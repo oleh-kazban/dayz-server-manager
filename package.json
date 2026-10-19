@@ -7,12 +7,11 @@
   "scripts": {
     "prepare": "husky",
     "start": "nx run web:serve",
-    "dev": "nx run web:serve",
     "build": "nx run-many -t build",
     "build:web": "nx run web:build",
     "typecheck": "nx run-many -t typecheck",
-    "lint": "eslint . --report-unused-disable-directives --max-warnings 0 --no-warn-ignored",
-    "lint:fix": "eslint . --report-unused-disable-directives --max-warnings 0 --no-warn-ignored --fix",
+    "lint": "eslint . --max-warnings 0 --no-warn-ignored",
+    "lint:fix": "eslint . --max-warnings 0 --no-warn-ignored --fix",
     "lint:staged": "lint-staged",
     "check:cycles": "madge --circular --extensions ts,tsx apps/",
     "format": "prettier --write .",
@@ -21,7 +20,7 @@
   },
   "lint-staged": {
     "*.{js,ts,tsx}": [
-      "eslint --report-unused-disable-directives --max-warnings 0 --no-warn-ignored --fix",
+      "eslint --max-warnings 0 --no-warn-ignored --fix",
       "prettier --write"
     ],
     "*.{json,css,html,md}": [
@@ -42,7 +41,6 @@
     "@types/node": "^26.6.5",
     "@types/react": "19.0.0",
     "@types/react-dom": "19.0.0",
-    "@typescript-eslint/parser": "8.71.1",
     "@vitejs/plugin-react": "4.7.0",
     "eslint": "10.12.0",
     "eslint-config-prettier": "10.1.8",
@@ -62,6 +60,7 @@
     "react-dom": "19.3.1",
     "tailwindcss": "4.3.3",
     "typescript": "5.5.4",
+    "typescript-eslint": "^8.71.2",
     "vite": "6.4.4",
     "zod": "^3.23.8",
     "zustand": "5.0.15"

@@ -21,7 +21,7 @@
     "lint": {
       "executor": "nx:run-commands",
       "options": {
-        "command": "eslint apps/web --report-unused-disable-directives --max-warnings 0 --no-warn-ignored"
+        "command": "eslint apps/web --max-warnings 0 --no-warn-ignored"
       }
     },
     "typecheck": {

@@ -1,17 +1,22 @@
 import { fixupPluginRules } from '@eslint/compat';
 import js from '@eslint/js';
 import nxEslintPlugin from '@nx/eslint-plugin';
-import tsParser from '@typescript-eslint/parser';
 import eslintConfigPrettier from 'eslint-config-prettier/flat';
 import react from 'eslint-plugin-react';
 import reactHooks from 'eslint-plugin-react-hooks';
 import reactRefresh from 'eslint-plugin-react-refresh';
 import simpleImportSort from 'eslint-plugin-simple-import-sort';
 import globals from 'globals';
+import tseslint from 'typescript-eslint';
 
 const reactPlugin = fixupPluginRules(react);
 
-export default [
+export default tseslint.config(
+  {
+    linterOptions: {
+      reportUnusedDisableDirectives: 'error',
+    },
+  },
   {
     ignores: [
       'dist/**',
@@ -21,19 +26,36 @@ export default [
       'apps/web/public/mockServiceWorker.js',
     ],
   },
+  js.configs.recommended,
+  ...tseslint.configs.recommended,
   {
     plugins: {
       '@nx': nxEslintPlugin,
+    },
+    rules: {
+      '@nx/enforce-module-boundaries': [
+        'error',
+        {
+          enforceBuildableLibDependency: true,
+          allowCircularSelfDependency: true,
+          allow: [],
+          depConstraints: [
+            {
+              sourceTag: '*',
+              onlyDependOnLibsWithTags: ['*'],
+            },
+          ],
+        },
+      ],
     },
   },
   {
     files: ['**/*.{js,ts,tsx}'],
     languageOptions: {
-      parser: tsParser,
+      ecmaVersion: 'latest',
+      sourceType: 'module',
       parserOptions: {
         ecmaFeatures: { jsx: true },
-        ecmaVersion: 'latest',
-        sourceType: 'module',
       },
       globals: {
         ...globals.browser,
@@ -50,13 +72,20 @@ export default [
       react: { version: 'detect' },
     },
     rules: {
-      ...js.configs.recommended.rules,
       ...react.configs.recommended.rules,
       ...react.configs['jsx-runtime'].rules,
       ...reactHooks.configs.flat.recommended.rules,
       'react/prop-types': 'off',
       'react/react-in-jsx-scope': 'off',
       'react-refresh/only-export-components': ['warn', { allowConstantExport: true }],
+      '@typescript-eslint/no-unused-vars': [
+        'error',
+        {
+          argsIgnorePattern: '^_',
+          varsIgnorePattern: '^_',
+        },
+      ],
+      'no-duplicate-imports': 'error',
       'padding-line-between-statements': [
         'error',
         { blankLine: 'always', prev: '*', next: 'export' },
@@ -79,13 +108,4 @@ export default [
     },
   },
   eslintConfigPrettier,
-  {
-    files: ['**/*.{js,ts,tsx}'],
-    rules: {
-      'no-duplicate-imports': 'error',
-      'no-multiple-empty-lines': ['error', { max: 1, maxEOF: 0 }],
-      'no-unused-vars': ['error', { argsIgnorePattern: '^_' }],
-      'eol-last': ['error', 'always'],
-    },
-  },
-];
+);
