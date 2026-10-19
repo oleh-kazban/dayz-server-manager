@@ -1,0 +1,12 @@
+node_modules
+dist
+.nx
+tmp
+coverage
+*.log
+
+# Project specs & references ignored from git
+specs/
+references/
+
+GEMINI.md

@@ -1,0 +1,73 @@
+{
+  "name": "@dayz-server-manager/source",
+  "private": true,
+  "version": "0.1.0",
+  "packageManager": "pnpm@12.10.1",
+  "type": "module",
+  "scripts": {
+    "prepare": "husky",
+    "start": "nx run web:serve",
+    "dev": "nx run web:serve",
+    "build": "nx run-many -t build",
+    "build:web": "nx run web:build",
+    "typecheck": "nx run-many -t typecheck",
+    "lint": "eslint . --report-unused-disable-directives --max-warnings 0",
+    "lint:fix": "eslint . --report-unused-disable-directives --max-warnings 0 --fix",
+    "lint:staged": "lint-staged",
+    "check:cycles": "madge --circular --extensions ts,tsx apps/",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "graph": "nx graph"
+  },
+  "lint-staged": {
+    "*.{js,ts,tsx}": [
+      "eslint --report-unused-disable-directives --max-warnings 0 --fix",
+      "prettier --write"
+    ],
+    "*.{json,css,html,md}": [
+      "prettier --write"
+    ]
+  },
+  "devDependencies": {
+    "@eslint/compat": "^2.1.1",
+    "@eslint/js": "10.0.1",
+    "@nx/eslint": "23.3.0",
+    "@nx/eslint-plugin": "23.3.0",
+    "@nx/js": "23.3.0",
+    "@nx/react": "23.3.0",
+    "@nx/vite": "23.3.0",
+    "@tailwindcss/vite": "^4.0.0",
+    "@tanstack/react-query": "5.104.4",
+    "@tanstack/react-router": "1.170.45",
+    "@types/react": "19.0.0",
+    "@types/react-dom": "19.0.0",
+    "@typescript-eslint/parser": "8.71.1",
+    "@vitejs/plugin-react": "4.7.0",
+    "eslint": "10.12.0",
+    "eslint-config-prettier": "10.1.8",
+    "eslint-plugin-react": "7.37.5",
+    "eslint-plugin-react-hooks": "7.1.1",
+    "eslint-plugin-react-refresh": "0.5.7",
+    "eslint-plugin-simple-import-sort": "14.0.0",
+    "globals": "17.13.0",
+    "husky": "9.1.7",
+    "lint-staged": "15.2.10",
+    "lucide-react": "1.59.0",
+    "madge": "8.0.0",
+    "msw": "2.15.0",
+    "nx": "23.3.0",
+    "prettier": "3.3.3",
+    "react": "19.3.1",
+    "react-dom": "19.3.1",
+    "tailwindcss": "4.3.3",
+    "typescript": "5.5.4",
+    "vite": "6.4.4",
+    "zod": "^3.23.8",
+    "zustand": "5.0.15"
+  },
+  "msw": {
+    "workerDirectory": [
+      "apps/web/public"
+    ]
+  }
+}
