@@ -1,0 +1,48 @@
+name: PR Validation
+
+on:
+  pull_request:
+    branches: [main, master]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pr-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    name: Validate PR (Format, Cycles, Lint, Typecheck, Build)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Verify Code Formatting
+        run: pnpm format:check
+
+      - name: Verify Architectural Cycles
+        run: pnpm check:cycles
+
+      - name: Nx Affected (Lint, Typecheck, Build)
+        run: >
+          pnpm nx affected
+          -t lint typecheck build
+          --base=origin/${{ github.base_ref }}
+          --head=HEAD
+          --parallel=3

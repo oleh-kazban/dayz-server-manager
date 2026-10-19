@@ -1,0 +1,41 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  pipeline:
+    name: Trunk Validation (Format, Cycles, Lint, Typecheck, Build)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Verify Code Formatting
+        run: pnpm format:check
+
+      - name: Verify Architectural Cycles
+        run: pnpm check:cycles
+
+      - name: Nx Run-Many (Lint, Typecheck, Build)
+        run: pnpm nx run-many -t lint typecheck build --parallel=3
