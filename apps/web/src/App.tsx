@@ -32,7 +32,7 @@ import {
 
 import { AppShell, PageContainer } from '@dsm/components/layout';
 
-import { ThemeProvider } from './features/theme/theme.context';
+import { ThemeProvider } from './features/theme';
 
 export function App() {
   return (
