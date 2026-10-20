@@ -16,7 +16,7 @@
     "baseUrl": ".",
     "strict": true,
     "paths": {
-      "@/*": ["apps/web/src/*"]
+      "@dsm/*": ["apps/web/src/*"]
     }
   },
   "exclude": ["node_modules", "tmp", "dist"]
