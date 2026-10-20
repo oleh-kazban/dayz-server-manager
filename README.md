@@ -1,5 +1,9 @@
 # DayZ Server Manager
 
+[![CI](https://img.shields.io/github/actions/workflow/status/oleh-kazban/dayz-server-manager/ci.yaml?branch=master&label=CI&logo=github)](https://github.com/oleh-kazban/dayz-server-manager/actions/workflows/ci.yaml)
+[![PR Validation](https://img.shields.io/github/actions/workflow/status/oleh-kazban/dayz-server-manager/pr-validation.yaml?label=PR%20Validation&logo=github)](https://github.com/oleh-kazban/dayz-server-manager/actions/workflows/pr-validation.yaml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
 Running a DayZ server usually means juggling a mess of batch scripts, manually editing massive XML files in text editors, and praying a missing bracket doesn't break loot spawns across the entire map. When a server crashes at 2 AM or a mod update quietly breaks compatibility, diagnosing the issue means digging through half a dozen raw log files.
 
 **DayZ Server Manager (DSM)** is a modern, self-hosted web control panel built to take the pain out of managing DayZ Dedicated Servers. Whether you are hosting a private server for a few friends or running a high-pop community server on a dedicated box, DSM gives you a clean, responsive interface to supervise your server, tweak configs safely, and keep everything running smoothly.
@@ -78,6 +82,16 @@ DSM is designed as a standalone, self-hosted appliance that runs on the same mac
 
 ## Technical Stack
 
+[![React](https://img.shields.io/badge/React_19-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)](https://react.dev/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![NodeJS](https://img.shields.io/badge/Node.js-339933?style=for-the-badge&logo=nodedotjs&logoColor=white)](https://nodejs.org/)
+[![Fastify](https://img.shields.io/badge/Fastify-000000?style=for-the-badge&logo=fastify&logoColor=white)](https://fastify.dev/)
+[![TailwindCSS](https://img.shields.io/badge/Tailwind_CSS_v4-06B6D4?style=for-the-badge&logo=tailwindcss&logoColor=white)](https://tailwindcss.com/)
+[![Vite](https://img.shields.io/badge/Vite_6-646CFF?style=for-the-badge&logo=vite&logoColor=white)](https://vite.dev/)
+[![SQLite](https://img.shields.io/badge/SQLite-07405E?style=for-the-badge&logo=sqlite&logoColor=white)](https://www.sqlite.org/)
+[![Nx](https://img.shields.io/badge/Nx-143055?style=for-the-badge&logo=nx&logoColor=white)](https://nx.dev/)
+[![pnpm](https://img.shields.io/badge/pnpm-4A4A4A?style=for-the-badge&logo=pnpm&logoColor=F69220)](https://pnpm.io/)
+
 Built from the ground up as a modern, high-throughput monorepo:
 
 - **Frontend:** React 19, Vite, TanStack Router (100% type-safe search parameters), TanStack Query v5, and Tailwind CSS v4.
@@ -99,7 +113,7 @@ Built from the ground up as a modern, high-throughput monorepo:
 1. **Clone the repository:**
 
    ```bash
-   git clone https://github.com/your-username/dayz-server-manager.git
+   git clone https://github.com/oleh-kazban/dayz-server-manager.git
    cd dayz-server-manager
    ```
 
