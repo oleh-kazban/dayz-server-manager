@@ -56,6 +56,7 @@ export default tseslint.config(
       sourceType: 'module',
       parserOptions: {
         ecmaFeatures: { jsx: true },
+        tsconfigRootDir: import.meta.dirname,
       },
       globals: {
         ...globals.browser,
