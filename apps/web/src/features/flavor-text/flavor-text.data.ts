@@ -1,10 +1,10 @@
-export type WorldQuoteItem = {
+export type FlavorTextItem = {
   id: number;
   title: string;
   subTitle: string;
 };
 
-export const WORLD_QUOTES: WorldQuoteItem[] = [
+export const FLAVOR_TEXTS: FlavorTextItem[] = [
   {
     id: 1,
     title: 'Survive. Build. Repeat.',
@@ -154,5 +154,10 @@ export const WORLD_QUOTES: WorldQuoteItem[] = [
     id: 30,
     title: 'The World Is Still Yours.',
     subTitle: 'Make of it what you will.',
+  },
+  {
+    id: 31,
+    title: 'Your world.',
+    subTitle: 'Ready when you are.',
   },
 ];
