@@ -70,5 +70,9 @@
     "workerDirectory": [
       "apps/web/public"
     ]
+  },
+  "dependencies": {
+    "@hookform/resolvers": "^6.0.0",
+    "react-hook-form": "^7.90.0"
   }
 }
