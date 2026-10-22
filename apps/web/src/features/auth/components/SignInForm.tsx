@@ -1,8 +1,38 @@
+import { useForm } from 'react-hook-form';
+
+import { zodResolver } from '@hookform/resolvers/zod';
+import { useNavigate, useRouter } from '@tanstack/react-router';
 import { ArrowRight, UserRound } from 'lucide-react';
 
-import { Input, PasswordInput } from '@dsm/components/ui';
+import { Checkbox, Input, PasswordInput } from '@dsm/components/ui';
+
+import { useAuth } from '../auth.context';
+import { SignInFormValues, signInSchema } from '../signIn.schema';
 
 export function SignInForm() {
+  const { login } = useAuth();
+  const router = useRouter();
+  const navigate = useNavigate();
+
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm<SignInFormValues>({
+    resolver: zodResolver(signInSchema),
+    defaultValues: {
+      usernameOrEmail: '',
+      password: '',
+      rememberMe: false,
+    },
+  });
+
+  const onSubmit = async (values: SignInFormValues) => {
+    login(values);
+    await router.invalidate();
+    await navigate({ to: '/dashboard' });
+  };
+
   return (
     <div className="flex-1 p-5 sm:p-8 lg:p-10 xl:p-[66px_72px_48px] flex flex-col justify-between bg-[var(--color-surface)]">
       <div className="space-y-8">
@@ -20,7 +50,7 @@ export function SignInForm() {
         </div>
 
         {/* Form Controls */}
-        <form onSubmit={e => e.preventDefault()} className="space-y-5">
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-5" noValidate>
           <Input
             label="Username or email"
             id="username"
@@ -28,6 +58,8 @@ export function SignInForm() {
             type="text"
             placeholder="Enter your username or email"
             autoComplete="username"
+            error={errors.usernameOrEmail?.message}
+            {...register('usernameOrEmail')}
           />
 
           <PasswordInput
@@ -35,22 +67,16 @@ export function SignInForm() {
             id="password"
             placeholder="Enter your password"
             autoComplete="current-password"
+            error={errors.password?.message}
+            {...register('password')}
           />
 
           {/* Remember Me */}
-          <div className="flex items-center gap-2.5 pt-1">
-            <input
-              id="remember"
-              type="checkbox"
-              className="w-[15px] h-[15px] rounded border border-[var(--color-border)] text-[var(--color-primary)] focus:ring-0 cursor-pointer"
-            />
-            <label
-              htmlFor="remember"
-              className="text-[11px] text-[var(--color-text-secondary)] cursor-pointer"
-            >
-              Remember me on this device
-            </label>
-          </div>
+          <Checkbox
+            label="Remember me on this device"
+            containerClassName="pt-1"
+            {...register('rememberMe')}
+          />
 
           {/* Action Button */}
           <button
