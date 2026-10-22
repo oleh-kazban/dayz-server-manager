@@ -8,7 +8,7 @@ Running a DayZ server usually means juggling a mess of batch scripts, manually e
 
 **DayZ Server Manager (DSM)** is a modern, self-hosted web control panel built to take the pain out of managing DayZ Dedicated Servers. Whether you are hosting a private server for a few friends or running a high-pop community server on a dedicated box, DSM gives you a clean, responsive interface to supervise your server, tweak configs safely, and keep everything running smoothly.
 
-![DayZ Server Manager - Dashboard Overview](docs/screenshots/dashboard-overview.png)
+![DayZ Server Manager - Dashboard Overview](docs/screenshots/dashboard-overview.jpg)
 
 ---
 
@@ -25,34 +25,40 @@ Running a DayZ server usually means juggling a mess of batch scripts, manually e
 
 DayZ's `types.xml` contains anywhere from 2,000 to over 20,000 item definitions. Opening and editing this file in standard editors is sluggish and prone to syntax errors that can ruin a wipe.
 
-![DayZ Server Manager - Types.xml Workbench](docs/screenshots/types-workbench.png)
+![DayZ Server Manager - Types.xml Workbench](docs/screenshots/types-workbench.jpg)
 
 - **Instant Filtering:** Filter 20,000+ items by category, tier, usage, or name in under 10 milliseconds.
 - **Batch Adjustments:** Easily scale nominal values, lifetimes, or restock timers across entire item classes (e.g., weapons, military loot, medical gear).
 - **Pre-commit XML Validation:** DSM validates syntax and structure before anything is written to disk, ensuring broken XML never makes it to your server files.
 - **Visual Diff Inspector:** Review every changed value side-by-side before applying changes to your live mission.
 
-### 3. Server Configuration & Scheduled Automation
+### 3. Secure Workspace Access & Role-Based Control
 
-![DayZ Server Manager - Server Settings & Automated Tasks](docs/screenshots/server-settings.png)
+![DayZ Server Manager - Workspace Access & Sign-In](docs/screenshots/sign-in.jpg)
+
+- **Role-Based Access Control (RBAC):** Delegate operational duties across team members with granular roles (`Administrator`, `Moderator`, `Viewer`) to protect critical server operations.
+- **Session Supervision:** Type-safe authentication workflows with protected layout routing, persistent session state, and immediate cache invalidation on logout.
+- **Modern Responsive Design:** Theme-synchronized workspace portal with system health status indicators and accessible form controls.
+
+### 4. Server Configuration & Scheduled Automation
 
 - **Automated Cron Jobs:** Schedule daily backups, periodic server restarts with warnings, and cleanup routines.
 - **Tags & Metadata:** Manage server browser tags, visibility, BattlEye/VAC enforcement, and Steam listing parameters.
 - **Discord Integration:** Stream server status events, player milestones, and critical crash alerts directly to Discord webhooks.
 
-### 4. Mod & Workshop Management
+### 5. Mod & Workshop Management
 
 - **SteamCMD Integration:** Download and update mods from the Steam Workshop without leaving the web interface.
 - **Automatic Key Handling:** Copies `.bikey` files directly into your server's `keys/` directory on install or update.
 - **Load Order Resolution:** Organize and toggle server-side and client-side mods with clear startup parameter generation.
 
-### 5. Snapshots & One-Click Rollbacks
+### 6. Snapshots & One-Click Rollbacks
 
 - **Scheduled Backups:** Automated snapshots of mission files, server profiles, and the hive persistence database (`storage_1`).
 - **Instant Recovery:** If a corrupted mod or bad config breaks your world, restore a known good snapshot with one click.
 - **Safe File Commits:** All file operations use atomic writes (`.tmp` write + swap) and pre-save backups (`.bak_{timestamp}`) to prevent partial writes.
 
-### 6. Searchable Logs & Audit Trail
+### 7. Searchable Logs & Audit Trail
 
 - **Log Streaming:** Live console output, server logs (`.rpt`, `.ADM`), and crash reports in a searchable, filterable viewer.
 - **Administrative Audit:** Track who restarted the server, what config values were modified, and when backups were restored.
@@ -181,6 +187,7 @@ dayz-server-manager/
 - [x] Monorepo architecture & quality tooling (Nx, pnpm, ESLint v10, Prettier, Husky)
 - [x] Client application skeleton with React 19, Vite, and Tailwind CSS v4
 - [x] MSW v2 mock layer and real-time SSE telemetry simulator
+- [x] Workspace access, authentication flows, and role-based identity (RBAC)
 - [ ] Dashboard shell with real-time process telemetry and quick actions
 - [ ] High-performance virtualized `types.xml` workbench with Web Worker diff engine
 - [ ] Fastify REST backend (`/api/v1`) with native child process supervision
