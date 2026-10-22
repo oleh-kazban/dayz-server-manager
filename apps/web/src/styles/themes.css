@@ -51,6 +51,10 @@
   --color-chart-other: #d8e4f2;
   --color-chart-grid: #eef2f6;
 
+  /* Scrollbar */
+  --color-scrollbar-thumb: rgba(122, 138, 160, 0.3);
+  --color-scrollbar-thumb-hover: rgba(122, 138, 160, 0.5);
+
   /* Elevation & Shadows */
   --shadow-card: 0 3px 14px rgba(36, 60, 88, 0.06);
   --shadow-card-hover: 0 6px 20px rgba(36, 60, 88, 0.09);
@@ -103,6 +107,10 @@
   --color-chart-sky: #7ba3f2;
   --color-chart-other: #243347;
   --color-chart-grid: #182333;
+
+  /* Scrollbar */
+  --color-scrollbar-thumb: rgba(148, 163, 184, 0.28);
+  --color-scrollbar-thumb-hover: rgba(148, 163, 184, 0.46);
 
   /* Elevation */
   --shadow-card: 0 4px 18px rgba(0, 0, 0, 0.35);
@@ -160,6 +168,10 @@
   --color-chart-other: #3c3f41;
   --color-chart-grid: #323232;
 
+  /* Scrollbar */
+  --color-scrollbar-thumb: rgba(169, 183, 198, 0.3);
+  --color-scrollbar-thumb-hover: rgba(169, 183, 198, 0.5);
+
   /* Elevation */
   --shadow-card: 0 4px 18px rgba(0, 0, 0, 0.25);
   --shadow-card-hover: 0 8px 24px rgba(0, 0, 0, 0.35);
@@ -216,6 +228,10 @@
   --color-chart-other: #2e2e2e;
   --color-chart-grid: #262626;
 
+  /* Scrollbar */
+  --color-scrollbar-thumb: rgba(190, 190, 190, 0.26);
+  --color-scrollbar-thumb-hover: rgba(190, 190, 190, 0.44);
+
   /* Elevation */
   --shadow-card: 0 4px 18px rgba(0, 0, 0, 0.4);
   --shadow-card-hover: 0 8px 24px rgba(0, 0, 0, 0.5);
@@ -271,6 +287,10 @@
   --color-chart-sky: #7dcfff;
   --color-chart-other: #292e42;
   --color-chart-grid: #1f2335;
+
+  /* Scrollbar */
+  --color-scrollbar-thumb: rgba(154, 165, 206, 0.3);
+  --color-scrollbar-thumb-hover: rgba(154, 165, 206, 0.5);
 
   /* Elevation */
   --shadow-card: 0 4px 18px rgba(0, 0, 0, 0.3);
@@ -347,8 +367,205 @@
   --color-chart-other: #313244;
   --color-chart-grid: #181825;
 
+  /* Scrollbar */
+  --color-scrollbar-thumb: rgba(186, 194, 222, 0.3);
+  --color-scrollbar-thumb-hover: rgba(186, 194, 222, 0.5);
+
   /* Elevation */
   --shadow-card: 0 4px 18px rgba(0, 0, 0, 0.25);
   --shadow-card-hover: 0 8px 24px rgba(0, 0, 0, 0.35);
   --shadow-dropdown: 0 12px 30px rgba(0, 0, 0, 0.45);
+}
+
+/* ==========================================================================
+   Theme: Darcula Light (soft neutral surfaces, JetBrains-inspired blue)
+   ========================================================================== */
+[data-theme='darcula-light'] {
+  color-scheme: light;
+  --color-canvas: #f3f4f6;
+  --color-surface: #ffffff;
+  --color-surface-subtle: #f7f7f8;
+  --color-surface-hover: #eceef1;
+  --color-sidebar: #fafafa;
+
+  --color-border: #d7dbe0;
+  --color-border-subtle: #e7e9ed;
+  --color-border-hover: #b8bec7;
+
+  --color-text-main: #30343b;
+  --color-text-secondary: #5f6670;
+  --color-text-muted: #6e7681;
+  --color-text-inverse: #ffffff;
+
+  --color-primary: #3574c8;
+  --color-primary-hover: #285fa8;
+  --color-primary-light: #eaf2fc;
+  --color-primary-border: #a9c5e8;
+
+  --color-success: #43834d;
+  --color-success-light: #eaf5eb;
+  --color-success-border: #a8d0ad;
+  --color-warning: #a86624;
+  --color-warning-light: #fff3e5;
+  --color-warning-border: #e8c49b;
+  --color-danger: #c44750;
+  --color-danger-light: #fcecee;
+  --color-danger-border: #e9afb4;
+
+  --color-chart-blue: #3574c8;
+  --color-chart-teal: #398f82;
+  --color-chart-sky: #6c9ecf;
+  --color-chart-other: #d7dbe0;
+  --color-chart-grid: #e6e9ee;
+
+  --color-scrollbar-thumb: rgba(75, 85, 99, 0.28);
+  --color-scrollbar-thumb-hover: rgba(75, 85, 99, 0.46);
+  --shadow-card: 0 3px 14px rgba(40, 48, 60, 0.06);
+  --shadow-card-hover: 0 6px 20px rgba(40, 48, 60, 0.1);
+  --shadow-dropdown: 0 10px 25px -5px rgba(40, 48, 60, 0.13), 0 8px 10px -6px rgba(40, 48, 60, 0.08);
+}
+
+/* ==========================================================================
+   Theme: Graphite Light (cool neutral, restrained monochrome)
+   ========================================================================== */
+[data-theme='graphite-light'] {
+  color-scheme: light;
+  --color-canvas: #f1f2f3;
+  --color-surface: #ffffff;
+  --color-surface-subtle: #f7f7f7;
+  --color-surface-hover: #e9ebed;
+  --color-sidebar: #f8f8f8;
+
+  --color-border: #d8dadd;
+  --color-border-subtle: #e8e9eb;
+  --color-border-hover: #b9bdc2;
+
+  --color-text-main: #292c30;
+  --color-text-secondary: #555b62;
+  --color-text-muted: #70767d;
+  --color-text-inverse: #ffffff;
+
+  --color-primary: #596b80;
+  --color-primary-hover: #46586d;
+  --color-primary-light: #e9edf2;
+  --color-primary-border: #b5c0cc;
+
+  --color-success: #47765a;
+  --color-success-light: #eaf2ed;
+  --color-success-border: #b0cbb9;
+  --color-warning: #906c32;
+  --color-warning-light: #f7f0e4;
+  --color-warning-border: #ddc99f;
+  --color-danger: #a94f4f;
+  --color-danger-light: #f8ebeb;
+  --color-danger-border: #dfb1b1;
+
+  --color-chart-blue: #596b80;
+  --color-chart-teal: #4f8276;
+  --color-chart-sky: #8798aa;
+  --color-chart-other: #d8dadd;
+  --color-chart-grid: #e5e7e9;
+
+  --color-scrollbar-thumb: rgba(82, 88, 95, 0.27);
+  --color-scrollbar-thumb-hover: rgba(82, 88, 95, 0.45);
+  --shadow-card: 0 3px 12px rgba(28, 32, 36, 0.055);
+  --shadow-card-hover: 0 6px 18px rgba(28, 32, 36, 0.09);
+  --shadow-dropdown: 0 10px 24px -5px rgba(28, 32, 36, 0.12), 0 8px 10px -6px rgba(28, 32, 36, 0.07);
+}
+
+/* ==========================================================================
+   Theme: Tokyo Night Light (cool lavender-blue, clear accent hierarchy)
+   ========================================================================== */
+[data-theme='tokyo-light'] {
+  color-scheme: light;
+  --color-canvas: #f2f4fa;
+  --color-surface: #ffffff;
+  --color-surface-subtle: #f7f8fd;
+  --color-surface-hover: #e9edfa;
+  --color-sidebar: #f8f9fe;
+
+  --color-border: #d7ddef;
+  --color-border-subtle: #e7eaf5;
+  --color-border-hover: #b8c3e1;
+
+  --color-text-main: #24283b;
+  --color-text-secondary: #545d7a;
+  --color-text-muted: #697394;
+  --color-text-inverse: #ffffff;
+
+  --color-primary: #4b68c8;
+  --color-primary-hover: #3b55ac;
+  --color-primary-light: #e9edff;
+  --color-primary-border: #b1bff0;
+
+  --color-success: #43835e;
+  --color-success-light: #e9f5ed;
+  --color-success-border: #acd2b8;
+  --color-warning: #986522;
+  --color-warning-light: #fff4df;
+  --color-warning-border: #e7c990;
+  --color-danger: #c04465;
+  --color-danger-light: #fceaf0;
+  --color-danger-border: #e9b1c1;
+
+  --color-chart-blue: #4b68c8;
+  --color-chart-teal: #368f91;
+  --color-chart-sky: #4c9bc7;
+  --color-chart-other: #d7ddef;
+  --color-chart-grid: #e4e8f3;
+
+  --color-scrollbar-thumb: rgba(84, 93, 122, 0.28);
+  --color-scrollbar-thumb-hover: rgba(84, 93, 122, 0.46);
+  --shadow-card: 0 3px 14px rgba(44, 52, 86, 0.06);
+  --shadow-card-hover: 0 6px 20px rgba(44, 52, 86, 0.1);
+  --shadow-dropdown: 0 10px 25px -5px rgba(44, 52, 86, 0.13), 0 8px 10px -6px rgba(44, 52, 86, 0.08);
+}
+
+/* ==========================================================================
+   Theme: Catppuccin Latte (pastel light, lavender and teal accents)
+   ========================================================================== */
+[data-theme='catppuccin-latte'] {
+  color-scheme: light;
+  --color-canvas: #eff1f5;
+  --color-surface: #ffffff;
+  --color-surface-subtle: #e6e9ef;
+  --color-surface-hover: #dce0e8;
+  --color-sidebar: #e6e9ef;
+
+  --color-border: #ccd0da;
+  --color-border-subtle: #dce0e8;
+  --color-border-hover: #acb0be;
+
+  --color-text-main: #4c4f69;
+  --color-text-secondary: #626582;
+  --color-text-muted: #6b718a;
+  --color-text-inverse: #ffffff;
+
+  --color-primary: #586fc4;
+  --color-primary-hover: #485ca8;
+  --color-primary-light: #e8eaff;
+  --color-primary-border: #b9c2ee;
+
+  --color-success: #40805c;
+  --color-success-light: #e5f4e9;
+  --color-success-border: #a6d2b3;
+  --color-warning: #94621b;
+  --color-warning-light: #fff2d9;
+  --color-warning-border: #e6c58b;
+  --color-danger: #c04462;
+  --color-danger-light: #fce9ef;
+  --color-danger-border: #e7afbd;
+
+  --color-chart-blue: #7287d8;
+  --color-chart-teal: #278f8b;
+  --color-chart-sky: #269bb5;
+  --color-chart-other: #ccd0da;
+  --color-chart-grid: #dce0e8;
+
+  --color-scrollbar-thumb: rgba(98, 101, 130, 0.28);
+  --color-scrollbar-thumb-hover: rgba(98, 101, 130, 0.46);
+  --shadow-card: 0 3px 14px rgba(76, 79, 105, 0.06);
+  --shadow-card-hover: 0 6px 20px rgba(76, 79, 105, 0.1);
+  --shadow-dropdown: 0 10px 25px -5px rgba(76, 79, 105, 0.13),
+    0 8px 10px -6px rgba(76, 79, 105, 0.08);
 }

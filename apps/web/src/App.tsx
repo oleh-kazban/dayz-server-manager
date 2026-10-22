@@ -33,8 +33,11 @@ import {
 import { AppShell, PageContainer } from '@dsm/components/layout';
 
 import { ThemeProvider } from './features/theme';
+import { SignIn } from './features';
 
 export function App() {
+  return <SignIn />;
+
   return (
     <ThemeProvider>
       <AppShell>
