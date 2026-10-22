@@ -59,6 +59,7 @@ export function Sidebar() {
         </div>
 
         {/* Navigation: Workspace */}
+        {/* Will be fixed later: Replace raw anchor tags with TanStack Router <Link to="..." /> and activeProps when route tree expands */}
         <nav aria-label="Workspace Links" className="space-y-1">
           <div className="px-3 pb-1.5 text-[10px] font-semibold tracking-wider text-[var(--color-text-muted)] uppercase">
             Workspace

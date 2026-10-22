@@ -1,8 +1,8 @@
 import { ReactNode, useMemo, useState } from 'react';
 
-import { AuthContext } from '../auth.context';
-import { authStorage } from '../auth.storage';
-import { AuthContextValue, AuthUser, SignInCredentials } from '../auth.types';
+import { AuthContext } from './auth.context';
+import { authStorage } from './auth.storage';
+import { AuthContextValue, AuthUser, SignInCredentials } from './auth.types';
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(authStorage.get);

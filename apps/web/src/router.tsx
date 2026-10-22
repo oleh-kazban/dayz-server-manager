@@ -2,12 +2,14 @@ import {
   createRootRouteWithContext,
   createRoute,
   createRouter,
+  lazyRouteComponent,
   Outlet,
   redirect,
 } from '@tanstack/react-router';
 
-import { AuthContextValue, SignIn } from './features/auth';
-import { Dashboard } from './features';
+import { AppShell } from '@dsm/components';
+
+import type { AuthContextValue } from './features/auth';
 
 export interface RouterContext {
   auth: AuthContextValue;
@@ -27,7 +29,7 @@ const indexRoute = createRoute({
   },
 });
 
-// 3. Guest-Only Route: /sign-in
+// 3. Guest-Only Route: /sign-in (code-split)
 const signInRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/sign-in',
@@ -36,23 +38,38 @@ const signInRoute = createRoute({
       throw redirect({ to: '/dashboard' });
     }
   },
-  component: SignIn,
+  component: lazyRouteComponent(() => import('./features/auth'), 'SignIn'),
 });
 
-// 4. Protected Route: /dashboard
-const dashboardRoute = createRoute({
+// 4. Authenticated Layout Route: hosts persistent AppShell and guards child routes
+const authedRoute = createRoute({
+  id: 'authed',
   getParentRoute: () => rootRoute,
-  path: '/dashboard',
   beforeLoad: ({ context }) => {
     if (!context.auth.isAuthenticated) {
       throw redirect({ to: '/sign-in' });
     }
   },
-  component: Dashboard, // extracted dashboard
+  component: () => (
+    <AppShell>
+      <Outlet />
+    </AppShell>
+  ),
 });
 
-// 5. Construct router
-const routeTree = rootRoute.addChildren([indexRoute, signInRoute, dashboardRoute]);
+// 5. Protected Route: /dashboard (code-split)
+const dashboardRoute = createRoute({
+  getParentRoute: () => authedRoute,
+  path: '/dashboard',
+  component: lazyRouteComponent(() => import('./features/dashboard'), 'Dashboard'),
+});
+
+// 6. Construct router
+const routeTree = rootRoute.addChildren([
+  indexRoute,
+  signInRoute,
+  authedRoute.addChildren([dashboardRoute]),
+]);
 
 export const router = createRouter({
   routeTree,

@@ -7,8 +7,8 @@ export type ThemeId = LightThemeId | DarkThemeId;
 
 export interface ThemeSettings {
   mode: ThemeMode;
-  prefferedLight: LightThemeId;
-  prefferedDark: DarkThemeId;
+  preferredLight: LightThemeId;
+  preferredDark: DarkThemeId;
 }
 
 export interface ThemeContextValue {
@@ -16,6 +16,6 @@ export interface ThemeContextValue {
   activeThemeId: ThemeId;
   toggleTheme: () => void;
   setMode: (mode: ThemeMode) => void;
-  setPrefferedDark: (theme: DarkThemeId) => void;
-  setPrefferedLight: (theme: LightThemeId) => void;
+  setPreferredDark: (theme: DarkThemeId) => void;
+  setPreferredLight: (theme: LightThemeId) => void;
 }
