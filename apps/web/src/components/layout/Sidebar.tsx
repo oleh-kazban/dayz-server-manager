@@ -4,7 +4,6 @@ import {
   ChevronsUpDown,
   CreditCard,
   LayoutDashboard,
-  LogOut,
   MapIcon,
   RadioTower,
   Server,
@@ -15,6 +14,7 @@ import {
 } from 'lucide-react';
 
 import { Logo } from './Logo';
+import { UserProfile } from './UserProfile';
 
 /* ====================================================================
 PRIMARY NAVIGATION (SIDEBAR)
@@ -59,6 +59,7 @@ export function Sidebar() {
         </div>
 
         {/* Navigation: Workspace */}
+        {/* Will be fixed later: Replace raw anchor tags with TanStack Router <Link to="..." /> and activeProps when route tree expands */}
         <nav aria-label="Workspace Links" className="space-y-1">
           <div className="px-3 pb-1.5 text-[10px] font-semibold tracking-wider text-[var(--color-text-muted)] uppercase">
             Workspace
@@ -174,28 +175,7 @@ export function Sidebar() {
         </div>
 
         {/* Admin Profile */}
-        <div className="flex items-center justify-between pt-1 border-t border-[var(--color-border-subtle)]">
-          <div className="flex items-center gap-2.5 min-w-0">
-            <div className="w-[30px] h-[30px] rounded-full bg-[var(--color-primary-light)] text-[var(--color-primary)] flex items-center justify-center text-xs font-semibold shrink-0">
-              AK
-            </div>
-            <div className="flex flex-col min-w-0">
-              <span className="text-xs font-semibold text-[var(--color-text-main)] truncate">
-                Alex Kovac
-              </span>
-              <span className="text-[10px] text-[var(--color-text-muted)] truncate">
-                Administrator
-              </span>
-            </div>
-          </div>
-          <button
-            type="button"
-            aria-label="Sign out"
-            className="p-1 text-[var(--color-text-secondary)] hover:text-[var(--color-text-main)] rounded transition-colors"
-          >
-            <LogOut className="w-4 h-4" />
-          </button>
-        </div>
+        <UserProfile />
       </div>
     </aside>
   );
