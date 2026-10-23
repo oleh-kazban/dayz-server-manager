@@ -45,21 +45,49 @@ export function DotsFloatingMenu({
 
   useEffect(() => {
     if (isOpen && isPositioned) {
-      optionRefs.current[0]?.focus();
+      const firstEnabledIndex = options.findIndex(opt => !opt.disabled);
+      if (firstEnabledIndex >= 0) {
+        optionRefs.current[firstEnabledIndex]?.focus();
+      }
     }
-  }, [isOpen, isPositioned]);
+  }, [isOpen, isPositioned, options]);
+
+  const getNextEnabledIndex = (currentIndex: number, step: 1 | -1): number | undefined => {
+    let next = currentIndex;
+    for (let i = 0; i < options.length; i++) {
+      next = (next + step + options.length) % options.length;
+      if (!options[next].disabled) {
+        return next;
+      }
+    }
+    return undefined;
+  };
+
+  const getFirstEnabledIndex = (): number | undefined => {
+    for (let i = 0; i < options.length; i++) {
+      if (!options[i].disabled) return i;
+    }
+    return undefined;
+  };
+
+  const getLastEnabledIndex = (): number | undefined => {
+    for (let i = options.length - 1; i >= 0; i--) {
+      if (!options[i].disabled) return i;
+    }
+    return undefined;
+  };
 
   const handleOptionKeyDown = (event: ReactKeyboardEvent<HTMLButtonElement>, index: number) => {
     let nextIndex: number | undefined;
 
     if (event.key === 'ArrowDown') {
-      nextIndex = (index + 1) % options.length;
+      nextIndex = getNextEnabledIndex(index, 1);
     } else if (event.key === 'ArrowUp') {
-      nextIndex = (index - 1 + options.length) % options.length;
+      nextIndex = getNextEnabledIndex(index, -1);
     } else if (event.key === 'Home') {
-      nextIndex = 0;
+      nextIndex = getFirstEnabledIndex();
     } else if (event.key === 'End') {
-      nextIndex = options.length - 1;
+      nextIndex = getLastEnabledIndex();
     }
 
     if (nextIndex !== undefined) {

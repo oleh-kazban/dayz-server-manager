@@ -84,9 +84,11 @@ export function FloatingMenu<T extends string>({
 
   useEffect(() => {
     if (isOpen && isPositioned) {
-      optionRefs.current[0]?.focus();
+      const selectedIndex = options.findIndex(option => option.value === value);
+      const targetIndex = selectedIndex >= 0 ? selectedIndex : 0;
+      optionRefs.current[targetIndex]?.focus();
     }
-  }, [isOpen, isPositioned]);
+  }, [isOpen, isPositioned, options, value]);
 
   const selectOption = (nextValue: T) => {
     onChange(nextValue);

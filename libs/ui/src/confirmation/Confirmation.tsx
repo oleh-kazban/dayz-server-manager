@@ -25,9 +25,9 @@ export interface ConfirmationProps {
 }
 
 const VARIANT_CONFIRM_CLASSES: Record<ConfirmationVariant, string> = {
-  primary: 'bg-[var(--color-primary)] text-white hover:opacity-90',
-  warning: 'bg-[var(--color-warning)] text-white hover:opacity-90',
-  danger: 'bg-[var(--color-danger)] text-white hover:opacity-90',
+  primary: 'bg-[var(--color-primary)] text-[var(--color-primary-fg)] hover:opacity-90',
+  warning: 'bg-[var(--color-warning)] text-[var(--color-warning-fg)] hover:opacity-90',
+  danger: 'bg-[var(--color-status-danger)] text-[var(--color-status-danger-fg)] hover:opacity-90',
 };
 
 function VariantIcon({ variant }: { variant: ConfirmationVariant }) {
@@ -66,6 +66,14 @@ export function Confirmation({
   onConfirm,
 }: ConfirmationProps) {
   const [remainingTime, setRemainingTime] = useState(timerValue);
+  const [prevTimerValue, setPrevTimerValue] = useState(timerValue);
+
+  // Synchronize remainingTime if timerValue changes dynamically without unmounting
+  if (timerValue !== prevTimerValue) {
+    setPrevTimerValue(timerValue);
+    setRemainingTime(timerValue);
+  }
+
   const isConfirmDisabled = remainingTime > 0;
   const dialogRef = useRef<HTMLDialogElement>(null);
   const titleId = useId();

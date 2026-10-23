@@ -33,6 +33,7 @@
   --color-status-warning: var(--color-warning);
   --color-status-warning-light: var(--color-warning-light);
   --color-status-warning-border: var(--color-warning-border);
+  --color-status-warning-fg: var(--color-warning-fg);
   --color-status-danger: var(--color-danger);
   --color-status-danger-light: var(--color-danger-light);
   --color-status-danger-border: var(--color-danger-border);

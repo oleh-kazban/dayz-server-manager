@@ -37,9 +37,10 @@
   --color-success-light: #e6f6f0;
   --color-success-border: #73c5b1;
 
-  --color-warning: #bb8a3e;
+  --color-warning: #a36818;
   --color-warning-light: #fbf4e7;
   --color-warning-border: #e6c88b;
+  --color-warning-fg: #ffffff;
 
   --color-danger: #c92a2a;
   --color-danger-light: #fdeeee;
@@ -99,6 +100,7 @@
   --color-warning: #d4a04d;
   --color-warning-light: rgba(187, 138, 62, 0.16);
   --color-warning-border: #745422;
+  --color-warning-fg: #090d12;
 
   --color-danger: #ea6464;
   --color-danger-light: rgba(224, 82, 82, 0.16);
@@ -158,9 +160,10 @@
   --color-success-light: rgba(98, 151, 85, 0.15);
   --color-success-border: #3c5e34;
 
-  --color-warning: #cc7832;
+  --color-warning: #d4823b;
   --color-warning-light: rgba(204, 120, 50, 0.15);
   --color-warning-border: #804a1e;
+  --color-warning-fg: #1e2022;
 
   --color-danger: #ea7a83;
   --color-danger-light: rgba(234, 122, 131, 0.15);
@@ -223,6 +226,7 @@
   --color-warning: #a68a5c;
   --color-warning-light: rgba(166, 138, 92, 0.15);
   --color-warning-border: #635236;
+  --color-warning-fg: #121212;
 
   --color-danger: #de7272;
   --color-danger-light: rgba(222, 114, 114, 0.15);
@@ -285,6 +289,7 @@
   --color-warning: #e0af68;
   --color-warning-light: rgba(224, 175, 104, 0.15);
   --color-warning-border: #8f682d;
+  --color-warning-fg: #16161e;
 
   --color-danger: #f7768e;
   --color-danger-light: rgba(247, 118, 142, 0.15);
@@ -363,6 +368,7 @@
   /* Yellow */
   --color-warning-light: rgba(249, 226, 175, 0.15);
   --color-warning-border: #91815b;
+  --color-warning-fg: #11111b;
 
   --color-danger: #f38ba8;
   /* Red */
@@ -421,6 +427,7 @@
   --color-warning: #a86624;
   --color-warning-light: #fff3e5;
   --color-warning-border: #e8c49b;
+  --color-warning-fg: #ffffff;
   --color-danger: #c44750;
   --color-danger-light: #fcecee;
   --color-danger-border: #e9afb4;
@@ -471,6 +478,7 @@
   --color-warning: #906c32;
   --color-warning-light: #f7f0e4;
   --color-warning-border: #ddc99f;
+  --color-warning-fg: #ffffff;
   --color-danger: #a94f4f;
   --color-danger-light: #f8ebeb;
   --color-danger-border: #dfb1b1;
@@ -521,6 +529,7 @@
   --color-warning: #986522;
   --color-warning-light: #fff4df;
   --color-warning-border: #e7c990;
+  --color-warning-fg: #ffffff;
   --color-danger: #c04465;
   --color-danger-light: #fceaf0;
   --color-danger-border: #e9b1c1;
@@ -571,6 +580,7 @@
   --color-warning: #94621b;
   --color-warning-light: #fff2d9;
   --color-warning-border: #e6c58b;
+  --color-warning-fg: #ffffff;
   --color-danger: #c04462;
   --color-danger-light: #fce9ef;
   --color-danger-border: #e7afbd;
