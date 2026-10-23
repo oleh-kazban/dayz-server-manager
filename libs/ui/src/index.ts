@@ -1,5 +1,6 @@
 export * from './autosuggest';
 export * from './button';
+export * from './card';
 export * from './checkbox';
 export * from './confirmation';
 export * from './date-picker';
