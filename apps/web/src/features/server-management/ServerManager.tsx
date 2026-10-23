@@ -1061,7 +1061,7 @@ export function ServerManager() {
                         <Shield className="w-3.5 h-3.5 text-[var(--color-text-muted)] inline-block" />
                       ) : (
                         <Button
-                          size="icon-sm"
+                          size="sm"
                           variant="ghost"
                           aria-label={`Options for ${m.name}`}
                           leftIcon={MoreHorizontal}
@@ -1249,11 +1249,11 @@ export function ServerManager() {
                   <td className="p-3 text-[var(--color-text-secondary)]">{player.location}</td>
                   <td className="p-3 pr-4 text-right">
                     <div className="flex items-center justify-end gap-2 text-[11px]">
-                      <Button variant="link" size="sm">
+                      <Button variant="text" size="sm">
                         Profile
                       </Button>
                       <span className="text-[var(--color-border)]">·</span>
-                      <Button variant="link-danger" size="sm">
+                      <Button variant="text" destructive size="sm">
                         Kick
                       </Button>
                     </div>
@@ -1264,7 +1264,7 @@ export function ServerManager() {
           </table>
           <div className="flex items-center justify-between p-3 border-t border-[var(--color-border)] text-[11px] text-[var(--color-text-muted)]">
             <span>Showing 3 of 48 online players</span>
-            <Button variant="link" size="sm" rightIcon={ArrowRight}>
+            <Button variant="text" size="sm" rightIcon={ArrowRight}>
               View all players
             </Button>
           </div>
@@ -1300,7 +1300,7 @@ export function ServerManager() {
                     <div className="font-medium text-[var(--color-text-main)]">{item.name}</div>
                     <div className="text-[10px] text-[var(--color-text-muted)]">{item.date}</div>
                   </div>
-                  <Button variant="link-danger" size="sm">
+                  <Button variant="text" destructive size="sm">
                     Remove
                   </Button>
                 </div>
@@ -1335,7 +1335,7 @@ export function ServerManager() {
                   8
                 </span>
               </div>
-              <Button variant="link" size="sm" rightIcon={ArrowUpRight}>
+              <Button variant="text" size="sm" rightIcon={ArrowUpRight}>
                 View ban history
               </Button>
             </div>
@@ -1349,7 +1349,7 @@ export function ServerManager() {
                       Expires: {ban.expires}
                     </div>
                   </div>
-                  <Button variant="link" size="sm">
+                  <Button variant="text" size="sm">
                     Unban
                   </Button>
                 </div>
@@ -1372,7 +1372,7 @@ export function ServerManager() {
                   <option value="7 days">7 days</option>
                   <option value="Permanent">Permanent</option>
                 </select>
-                <Button variant="danger" size="sm">
+                <Button variant="secondary" destructive size="sm">
                   Ban player
                 </Button>
               </div>
@@ -1493,7 +1493,7 @@ export function ServerManager() {
               </tbody>
             </table>
             <div className="p-3 border-t border-[var(--color-border)] text-center text-xs">
-              <Button variant="link" size="sm" rightIcon={ArrowRight}>
+              <Button variant="text" size="sm" rightIcon={ArrowRight}>
                 Show all 12 mods
               </Button>
             </div>
@@ -1817,11 +1817,11 @@ export function ServerManager() {
                     <td className="p-3 font-mono text-[var(--color-text-muted)]">{b.size}</td>
                     <td className="p-3 pr-4 text-right">
                       <div className="flex items-center justify-end gap-2 text-[11px]">
-                        <Button variant="link" size="sm">
+                        <Button variant="text" size="sm">
                           Download
                         </Button>
                         <span className="text-[var(--color-border)]">·</span>
-                        <Button variant="link-warning" size="sm">
+                        <Button variant="text" size="sm">
                           Restore
                         </Button>
                       </div>
@@ -1833,7 +1833,7 @@ export function ServerManager() {
 
             <div className="p-3 border-t border-[var(--color-border)] flex items-center justify-between text-xs text-[var(--color-text-muted)]">
               <span>14 backups · 66.2 MB of 5 GB used</span>
-              <Button variant="link" size="sm" rightIcon={ArrowRight}>
+              <Button variant="text" size="sm" rightIcon={ArrowRight}>
                 View full history
               </Button>
             </div>
@@ -2000,13 +2000,13 @@ export function ServerManager() {
                   <td className="p-3 pr-4 text-right">
                     <div className="flex items-center justify-end gap-1.5">
                       <Button
-                        size="icon-sm"
+                        size="sm"
                         variant="ghost"
                         aria-label={`Run ${task.title} now`}
                         leftIcon={Play}
                       />
                       <Button
-                        size="icon-sm"
+                        size="sm"
                         variant="ghost"
                         aria-label={`Edit ${task.title}`}
                         leftIcon={Settings}

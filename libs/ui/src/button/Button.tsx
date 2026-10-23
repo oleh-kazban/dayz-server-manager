@@ -1,107 +1,142 @@
 import {
   type ButtonHTMLAttributes,
-  type ElementType,
+  Children,
+  cloneElement,
+  type ComponentType,
   isValidElement,
-  type ReactNode,
+  type ReactElement,
   type Ref,
 } from 'react';
 
 import { Loader2, type LucideIcon } from 'lucide-react';
 
-export type ButtonVariant =
-  | 'primary'
-  | 'secondary'
-  | 'subtle'
-  | 'ghost'
-  | 'danger'
-  | 'danger-solid'
-  | 'link'
-  | 'link-danger'
-  | 'link-warning'
-  | 'link-muted';
+export type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'text';
 
-export type ButtonSize = 'sm' | 'md' | 'lg' | 'icon-sm' | 'icon' | 'icon-lg';
+export type ButtonSize = 'sm' | 'md' | 'lg';
 
-export type ButtonIcon = LucideIcon | ElementType | ReactNode;
+export type ButtonIcon =
+  | LucideIcon
+  | ComponentType<{ className?: string; 'aria-hidden'?: boolean | 'true' | 'false' }>
+  | ReactElement;
 
 export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
+  /**
+   * Visual style variant of the button.
+   * @default 'secondary'
+   */
   variant?: ButtonVariant;
+
+  /**
+   * Dimensional scale (sm: 32px, md: 36px, lg: 40px).
+   * @default 'md'
+   */
   size?: ButtonSize;
+
+  /**
+   * Applies destructive/danger styling across all variants.
+   * @default false
+   */
+  destructive?: boolean;
+
+  /** Leading icon or component */
   leftIcon?: ButtonIcon;
+
+  /** Trailing icon or component */
   rightIcon?: ButtonIcon;
-  badge?: ReactNode;
+
+  /** Force square icon-only button aspect ratio (auto-detected if no children) */
+  isIconOnly?: boolean;
+
+  /** Displays a loading spinner and disables user interaction */
   isLoading?: boolean;
+
+  /** Expands the button to 100% of the parent container's width */
   fullWidth?: boolean;
 }
 
-const VARIANT_CLASSES: Record<ButtonVariant, string> = {
-  primary:
-    'bg-[var(--color-primary)] text-white hover:bg-[var(--color-primary-hover)] active:opacity-95 shadow-sm border border-transparent',
-  secondary:
-    'border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-hover)] hover:text-[var(--color-text-main)] active:bg-[var(--color-surface-subtle)] shadow-sm',
-  subtle:
-    'border border-[var(--color-primary-border)] bg-[var(--color-primary-light)] text-[var(--color-primary)] hover:opacity-95 shadow-sm font-semibold',
-  ghost:
-    'border border-transparent bg-transparent text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-hover)] hover:text-[var(--color-text-main)] active:bg-[var(--color-surface-subtle)]',
-  danger:
-    'border border-[var(--color-status-danger-border)] bg-[var(--color-surface)] text-[var(--color-status-danger)] hover:bg-[var(--color-status-danger-light)] active:opacity-90 shadow-sm',
-  'danger-solid':
-    'bg-[var(--color-status-danger)] text-white hover:opacity-90 active:opacity-95 shadow-sm border border-transparent',
-  link: 'border-0 bg-transparent text-[var(--color-primary)] hover:underline active:opacity-80 p-0 h-auto font-medium shadow-none focus-visible:ring-1',
-  'link-danger':
-    'border-0 bg-transparent text-rose-600 dark:text-rose-400 hover:underline active:opacity-80 p-0 h-auto font-medium shadow-none focus-visible:ring-1',
-  'link-warning':
-    'border-0 bg-transparent text-amber-600 dark:text-amber-400 hover:underline active:opacity-80 p-0 h-auto font-medium shadow-none focus-visible:ring-1',
-  'link-muted':
-    'border-0 bg-transparent text-[var(--color-text-muted)] hover:text-[var(--color-text-main)] hover:underline active:opacity-80 p-0 h-auto font-medium shadow-none focus-visible:ring-1',
+/* --------------------------------------------------------------------------
+   STYLE CONFIGURATIONS (100% CSS Variable Tokens)
+   -------------------------------------------------------------------------- */
+
+const VARIANT_CLASSES: Record<ButtonVariant, { standard: string; destructive: string }> = {
+  primary: {
+    standard:
+      'bg-[var(--color-primary)] text-[var(--color-primary-fg)] enabled:hover:bg-[var(--color-primary-hover)] enabled:active:opacity-95 shadow-xs border border-transparent focus-visible:ring-[var(--color-primary)]',
+    destructive:
+      'bg-[var(--color-status-danger)] text-[var(--color-status-danger-fg)] enabled:hover:opacity-90 enabled:active:opacity-95 shadow-xs border border-transparent focus-visible:ring-[var(--color-status-danger)]',
+  },
+  secondary: {
+    standard:
+      'border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text-secondary)] enabled:hover:bg-[var(--color-surface-hover)] enabled:hover:text-[var(--color-text-main)] enabled:active:bg-[var(--color-surface-subtle)] shadow-xs focus-visible:ring-[var(--color-primary)]',
+    destructive:
+      'border border-[var(--color-status-danger-border)] bg-[var(--color-surface)] text-[var(--color-status-danger)] enabled:hover:bg-[var(--color-status-danger-light)] enabled:active:opacity-90 shadow-xs focus-visible:ring-[var(--color-status-danger)]',
+  },
+  ghost: {
+    standard:
+      'border border-transparent bg-transparent text-[var(--color-text-secondary)] enabled:hover:bg-[var(--color-surface-hover)] enabled:hover:text-[var(--color-text-main)] enabled:active:bg-[var(--color-surface-subtle)] focus-visible:ring-[var(--color-primary)]',
+    destructive:
+      'border border-transparent bg-transparent text-[var(--color-status-danger)] enabled:hover:bg-[var(--color-status-danger-light)] enabled:active:opacity-90 focus-visible:ring-[var(--color-status-danger)]',
+  },
+  text: {
+    standard:
+      'border-0 bg-transparent text-[var(--color-primary)] enabled:hover:underline enabled:active:opacity-80 p-0 h-auto font-medium shadow-none focus-visible:ring-1 focus-visible:ring-[var(--color-primary)]',
+    destructive:
+      'border-0 bg-transparent text-[var(--color-status-danger)] enabled:hover:underline enabled:active:opacity-80 p-0 h-auto font-medium shadow-none focus-visible:ring-1 focus-visible:ring-[var(--color-status-danger)]',
+  },
 };
 
 const SIZE_CLASSES: Record<ButtonSize, string> = {
-  sm: 'h-8 px-2.5 py-1 text-xs gap-1.5 rounded-lg',
-  md: 'h-9 px-3.5 py-2 text-xs gap-2 rounded-lg font-medium',
-  lg: 'h-10 px-4 py-2.5 text-sm gap-2.5 rounded-xl font-medium',
-  'icon-sm': 'h-7 w-7 p-1 rounded-md text-xs justify-center shrink-0',
-  icon: 'h-8 w-8 p-1.5 rounded-lg text-xs justify-center shrink-0',
-  'icon-lg': 'h-9 w-9 p-2 rounded-lg text-sm justify-center shrink-0',
+  sm: 'h-8 px-2.5 py-1 text-xs gap-1.5 rounded-lg font-medium',
+  md: 'h-9 px-3.5 py-1.5 text-xs gap-2 rounded-lg font-medium',
+  lg: 'h-10 px-4 py-2 text-sm gap-2.5 rounded-xl font-medium',
 };
 
-const LINK_SIZE_CLASSES: Record<ButtonSize, string> = {
-  sm: 'text-[11px] gap-1',
-  md: 'text-xs gap-1.5',
-  lg: 'text-sm gap-2',
-  'icon-sm': 'text-[11px] gap-1',
-  icon: 'text-xs gap-1.5',
-  'icon-lg': 'text-sm gap-2',
+const ICON_ONLY_CLASSES: Record<ButtonSize, string> = {
+  sm: 'h-8 w-8 p-0 rounded-lg justify-center shrink-0',
+  md: 'h-9 w-9 p-0 rounded-lg justify-center shrink-0',
+  lg: 'h-10 w-10 p-0 rounded-xl justify-center shrink-0',
+};
+
+const TEXT_SIZE_CLASSES: Record<ButtonSize, string> = {
+  sm: 'text-xs gap-1 font-medium',
+  md: 'text-xs gap-1.5 font-medium',
+  lg: 'text-sm gap-2 font-medium',
 };
 
 const ICON_SIZE_CLASSES: Record<ButtonSize, string> = {
   sm: 'w-3.5 h-3.5 shrink-0',
-  md: 'w-3.5 h-3.5 shrink-0',
+  md: 'w-4 h-4 shrink-0',
   lg: 'w-4 h-4 shrink-0',
-  'icon-sm': 'w-3.5 h-3.5 shrink-0',
-  icon: 'w-3.5 h-3.5 shrink-0',
-  'icon-lg': 'w-4 h-4 shrink-0',
 };
 
 function renderIcon(icon: ButtonIcon | undefined, size: ButtonSize) {
   if (!icon) return null;
 
   if (isValidElement(icon)) {
-    return icon;
+    const element = icon as ReactElement<{ className?: string; 'aria-hidden'?: boolean }>;
+    return cloneElement(element, {
+      className: `${ICON_SIZE_CLASSES[size]} ${element.props.className ?? ''}`.trim(),
+      'aria-hidden': true,
+    });
   }
 
-  const IconComponent = icon as ElementType;
-  return <IconComponent className={ICON_SIZE_CLASSES[size]} aria-hidden="true" />;
+  const IconComponent = icon as ComponentType<{ className?: string; 'aria-hidden'?: boolean }>;
+  return <IconComponent className={ICON_SIZE_CLASSES[size]} aria-hidden={true} />;
 }
+
+/* --------------------------------------------------------------------------
+   BUTTON COMPONENT
+   -------------------------------------------------------------------------- */
 
 export function Button({
   ref,
   type = 'button',
   variant = 'secondary',
   size = 'md',
+  destructive = false,
   leftIcon,
   rightIcon,
-  badge,
+  isIconOnly: explicitIconOnly,
   isLoading = false,
   fullWidth = false,
   disabled = false,
@@ -110,8 +145,36 @@ export function Button({
   ...props
 }: ButtonProps & { ref?: Ref<HTMLButtonElement> }) {
   const isButtonDisabled = disabled || isLoading;
-  const isLink = variant.startsWith('link');
-  const sizeClass = isLink ? LINK_SIZE_CLASSES[size] : SIZE_CLASSES[size];
+  const isText = variant === 'text';
+
+  // React renders booleans, null, and undefined as nothing.
+  // Use React.Children.toArray which automatically strips booleans, null, and undefined,
+  // then filter out empty strings to detect genuine rendered content (e.g. preserves 0 and non-empty strings/elements).
+  const renderedChildren = Children.toArray(children).filter(
+    child => child !== '' && typeof child !== 'boolean',
+  );
+  const hasChildren = renderedChildren.length > 0;
+
+  // Automatically determine if the button is icon-only (when no content children provided).
+  // The text variant is an inline hyperlink action, so isIconOnly does not apply to it.
+  const isIconOnly =
+    !isText && (explicitIconOnly ?? (!hasChildren && Boolean(leftIcon || rightIcon)));
+
+  let dimensionClass = SIZE_CLASSES[size];
+  if (isText) {
+    dimensionClass = TEXT_SIZE_CLASSES[size];
+  } else if (isIconOnly) {
+    dimensionClass = ICON_ONLY_CLASSES[size];
+  }
+
+  let alignmentClass = '';
+  if (fullWidth) {
+    alignmentClass = 'w-full justify-center';
+  } else if (isIconOnly) {
+    alignmentClass = 'justify-center';
+  }
+
+  const variantStyle = VARIANT_CLASSES[variant][destructive ? 'destructive' : 'standard'];
 
   return (
     <button
@@ -121,9 +184,7 @@ export function Button({
       disabled={isButtonDisabled}
       aria-busy={isLoading}
       aria-disabled={isButtonDisabled}
-      className={`inline-flex items-center select-none transition-colors duration-150 cursor-pointer disabled:cursor-not-allowed disabled:opacity-50 disabled:pointer-events-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)] focus-visible:ring-offset-2 ${
-        fullWidth ? 'w-full justify-center' : 'justify-center'
-      } ${VARIANT_CLASSES[variant]} ${sizeClass} ${className}`}
+      className={`inline-flex items-center select-none transition-colors duration-150 cursor-pointer disabled:cursor-not-allowed disabled:opacity-50 disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-surface)] ${alignmentClass} ${variantStyle} ${dimensionClass} ${className}`.trim()}
     >
       {isLoading ? (
         <Loader2 className={`animate-spin ${ICON_SIZE_CLASSES[size]}`} aria-hidden="true" />
@@ -131,19 +192,7 @@ export function Button({
         renderIcon(leftIcon, size)
       )}
 
-      {children && <span>{children}</span>}
-
-      {badge && (
-        <span
-          className={`inline-flex items-center px-1.5 py-0.2 rounded text-[10px] font-semibold leading-tight ${
-            variant === 'primary' || variant === 'danger-solid'
-              ? 'bg-white/20 text-white'
-              : 'bg-[var(--color-primary)]/15 text-[var(--color-primary)]'
-          }`}
-        >
-          {badge}
-        </span>
-      )}
+      {hasChildren && <span>{children}</span>}
 
       {!isLoading && renderIcon(rightIcon, size)}
     </button>

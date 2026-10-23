@@ -26,10 +26,11 @@
   --color-text-inverse: #ffffff;
 
   /* Primary Brand (Outlive Royal Blue) */
-  --color-primary: #4279e8;
-  --color-primary-hover: #3567d1;
+  --color-primary: #2b66d9;
+  --color-primary-hover: #2252b3;
   --color-primary-light: #edf3ff;
   --color-primary-border: #acc3ef;
+  --color-primary-fg: #ffffff;
 
   /* Status Colors */
   --color-success: #27a88c;
@@ -40,9 +41,10 @@
   --color-warning-light: #fbf4e7;
   --color-warning-border: #e6c88b;
 
-  --color-danger: #e05252;
+  --color-danger: #c92a2a;
   --color-danger-light: #fdeeee;
-  --color-danger-border: #f8b4b4;
+  --color-danger-border: #f3a6a6;
+  --color-danger-fg: #ffffff;
 
   /* Data Visualizations */
   --color-chart-blue: #4279e8;
@@ -84,9 +86,10 @@
 
   /* Primary Brand */
   --color-primary: #558bf2;
-  --color-primary-hover: #4279e8;
+  --color-primary-hover: #6ba0ff;
   --color-primary-light: rgba(66, 121, 232, 0.15);
   --color-primary-border: #2c4a87;
+  --color-primary-fg: #090d12;
 
   /* Status Colors */
   --color-success: #31ba9b;
@@ -100,6 +103,7 @@
   --color-danger: #ea6464;
   --color-danger-light: rgba(224, 82, 82, 0.16);
   --color-danger-border: #8b3232;
+  --color-danger-fg: #090d12;
 
   /* Visualizations */
   --color-chart-blue: #558bf2;
@@ -143,10 +147,11 @@
   --color-text-inverse: #232529;
 
   /* Primary Brand */
-  --color-primary: #4d90fe;
-  --color-primary-hover: #357ae8;
-  --color-primary-light: rgba(77, 144, 254, 0.15);
+  --color-primary: #5696ff;
+  --color-primary-hover: #6aa5ff;
+  --color-primary-light: rgba(86, 150, 255, 0.15);
   --color-primary-border: #2f5496;
+  --color-primary-fg: #1e2022;
 
   /* Status Colors */
   --color-success: #629755;
@@ -157,9 +162,10 @@
   --color-warning-light: rgba(204, 120, 50, 0.15);
   --color-warning-border: #804a1e;
 
-  --color-danger: #cc666e;
-  --color-danger-light: rgba(204, 102, 110, 0.15);
+  --color-danger: #ea7a83;
+  --color-danger-light: rgba(234, 122, 131, 0.15);
   --color-danger-border: #803e43;
+  --color-danger-fg: #1e2022;
 
   /* Visualizations */
   --color-chart-blue: #4d90fe;
@@ -203,10 +209,11 @@
   --color-text-inverse: #121212;
 
   /* Primary Brand (Muted Blue-Grey) */
-  --color-primary: #6b7a8f;
-  --color-primary-hover: #8292a8;
-  --color-primary-light: rgba(107, 122, 143, 0.15);
-  --color-primary-border: #3e4856;
+  --color-primary: #8a99ad;
+  --color-primary-hover: #9eacc0;
+  --color-primary-light: rgba(138, 153, 173, 0.15);
+  --color-primary-border: #4a5768;
+  --color-primary-fg: #121212;
 
   /* Status Colors (Desaturated) */
   --color-success: #5e8a6e;
@@ -217,9 +224,10 @@
   --color-warning-light: rgba(166, 138, 92, 0.15);
   --color-warning-border: #635236;
 
-  --color-danger: #a65c5c;
-  --color-danger-light: rgba(166, 92, 92, 0.15);
-  --color-danger-border: #663838;
+  --color-danger: #de7272;
+  --color-danger-light: rgba(222, 114, 114, 0.15);
+  --color-danger-border: #804040;
+  --color-danger-fg: #121212;
 
   /* Visualizations */
   --color-chart-blue: #6b7a8f;
@@ -267,6 +275,7 @@
   --color-primary-hover: #8db0f8;
   --color-primary-light: rgba(122, 162, 247, 0.15);
   --color-primary-border: #3d59a1;
+  --color-primary-fg: #16161e;
 
   /* Status Colors */
   --color-success: #9ece6a;
@@ -280,6 +289,7 @@
   --color-danger: #f7768e;
   --color-danger-light: rgba(247, 118, 142, 0.15);
   --color-danger-border: #a33b52;
+  --color-danger-fg: #16161e;
 
   /* Visualizations */
   --color-chart-blue: #7aa2f7;
@@ -341,6 +351,7 @@
   /* Lavender */
   --color-primary-light: rgba(137, 180, 250, 0.15);
   --color-primary-border: #4a679e;
+  --color-primary-fg: #11111b;
 
   /* Status Colors */
   --color-success: #a6e3a1;
@@ -357,6 +368,7 @@
   /* Red */
   --color-danger-light: rgba(243, 139, 168, 0.15);
   --color-danger-border: #9e4b61;
+  --color-danger-fg: #11111b;
 
   /* Visualizations */
   --color-chart-blue: #89b4fa;
@@ -401,6 +413,7 @@
   --color-primary-hover: #285fa8;
   --color-primary-light: #eaf2fc;
   --color-primary-border: #a9c5e8;
+  --color-primary-fg: #ffffff;
 
   --color-success: #43834d;
   --color-success-light: #eaf5eb;
@@ -411,6 +424,7 @@
   --color-danger: #c44750;
   --color-danger-light: #fcecee;
   --color-danger-border: #e9afb4;
+  --color-danger-fg: #ffffff;
 
   --color-chart-blue: #3574c8;
   --color-chart-teal: #398f82;
@@ -449,6 +463,7 @@
   --color-primary-hover: #46586d;
   --color-primary-light: #e9edf2;
   --color-primary-border: #b5c0cc;
+  --color-primary-fg: #ffffff;
 
   --color-success: #47765a;
   --color-success-light: #eaf2ed;
@@ -459,6 +474,7 @@
   --color-danger: #a94f4f;
   --color-danger-light: #f8ebeb;
   --color-danger-border: #dfb1b1;
+  --color-danger-fg: #ffffff;
 
   --color-chart-blue: #596b80;
   --color-chart-teal: #4f8276;
@@ -497,6 +513,7 @@
   --color-primary-hover: #3b55ac;
   --color-primary-light: #e9edff;
   --color-primary-border: #b1bff0;
+  --color-primary-fg: #ffffff;
 
   --color-success: #43835e;
   --color-success-light: #e9f5ed;
@@ -507,6 +524,7 @@
   --color-danger: #c04465;
   --color-danger-light: #fceaf0;
   --color-danger-border: #e9b1c1;
+  --color-danger-fg: #ffffff;
 
   --color-chart-blue: #4b68c8;
   --color-chart-teal: #368f91;
@@ -545,6 +563,7 @@
   --color-primary-hover: #485ca8;
   --color-primary-light: #e8eaff;
   --color-primary-border: #b9c2ee;
+  --color-primary-fg: #ffffff;
 
   --color-success: #40805c;
   --color-success-light: #e5f4e9;
@@ -555,6 +574,7 @@
   --color-danger: #c04462;
   --color-danger-light: #fce9ef;
   --color-danger-border: #e7afbd;
+  --color-danger-fg: #ffffff;
 
   --color-chart-blue: #7287d8;
   --color-chart-teal: #278f8b;

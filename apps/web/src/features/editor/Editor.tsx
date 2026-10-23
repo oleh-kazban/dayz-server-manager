@@ -448,7 +448,7 @@ export function Editor() {
 
             {/* Column Switcher Trigger Button */}
             <div className="shrink-0 flex items-center justify-end">
-              <Button variant="subtle" leftIcon={Columns3} badge="9 of 12" rightIcon={ChevronDown}>
+              <Button variant="secondary" leftIcon={Columns3} rightIcon={ChevronDown}>
                 Columns
               </Button>
             </div>
@@ -467,20 +467,10 @@ export function Editor() {
             <div className="flex items-center gap-1.5">
               <span className="text-[11px]">Density</span>
               <div className="flex items-center rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] p-0.5">
-                <Button
-                  size="icon-sm"
-                  variant="secondary"
-                  aria-label="Compact view"
-                  className="rounded"
-                >
+                <Button size="sm" variant="secondary" aria-label="Compact view" className="rounded">
                   <List className="w-3 h-3" />
                 </Button>
-                <Button
-                  size="icon-sm"
-                  variant="ghost"
-                  aria-label="Expanded view"
-                  className="rounded"
-                >
+                <Button size="sm" variant="ghost" aria-label="Expanded view" className="rounded">
                   <LayoutGrid className="w-3 h-3" />
                 </Button>
               </div>
@@ -508,7 +498,7 @@ export function Editor() {
               <Button variant="secondary" size="sm" leftIcon={Copy}>
                 Duplicate
               </Button>
-              <Button variant="danger" size="sm" leftIcon={Trash2}>
+              <Button variant="secondary" destructive size="sm" leftIcon={Trash2}>
                 Delete
               </Button>
               <Button variant="ghost" size="sm">
@@ -676,19 +666,19 @@ export function Editor() {
                       <td className="p-3 pr-4 text-right">
                         <div className="flex items-center justify-end gap-1">
                           <Button
-                            size="icon-sm"
+                            size="sm"
                             variant="ghost"
                             aria-label={`Edit ${item.classname}`}
                             leftIcon={SquarePen}
                           />
                           <Button
-                            size="icon-sm"
+                            size="sm"
                             variant="ghost"
                             aria-label={`Duplicate ${item.classname}`}
                             leftIcon={Copy}
                           />
                           <Button
-                            size="icon-sm"
+                            size="sm"
                             variant="ghost"
                             aria-label={`More options for ${item.classname}`}
                             leftIcon={MoreHorizontal}
@@ -769,10 +759,10 @@ export function Editor() {
 
               {/* Footer Actions */}
               <div className="flex items-center justify-between pt-2 border-t border-[var(--color-border)] text-[11px]">
-                <Button variant="link" size="sm">
+                <Button variant="text" size="sm">
                   Show all
                 </Button>
-                <Button variant="link-muted" size="sm">
+                <Button variant="text" size="sm">
                   Reset to default
                 </Button>
               </div>
@@ -804,45 +794,30 @@ export function Editor() {
               <div className="h-4 w-px bg-[var(--color-border)]" />
 
               <div className="flex items-center gap-1">
+                <Button size="sm" variant="ghost" aria-label="First page" leftIcon={ChevronsLeft} />
                 <Button
-                  size="icon-sm"
-                  variant="ghost"
-                  aria-label="First page"
-                  leftIcon={ChevronsLeft}
-                />
-                <Button
-                  size="icon-sm"
+                  size="sm"
                   variant="ghost"
                   aria-label="Previous page"
                   leftIcon={ChevronLeft}
                 />
 
-                <Button size="icon-sm" variant="subtle" aria-label="Page 1" aria-current="page">
+                <Button size="sm" variant="secondary" aria-label="Page 1" aria-current="page">
                   1
                 </Button>
-                <Button size="icon-sm" variant="ghost" aria-label="Page 2">
+                <Button size="sm" variant="ghost" aria-label="Page 2">
                   2
                 </Button>
-                <Button size="icon-sm" variant="ghost" aria-label="Page 3">
+                <Button size="sm" variant="ghost" aria-label="Page 3">
                   3
                 </Button>
                 <span className="px-1 text-[var(--color-text-muted)] select-none">…</span>
-                <Button size="icon-sm" variant="ghost" aria-label="Page 84">
+                <Button size="sm" variant="ghost" aria-label="Page 84">
                   84
                 </Button>
 
-                <Button
-                  size="icon-sm"
-                  variant="ghost"
-                  aria-label="Next page"
-                  leftIcon={ChevronRight}
-                />
-                <Button
-                  size="icon-sm"
-                  variant="ghost"
-                  aria-label="Last page"
-                  leftIcon={ChevronsRight}
-                />
+                <Button size="sm" variant="ghost" aria-label="Next page" leftIcon={ChevronRight} />
+                <Button size="sm" variant="ghost" aria-label="Last page" leftIcon={ChevronsRight} />
               </div>
             </div>
           </div>

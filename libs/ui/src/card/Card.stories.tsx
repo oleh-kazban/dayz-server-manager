@@ -222,7 +222,7 @@ export const InstalledModsShowcase: Story = {
       <Card
         title="Installed mods"
         actions={
-          <Button variant="link" size="sm" rightIcon={ArrowUpRight}>
+          <Button variant="text" size="sm" rightIcon={ArrowUpRight}>
             Manage
           </Button>
         }

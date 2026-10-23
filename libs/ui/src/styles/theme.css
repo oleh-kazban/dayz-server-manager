@@ -25,6 +25,7 @@
   --color-primary-hover: var(--color-primary-hover);
   --color-primary-light: var(--color-primary-light);
   --color-primary-border: var(--color-primary-border);
+  --color-primary-fg: var(--color-primary-fg);
 
   --color-status-success: var(--color-success);
   --color-status-success-light: var(--color-success-light);
@@ -35,6 +36,7 @@
   --color-status-danger: var(--color-danger);
   --color-status-danger-light: var(--color-danger-light);
   --color-status-danger-border: var(--color-danger-border);
+  --color-status-danger-fg: var(--color-danger-fg);
 
   --color-chart-blue: var(--color-chart-blue);
   --color-chart-teal: var(--color-chart-teal);

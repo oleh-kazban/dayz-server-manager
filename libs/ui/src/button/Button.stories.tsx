@@ -29,24 +29,17 @@ const meta: Meta<typeof Button> = {
   argTypes: {
     variant: {
       control: 'select',
-      options: [
-        'primary',
-        'secondary',
-        'subtle',
-        'ghost',
-        'danger',
-        'danger-solid',
-        'link',
-        'link-danger',
-        'link-warning',
-        'link-muted',
-      ],
+      options: ['primary', 'secondary', 'ghost', 'text'],
       description: 'Visual stylistic variant of the button',
     },
     size: {
       control: 'select',
-      options: ['sm', 'md', 'lg', 'icon-sm', 'icon', 'icon-lg'],
-      description: 'Physical dimension and padding scale',
+      options: ['sm', 'md', 'lg'],
+      description: 'Physical dimension and padding scale (sm: 32px, md: 36px, lg: 40px)',
+    },
+    destructive: {
+      control: 'boolean',
+      description: 'Applies destructive/danger styling across any variant',
     },
     isLoading: {
       control: 'boolean',
@@ -87,16 +80,6 @@ export const Secondary: Story = {
   },
 };
 
-export const SubtleWithBadge: Story = {
-  args: {
-    variant: 'subtle',
-    children: 'Columns',
-    leftIcon: Columns3,
-    badge: '9 of 12',
-    rightIcon: ChevronDown,
-  },
-};
-
 export const Ghost: Story = {
   args: {
     variant: 'ghost',
@@ -104,10 +87,19 @@ export const Ghost: Story = {
   },
 };
 
-export const Danger: Story = {
+export const Text: Story = {
   args: {
-    variant: 'danger',
-    children: 'Delete',
+    variant: 'text',
+    children: 'View all players',
+    rightIcon: ArrowRight,
+  },
+};
+
+export const Destructive: Story = {
+  args: {
+    variant: 'primary',
+    destructive: true,
+    children: 'Halt server',
     leftIcon: Trash2,
   },
 };
@@ -121,57 +113,219 @@ export const Loading: Story = {
 };
 
 /* ====================================================================
-   COMPREHENSIVE VARIANTS GALLERY
+   COMPREHENSIVE VARIANTS & DESTRUCTIVE GALLERY
+   ==================================================================== */
+
+export const Disabled: Story = {
+  args: {
+    variant: 'primary',
+    disabled: true,
+    children: 'Disabled action',
+    leftIcon: Plus,
+  },
+};
+
+export const IconButton: Story = {
+  args: {
+    variant: 'secondary',
+    size: 'md',
+    leftIcon: Settings,
+    'aria-label': 'Server settings',
+  },
+};
+
+/* ====================================================================
+   COMPREHENSIVE VARIANTS & DESTRUCTIVE GALLERY
    ==================================================================== */
 
 export const AllVariants: Story = {
-  render: () => (
-    <div className="flex flex-wrap items-center gap-3 p-4">
-      <Button variant="primary" leftIcon={Plus}>
-        Primary
-      </Button>
-      <Button variant="secondary" leftIcon={Upload}>
-        Secondary
-      </Button>
-      <Button variant="subtle" leftIcon={Columns3} badge="9 of 12" rightIcon={ChevronDown}>
-        Subtle
-      </Button>
-      <Button variant="ghost">Ghost</Button>
-      <Button variant="danger" leftIcon={Trash2}>
-        Danger
-      </Button>
-      <Button variant="danger-solid" leftIcon={Trash2}>
-        Danger Solid
-      </Button>
+  parameters: {
+    controls: { include: ['disabled', 'isLoading'] },
+  },
+  render: args => (
+    <div className="space-y-6 p-6 max-w-2xl">
+      <div>
+        <h4 className="text-xs font-semibold text-[var(--color-text-muted)] uppercase mb-3">
+          Standard Variants {args.disabled ? '(Disabled State)' : ''}
+        </h4>
+        <div className="flex flex-wrap items-center gap-3">
+          <Button {...args} variant="primary" leftIcon={Plus}>
+            Primary
+          </Button>
+          <Button {...args} variant="secondary" leftIcon={Upload}>
+            Secondary
+          </Button>
+          <Button {...args} variant="ghost">
+            Ghost
+          </Button>
+          <Button {...args} variant="text" rightIcon={ArrowRight}>
+            Text Action
+          </Button>
+        </div>
+      </div>
+
+      <div>
+        <h4 className="text-xs font-semibold text-[var(--color-text-muted)] uppercase mb-3">
+          Destructive Modifier (destructive: true) {args.disabled ? '(Disabled State)' : ''}
+        </h4>
+        <div className="flex flex-wrap items-center gap-3">
+          <Button {...args} variant="primary" destructive leftIcon={Trash2}>
+            Primary Destructive
+          </Button>
+          <Button {...args} variant="secondary" destructive leftIcon={Trash2}>
+            Secondary Destructive
+          </Button>
+          <Button {...args} variant="ghost" destructive leftIcon={Trash2}>
+            Ghost Destructive
+          </Button>
+          <Button {...args} variant="text" destructive>
+            Text Destructive (Kick)
+          </Button>
+        </div>
+      </div>
+
+      <div>
+        <h4 className="text-xs font-semibold text-[var(--color-text-muted)] uppercase mb-3">
+          Explicit Disabled Comparison (Static)
+        </h4>
+        <div className="flex flex-wrap items-center gap-3">
+          <Button variant="primary" disabled leftIcon={Plus}>
+            Primary Disabled
+          </Button>
+          <Button variant="secondary" disabled leftIcon={Upload}>
+            Secondary Disabled
+          </Button>
+          <Button variant="ghost" disabled>
+            Ghost Disabled
+          </Button>
+          <Button variant="text" disabled rightIcon={ArrowRight}>
+            Text Disabled
+          </Button>
+          <Button variant="primary" destructive disabled leftIcon={Trash2}>
+            Destructive Disabled
+          </Button>
+        </div>
+      </div>
     </div>
   ),
 };
 
+/* ====================================================================
+   ALL SIZES & ICON BUTTONS (Unified Rhythm: 32px / 36px / 40px)
+   ==================================================================== */
+
 export const AllSizes: Story = {
-  render: () => (
-    <div className="flex flex-col gap-4 p-4">
-      <div className="flex items-center gap-3">
-        <Button size="sm" variant="secondary" leftIcon={Download}>
-          Small (h-8)
-        </Button>
-        <Button size="md" variant="secondary" leftIcon={Download}>
-          Medium (h-9)
-        </Button>
-        <Button size="lg" variant="secondary" leftIcon={Download}>
-          Large (h-10)
-        </Button>
+  parameters: {
+    controls: { include: ['disabled', 'isLoading'] },
+  },
+  render: args => (
+    <div className="flex flex-col gap-6 p-6">
+      <div>
+        <h4 className="text-xs font-semibold text-[var(--color-text-muted)] uppercase mb-3">
+          Standard Buttons (Text + Icon) {args.disabled ? '(Disabled State)' : ''}
+        </h4>
+        <div className="flex items-center gap-3">
+          <Button
+            size="sm"
+            variant="secondary"
+            disabled={args.disabled}
+            isLoading={args.isLoading}
+            leftIcon={Download}
+          >
+            Small (h-8 / 32px)
+          </Button>
+          <Button
+            size="md"
+            variant="secondary"
+            disabled={args.disabled}
+            isLoading={args.isLoading}
+            leftIcon={Download}
+          >
+            Medium (h-9 / 36px)
+          </Button>
+          <Button
+            size="lg"
+            variant="secondary"
+            disabled={args.disabled}
+            isLoading={args.isLoading}
+            leftIcon={Download}
+          >
+            Large (h-10 / 40px)
+          </Button>
+        </div>
       </div>
 
-      <div className="flex items-center gap-3">
-        <Button size="icon-sm" variant="secondary" aria-label="List view">
-          <List className="w-3 h-3" />
-        </Button>
-        <Button size="icon" variant="secondary" aria-label="Grid view">
-          <LayoutGrid className="w-3.5 h-3.5" />
-        </Button>
-        <Button size="icon-lg" variant="secondary" aria-label="Columns view">
-          <Columns3 className="w-4 h-4" />
-        </Button>
+      <div>
+        <h4 className="text-xs font-semibold text-[var(--color-text-muted)] uppercase mb-3">
+          Square Icon Buttons (Auto-detected or isIconOnly)
+        </h4>
+        <div className="flex items-center gap-3">
+          <Button
+            size="sm"
+            variant="secondary"
+            disabled={args.disabled}
+            isLoading={args.isLoading}
+            leftIcon={List}
+            aria-label="List view"
+          />
+          <Button
+            size="md"
+            variant="secondary"
+            disabled={args.disabled}
+            isLoading={args.isLoading}
+            leftIcon={LayoutGrid}
+            aria-label="Grid view"
+          />
+          <Button
+            size="lg"
+            variant="secondary"
+            disabled={args.disabled}
+            isLoading={args.isLoading}
+            leftIcon={Columns3}
+            aria-label="Columns view"
+          />
+        </div>
+      </div>
+
+      <div>
+        <h4 className="text-xs font-semibold text-[var(--color-text-muted)] uppercase mb-3">
+          Ghost Icon Triggers
+        </h4>
+        <div className="flex items-center gap-3">
+          <Button
+            size="sm"
+            variant="ghost"
+            disabled={args.disabled}
+            isLoading={args.isLoading}
+            leftIcon={SquarePen}
+            aria-label="Edit"
+          />
+          <Button
+            size="sm"
+            variant="ghost"
+            disabled={args.disabled}
+            isLoading={args.isLoading}
+            leftIcon={Copy}
+            aria-label="Duplicate"
+          />
+          <Button
+            size="sm"
+            variant="ghost"
+            destructive
+            disabled={args.disabled}
+            isLoading={args.isLoading}
+            leftIcon={Trash2}
+            aria-label="Delete"
+          />
+          <Button
+            size="sm"
+            variant="ghost"
+            disabled={args.disabled}
+            isLoading={args.isLoading}
+            leftIcon={MoreHorizontal}
+            aria-label="More"
+          />
+        </div>
       </div>
     </div>
   ),
@@ -183,7 +337,10 @@ export const AllSizes: Story = {
 
 export const FigmaToolbarShowcase: Story = {
   name: 'Figma Toolbar & Selection Bar',
-  render: () => (
+  parameters: {
+    controls: { include: ['disabled', 'isLoading'] },
+  },
+  render: args => (
     <div className="space-y-6 w-full max-w-4xl p-6 rounded-2xl border border-[var(--color-border)] bg-[var(--color-canvas)]">
       {/* Top action row */}
       <div className="flex items-center justify-between border-b border-[var(--color-border)] pb-4">
@@ -191,10 +348,20 @@ export const FigmaToolbarShowcase: Story = {
           Table Action Bar
         </span>
         <div className="flex items-center gap-2.5">
-          <Button variant="secondary" leftIcon={Upload}>
+          <Button
+            variant="secondary"
+            disabled={args.disabled}
+            isLoading={args.isLoading}
+            leftIcon={Upload}
+          >
             Import XML
           </Button>
-          <Button variant="primary" leftIcon={Plus}>
+          <Button
+            variant="primary"
+            disabled={args.disabled}
+            isLoading={args.isLoading}
+            leftIcon={Plus}
+          >
             Add item
           </Button>
         </div>
@@ -203,32 +370,68 @@ export const FigmaToolbarShowcase: Story = {
       {/* Filter and selector row */}
       <div className="flex items-center justify-between gap-3 flex-wrap">
         <div className="flex items-center gap-2 flex-wrap">
-          <Button variant="secondary" rightIcon={ChevronDown}>
+          <Button
+            variant="secondary"
+            disabled={args.disabled}
+            isLoading={args.isLoading}
+            rightIcon={ChevronDown}
+          >
             All categories
           </Button>
-          <Button variant="secondary" rightIcon={ChevronDown}>
+          <Button
+            variant="secondary"
+            disabled={args.disabled}
+            isLoading={args.isLoading}
+            rightIcon={ChevronDown}
+          >
             All usages
           </Button>
-          <Button variant="secondary" rightIcon={ChevronDown}>
+          <Button
+            variant="secondary"
+            disabled={args.disabled}
+            isLoading={args.isLoading}
+            rightIcon={ChevronDown}
+          >
             All statuses
           </Button>
-          <Button variant="secondary" leftIcon={SlidersHorizontal}>
+          <Button
+            variant="secondary"
+            disabled={args.disabled}
+            isLoading={args.isLoading}
+            leftIcon={SlidersHorizontal}
+          >
             More filters
           </Button>
         </div>
 
         <div className="flex items-center gap-3">
-          <Button variant="subtle" leftIcon={Columns3} badge="9 of 12" rightIcon={ChevronDown}>
+          <Button
+            variant="secondary"
+            disabled={args.disabled}
+            isLoading={args.isLoading}
+            leftIcon={Columns3}
+            rightIcon={ChevronDown}
+          >
             Columns
           </Button>
 
           <div className="flex items-center gap-1 border border-[var(--color-border)] rounded-lg p-0.5 bg-[var(--color-surface)]">
-            <Button size="icon-sm" variant="ghost" aria-label="Compact density">
-              <List className="w-3 h-3" />
-            </Button>
-            <Button size="icon-sm" variant="secondary" aria-label="Card density">
-              <LayoutGrid className="w-3 h-3" />
-            </Button>
+            <Button
+              size="sm"
+              variant="ghost"
+              disabled={args.disabled}
+              isLoading={args.isLoading}
+              leftIcon={List}
+              aria-label="Compact density"
+            />
+            <Button
+              size="sm"
+              variant="secondary"
+              disabled={args.disabled}
+              isLoading={args.isLoading}
+              leftIcon={LayoutGrid}
+              aria-label="Card density"
+            />
           </div>
         </div>
       </div>
@@ -238,16 +441,35 @@ export const FigmaToolbarShowcase: Story = {
         <span className="font-semibold">3 items selected</span>
 
         <div className="flex items-center gap-2">
-          <Button variant="secondary" size="sm" leftIcon={SquarePen}>
+          <Button
+            variant="secondary"
+            size="sm"
+            disabled={args.disabled}
+            isLoading={args.isLoading}
+            leftIcon={SquarePen}
+          >
             Bulk edit
           </Button>
-          <Button variant="secondary" size="sm" leftIcon={Copy}>
+          <Button
+            variant="secondary"
+            size="sm"
+            disabled={args.disabled}
+            isLoading={args.isLoading}
+            leftIcon={Copy}
+          >
             Duplicate
           </Button>
-          <Button variant="danger" size="sm" leftIcon={Trash2}>
+          <Button
+            variant="secondary"
+            destructive
+            size="sm"
+            disabled={args.disabled}
+            isLoading={args.isLoading}
+            leftIcon={Trash2}
+          >
             Delete
           </Button>
-          <Button variant="ghost" size="sm">
+          <Button variant="ghost" size="sm" disabled={args.disabled} isLoading={args.isLoading}>
             Clear selection
           </Button>
         </div>
@@ -258,7 +480,10 @@ export const FigmaToolbarShowcase: Story = {
 
 export const TableActionsShowcase: Story = {
   name: 'Table Actions (Screenshots Showcase)',
-  render: () => (
+  parameters: {
+    controls: { include: ['disabled', 'isLoading'] },
+  },
+  render: args => (
     <div className="space-y-6 w-full max-w-3xl p-6 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)]">
       <div>
         <h3 className="text-sm font-semibold text-[var(--color-text-main)]">
@@ -293,9 +518,18 @@ export const TableActionsShowcase: Story = {
               <td className="p-3 text-[var(--color-text-main)]">Wolfpack</td>
               <td className="p-3 pr-4 text-right">
                 <div className="inline-flex items-center gap-2 text-xs">
-                  <Button variant="link">Profile</Button>
+                  <Button variant="text" disabled={args.disabled} isLoading={args.isLoading}>
+                    Profile
+                  </Button>
                   <span className="text-[var(--color-border)]">·</span>
-                  <Button variant="link-danger">Kick</Button>
+                  <Button
+                    variant="text"
+                    destructive
+                    disabled={args.disabled}
+                    isLoading={args.isLoading}
+                  >
+                    Kick
+                  </Button>
                 </div>
               </td>
             </tr>
@@ -310,9 +544,13 @@ export const TableActionsShowcase: Story = {
               </td>
               <td className="p-3 pr-4 text-right">
                 <div className="inline-flex items-center gap-2 text-xs">
-                  <Button variant="link">Download</Button>
+                  <Button variant="text" disabled={args.disabled} isLoading={args.isLoading}>
+                    Download
+                  </Button>
                   <span className="text-[var(--color-border)]">·</span>
-                  <Button variant="link-warning">Restore</Button>
+                  <Button variant="text" disabled={args.disabled} isLoading={args.isLoading}>
+                    Restore
+                  </Button>
                 </div>
               </td>
             </tr>
@@ -324,7 +562,9 @@ export const TableActionsShowcase: Story = {
               </td>
               <td className="p-3 text-[var(--color-text-main)]">RedFox · Combat logging</td>
               <td className="p-3 pr-4 text-right">
-                <Button variant="link">Unban</Button>
+                <Button variant="text" disabled={args.disabled} isLoading={args.isLoading}>
+                  Unban
+                </Button>
               </td>
             </tr>
 
@@ -337,16 +577,20 @@ export const TableActionsShowcase: Story = {
               <td className="p-3 pr-4 text-right">
                 <div className="inline-flex items-center gap-1.5">
                   <Button
-                    size="icon-sm"
+                    size="sm"
                     variant="ghost"
-                    aria-label="Run task now"
+                    disabled={args.disabled}
+                    isLoading={args.isLoading}
                     leftIcon={Play}
+                    aria-label="Run task now"
                   />
                   <Button
-                    size="icon-sm"
+                    size="sm"
                     variant="ghost"
-                    aria-label="Task settings"
+                    disabled={args.disabled}
+                    isLoading={args.isLoading}
                     leftIcon={Settings}
+                    aria-label="Task settings"
                   />
                 </div>
               </td>
@@ -361,22 +605,28 @@ export const TableActionsShowcase: Story = {
               <td className="p-3 pr-4 text-right">
                 <div className="inline-flex items-center gap-1">
                   <Button
-                    size="icon-sm"
+                    size="sm"
                     variant="ghost"
-                    aria-label="Edit item"
+                    disabled={args.disabled}
+                    isLoading={args.isLoading}
                     leftIcon={SquarePen}
+                    aria-label="Edit item"
                   />
                   <Button
-                    size="icon-sm"
+                    size="sm"
                     variant="ghost"
-                    aria-label="Duplicate item"
+                    disabled={args.disabled}
+                    isLoading={args.isLoading}
                     leftIcon={Copy}
+                    aria-label="Duplicate item"
                   />
                   <Button
-                    size="icon-sm"
+                    size="sm"
                     variant="ghost"
-                    aria-label="More options"
+                    disabled={args.disabled}
+                    isLoading={args.isLoading}
                     leftIcon={MoreHorizontal}
+                    aria-label="More options"
                   />
                 </div>
               </td>
@@ -386,15 +636,30 @@ export const TableActionsShowcase: Story = {
 
         {/* Table Footer with Navigation Links */}
         <div className="flex items-center justify-between p-3 bg-[var(--color-surface-subtle)] border-t border-[var(--color-border)] text-xs">
-          <Button variant="link" rightIcon={ArrowRight}>
+          <Button
+            variant="text"
+            disabled={args.disabled}
+            isLoading={args.isLoading}
+            rightIcon={ArrowRight}
+          >
             View all players
           </Button>
 
-          <Button variant="link" rightIcon={ArrowRight}>
+          <Button
+            variant="text"
+            disabled={args.disabled}
+            isLoading={args.isLoading}
+            rightIcon={ArrowRight}
+          >
             View full history
           </Button>
 
-          <Button variant="link" rightIcon={ArrowUpRight}>
+          <Button
+            variant="text"
+            disabled={args.disabled}
+            isLoading={args.isLoading}
+            rightIcon={ArrowUpRight}
+          >
             View ban history
           </Button>
         </div>
@@ -407,7 +672,13 @@ export const TableActionsShowcase: Story = {
             <span className="text-xs font-semibold text-[var(--color-text-main)]">
               Active Bans Form
             </span>
-            <Button variant="danger" size="sm">
+            <Button
+              variant="secondary"
+              destructive
+              size="sm"
+              disabled={args.disabled}
+              isLoading={args.isLoading}
+            >
               Ban player
             </Button>
           </div>
@@ -418,7 +689,12 @@ export const TableActionsShowcase: Story = {
             <span className="text-xs font-semibold text-[var(--color-text-main)]">
               Mods Management Header
             </span>
-            <Button variant="link" leftIcon={Plus}>
+            <Button
+              variant="text"
+              disabled={args.disabled}
+              isLoading={args.isLoading}
+              leftIcon={Plus}
+            >
               Add a mod
             </Button>
           </div>
