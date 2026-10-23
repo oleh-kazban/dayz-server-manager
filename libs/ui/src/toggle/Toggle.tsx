@@ -94,9 +94,14 @@ export function Toggle({
     onChange?.(e);
   };
 
-  const trackBgClass = isChecked
-    ? COLOR_CHECKED_CLASSES[color]
-    : 'bg-slate-300 dark:bg-zinc-700 hover:bg-slate-400 dark:hover:bg-zinc-600';
+  let trackBgClass = 'bg-slate-300 dark:bg-zinc-700';
+  if (isChecked) {
+    trackBgClass = disabled
+      ? COLOR_CHECKED_CLASSES[color].split(' ')[0]
+      : COLOR_CHECKED_CLASSES[color];
+  } else if (!disabled) {
+    trackBgClass = 'bg-slate-300 dark:bg-zinc-700 hover:bg-slate-400 dark:hover:bg-zinc-600';
+  }
 
   const knobTranslateClass = isChecked ? KNOB_TRANSLATE_CLASSES[size] : 'translate-x-0';
 
@@ -122,8 +127,8 @@ export function Toggle({
   return (
     <label
       htmlFor={inputId}
-      className={`inline-flex items-center gap-2 select-none cursor-pointer group ${
-        disabled ? 'cursor-not-allowed opacity-50' : ''
+      className={`inline-flex items-center gap-2 select-none group ${
+        disabled ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'
       } ${containerClassName}`}
     >
       {/* Hidden Accessible Checkbox Input */}
@@ -146,15 +151,15 @@ export function Toggle({
       {/* Visual Toggle Track */}
       <span
         aria-hidden="true"
-        className={`relative inline-flex shrink-0 rounded-full cursor-pointer transition-colors duration-200 ease-in-out group-focus-within:ring-2 group-focus-within:ring-[var(--color-primary)] group-focus-within:ring-offset-2 ${
-          TRACK_SIZE_CLASSES[size]
-        } ${trackBgClass} ${trackClassName}`}
+        className={`relative inline-flex shrink-0 rounded-full transition-colors duration-200 ease-in-out group-focus-within:ring-2 group-focus-within:ring-[var(--color-primary)] group-focus-within:ring-offset-2 ${
+          disabled ? 'cursor-not-allowed' : 'cursor-pointer'
+        } ${TRACK_SIZE_CLASSES[size]} ${trackBgClass} ${trackClassName}`}
       >
         {/* Visual Sliding Knob */}
         <span
-          className={`inline-block rounded-full bg-white shadow-sm pointer-events-none transform transition-transform duration-200 ease-in-out group-active:scale-95 ${
-            KNOB_SIZE_CLASSES[size]
-          } ${knobTranslateClass} ${knobClassName}`}
+          className={`inline-block rounded-full bg-white shadow-sm pointer-events-none transform transition-transform duration-200 ease-in-out ${
+            disabled ? '' : 'group-active:scale-95'
+          } ${KNOB_SIZE_CLASSES[size]} ${knobTranslateClass} ${knobClassName}`}
         />
       </span>
 

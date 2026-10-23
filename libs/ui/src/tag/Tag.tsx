@@ -194,16 +194,33 @@ export function Tag({
     }
   };
 
+  const handleClick = (e: MouseEvent<HTMLSpanElement>) => {
+    if (disabled) {
+      e.preventDefault();
+      e.stopPropagation();
+      return;
+    }
+    props.onClick?.(e);
+  };
+
+  let interactionClass = '';
+  if (disabled) {
+    interactionClass = 'opacity-50 cursor-not-allowed';
+  } else if (props.onClick) {
+    interactionClass = 'cursor-pointer hover:opacity-90';
+  }
+
   return (
     <span
       {...props}
       ref={ref}
       aria-disabled={disabled}
+      onClick={props.onClick ? handleClick : undefined}
       className={`inline-flex items-center border font-semibold select-none transition-colors ${
         SHAPE_CLASSES[shape]
       } ${SIZE_CLASSES[size]} ${colorClass} ${uppercase ? 'uppercase tracking-wider' : ''} ${
         mono ? 'font-mono' : ''
-      } ${disabled ? 'opacity-50 pointer-events-none' : ''} ${className}`}
+      } ${interactionClass} ${className}`}
     >
       {/* Optional Dot Indicator */}
       {showDot && (
@@ -239,7 +256,11 @@ export function Tag({
           disabled={disabled}
           onClick={handleRemove}
           aria-label={removeAriaLabel || 'Remove tag'}
-          className="rounded-sm p-0.5 text-inherit opacity-60 hover:opacity-100 hover:bg-black/10 dark:hover:bg-white/10 transition-opacity focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-current cursor-pointer ml-0.5"
+          className={`rounded-sm p-0.5 text-inherit transition-opacity focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-current ml-0.5 ${
+            disabled
+              ? 'cursor-not-allowed opacity-40'
+              : 'opacity-60 hover:opacity-100 hover:bg-black/10 dark:hover:bg-white/10 cursor-pointer'
+          }`}
         >
           <X className={ICON_SIZE_CLASSES[size]} aria-hidden="true" />
         </button>
@@ -257,15 +278,20 @@ export function TagAddButton({
   shape = 'rounded',
   className = '',
   children = 'Add tag',
+  disabled = false,
   ...props
 }: TagAddButtonProps) {
   return (
     <button
       {...props}
       type="button"
-      className={`inline-flex items-center border border-dashed border-[var(--color-border)] text-[var(--color-primary)] hover:bg-[var(--color-primary-light)] transition-colors cursor-pointer select-none font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)] ${
-        SHAPE_CLASSES[shape]
-      } ${SIZE_CLASSES[size]} ${className}`}
+      disabled={disabled}
+      aria-disabled={disabled}
+      className={`inline-flex items-center border border-dashed border-[var(--color-border)] text-[var(--color-primary)] transition-colors select-none font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)] ${
+        disabled
+          ? 'cursor-not-allowed opacity-50 shadow-none'
+          : 'cursor-pointer hover:bg-[var(--color-primary-light)]'
+      } ${SHAPE_CLASSES[shape]} ${SIZE_CLASSES[size]} ${className}`}
     >
       <Plus className={ICON_SIZE_CLASSES[size]} aria-hidden="true" />
       <span>{children}</span>

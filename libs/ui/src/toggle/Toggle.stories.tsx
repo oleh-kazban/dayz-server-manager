@@ -5,7 +5,7 @@ import { Pause, Play } from 'lucide-react';
 
 import { Button } from '../button';
 
-import { Toggle } from './Toggle';
+import { Toggle, type ToggleProps } from './Toggle';
 
 const meta: Meta<typeof Toggle> = {
   title: 'Components/Toggle',
@@ -42,6 +42,9 @@ const meta: Meta<typeof Toggle> = {
       description: 'Disables user interactions and dims opacity',
     },
   },
+  args: {
+    disabled: false,
+  },
 };
 
 export default meta;
@@ -59,10 +62,11 @@ export const AutoScroll: Story = {
     defaultChecked: true,
     labelPosition: 'left',
     size: 'md',
+    disabled: false,
   },
 };
 
-function ControlledInteractiveDemo() {
+function ControlledInteractiveDemo(props: Partial<ToggleProps>) {
   const [enabled, setEnabled] = useState(true);
 
   return (
@@ -73,6 +77,7 @@ function ControlledInteractiveDemo() {
           checked={enabled}
           onChange={e => setEnabled(e.target.checked)}
           labelPosition="left"
+          disabled={props.disabled}
         />
         <span className="text-xs text-[var(--color-text-muted)] font-mono">
           State: {enabled ? 'ON' : 'OFF'}
@@ -84,71 +89,96 @@ function ControlledInteractiveDemo() {
 
 export const ControlledInteractive: Story = {
   name: 'Interactive Controlled',
-  render: () => <ControlledInteractiveDemo />,
+  render: args => <ControlledInteractiveDemo {...args} />,
 };
 
 export const LabelPositions: Story = {
-  render: () => (
+  render: args => (
     <div className="flex flex-col gap-4 p-4">
-      <Toggle label="Label on the left" labelPosition="left" defaultChecked />
-      <Toggle label="Label on the right" labelPosition="right" defaultChecked />
+      <Toggle
+        label="Label on the left"
+        labelPosition="left"
+        defaultChecked
+        disabled={args.disabled}
+      />
+      <Toggle
+        label="Label on the right"
+        labelPosition="right"
+        defaultChecked
+        disabled={args.disabled}
+      />
     </div>
   ),
 };
 
 export const Sizes: Story = {
-  render: () => (
+  render: args => (
     <div className="flex flex-col gap-4 p-4">
-      <Toggle size="sm" label="Small (28x16)" defaultChecked />
-      <Toggle size="md" label="Medium (32x18 - Default)" defaultChecked />
-      <Toggle size="lg" label="Large (44x24)" defaultChecked />
+      <Toggle size="sm" label="Small (28x16)" defaultChecked disabled={args.disabled} />
+      <Toggle size="md" label="Medium (32x18 - Default)" defaultChecked disabled={args.disabled} />
+      <Toggle size="lg" label="Large (44x24)" defaultChecked disabled={args.disabled} />
     </div>
   ),
 };
 
 export const Colors: Story = {
-  render: () => (
+  render: args => (
     <div className="flex flex-col gap-4 p-4">
-      <Toggle color="primary" label="Primary (Brand Blue)" defaultChecked />
-      <Toggle color="success" label="Success (Emerald)" defaultChecked />
-      <Toggle color="danger" label="Danger (Rose)" defaultChecked />
+      <Toggle
+        color="primary"
+        label="Primary (Brand Blue)"
+        defaultChecked
+        disabled={args.disabled}
+      />
+      <Toggle color="success" label="Success (Emerald)" defaultChecked disabled={args.disabled} />
+      <Toggle color="danger" label="Danger (Rose)" defaultChecked disabled={args.disabled} />
     </div>
   ),
 };
 
 export const WithDescription: Story = {
-  render: () => (
+  render: args => (
     <div className="space-y-4 p-4 max-w-md">
       <Toggle
         label="Enforce Whitelist"
         description="Only pre-approved Steam IDs can join during maintenance windows."
         labelPosition="right"
         defaultChecked
+        disabled={args.disabled}
       />
       <Toggle
         label="BattlEye RCON Shutdown Protection"
         description="Gracefully sends #shutdown before terminating server process to avoid rollback."
         labelPosition="right"
         defaultChecked
+        disabled={args.disabled}
       />
     </div>
   ),
 };
 
 export const DisabledStates: Story = {
-  render: () => (
+  name: 'Disabled State Showcase',
+  render: args => (
     <div className="flex flex-col gap-4 p-4">
-      <Toggle label="Disabled (Active)" defaultChecked disabled />
-      <Toggle label="Disabled (Inactive)" disabled />
+      <Toggle
+        label="Disabled (Active / Locked On)"
+        defaultChecked
+        disabled={args.disabled ?? true}
+      />
+      <Toggle label="Disabled (Inactive / Locked Off)" disabled={args.disabled ?? true} />
     </div>
   ),
+  args: {
+    disabled: true,
+  },
 };
 
 /* ====================================================================
    LOG STREAM HEADER SHOWCASE (As seen in Server Manager & Dashboard)
    ==================================================================== */
 
-function LogStreamShowcaseDemo() {
+function LogStreamShowcaseDemo(props: Partial<ToggleProps>) {
   const [autoScroll, setAutoScroll] = useState(true);
   const [isPaused, setIsPaused] = useState(false);
 
@@ -169,11 +199,13 @@ function LogStreamShowcaseDemo() {
             onChange={e => setAutoScroll(e.target.checked)}
             labelPosition="left"
             size="md"
+            disabled={props.disabled}
           />
 
           <Button
             variant="secondary"
             size="sm"
+            disabled={props.disabled}
             leftIcon={isPaused ? Play : Pause}
             onClick={() => setIsPaused(!isPaused)}
           >
@@ -199,5 +231,5 @@ function LogStreamShowcaseDemo() {
 
 export const LogStreamHeaderShowcase: Story = {
   name: 'Log Stream Controls Showcase',
-  render: () => <LogStreamShowcaseDemo />,
+  render: args => <LogStreamShowcaseDemo {...args} />,
 };

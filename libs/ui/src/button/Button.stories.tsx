@@ -54,6 +54,9 @@ const meta: Meta<typeof Button> = {
       description: 'Expands the button to fill 100% of container width',
     },
   },
+  args: {
+    disabled: false,
+  },
 };
 
 export default meta;

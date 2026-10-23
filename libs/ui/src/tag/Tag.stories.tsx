@@ -61,6 +61,9 @@ const meta: Meta<typeof Tag> = {
       description: 'Disables interactions and dims opacity',
     },
   },
+  args: {
+    disabled: false,
+  },
 };
 
 export default meta;
@@ -76,6 +79,7 @@ export const Default: Story = {
     children: 'Vanilla+',
     variant: 'subtle',
     color: 'primary',
+    disabled: false,
   },
 };
 
@@ -84,6 +88,7 @@ export const Removable: Story = {
     children: '1PP',
     variant: 'neutral',
     size: 'lg',
+    disabled: false,
     onRemove: () => alert('Tag removed!'),
   },
 };
@@ -95,6 +100,7 @@ export const WithStatusDot: Story = {
     color: 'primary',
     shape: 'pill',
     size: 'sm',
+    disabled: false,
     dot: { ping: true },
   },
 };
@@ -105,7 +111,7 @@ export const WithStatusDot: Story = {
 
 export const LogLevelsShowcase: Story = {
   name: 'Log Levels (Screenshot 1)',
-  render: () => (
+  render: args => (
     <div className="p-6 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] space-y-4 max-w-md w-full">
       <div>
         <h4 className="text-xs font-bold text-[var(--color-text-muted)] uppercase tracking-wider">
@@ -118,7 +124,7 @@ export const LogLevelsShowcase: Story = {
 
       <div className="flex flex-col gap-2.5">
         <div className="flex items-center gap-3">
-          <Tag variant="subtle" color="info" size="sm" uppercase mono>
+          <Tag variant="subtle" color="info" size="sm" uppercase mono disabled={args.disabled}>
             INFO
           </Tag>
           <span className="text-xs text-[var(--color-text-secondary)]">
@@ -127,7 +133,7 @@ export const LogLevelsShowcase: Story = {
         </div>
 
         <div className="flex items-center gap-3">
-          <Tag variant="subtle" color="success" size="sm" uppercase mono>
+          <Tag variant="subtle" color="success" size="sm" uppercase mono disabled={args.disabled}>
             SAVE
           </Tag>
           <span className="text-xs text-[var(--color-text-secondary)]">
@@ -136,7 +142,7 @@ export const LogLevelsShowcase: Story = {
         </div>
 
         <div className="flex items-center gap-3">
-          <Tag variant="subtle" color="warning" size="sm" uppercase mono>
+          <Tag variant="subtle" color="warning" size="sm" uppercase mono disabled={args.disabled}>
             WARN
           </Tag>
           <span className="text-xs text-[var(--color-text-secondary)]">
@@ -145,7 +151,7 @@ export const LogLevelsShowcase: Story = {
         </div>
 
         <div className="flex items-center gap-3">
-          <Tag variant="subtle" color="danger" size="sm" uppercase mono>
+          <Tag variant="subtle" color="danger" size="sm" uppercase mono disabled={args.disabled}>
             ERROR
           </Tag>
           <span className="text-xs text-[var(--color-text-secondary)]">
@@ -163,28 +169,35 @@ export const LogLevelsShowcase: Story = {
 
 export const TacticalPillsShowcase: Story = {
   name: 'Tactical Map Pills (Screenshot 2)',
-  render: () => (
+  render: args => (
     <div className="p-8 rounded-2xl border border-zinc-800 bg-[#141b16] space-y-6 max-w-sm w-full text-white">
       <div className="text-xs text-zinc-400">Tactical Radar / GPS Player Badges</div>
 
       <div className="space-y-6">
         <div>
           <div className="text-[11px] text-zinc-400 font-semibold mb-1">Stary Sobor</div>
-          <Tag variant="solid" color="primary" shape="pill" size="sm" dot={{ ping: true }}>
+          <Tag
+            variant="solid"
+            color="primary"
+            shape="pill"
+            size="sm"
+            disabled={args.disabled}
+            dot={{ ping: true }}
+          >
             Wolfpack
           </Tag>
         </div>
 
         <div>
           <div className="text-[11px] text-zinc-400 font-semibold mb-1">Chernogorsk</div>
-          <Tag variant="solid" color="emerald" shape="pill" size="sm">
+          <Tag variant="solid" color="emerald" shape="pill" size="sm" disabled={args.disabled}>
             TheWanderer
           </Tag>
         </div>
 
         <div>
           <div className="text-[11px] text-zinc-400 font-semibold mb-1">Elektrozavodsk</div>
-          <Tag variant="solid" color="emerald" shape="pill" size="sm">
+          <Tag variant="solid" color="emerald" shape="pill" size="sm" disabled={args.disabled}>
             Rook
           </Tag>
         </div>
@@ -199,7 +212,7 @@ export const TacticalPillsShowcase: Story = {
 
 export const CategoriesShowcase: Story = {
   name: 'Economy Categories (Screenshot 3)',
-  render: () => (
+  render: args => (
     <div className="p-6 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] space-y-4 max-w-md w-full">
       <div className="border-b border-[var(--color-border)] pb-2 flex items-center justify-between">
         <span className="text-xs font-bold text-[var(--color-text-muted)] uppercase tracking-wider">
@@ -209,28 +222,28 @@ export const CategoriesShowcase: Story = {
       </div>
 
       <div className="flex flex-col gap-2">
-        <Tag variant="subtle" color="rose">
+        <Tag variant="subtle" color="rose" disabled={args.disabled}>
           Weapons
         </Tag>
-        <Tag variant="subtle" color="purple">
+        <Tag variant="subtle" color="purple" disabled={args.disabled}>
           Clothing
         </Tag>
-        <Tag variant="subtle" color="amber">
+        <Tag variant="subtle" color="amber" disabled={args.disabled}>
           Ammunition
         </Tag>
-        <Tag variant="subtle" color="emerald">
+        <Tag variant="subtle" color="emerald" disabled={args.disabled}>
           Food
         </Tag>
-        <Tag variant="subtle" color="teal">
+        <Tag variant="subtle" color="teal" disabled={args.disabled}>
           Medical
         </Tag>
-        <Tag variant="subtle" color="sky">
+        <Tag variant="subtle" color="sky" disabled={args.disabled}>
           Tools
         </Tag>
-        <Tag variant="subtle" color="blue">
+        <Tag variant="subtle" color="blue" disabled={args.disabled}>
           Containers
         </Tag>
-        <Tag variant="subtle" color="cyan">
+        <Tag variant="subtle" color="cyan" disabled={args.disabled}>
           Electronics
         </Tag>
       </div>
@@ -242,7 +255,7 @@ export const CategoriesShowcase: Story = {
    SCREENSHOT 4: SERVER TAGS SHOWCASE (Interactive Add & Dismiss)
    ==================================================================== */
 
-function ServerTagsDemo() {
+function ServerTagsDemo({ disabled = false }: { disabled?: boolean }) {
   const [tags, setTags] = useState(['1PP', 'Vanilla+', 'PvP', 'No safe zones']);
 
   const handleRemove = (tagToRemove: string) => {
@@ -258,7 +271,9 @@ function ServerTagsDemo() {
 
   return (
     <div className="p-6 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] space-y-3 max-w-lg w-full">
-      <div className="text-xs font-semibold text-[var(--color-text-main)]">Server tags</div>
+      <div className="text-xs font-semibold text-[var(--color-text-main)]">
+        Server tags {disabled ? '(Disabled)' : ''}
+      </div>
 
       <div className="flex items-center gap-2 flex-wrap">
         {tags.map(tag => (
@@ -266,6 +281,7 @@ function ServerTagsDemo() {
             key={tag}
             variant="neutral"
             size="lg"
+            disabled={disabled}
             onRemove={() => handleRemove(tag)}
             removeAriaLabel={`Remove ${tag}`}
           >
@@ -273,7 +289,7 @@ function ServerTagsDemo() {
           </Tag>
         ))}
 
-        <Tag.Add size="lg" onClick={handleAdd}>
+        <Tag.Add size="lg" disabled={disabled} onClick={handleAdd}>
           Add tag
         </Tag.Add>
       </div>
@@ -287,7 +303,7 @@ function ServerTagsDemo() {
 
 export const ServerTagsShowcase: Story = {
   name: 'Server Tags & Add Trigger (Screenshot 4)',
-  render: () => <ServerTagsDemo />,
+  render: args => <ServerTagsDemo disabled={args.disabled} />,
 };
 
 /* ====================================================================
@@ -295,27 +311,27 @@ export const ServerTagsShowcase: Story = {
    ==================================================================== */
 
 export const AllVariants: Story = {
-  render: () => (
+  render: args => (
     <div className="space-y-4 p-4">
       <div className="space-y-1">
         <div className="text-xs font-semibold text-[var(--color-text-secondary)]">Subtle</div>
         <div className="flex flex-wrap gap-2">
-          <Tag variant="subtle" color="primary">
+          <Tag variant="subtle" color="primary" disabled={args.disabled}>
             Primary
           </Tag>
-          <Tag variant="subtle" color="success">
+          <Tag variant="subtle" color="success" disabled={args.disabled}>
             Success
           </Tag>
-          <Tag variant="subtle" color="warning">
+          <Tag variant="subtle" color="warning" disabled={args.disabled}>
             Warning
           </Tag>
-          <Tag variant="subtle" color="danger">
+          <Tag variant="subtle" color="danger" disabled={args.disabled}>
             Danger
           </Tag>
-          <Tag variant="subtle" color="info">
+          <Tag variant="subtle" color="info" disabled={args.disabled}>
             Info
           </Tag>
-          <Tag variant="subtle" color="purple">
+          <Tag variant="subtle" color="purple" disabled={args.disabled}>
             Purple
           </Tag>
         </div>
@@ -324,22 +340,22 @@ export const AllVariants: Story = {
       <div className="space-y-1">
         <div className="text-xs font-semibold text-[var(--color-text-secondary)]">Solid</div>
         <div className="flex flex-wrap gap-2">
-          <Tag variant="solid" color="primary">
+          <Tag variant="solid" color="primary" disabled={args.disabled}>
             Primary
           </Tag>
-          <Tag variant="solid" color="success">
+          <Tag variant="solid" color="success" disabled={args.disabled}>
             Success
           </Tag>
-          <Tag variant="solid" color="warning">
+          <Tag variant="solid" color="warning" disabled={args.disabled}>
             Warning
           </Tag>
-          <Tag variant="solid" color="danger">
+          <Tag variant="solid" color="danger" disabled={args.disabled}>
             Danger
           </Tag>
-          <Tag variant="solid" color="info">
+          <Tag variant="solid" color="info" disabled={args.disabled}>
             Info
           </Tag>
-          <Tag variant="solid" color="purple">
+          <Tag variant="solid" color="purple" disabled={args.disabled}>
             Purple
           </Tag>
         </div>
@@ -348,22 +364,22 @@ export const AllVariants: Story = {
       <div className="space-y-1">
         <div className="text-xs font-semibold text-[var(--color-text-secondary)]">Outline</div>
         <div className="flex flex-wrap gap-2">
-          <Tag variant="outline" color="primary">
+          <Tag variant="outline" color="primary" disabled={args.disabled}>
             Primary
           </Tag>
-          <Tag variant="outline" color="success">
+          <Tag variant="outline" color="success" disabled={args.disabled}>
             Success
           </Tag>
-          <Tag variant="outline" color="warning">
+          <Tag variant="outline" color="warning" disabled={args.disabled}>
             Warning
           </Tag>
-          <Tag variant="outline" color="danger">
+          <Tag variant="outline" color="danger" disabled={args.disabled}>
             Danger
           </Tag>
-          <Tag variant="outline" color="info">
+          <Tag variant="outline" color="info" disabled={args.disabled}>
             Info
           </Tag>
-          <Tag variant="outline" color="purple">
+          <Tag variant="outline" color="purple" disabled={args.disabled}>
             Purple
           </Tag>
         </div>
@@ -372,8 +388,10 @@ export const AllVariants: Story = {
       <div className="space-y-1">
         <div className="text-xs font-semibold text-[var(--color-text-secondary)]">Neutral</div>
         <div className="flex flex-wrap gap-2">
-          <Tag variant="neutral">Default</Tag>
-          <Tag variant="neutral" onRemove={() => {}}>
+          <Tag variant="neutral" disabled={args.disabled}>
+            Default
+          </Tag>
+          <Tag variant="neutral" disabled={args.disabled} onRemove={() => {}}>
             Removable
           </Tag>
         </div>
@@ -383,18 +401,18 @@ export const AllVariants: Story = {
 };
 
 export const AllSizesAndShapes: Story = {
-  render: () => (
+  render: args => (
     <div className="space-y-6 p-4">
       <div className="space-y-2">
         <div className="text-xs font-semibold text-[var(--color-text-secondary)]">Sizes</div>
         <div className="flex items-center gap-3">
-          <Tag size="sm" color="primary">
+          <Tag size="sm" color="primary" disabled={args.disabled}>
             Small (sm)
           </Tag>
-          <Tag size="md" color="primary">
+          <Tag size="md" color="primary" disabled={args.disabled}>
             Medium (md)
           </Tag>
-          <Tag size="lg" color="primary">
+          <Tag size="lg" color="primary" disabled={args.disabled}>
             Large (lg)
           </Tag>
         </div>
@@ -403,10 +421,10 @@ export const AllSizesAndShapes: Story = {
       <div className="space-y-2">
         <div className="text-xs font-semibold text-[var(--color-text-secondary)]">Shapes</div>
         <div className="flex items-center gap-3">
-          <Tag shape="rounded" color="emerald">
+          <Tag shape="rounded" color="emerald" disabled={args.disabled}>
             Rounded (Default)
           </Tag>
-          <Tag shape="pill" color="emerald">
+          <Tag shape="pill" color="emerald" disabled={args.disabled}>
             Pill (rounded-full)
           </Tag>
         </div>
@@ -417,23 +435,69 @@ export const AllSizesAndShapes: Story = {
           With Icons &amp; Dots
         </div>
         <div className="flex items-center gap-3">
-          <Tag color="primary" leftIcon={Shield}>
+          <Tag color="primary" leftIcon={Shield} disabled={args.disabled}>
             Protected
           </Tag>
-          <Tag color="purple" leftIcon={User}>
+          <Tag color="purple" leftIcon={User} disabled={args.disabled}>
             Admin
           </Tag>
-          <Tag color="emerald" dot>
+          <Tag color="emerald" dot disabled={args.disabled}>
             Live
           </Tag>
-          <Tag color="rose" dot={{ ping: true }}>
+          <Tag color="rose" dot={{ ping: true }} disabled={args.disabled}>
             Combat
           </Tag>
-          <Tag variant="neutral" leftIcon={TagIconLucide} onRemove={() => {}}>
+          <Tag
+            variant="neutral"
+            leftIcon={TagIconLucide}
+            disabled={args.disabled}
+            onRemove={() => {}}
+          >
             Chernarus
           </Tag>
         </div>
       </div>
     </div>
   ),
+};
+
+/* ====================================================================
+   DEDICATED DISABLED SHOWCASE
+   ==================================================================== */
+
+export const Disabled: Story = {
+  name: 'Disabled State Showcase',
+  render: args => (
+    <div className="p-6 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] space-y-4 max-w-lg w-full">
+      <div className="border-b border-[var(--color-border)] pb-2 text-xs font-semibold text-[var(--color-text-main)]">
+        Disabled Tags &amp; Add Triggers
+      </div>
+
+      <div className="flex flex-wrap items-center gap-2">
+        <Tag variant="subtle" color="primary" disabled={args.disabled ?? true}>
+          Subtle Disabled
+        </Tag>
+        <Tag variant="solid" color="emerald" shape="pill" disabled={args.disabled ?? true}>
+          Solid Pill Disabled
+        </Tag>
+        <Tag variant="outline" color="danger" disabled={args.disabled ?? true}>
+          Outline Disabled
+        </Tag>
+        <Tag
+          variant="neutral"
+          disabled={args.disabled ?? true}
+          onRemove={() => {}}
+          removeAriaLabel="Remove disabled tag"
+        >
+          Removable Disabled
+        </Tag>
+        <Tag.Add size="md" disabled={args.disabled ?? true}>
+          Add tag (Disabled)
+        </Tag.Add>
+      </div>
+    </div>
+  ),
+  args: {
+    disabled: true,
+  },
 };

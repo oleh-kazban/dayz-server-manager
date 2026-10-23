@@ -52,6 +52,9 @@ const meta: Meta<typeof Autosuggest> = {
       description: 'Custom message displayed when character count is below minChars',
     },
   },
+  args: {
+    disabled: false,
+  },
 };
 
 export default meta;
@@ -126,7 +129,7 @@ export const Interactive: Story = {
    2. MINIMUM CHARACTERS THRESHOLD STORY
    ==================================================================== */
 
-function MinCharsDemo() {
+function MinCharsDemo(props: Partial<AutosuggestProps<DayZItem>>) {
   const [value, setValue] = useState('A');
 
   const filteredItems =
@@ -146,6 +149,7 @@ function MinCharsDemo() {
         minChars={3}
         minCharsHint="Type 3 or more characters to query types.xml..."
         placeholder="Type at least 3 characters..."
+        disabled={props.disabled}
         getOptionKey={item => item.id}
         getOptionLabel={item => item.name}
         onSelect={item => setValue(item.name)}
@@ -155,14 +159,14 @@ function MinCharsDemo() {
 }
 
 export const MinCharsThreshold: Story = {
-  render: () => <MinCharsDemo />,
+  render: args => <MinCharsDemo {...(args as Partial<AutosuggestProps<DayZItem>>)} />,
 };
 
 /* ====================================================================
    3. EMPTY RESULTS STORY
    ==================================================================== */
 
-function EmptyResultsDemo() {
+function EmptyResultsDemo(props: Partial<AutosuggestProps<DayZItem>>) {
   const [value, setValue] = useState('Railgun');
 
   return (
@@ -175,6 +179,7 @@ function EmptyResultsDemo() {
         onChange={setValue}
         items={[]}
         minChars={1}
+        disabled={props.disabled}
         emptyText="No items matched your query"
         placeholder="Search items..."
         getOptionKey={item => item.id}
@@ -186,14 +191,14 @@ function EmptyResultsDemo() {
 }
 
 export const EmptyResults: Story = {
-  render: () => <EmptyResultsDemo />,
+  render: args => <EmptyResultsDemo {...(args as Partial<AutosuggestProps<DayZItem>>)} />,
 };
 
 /* ====================================================================
    4. DYNAMIC ASYNC LOADING STORY
    ==================================================================== */
 
-function AsyncLoadingDemo() {
+function AsyncLoadingDemo(props: Partial<AutosuggestProps<DayZItem>>) {
   const [value, setValue] = useState('M');
   const [isLoading, setIsLoading] = useState(false);
   const [results, setResults] = useState<DayZItem[]>(() =>
@@ -238,6 +243,7 @@ function AsyncLoadingDemo() {
         onChange={handleQueryChange}
         items={results}
         isLoading={isLoading}
+        disabled={props.disabled}
         minChars={1}
         placeholder="Search with simulated network..."
         getOptionKey={item => item.id}
@@ -252,7 +258,7 @@ function AsyncLoadingDemo() {
 }
 
 export const AsyncLoading: Story = {
-  render: () => <AsyncLoadingDemo />,
+  render: args => <AsyncLoadingDemo {...(args as Partial<AutosuggestProps<DayZItem>>)} />,
 };
 
 /* ====================================================================
@@ -260,13 +266,13 @@ export const AsyncLoading: Story = {
    ==================================================================== */
 
 export const Disabled: Story = {
-  render: () => (
+  render: args => (
     <div className="w-80">
       <Autosuggest<DayZItem>
         value="M4A1 Automatic Carbine"
         onChange={() => {}}
         items={MOCK_ITEMS}
-        disabled={true}
+        disabled={args.disabled ?? true}
         placeholder="Locked field..."
         getOptionKey={item => item.id}
         getOptionLabel={item => item.name}
@@ -274,4 +280,7 @@ export const Disabled: Story = {
       />
     </div>
   ),
+  args: {
+    disabled: true,
+  },
 };
