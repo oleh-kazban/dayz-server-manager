@@ -16,6 +16,7 @@ export default defineConfig({
   },
   resolve: {
     alias: {
+      '@dsm/ui': path.resolve(workspaceRoot, 'libs/ui/src'),
       '@dsm': path.resolve(__dirname, 'src'),
     },
   },

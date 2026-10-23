@@ -11,7 +11,7 @@ import { createPortal } from 'react-dom';
 
 import { Loader2, Search, X } from 'lucide-react';
 
-import { usePopup } from '@dsm/core/hooks';
+import { usePopup } from '../hooks';
 
 export interface AutosuggestProps<T> {
   value: string;
