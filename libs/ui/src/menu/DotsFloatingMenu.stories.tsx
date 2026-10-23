@@ -1,13 +1,11 @@
-import { useState } from 'react';
-
 import type { Meta, StoryObj } from '@storybook/react';
-import { Download, Power, RefreshCw, Trash2 } from 'lucide-react';
+import { Download, Power, RefreshCw, Sliders, Trash2 } from 'lucide-react';
 
 import { DotsFloatingMenu } from './DotsFloatingMenu';
-import { FloatingMenu } from './FloatingMenu';
 
-const meta: Meta = {
-  title: 'Navigation/Menu',
+const meta: Meta<typeof DotsFloatingMenu> = {
+  title: 'Navigation/DotsFloatingMenu',
+  component: DotsFloatingMenu,
   parameters: {
     layout: 'centered',
   },
@@ -15,9 +13,9 @@ const meta: Meta = {
 
 export default meta;
 
-export const DotsActionMenu: StoryObj = {
+export const DefaultActionMenu: StoryObj = {
   render: () => (
-    <div className="flex h-48 items-start justify-center p-8">
+    <div className="flex h-56 items-start justify-center p-8">
       <DotsFloatingMenu
         ariaLabel="Server row actions"
         options={[
@@ -48,37 +46,28 @@ export const DotsActionMenu: StoryObj = {
   ),
 };
 
-function FloatingSelectionDemo() {
-  const [status, setStatus] = useState<'online' | 'starting' | 'offline'>('online');
-
-  return (
-    <div className="flex h-48 items-start justify-center p-8">
-      <FloatingMenu
-        ariaLabel="Server status selector"
-        value={status}
-        onChange={setStatus}
+export const CustomTriggerIcon: StoryObj = {
+  render: () => (
+    <div className="flex h-56 items-start justify-center p-8">
+      <DotsFloatingMenu
+        ariaLabel="Filter settings"
+        icon={<Sliders className="h-4 w-4" />}
         options={[
           {
-            value: 'online',
-            label: 'Online',
-            indicatorClassName: 'bg-emerald-500',
+            label: 'Show Only Active Players',
+            onSelect: () => console.log('Filter active'),
           },
           {
-            value: 'starting',
-            label: 'Starting',
-            indicatorClassName: 'bg-amber-500',
+            label: 'Show Empty Servers',
+            onSelect: () => console.log('Filter empty'),
           },
           {
-            value: 'offline',
-            label: 'Offline',
-            indicatorClassName: 'bg-rose-500',
+            label: 'Reset Filters',
+            disabled: true,
+            onSelect: () => console.log('Reset'),
           },
         ]}
       />
     </div>
-  );
-}
-
-export const FloatingStatusSelect: StoryObj = {
-  render: () => <FloatingSelectionDemo />,
+  ),
 };
