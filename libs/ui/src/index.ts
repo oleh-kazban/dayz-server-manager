@@ -9,4 +9,5 @@ export * from './loader';
 export * from './menu';
 export * from './tag';
 export * from './toast';
+export * from './toggle';
 export * from './utils';

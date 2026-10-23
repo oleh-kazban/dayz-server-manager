@@ -37,7 +37,7 @@ import {
 } from 'lucide-react';
 
 import { PageContainer } from '@dsm/components';
-import { Button, Tag, type TagColor } from '@dsm/ui';
+import { Button, Tag, type TagColor, Toggle } from '@dsm/ui';
 
 const LOG_LEVEL_COLORS: Record<string, TagColor> = {
   INFO: 'sky',
@@ -1284,15 +1284,13 @@ export function ServerManager() {
                   126
                 </span>
               </div>
-              <div className="flex items-center gap-2">
-                <span className="text-[11px] text-[var(--color-text-muted)]">Enforced</span>
-                <input
-                  type="checkbox"
-                  defaultChecked
-                  aria-label="Enforce whitelist"
-                  className="w-4 h-4 rounded border-[var(--color-border)] text-[var(--color-primary)] accent-[var(--color-primary)] cursor-pointer"
-                />
-              </div>
+              <Toggle
+                label="Enforced"
+                defaultChecked
+                aria-label="Enforce whitelist"
+                labelPosition="left"
+                size="sm"
+              />
             </div>
 
             <div className="divide-y divide-[var(--color-border)] text-xs">
@@ -1600,15 +1598,13 @@ export function ServerManager() {
           </div>
 
           <div className="flex items-center gap-2.5 shrink-0 flex-wrap">
-            <div className="flex items-center gap-1.5 text-xs text-[var(--color-text-secondary)]">
-              <span>Auto-scroll</span>
-              <input
-                type="checkbox"
-                defaultChecked
-                aria-label="Toggle log auto-scroll"
-                className="w-4 h-4 rounded border-[var(--color-border)] text-[var(--color-primary)] accent-[var(--color-primary)] cursor-pointer"
-              />
-            </div>
+            <Toggle
+              label="Auto-scroll"
+              defaultChecked
+              aria-label="Toggle log auto-scroll"
+              labelPosition="left"
+              size="md"
+            />
             <button
               type="button"
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] hover:bg-[var(--color-surface-hover)] text-xs font-medium text-[var(--color-text-secondary)] shadow-sm"
