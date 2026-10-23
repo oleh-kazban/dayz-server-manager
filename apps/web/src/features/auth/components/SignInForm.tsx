@@ -4,7 +4,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useNavigate, useRouter } from '@tanstack/react-router';
 import { ArrowRight, UserRound } from 'lucide-react';
 
-import { Checkbox, Input, PasswordInput } from '@dsm/components/ui';
+import { Checkbox, Input, PasswordInput } from '@dsm/ui';
 
 import { useAuth } from '../auth.context';
 import { SignInFormValues, signInSchema } from '../signIn.schema';

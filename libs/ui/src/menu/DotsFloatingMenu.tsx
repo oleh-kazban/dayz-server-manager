@@ -9,7 +9,7 @@ import { createPortal } from 'react-dom';
 
 import { MoreVertical } from 'lucide-react';
 
-import { type Alignment, usePopup } from '@dsm/core/hooks';
+import { type Alignment, usePopup } from '../hooks';
 
 export interface DotsFloatingMenuOption {
   label: string;

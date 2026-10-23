@@ -16,6 +16,8 @@
     "baseUrl": ".",
     "strict": true,
     "paths": {
+      "@dsm/ui": ["libs/ui/src/index.ts"],
+      "@dsm/ui/*": ["libs/ui/src/*"],
       "@dsm/*": ["apps/web/src/*"]
     }
   },

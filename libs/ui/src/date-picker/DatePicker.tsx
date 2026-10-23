@@ -4,8 +4,8 @@ import { createPortal } from 'react-dom';
 
 import { Calendar, X } from 'lucide-react';
 
-import { type Alignment, usePopup } from '@dsm/core/hooks';
-import { formatDateOnly, parseDateOnly, toDateOnlyString } from '@dsm/core/utils';
+import { type Alignment, usePopup } from '../hooks';
+import { formatDateOnly, parseDateOnly, toDateOnlyString } from '../utils';
 
 import 'react-day-picker/style.css';
 
