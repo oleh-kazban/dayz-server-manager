@@ -57,18 +57,30 @@ const authedRoute = createRoute({
   ),
 });
 
-// 5. Protected Route: /dashboard (code-split)
+// 5. Protected Routes: /dashboard and /editor (code-split)
 const dashboardRoute = createRoute({
   getParentRoute: () => authedRoute,
   path: '/dashboard',
   component: lazyRouteComponent(() => import('./features/dashboard'), 'Dashboard'),
 });
 
+const editorRoute = createRoute({
+  getParentRoute: () => authedRoute,
+  path: '/editor',
+  component: lazyRouteComponent(() => import('./features/editor'), 'Editor'),
+});
+
+const serverManagementRoute = createRoute({
+  getParentRoute: () => authedRoute,
+  path: '/server-management',
+  component: lazyRouteComponent(() => import('./features/server-management'), 'ServerManager'),
+});
+
 // 6. Construct router
 const routeTree = rootRoute.addChildren([
   indexRoute,
   signInRoute,
-  authedRoute.addChildren([dashboardRoute]),
+  authedRoute.addChildren([dashboardRoute, editorRoute, serverManagementRoute]),
 ]);
 
 export const router = createRouter({
