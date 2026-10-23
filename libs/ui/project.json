@@ -16,6 +16,19 @@
       "options": {
         "command": "tsc -p libs/ui/tsconfig.lib.json --noEmit"
       }
+    },
+    "storybook": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "storybook dev -p 6006 -c libs/ui/.storybook"
+      }
+    },
+    "build-storybook": {
+      "executor": "nx:run-commands",
+      "outputs": ["{workspaceRoot}/dist/storybook/ui"],
+      "options": {
+        "command": "storybook build -c libs/ui/.storybook -o dist/storybook/ui"
+      }
     }
   }
 }

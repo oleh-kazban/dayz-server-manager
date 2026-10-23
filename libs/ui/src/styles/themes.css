@@ -1,0 +1,571 @@
+/* ==========================================================================
+   Design Tokens & Color Themes
+   Default: Light Theme (Outlive Figma Specification)
+   Extensible: Supports [data-theme="dark"] and alternate palettes
+   ========================================================================== */
+:root,
+[data-theme='light'] {
+  color-scheme: light;
+
+  /* Surfaces & Canvas */
+  --color-canvas: #f0f4f8;
+  --color-surface: #ffffff;
+  --color-surface-subtle: #f7f9fc;
+  --color-surface-hover: #f1f5f9;
+  --color-sidebar: #ffffff;
+
+  /* Borders & Dividers */
+  --color-border: #e2ecf3;
+  --color-border-subtle: #edf2f7;
+  --color-border-hover: #cbd5e1;
+
+  /* Typography / Foreground */
+  --color-text-main: #1d3048;
+  --color-text-secondary: #53677f;
+  --color-text-muted: #7a8aa0;
+  --color-text-inverse: #ffffff;
+
+  /* Primary Brand (Outlive Royal Blue) */
+  --color-primary: #4279e8;
+  --color-primary-hover: #3567d1;
+  --color-primary-light: #edf3ff;
+  --color-primary-border: #acc3ef;
+
+  /* Status Colors */
+  --color-success: #27a88c;
+  --color-success-light: #e6f6f0;
+  --color-success-border: #73c5b1;
+
+  --color-warning: #bb8a3e;
+  --color-warning-light: #fbf4e7;
+  --color-warning-border: #e6c88b;
+
+  --color-danger: #e05252;
+  --color-danger-light: #fdeeee;
+  --color-danger-border: #f8b4b4;
+
+  /* Data Visualizations */
+  --color-chart-blue: #4279e8;
+  --color-chart-teal: #73c5b1;
+  --color-chart-sky: #91b2f4;
+  --color-chart-other: #d8e4f2;
+  --color-chart-grid: #eef2f6;
+
+  /* Scrollbar */
+  --color-scrollbar-thumb: rgba(122, 138, 160, 0.3);
+  --color-scrollbar-thumb-hover: rgba(122, 138, 160, 0.5);
+
+  /* Elevation & Shadows */
+  --shadow-card: 0 3px 14px rgba(36, 60, 88, 0.06);
+  --shadow-card-hover: 0 6px 20px rgba(36, 60, 88, 0.09);
+  --shadow-dropdown: 0 10px 25px -5px rgba(36, 60, 88, 0.12), 0 8px 10px -6px rgba(36, 60, 88, 0.08);
+}
+
+[data-theme='dark'] {
+  color-scheme: dark;
+
+  /* Dark Theme Surfaces (Mil-Spec Tactical Obsidian) */
+  --color-canvas: #090d12;
+  --color-surface: #101620;
+  --color-surface-subtle: #161e2b;
+  --color-surface-hover: #1c2637;
+  --color-sidebar: #0d121a;
+
+  /* Borders & Dividers */
+  --color-border: #1e2a3b;
+  --color-border-subtle: #16202e;
+  --color-border-hover: #2a3a52;
+
+  /* Typography */
+  --color-text-main: #f1f5f9;
+  --color-text-secondary: #94a3b8;
+  --color-text-muted: #64748b;
+  --color-text-inverse: #090d12;
+
+  /* Primary Brand */
+  --color-primary: #558bf2;
+  --color-primary-hover: #4279e8;
+  --color-primary-light: rgba(66, 121, 232, 0.15);
+  --color-primary-border: #2c4a87;
+
+  /* Status Colors */
+  --color-success: #31ba9b;
+  --color-success-light: rgba(39, 168, 140, 0.16);
+  --color-success-border: #1c6857;
+
+  --color-warning: #d4a04d;
+  --color-warning-light: rgba(187, 138, 62, 0.16);
+  --color-warning-border: #745422;
+
+  --color-danger: #ea6464;
+  --color-danger-light: rgba(224, 82, 82, 0.16);
+  --color-danger-border: #8b3232;
+
+  /* Visualizations */
+  --color-chart-blue: #558bf2;
+  --color-chart-teal: #31ba9b;
+  --color-chart-sky: #7ba3f2;
+  --color-chart-other: #243347;
+  --color-chart-grid: #182333;
+
+  /* Scrollbar */
+  --color-scrollbar-thumb: rgba(148, 163, 184, 0.28);
+  --color-scrollbar-thumb-hover: rgba(148, 163, 184, 0.46);
+
+  /* Elevation */
+  --shadow-card: 0 4px 18px rgba(0, 0, 0, 0.35);
+  --shadow-card-hover: 0 8px 24px rgba(0, 0, 0, 0.45);
+  --shadow-dropdown: 0 12px 30px rgba(0, 0, 0, 0.55);
+}
+
+/* ==========================================================================
+   Theme: Darcula (Classic JetBrains)
+   ========================================================================== */
+[data-theme='darcula'] {
+  color-scheme: dark;
+
+  /* Surfaces */
+  --color-canvas: #232529;
+  --color-surface: #2b2b2b;
+  --color-surface-subtle: #313335;
+  --color-surface-hover: #3c3f41;
+  --color-sidebar: #2b2b2b;
+
+  /* Borders */
+  --color-border: #3c3f41;
+  --color-border-subtle: #323232;
+  --color-border-hover: #555555;
+
+  /* Typography */
+  --color-text-main: #a9b7c6;
+  --color-text-secondary: #808080;
+  --color-text-muted: #606366;
+  --color-text-inverse: #232529;
+
+  /* Primary Brand */
+  --color-primary: #4d90fe;
+  --color-primary-hover: #357ae8;
+  --color-primary-light: rgba(77, 144, 254, 0.15);
+  --color-primary-border: #2f5496;
+
+  /* Status Colors */
+  --color-success: #629755;
+  --color-success-light: rgba(98, 151, 85, 0.15);
+  --color-success-border: #3c5e34;
+
+  --color-warning: #cc7832;
+  --color-warning-light: rgba(204, 120, 50, 0.15);
+  --color-warning-border: #804a1e;
+
+  --color-danger: #cc666e;
+  --color-danger-light: rgba(204, 102, 110, 0.15);
+  --color-danger-border: #803e43;
+
+  /* Visualizations */
+  --color-chart-blue: #4d90fe;
+  --color-chart-teal: #629755;
+  --color-chart-sky: #6897bb;
+  --color-chart-other: #3c3f41;
+  --color-chart-grid: #323232;
+
+  /* Scrollbar */
+  --color-scrollbar-thumb: rgba(169, 183, 198, 0.3);
+  --color-scrollbar-thumb-hover: rgba(169, 183, 198, 0.5);
+
+  /* Elevation */
+  --shadow-card: 0 4px 18px rgba(0, 0, 0, 0.25);
+  --shadow-card-hover: 0 8px 24px rgba(0, 0, 0, 0.35);
+  --shadow-dropdown: 0 12px 30px rgba(0, 0, 0, 0.45);
+}
+
+/* ==========================================================================
+   Theme: Graphite (Monochrome & Sleek)
+   ========================================================================== */
+[data-theme='graphite'] {
+  color-scheme: dark;
+
+  /* Surfaces */
+  --color-canvas: #121212;
+  --color-surface: #1c1c1c;
+  --color-surface-subtle: #252525;
+  --color-surface-hover: #2e2e2e;
+  --color-sidebar: #1c1c1c;
+
+  /* Borders */
+  --color-border: #333333;
+  --color-border-subtle: #262626;
+  --color-border-hover: #4a4a4a;
+
+  /* Typography */
+  --color-text-main: #e0e0e0;
+  --color-text-secondary: #a0a0a0;
+  --color-text-muted: #6e6e6e;
+  --color-text-inverse: #121212;
+
+  /* Primary Brand (Muted Blue-Grey) */
+  --color-primary: #6b7a8f;
+  --color-primary-hover: #8292a8;
+  --color-primary-light: rgba(107, 122, 143, 0.15);
+  --color-primary-border: #3e4856;
+
+  /* Status Colors (Desaturated) */
+  --color-success: #5e8a6e;
+  --color-success-light: rgba(94, 138, 110, 0.15);
+  --color-success-border: #385442;
+
+  --color-warning: #a68a5c;
+  --color-warning-light: rgba(166, 138, 92, 0.15);
+  --color-warning-border: #635236;
+
+  --color-danger: #a65c5c;
+  --color-danger-light: rgba(166, 92, 92, 0.15);
+  --color-danger-border: #663838;
+
+  /* Visualizations */
+  --color-chart-blue: #6b7a8f;
+  --color-chart-teal: #5e8a6e;
+  --color-chart-sky: #8292a8;
+  --color-chart-other: #2e2e2e;
+  --color-chart-grid: #262626;
+
+  /* Scrollbar */
+  --color-scrollbar-thumb: rgba(190, 190, 190, 0.26);
+  --color-scrollbar-thumb-hover: rgba(190, 190, 190, 0.44);
+
+  /* Elevation */
+  --shadow-card: 0 4px 18px rgba(0, 0, 0, 0.4);
+  --shadow-card-hover: 0 8px 24px rgba(0, 0, 0, 0.5);
+  --shadow-dropdown: 0 12px 30px rgba(0, 0, 0, 0.6);
+}
+
+/* ==========================================================================
+   Theme: Tokyo Night (Deep Blue with Neon Accents)
+   ========================================================================== */
+[data-theme='tokyo'] {
+  color-scheme: dark;
+
+  /* Surfaces */
+  --color-canvas: #16161e;
+  --color-surface: #1a1b26;
+  --color-surface-subtle: #24283b;
+  --color-surface-hover: #292e42;
+  --color-sidebar: #1a1b26;
+
+  /* Borders */
+  --color-border: #292e42;
+  --color-border-subtle: #1f2335;
+  --color-border-hover: #3b4261;
+
+  /* Typography */
+  --color-text-main: #c0caf5;
+  --color-text-secondary: #9aa5ce;
+  --color-text-muted: #565f89;
+  --color-text-inverse: #16161e;
+
+  /* Primary Brand */
+  --color-primary: #7aa2f7;
+  --color-primary-hover: #8db0f8;
+  --color-primary-light: rgba(122, 162, 247, 0.15);
+  --color-primary-border: #3d59a1;
+
+  /* Status Colors */
+  --color-success: #9ece6a;
+  --color-success-light: rgba(158, 206, 106, 0.15);
+  --color-success-border: #567832;
+
+  --color-warning: #e0af68;
+  --color-warning-light: rgba(224, 175, 104, 0.15);
+  --color-warning-border: #8f682d;
+
+  --color-danger: #f7768e;
+  --color-danger-light: rgba(247, 118, 142, 0.15);
+  --color-danger-border: #a33b52;
+
+  /* Visualizations */
+  --color-chart-blue: #7aa2f7;
+  --color-chart-teal: #9ece6a;
+  --color-chart-sky: #7dcfff;
+  --color-chart-other: #292e42;
+  --color-chart-grid: #1f2335;
+
+  /* Scrollbar */
+  --color-scrollbar-thumb: rgba(154, 165, 206, 0.3);
+  --color-scrollbar-thumb-hover: rgba(154, 165, 206, 0.5);
+
+  /* Elevation */
+  --shadow-card: 0 4px 18px rgba(0, 0, 0, 0.3);
+  --shadow-card-hover: 0 8px 24px rgba(0, 0, 0, 0.4);
+  --shadow-dropdown: 0 12px 30px rgba(0, 0, 0, 0.5);
+}
+
+/* ==========================================================================
+   Theme: Catppuccin (Mocha - Pastel Dark)
+   ========================================================================== */
+[data-theme='catppuccin'] {
+  color-scheme: dark;
+
+  /* Surfaces */
+  --color-canvas: #11111b;
+  /* Crust */
+  --color-surface: #1e1e2e;
+  /* Base */
+  --color-surface-subtle: #181825;
+  /* Mantle */
+  --color-surface-hover: #313244;
+  /* Surface0 */
+  --color-sidebar: #181825;
+  /* Mantle */
+
+  /* Borders */
+  --color-border: #45475a;
+  /* Surface1 */
+  --color-border-subtle: #313244;
+  /* Surface0 */
+  --color-border-hover: #585b70;
+  /* Surface2 */
+
+  /* Typography */
+  --color-text-main: #cdd6f4;
+  /* Text */
+  --color-text-secondary: #bac2de;
+  /* Subtext1 */
+  --color-text-muted: #a6adc8;
+  /* Subtext0 */
+  --color-text-inverse: #11111b;
+  /* Crust */
+
+  /* Primary Brand */
+  --color-primary: #89b4fa;
+  /* Blue */
+  --color-primary-hover: #b4befe;
+  /* Lavender */
+  --color-primary-light: rgba(137, 180, 250, 0.15);
+  --color-primary-border: #4a679e;
+
+  /* Status Colors */
+  --color-success: #a6e3a1;
+  /* Green */
+  --color-success-light: rgba(166, 227, 161, 0.15);
+  --color-success-border: #5a8556;
+
+  --color-warning: #f9e2af;
+  /* Yellow */
+  --color-warning-light: rgba(249, 226, 175, 0.15);
+  --color-warning-border: #91815b;
+
+  --color-danger: #f38ba8;
+  /* Red */
+  --color-danger-light: rgba(243, 139, 168, 0.15);
+  --color-danger-border: #9e4b61;
+
+  /* Visualizations */
+  --color-chart-blue: #89b4fa;
+  --color-chart-teal: #94e2d5;
+  /* Teal */
+  --color-chart-sky: #89dceb;
+  /* Sky */
+  --color-chart-other: #313244;
+  --color-chart-grid: #181825;
+
+  /* Scrollbar */
+  --color-scrollbar-thumb: rgba(186, 194, 222, 0.3);
+  --color-scrollbar-thumb-hover: rgba(186, 194, 222, 0.5);
+
+  /* Elevation */
+  --shadow-card: 0 4px 18px rgba(0, 0, 0, 0.25);
+  --shadow-card-hover: 0 8px 24px rgba(0, 0, 0, 0.35);
+  --shadow-dropdown: 0 12px 30px rgba(0, 0, 0, 0.45);
+}
+
+/* ==========================================================================
+   Theme: Darcula Light (soft neutral surfaces, JetBrains-inspired blue)
+   ========================================================================== */
+[data-theme='darcula-light'] {
+  color-scheme: light;
+  --color-canvas: #f3f4f6;
+  --color-surface: #ffffff;
+  --color-surface-subtle: #f7f7f8;
+  --color-surface-hover: #eceef1;
+  --color-sidebar: #fafafa;
+
+  --color-border: #d7dbe0;
+  --color-border-subtle: #e7e9ed;
+  --color-border-hover: #b8bec7;
+
+  --color-text-main: #30343b;
+  --color-text-secondary: #5f6670;
+  --color-text-muted: #6e7681;
+  --color-text-inverse: #ffffff;
+
+  --color-primary: #3574c8;
+  --color-primary-hover: #285fa8;
+  --color-primary-light: #eaf2fc;
+  --color-primary-border: #a9c5e8;
+
+  --color-success: #43834d;
+  --color-success-light: #eaf5eb;
+  --color-success-border: #a8d0ad;
+  --color-warning: #a86624;
+  --color-warning-light: #fff3e5;
+  --color-warning-border: #e8c49b;
+  --color-danger: #c44750;
+  --color-danger-light: #fcecee;
+  --color-danger-border: #e9afb4;
+
+  --color-chart-blue: #3574c8;
+  --color-chart-teal: #398f82;
+  --color-chart-sky: #6c9ecf;
+  --color-chart-other: #d7dbe0;
+  --color-chart-grid: #e6e9ee;
+
+  --color-scrollbar-thumb: rgba(75, 85, 99, 0.28);
+  --color-scrollbar-thumb-hover: rgba(75, 85, 99, 0.46);
+  --shadow-card: 0 3px 14px rgba(40, 48, 60, 0.06);
+  --shadow-card-hover: 0 6px 20px rgba(40, 48, 60, 0.1);
+  --shadow-dropdown: 0 10px 25px -5px rgba(40, 48, 60, 0.13), 0 8px 10px -6px rgba(40, 48, 60, 0.08);
+}
+
+/* ==========================================================================
+   Theme: Graphite Light (cool neutral, restrained monochrome)
+   ========================================================================== */
+[data-theme='graphite-light'] {
+  color-scheme: light;
+  --color-canvas: #f1f2f3;
+  --color-surface: #ffffff;
+  --color-surface-subtle: #f7f7f7;
+  --color-surface-hover: #e9ebed;
+  --color-sidebar: #f8f8f8;
+
+  --color-border: #d8dadd;
+  --color-border-subtle: #e8e9eb;
+  --color-border-hover: #b9bdc2;
+
+  --color-text-main: #292c30;
+  --color-text-secondary: #555b62;
+  --color-text-muted: #70767d;
+  --color-text-inverse: #ffffff;
+
+  --color-primary: #596b80;
+  --color-primary-hover: #46586d;
+  --color-primary-light: #e9edf2;
+  --color-primary-border: #b5c0cc;
+
+  --color-success: #47765a;
+  --color-success-light: #eaf2ed;
+  --color-success-border: #b0cbb9;
+  --color-warning: #906c32;
+  --color-warning-light: #f7f0e4;
+  --color-warning-border: #ddc99f;
+  --color-danger: #a94f4f;
+  --color-danger-light: #f8ebeb;
+  --color-danger-border: #dfb1b1;
+
+  --color-chart-blue: #596b80;
+  --color-chart-teal: #4f8276;
+  --color-chart-sky: #8798aa;
+  --color-chart-other: #d8dadd;
+  --color-chart-grid: #e5e7e9;
+
+  --color-scrollbar-thumb: rgba(82, 88, 95, 0.27);
+  --color-scrollbar-thumb-hover: rgba(82, 88, 95, 0.45);
+  --shadow-card: 0 3px 12px rgba(28, 32, 36, 0.055);
+  --shadow-card-hover: 0 6px 18px rgba(28, 32, 36, 0.09);
+  --shadow-dropdown: 0 10px 24px -5px rgba(28, 32, 36, 0.12), 0 8px 10px -6px rgba(28, 32, 36, 0.07);
+}
+
+/* ==========================================================================
+   Theme: Tokyo Night Light (cool lavender-blue, clear accent hierarchy)
+   ========================================================================== */
+[data-theme='tokyo-light'] {
+  color-scheme: light;
+  --color-canvas: #f2f4fa;
+  --color-surface: #ffffff;
+  --color-surface-subtle: #f7f8fd;
+  --color-surface-hover: #e9edfa;
+  --color-sidebar: #f8f9fe;
+
+  --color-border: #d7ddef;
+  --color-border-subtle: #e7eaf5;
+  --color-border-hover: #b8c3e1;
+
+  --color-text-main: #24283b;
+  --color-text-secondary: #545d7a;
+  --color-text-muted: #697394;
+  --color-text-inverse: #ffffff;
+
+  --color-primary: #4b68c8;
+  --color-primary-hover: #3b55ac;
+  --color-primary-light: #e9edff;
+  --color-primary-border: #b1bff0;
+
+  --color-success: #43835e;
+  --color-success-light: #e9f5ed;
+  --color-success-border: #acd2b8;
+  --color-warning: #986522;
+  --color-warning-light: #fff4df;
+  --color-warning-border: #e7c990;
+  --color-danger: #c04465;
+  --color-danger-light: #fceaf0;
+  --color-danger-border: #e9b1c1;
+
+  --color-chart-blue: #4b68c8;
+  --color-chart-teal: #368f91;
+  --color-chart-sky: #4c9bc7;
+  --color-chart-other: #d7ddef;
+  --color-chart-grid: #e4e8f3;
+
+  --color-scrollbar-thumb: rgba(84, 93, 122, 0.28);
+  --color-scrollbar-thumb-hover: rgba(84, 93, 122, 0.46);
+  --shadow-card: 0 3px 14px rgba(44, 52, 86, 0.06);
+  --shadow-card-hover: 0 6px 20px rgba(44, 52, 86, 0.1);
+  --shadow-dropdown: 0 10px 25px -5px rgba(44, 52, 86, 0.13), 0 8px 10px -6px rgba(44, 52, 86, 0.08);
+}
+
+/* ==========================================================================
+   Theme: Catppuccin Latte (pastel light, lavender and teal accents)
+   ========================================================================== */
+[data-theme='catppuccin-latte'] {
+  color-scheme: light;
+  --color-canvas: #eff1f5;
+  --color-surface: #ffffff;
+  --color-surface-subtle: #e6e9ef;
+  --color-surface-hover: #dce0e8;
+  --color-sidebar: #e6e9ef;
+
+  --color-border: #ccd0da;
+  --color-border-subtle: #dce0e8;
+  --color-border-hover: #acb0be;
+
+  --color-text-main: #4c4f69;
+  --color-text-secondary: #626582;
+  --color-text-muted: #6b718a;
+  --color-text-inverse: #ffffff;
+
+  --color-primary: #586fc4;
+  --color-primary-hover: #485ca8;
+  --color-primary-light: #e8eaff;
+  --color-primary-border: #b9c2ee;
+
+  --color-success: #40805c;
+  --color-success-light: #e5f4e9;
+  --color-success-border: #a6d2b3;
+  --color-warning: #94621b;
+  --color-warning-light: #fff2d9;
+  --color-warning-border: #e6c58b;
+  --color-danger: #c04462;
+  --color-danger-light: #fce9ef;
+  --color-danger-border: #e7afbd;
+
+  --color-chart-blue: #7287d8;
+  --color-chart-teal: #278f8b;
+  --color-chart-sky: #269bb5;
+  --color-chart-other: #ccd0da;
+  --color-chart-grid: #dce0e8;
+
+  --color-scrollbar-thumb: rgba(98, 101, 130, 0.28);
+  --color-scrollbar-thumb-hover: rgba(98, 101, 130, 0.46);
+  --shadow-card: 0 3px 14px rgba(76, 79, 105, 0.06);
+  --shadow-card-hover: 0 6px 20px rgba(76, 79, 105, 0.1);
+  --shadow-dropdown: 0 10px 25px -5px rgba(76, 79, 105, 0.13),
+    0 8px 10px -6px rgba(76, 79, 105, 0.08);
+}

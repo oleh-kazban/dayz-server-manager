@@ -16,6 +16,8 @@
     "check:cycles": "madge --circular --extensions ts,tsx apps/",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
+    "storybook": "nx run ui:storybook",
+    "build-storybook": "nx run ui:build-storybook",
     "graph": "nx graph"
   },
   "lint-staged": {
@@ -35,6 +37,11 @@
     "@nx/js": "23.3.0",
     "@nx/react": "23.3.0",
     "@nx/vite": "23.3.0",
+    "@storybook/addon-a11y": "8.6.14",
+    "@storybook/addon-essentials": "8.6.14",
+    "@storybook/addon-interactions": "8.6.14",
+    "@storybook/react": "8.6.14",
+    "@storybook/react-vite": "8.6.14",
     "@tailwindcss/vite": "^4.0.0",
     "@tanstack/react-query": "5.104.4",
     "@tanstack/react-router": "1.170.45",
@@ -59,6 +66,7 @@
     "prettier": "3.3.3",
     "react": "19.3.1",
     "react-dom": "19.3.1",
+    "storybook": "8.6.14",
     "tailwindcss": "4.3.3",
     "typescript": "5.5.4",
     "typescript-eslint": "^8.71.2",
