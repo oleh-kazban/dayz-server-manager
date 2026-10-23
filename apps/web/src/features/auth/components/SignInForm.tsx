@@ -28,7 +28,7 @@ export function SignInForm() {
   });
 
   const onSubmit = async (values: SignInFormValues) => {
-    login(values);
+    await login(values);
     await router.invalidate();
     await navigate({ to: '/dashboard' });
   };
