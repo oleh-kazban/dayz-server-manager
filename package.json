@@ -73,6 +73,8 @@
   },
   "dependencies": {
     "@hookform/resolvers": "^6.0.0",
-    "react-hook-form": "^7.90.0"
+    "react-day-picker": "^10.0.2",
+    "react-hook-form": "^7.90.0",
+    "react-hot-toast": "^2.6.1"
   }
 }
