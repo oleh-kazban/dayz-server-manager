@@ -144,6 +144,7 @@ export function Autosuggest<T>({
             optionRefs.current[index] = element;
           }}
           role="option"
+          tabIndex={-1}
           aria-selected={isHighlighted}
           onMouseEnter={() => setHighlightedIndex(index)}
           onClick={() => handleSelect(item)}
