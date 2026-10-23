@@ -5,3 +5,4 @@ export * from './date-picker';
 export * from './input';
 export * from './loader';
 export * from './menu';
+export * from './toast';
