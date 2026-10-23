@@ -34,11 +34,17 @@ import {
   UserCheck,
   UserPlus,
   Users,
-  X,
 } from 'lucide-react';
 
 import { PageContainer } from '@dsm/components';
-import { Button } from '@dsm/ui';
+import { Button, Tag, type TagColor } from '@dsm/ui';
+
+const LOG_LEVEL_COLORS: Record<string, TagColor> = {
+  INFO: 'sky',
+  SAVE: 'emerald',
+  WARN: 'amber',
+  ERROR: 'rose',
+};
 
 /* --------------------------------------------------------------------------
    DUMMY PRESENTATION DATA
@@ -639,17 +645,29 @@ export function ServerManager() {
           </div>
 
           {/* Simulated Tactical Markers */}
-          <div className="absolute top-48 left-1/2 -translate-x-1/2 flex items-center gap-1.5 px-2 py-1 rounded-full bg-[var(--color-primary)] text-white text-[10px] font-bold shadow-lg">
-            <span className="w-1.5 h-1.5 rounded-full bg-white animate-ping" />
-            <span>Wolfpack</span>
+          <div className="absolute top-48 left-1/2 -translate-x-1/2">
+            <Tag
+              variant="solid"
+              color="primary"
+              shape="pill"
+              size="sm"
+              dot={{ ping: true }}
+              className="shadow-lg"
+            >
+              Wolfpack
+            </Tag>
           </div>
 
-          <div className="absolute bottom-20 left-1/2 -translate-x-12 px-2 py-0.5 rounded-full bg-emerald-600 text-white text-[10px] font-medium shadow-md">
-            TheWanderer
+          <div className="absolute bottom-20 left-1/2 -translate-x-12">
+            <Tag variant="solid" color="emerald" shape="pill" size="sm" className="shadow-md">
+              TheWanderer
+            </Tag>
           </div>
 
-          <div className="absolute bottom-24 right-44 px-2 py-0.5 rounded-full bg-emerald-600 text-white text-[10px] font-medium shadow-md">
-            Rook
+          <div className="absolute bottom-24 right-44">
+            <Tag variant="solid" color="emerald" shape="pill" size="sm" className="shadow-md">
+              Rook
+            </Tag>
           </div>
 
           {/* Map Footer Legend */}
@@ -808,21 +826,17 @@ export function ServerManager() {
                 </span>
                 <div className="flex items-center gap-2 flex-wrap pt-1">
                   {['1PP', 'Vanilla+', 'PvP', 'No safe zones'].map(tag => (
-                    <span
+                    <Tag
                       key={tag}
-                      className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md border border-[var(--color-border)] bg-[var(--color-surface-subtle)] text-xs text-[var(--color-text-secondary)]"
+                      variant="neutral"
+                      size="lg"
+                      onRemove={() => {}}
+                      removeAriaLabel={`Remove ${tag}`}
                     >
-                      <span>{tag}</span>
-                      <X className="w-3 h-3 cursor-pointer hover:text-[var(--color-text-main)]" />
-                    </span>
+                      {tag}
+                    </Tag>
                   ))}
-                  <button
-                    type="button"
-                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md border border-dashed border-[var(--color-border)] text-xs text-[var(--color-primary)] hover:bg-[var(--color-primary-light)] transition-colors"
-                  >
-                    <Plus className="w-3 h-3" />
-                    <span>Add tag</span>
-                  </button>
+                  <Tag.Add size="lg">Add tag</Tag.Add>
                 </div>
               </div>
             </div>
@@ -1392,9 +1406,9 @@ export function ServerManager() {
           </div>
 
           <div className="flex items-center gap-2.5 shrink-0">
-            <span className="px-2 py-0.5 rounded bg-amber-500/10 border border-amber-500/20 text-amber-600 dark:text-amber-400 text-xs font-medium">
+            <Tag variant="subtle" color="amber" size="sm">
               1 update available
-            </span>
+            </Tag>
             <button
               type="button"
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] hover:bg-[var(--color-surface-hover)] text-xs font-medium text-[var(--color-text-secondary)] shadow-sm"
@@ -1459,9 +1473,9 @@ export function ServerManager() {
                     </td>
                     <td className="p-3">
                       {mod.status === 'Update' ? (
-                        <span className="px-2 py-0.5 rounded bg-amber-500/10 border border-amber-500/20 text-amber-600 dark:text-amber-400 text-[10px] font-semibold">
+                        <Tag variant="subtle" color="amber" size="sm">
                           Update
-                        </span>
+                        </Tag>
                       ) : (
                         <span className="text-[11px] text-emerald-600 dark:text-emerald-400">
                           Up to date
@@ -1696,11 +1710,15 @@ export function ServerManager() {
                     {log.time}
                   </td>
                   <td className="p-2.5">
-                    <span
-                      className={`inline-block px-1.5 py-0.5 rounded text-[10px] font-bold border ${log.levelColor}`}
+                    <Tag
+                      variant="subtle"
+                      color={LOG_LEVEL_COLORS[log.level] || 'sky'}
+                      size="sm"
+                      uppercase
+                      mono
                     >
                       {log.level}
-                    </span>
+                    </Tag>
                   </td>
                   <td className="p-2.5 text-[var(--color-text-secondary)] font-sans text-xs">
                     {log.source}

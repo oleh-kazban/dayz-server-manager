@@ -29,7 +29,7 @@ import {
 } from 'lucide-react';
 
 import { PageContainer } from '@dsm/components';
-import { Button } from '@dsm/ui';
+import { Button, Tag, type TagColor } from '@dsm/ui';
 
 /* --------------------------------------------------------------------------
    DUMMY PRESENTATION DATA TYPES & CONSTANTS
@@ -239,15 +239,15 @@ const ITEMS: ItemRow[] = [
   },
 ];
 
-const CATEGORY_STYLES: Record<ItemRow['categoryTheme'], string> = {
-  weapons: 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20',
-  clothing: 'bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/20',
-  ammunition: 'bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-500/20',
-  food: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20',
-  medical: 'bg-teal-500/10 text-teal-600 dark:text-teal-400 border border-teal-500/20',
-  tools: 'bg-sky-500/10 text-sky-600 dark:text-sky-400 border border-sky-500/20',
-  containers: 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20',
-  electronics: 'bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 border border-cyan-500/20',
+const CATEGORY_TAG_COLORS: Record<ItemRow['categoryTheme'], TagColor> = {
+  weapons: 'rose',
+  clothing: 'purple',
+  ammunition: 'amber',
+  food: 'emerald',
+  medical: 'teal',
+  tools: 'sky',
+  containers: 'blue',
+  electronics: 'cyan',
 };
 
 const COLUMNS = [
@@ -621,13 +621,9 @@ export function Editor() {
 
                       {/* Category Badge */}
                       <td className="p-3">
-                        <span
-                          className={`inline-block px-2 py-0.5 rounded text-[11px] font-medium leading-tight ${
-                            CATEGORY_STYLES[item.categoryTheme]
-                          }`}
-                        >
+                        <Tag variant="subtle" color={CATEGORY_TAG_COLORS[item.categoryTheme]}>
                           {item.category}
-                        </span>
+                        </Tag>
                       </td>
 
                       {/* Numeric Values */}
