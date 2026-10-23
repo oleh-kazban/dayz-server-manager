@@ -3,6 +3,7 @@ import {
   Box,
   ChevronsUpDown,
   CreditCard,
+  FileCode2,
   LayoutDashboard,
   MapIcon,
   RadioTower,
@@ -72,7 +73,7 @@ export function Sidebar() {
             <span className="truncate">Overview</span>
           </a>
           <a
-            href="#servers"
+            href="/server-management"
             className="flex items-center justify-between px-3 py-2.5 rounded-lg text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-hover)] hover:text-[var(--color-text-main)] text-xs transition-colors"
           >
             <div className="flex items-center gap-3 min-w-0">
@@ -97,6 +98,13 @@ export function Sidebar() {
           >
             <MapIcon className="w-[17px] h-[17px]" />
             <span className="truncate">World &amp; map</span>
+          </a>
+          <a
+            href="/editor"
+            className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-hover)] hover:text-[var(--color-text-main)] text-xs transition-colors"
+          >
+            <FileCode2 className="w-[17px] h-[17px]" />
+            <span className="truncate">Types.xml Editor</span>
           </a>
           <a
             href="#mods"

@@ -24,9 +24,10 @@ export function PasswordInput({
         showToggle ? (
           <button
             type="button"
+            disabled={props.disabled}
             onClick={() => setShow(prev => !prev)}
             aria-label={show ? 'Hide password' : 'Show password'}
-            className="text-[var(--color-text-muted)] hover:text-[var(--color-text-secondary)] transition-colors cursor-pointer shrink-0"
+            className="text-[var(--color-text-muted)] enabled:hover:text-[var(--color-text-secondary)] disabled:cursor-not-allowed disabled:opacity-50 transition-colors cursor-pointer shrink-0"
           >
             {show ? (
               <EyeOff className="w-[17px] h-[17px]" />

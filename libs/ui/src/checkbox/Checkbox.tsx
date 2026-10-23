@@ -13,6 +13,7 @@ export function Checkbox({
   label,
   description,
   error,
+  disabled = false,
   containerClassName = '',
   className = '',
   ...props
@@ -28,18 +29,22 @@ export function Checkbox({
           ref={ref}
           id={inputId}
           type="checkbox"
+          disabled={disabled}
+          aria-disabled={disabled}
           aria-invalid={Boolean(error)}
           aria-describedby={error ? `${inputId}-error` : undefined}
-          className={`w-[15px] h-[15px] rounded border border-[var(--color-border)] text-[var(--color-primary)] accent-[var(--color-primary)] focus:ring-0 cursor-pointer shrink-0 ${
-            description ? 'mt-0.5' : ''
-          } ${className}`}
+          className={`w-[15px] h-[15px] rounded border border-[var(--color-border)] text-[var(--color-primary)] accent-[var(--color-primary)] focus:ring-0 shrink-0 transition-opacity ${
+            disabled ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'
+          } ${description ? 'mt-0.5' : ''} ${className}`}
         />
         {label && (
           <label
             htmlFor={inputId}
-            className={`text-[11px] text-[var(--color-text-secondary)] select-none cursor-pointer ${
-              description ? 'leading-tight' : 'leading-none'
-            }`}
+            className={`text-[11px] select-none ${
+              disabled
+                ? 'cursor-not-allowed opacity-50 text-[var(--color-text-muted)]'
+                : 'cursor-pointer text-[var(--color-text-secondary)]'
+            } ${description ? 'leading-tight' : 'leading-none'}`}
           >
             {label}
             {description && (

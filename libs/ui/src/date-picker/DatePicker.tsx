@@ -40,18 +40,27 @@ export function DatePicker({
   const popupId = useId();
   const { isOpen, close, toggle, popupPosition, containerRef, triggerRef, popupRef } =
     usePopup(alignment);
+  const isPopupOpen = !disabled && isOpen;
   const isPositioned = popupPosition !== null;
   const selected = value ? parseDateOnly(value) : undefined;
   const startDate = minDate ? parseDateOnly(minDate) : undefined;
   const endDate = maxDate ? parseDateOnly(maxDate) : undefined;
 
   useEffect(() => {
-    if (isOpen && isPositioned) {
+    if (isPopupOpen && isPositioned) {
       popupRef.current?.querySelector<HTMLButtonElement>('button[tabindex="0"]')?.focus();
     }
-  }, [isOpen, isPositioned, popupRef]);
+  }, [isPopupOpen, isPositioned, popupRef]);
+
+  // Dismiss popup if component becomes disabled while open
+  useEffect(() => {
+    if (disabled && isOpen) {
+      close();
+    }
+  }, [disabled, isOpen, close]);
 
   const handleSelect = (date: Date | undefined) => {
+    if (disabled) return;
     onChange(date ? toDateOnlyString(date) : undefined);
     close();
     triggerRef.current?.focus();
@@ -63,7 +72,7 @@ export function DatePicker({
         ref={triggerRef}
         type="button"
         aria-haspopup="dialog"
-        aria-expanded={isOpen}
+        aria-expanded={isPopupOpen}
         aria-controls={popupId}
         aria-label={value ? `${ariaLabel}: ${formatDateOnly(value)}` : ariaLabel}
         onClick={toggle}
@@ -72,10 +81,10 @@ export function DatePicker({
           triggerClassName ?? DEFAULT_TRIGGER_CLASS
         }`}
       >
-        <div className="flex items-center gap-2 truncate">
+        <span className="flex items-center gap-2 truncate">
           <Calendar className="h-4 w-4 shrink-0 text-[var(--color-text-muted)]" />
           <span className="truncate">{value ? formatDateOnly(value) : placeholder}</span>
-        </div>
+        </span>
       </button>
 
       {value && !disabled && (
@@ -92,7 +101,7 @@ export function DatePicker({
         </button>
       )}
 
-      {isOpen &&
+      {isPopupOpen &&
         createPortal(
           <div
             ref={popupRef}
