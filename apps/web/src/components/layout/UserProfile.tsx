@@ -46,9 +46,7 @@ export function UserProfile() {
       </div>
       <button
         type="button"
-        onClick={() => {
-          void handleLogout();
-        }}
+        onClick={handleLogout}
         aria-label="Sign out"
         title="Sign out"
         className="p-1 text-[var(--color-text-secondary)] hover:text-[var(--color-danger)] rounded transition-colors cursor-pointer"

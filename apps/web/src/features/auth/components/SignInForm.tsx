@@ -49,13 +49,8 @@ export function SignInForm() {
           </p>
         </div>
 
-        <form
-          onSubmit={e => {
-            void handleSubmit(onSubmit)(e);
-          }}
-          className="space-y-5"
-          noValidate
-        >
+        {/* Form Controls */}
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-5" noValidate>
           <Input
             label="Username or email"
             id="username"
