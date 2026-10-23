@@ -1,0 +1,48 @@
+version: 2
+updates:
+  # Maintain Node.js & pnpm monorepo dependencies
+  - package-ecosystem: 'npm'
+    directory: '/'
+    schedule:
+      interval: 'weekly'
+      day: 'monday'
+      time: '06:00'
+      timezone: 'UTC'
+    open-pull-requests-limit: 10
+    commit-message:
+      prefix: 'chore(deps)'
+    labels:
+      - 'dependencies'
+      - 'security'
+    groups:
+      runtime-dependencies:
+        patterns:
+          - '*'
+        exclude-patterns:
+          - '@types/*'
+          - 'eslint*'
+          - 'prettier*'
+          - '@storybook/*'
+          - 'typescript'
+      dev-dependencies:
+        patterns:
+          - '@types/*'
+          - 'eslint*'
+          - 'prettier*'
+          - '@storybook/*'
+          - 'typescript'
+
+  # Maintain GitHub Actions workflow dependencies
+  - package-ecosystem: 'github-actions'
+    directory: '/'
+    schedule:
+      interval: 'weekly'
+      day: 'monday'
+      time: '06:00'
+      timezone: 'UTC'
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: 'ci(actions)'
+    labels:
+      - 'dependencies'
+      - 'github-actions'
