@@ -31,6 +31,7 @@ import {
 } from 'lucide-react';
 
 import { PageContainer } from '@dsm/components';
+import { Toggle } from '@dsm/ui';
 
 export function Dashboard() {
   return (
@@ -757,12 +758,7 @@ export function Dashboard() {
             <div className="flex items-center justify-between gap-4">
               <h3 className="text-base font-semibold text-[var(--color-text-main)]">Server logs</h3>
               <div className="flex items-center gap-3">
-                <div className="flex items-center gap-2 text-xs text-[var(--color-text-muted)]">
-                  <span>Auto-scroll</span>
-                  <div className="w-8 h-4 rounded-full bg-[var(--color-primary)] p-0.5 cursor-pointer flex justify-end">
-                    <div className="w-3 h-3 rounded-full bg-white shadow-sm" />
-                  </div>
-                </div>
+                <Toggle label="Auto-scroll" defaultChecked labelPosition="left" />
                 <button
                   type="button"
                   className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] hover:bg-[var(--color-surface-hover)] text-xs text-[var(--color-text-secondary)] transition-colors"

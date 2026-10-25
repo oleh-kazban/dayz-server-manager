@@ -1,6 +1,7 @@
 @import './fonts.css';
 @import './themes.css';
 @import 'tailwindcss';
+@source '../../../../libs/ui/src';
 
 @theme {
   --font-sans: var(--font-sans);
@@ -25,6 +26,7 @@
   --color-primary-hover: var(--color-primary-hover);
   --color-primary-light: var(--color-primary-light);
   --color-primary-border: var(--color-primary-border);
+  --color-primary-fg: var(--color-primary-fg);
 
   --color-status-success: var(--color-success);
   --color-status-success-light: var(--color-success-light);
@@ -32,9 +34,15 @@
   --color-status-warning: var(--color-warning);
   --color-status-warning-light: var(--color-warning-light);
   --color-status-warning-border: var(--color-warning-border);
+  --color-status-warning-fg: var(--color-warning-fg);
   --color-status-danger: var(--color-danger);
   --color-status-danger-light: var(--color-danger-light);
   --color-status-danger-border: var(--color-danger-border);
+  --color-status-danger-fg: var(--color-danger-fg);
+  --color-status-info: var(--color-info);
+  --color-status-info-light: var(--color-info-light);
+  --color-status-info-border: var(--color-info-border);
+  --color-status-info-fg: var(--color-info-fg);
 
   --color-chart-blue: var(--color-chart-blue);
   --color-chart-teal: var(--color-chart-teal);
@@ -92,4 +100,15 @@ body {
 
 ::-webkit-scrollbar-thumb:hover {
   background: var(--color-scrollbar-thumb-hover);
+}
+
+/* WebKit Autofill Harmonization (preserves theme surface & text color) */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus,
+input:-webkit-autofill:active {
+  -webkit-box-shadow: 0 0 0 1000px var(--color-surface) inset !important;
+  -webkit-text-fill-color: var(--color-text-main) !important;
+  caret-color: var(--color-text-main);
+  transition: background-color 5000s ease-in-out 0s;
 }

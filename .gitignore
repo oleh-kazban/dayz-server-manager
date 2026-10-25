@@ -6,8 +6,8 @@ coverage
 *.log
 
 # Project specs & references ignored from git
-specs/
-references/
+specs
+references
 
 GEMINI.md
 ...sandbox

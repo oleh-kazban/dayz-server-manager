@@ -1,6 +1,7 @@
 import {
   type KeyboardEvent as ReactKeyboardEvent,
   type ReactNode,
+  type Ref,
   useEffect,
   useId,
   useRef,
@@ -22,10 +23,12 @@ export interface FloatingMenuOption<T> {
 export interface FloatingMenuProps<T extends string> {
   options: FloatingMenuOption<T>[];
   value: T;
-  onChange: (_value: T) => void;
+  onChange: (value: T) => void;
   ariaLabel: string;
   alignment?: Alignment;
-  triggerClassName?: string;
+  disabled?: boolean;
+  customClassName?: string;
+  ref?: Ref<HTMLButtonElement>;
 }
 
 function OptionIndicator({
@@ -47,12 +50,14 @@ function OptionIndicator({
 }
 
 export function FloatingMenu<T extends string>({
+  ref,
   options,
   value,
   ariaLabel,
   onChange,
   alignment = 'end',
-  triggerClassName = '',
+  disabled = false,
+  customClassName = '',
 }: FloatingMenuProps<T>) {
   const menuId = useId();
   const optionRefs = useRef<(HTMLButtonElement | null)[]>([]);
@@ -60,6 +65,21 @@ export function FloatingMenu<T extends string>({
     usePopup(alignment);
 
   const currentSelectedOption = options.find(option => option.value === value);
+
+  const handleTriggerRef = (element: HTMLButtonElement | null) => {
+    triggerRef.current = element;
+    if (typeof ref === 'function') {
+      ref(element);
+    } else if (ref && 'current' in ref) {
+      (ref as { current: HTMLButtonElement | null }).current = element;
+    }
+  };
+
+  useEffect(() => {
+    if (disabled && isOpen) {
+      close();
+    }
+  }, [disabled, isOpen, close]);
 
   const handleOptionKeyDown = (event: ReactKeyboardEvent<HTMLButtonElement>, index: number) => {
     let nextIndex: number | undefined;
@@ -84,11 +104,14 @@ export function FloatingMenu<T extends string>({
 
   useEffect(() => {
     if (isOpen && isPositioned) {
-      optionRefs.current[0]?.focus();
+      const selectedIndex = options.findIndex(option => option.value === value);
+      const targetIndex = selectedIndex >= 0 ? selectedIndex : 0;
+      optionRefs.current[targetIndex]?.focus();
     }
-  }, [isOpen, isPositioned]);
+  }, [isOpen, isPositioned, options, value]);
 
   const selectOption = (nextValue: T) => {
+    if (disabled) return;
     onChange(nextValue);
     close();
     triggerRef.current?.focus();
@@ -101,16 +124,17 @@ export function FloatingMenu<T extends string>({
   return (
     <div ref={containerRef} className="relative inline-block">
       <button
-        ref={triggerRef}
+        ref={handleTriggerRef}
         type="button"
         aria-haspopup="menu"
         aria-expanded={isOpen}
         aria-controls={menuId}
         aria-label={ariaLabel}
+        disabled={disabled}
         onClick={toggle}
-        className={`inline-flex items-center gap-1.5 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] px-2.5 py-1.5 text-xs font-medium text-[var(--color-text-main)] transition-colors hover:bg-[var(--color-surface-subtle)] ${triggerClassName} ${
+        className={`inline-flex h-9 items-center justify-between gap-2.5 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] px-3.5 text-xs font-sans font-medium text-[var(--color-text-main)] shadow-xs transition-colors hover:bg-[var(--color-surface-subtle)] focus-visible:outline-none focus-visible:border-[var(--color-primary)] focus-visible:ring-1 focus-visible:ring-[var(--color-primary)] disabled:cursor-not-allowed disabled:opacity-50 ${customClassName} ${
           currentSelectedOption.className ?? ''
-        }`}
+        }`.trim()}
       >
         {currentSelectedOption.icon && (
           <span className="shrink-0">{currentSelectedOption.icon}</span>
@@ -126,7 +150,7 @@ export function FloatingMenu<T extends string>({
             id={menuId}
             role="menu"
             aria-label={ariaLabel}
-            className="fixed z-50 min-w-36 overflow-y-auto rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-1 text-[var(--color-text-main)] shadow-[var(--shadow-card)]"
+            className="fixed z-50 min-w-36 overflow-y-auto rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-1 font-sans text-xs text-[var(--color-text-main)] shadow-[var(--shadow-card)]"
             style={{
               top: popupPosition?.top ?? 0,
               left: popupPosition?.left ?? 0,
@@ -148,7 +172,7 @@ export function FloatingMenu<T extends string>({
                   aria-checked={isSelected}
                   onClick={() => selectOption(option.value)}
                   onKeyDown={event => handleOptionKeyDown(event, index)}
-                  className={`flex w-full items-center justify-between gap-3 rounded-lg px-3 py-2 text-left text-xs font-medium transition-colors ${
+                  className={`flex w-full items-center justify-between gap-3 rounded-lg px-3 py-2 text-left text-xs font-sans font-medium transition-colors ${
                     isSelected
                       ? 'bg-[var(--color-primary)]/10 text-[var(--color-primary)]'
                       : 'text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-subtle)] hover:text-[var(--color-text-main)]'

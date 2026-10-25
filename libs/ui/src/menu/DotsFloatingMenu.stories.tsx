@@ -31,13 +31,13 @@ export const DefaultActionMenu: StoryObj = {
           },
           {
             label: 'Force Kill (#shutdown)',
-            icon: <Power className="h-3.5 w-3.5 text-[var(--color-warning)]" />,
+            icon: <Power className="h-3.5 w-3.5 text-[var(--color-status-warning)]" />,
             onSelect: () => console.log('Force kill clicked'),
           },
           {
             label: 'Delete Instance',
-            icon: <Trash2 className="h-3.5 w-3.5 text-[var(--color-danger)]" />,
-            className: 'text-[var(--color-danger)] hover:bg-[var(--color-danger)]/10',
+            icon: <Trash2 className="h-3.5 w-3.5 text-[var(--color-status-danger)]" />,
+            destructive: true,
             onSelect: () => console.log('Delete clicked'),
           },
         ]}
@@ -65,6 +65,23 @@ export const CustomTriggerIcon: StoryObj = {
             label: 'Reset Filters',
             disabled: true,
             onSelect: () => console.log('Reset'),
+          },
+        ]}
+      />
+    </div>
+  ),
+};
+
+export const Disabled: StoryObj = {
+  render: () => (
+    <div className="flex h-56 items-start justify-center p-8">
+      <DotsFloatingMenu
+        disabled
+        ariaLabel="Disabled server actions"
+        options={[
+          {
+            label: 'View Details',
+            onSelect: () => console.log('View'),
           },
         ]}
       />

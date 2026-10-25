@@ -23,6 +23,10 @@
     "typecheck": {
       "cache": true,
       "inputs": ["default"]
+    },
+    "test": {
+      "cache": true,
+      "inputs": ["default"]
     }
   },
   "analytics": false

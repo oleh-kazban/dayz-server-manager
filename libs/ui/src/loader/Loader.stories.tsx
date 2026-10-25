@@ -24,10 +24,20 @@ export const SpinnerVariants: StoryObj = {
 
 export const BouncingDots: StoryObj = {
   render: () => (
-    <div className="flex flex-col items-center gap-6">
+    <div className="flex flex-col items-center gap-8">
       <Loader variant="dots" size="sm" />
       <Loader variant="dots" size="md" showLabel label="Synchronizing with BattlEye..." />
       <Loader variant="dots" size="lg" />
+    </div>
+  ),
+};
+
+export const PulseWaveDots: StoryObj = {
+  render: () => (
+    <div className="flex flex-col items-center gap-8">
+      <Loader variant="pulse" size="sm" />
+      <Loader variant="pulse" size="md" showLabel label="Connecting to DayZ server..." />
+      <Loader variant="pulse" size="lg" />
     </div>
   ),
 };

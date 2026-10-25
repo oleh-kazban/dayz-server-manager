@@ -2,6 +2,8 @@ import { useState } from 'react';
 
 import type { Meta, StoryObj } from '@storybook/react';
 
+import { Button } from '../button';
+
 import { Confirmation, type ConfirmationProps } from './Confirmation';
 
 const meta: Meta<typeof Confirmation> = {
@@ -20,13 +22,9 @@ function ConfirmationDemo(props: Partial<ConfirmationProps>) {
 
   return (
     <div className="flex flex-col items-center gap-4">
-      <button
-        type="button"
-        onClick={() => setIsOpen(true)}
-        className="rounded-lg bg-[var(--color-primary)] px-4 py-2 text-xs font-semibold text-white shadow-sm transition hover:opacity-90"
-      >
+      <Button variant="primary" onClick={() => setIsOpen(true)}>
         Open Confirmation Dialog
-      </button>
+      </Button>
 
       {isOpen && (
         <Confirmation
@@ -80,4 +78,35 @@ export const DangerWithTimer: Story = {
       timerValue={5}
     />
   ),
+};
+
+export const Loading: Story = {
+  render: () => (
+    <ConfirmationDemo
+      title="Stopping Server via RCON"
+      description="Sending RCON #shutdown command to DayZ Dedicated Server... waiting for process to exit cleanly."
+      variant="danger"
+      confirmLabel="Stopping..."
+      isLoading={true}
+    />
+  ),
+  play: async ({ canvasElement }) => {
+    const openButton = canvasElement.querySelector<HTMLButtonElement>('button');
+    if (!openButton) {
+      throw new Error('The loading confirmation trigger should be rendered.');
+    }
+    openButton.click();
+
+    await new Promise(resolve => requestAnimationFrame(() => resolve(undefined)));
+
+    const dialog = canvasElement.querySelector<HTMLDialogElement>('dialog');
+    if (!dialog?.open) {
+      throw new Error('The loading confirmation dialog should be open.');
+    }
+
+    const cancelEvent = new Event('cancel', { cancelable: true });
+    if (dialog.dispatchEvent(cancelEvent) || !dialog.open) {
+      throw new Error('A loading confirmation dialog must prevent cancellation.');
+    }
+  },
 };

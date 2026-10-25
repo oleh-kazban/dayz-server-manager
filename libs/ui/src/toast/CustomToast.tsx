@@ -9,46 +9,71 @@ export interface CustomToastProps {
   title: string;
   description?: string;
   type?: ToastType;
+  customClassName?: string;
 }
+
+const TOAST_STYLES: Record<
+  ToastType,
+  {
+    container: string;
+    iconColor: string;
+  }
+> = {
+  success: {
+    container: 'border-[var(--color-status-success-border)] bg-[var(--color-status-success-light)]',
+    iconColor: 'text-[var(--color-status-success)]',
+  },
+  info: {
+    container: 'border-[var(--color-primary-border)] bg-[var(--color-primary-light)]',
+    iconColor: 'text-[var(--color-primary)]',
+  },
+  warning: {
+    container: 'border-[var(--color-status-warning-border)] bg-[var(--color-status-warning-light)]',
+    iconColor: 'text-[var(--color-status-warning)]',
+  },
+  error: {
+    container: 'border-[var(--color-status-danger-border)] bg-[var(--color-status-danger-light)]',
+    iconColor: 'text-[var(--color-status-danger)]',
+  },
+};
 
 function ToastIcon({ type }: { type: ToastType }) {
-  switch (type) {
-    case 'success':
-      return (
-        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-500">
-          <CheckCircle2 className="h-4 w-4" />
-        </div>
-      );
-    case 'error':
-      return (
-        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-[var(--color-danger)]/10 text-[var(--color-danger)]">
-          <AlertCircle className="h-4 w-4" />
-        </div>
-      );
-    case 'warning':
-      return (
-        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-[var(--color-warning)]/10 text-[var(--color-warning)]">
-          <AlertTriangle className="h-4 w-4" />
-        </div>
-      );
-    case 'info':
-    default:
-      return (
-        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-[var(--color-primary)]/10 text-[var(--color-primary)]">
-          <Info className="h-4 w-4" />
-        </div>
-      );
-  }
+  const styles = TOAST_STYLES[type] ?? TOAST_STYLES.info;
+
+  const IconComponent =
+    {
+      success: CheckCircle2,
+      error: AlertCircle,
+      warning: AlertTriangle,
+      info: Info,
+    }[type] ?? Info;
+
+  return (
+    <div className={`shrink-0 pt-0.5 ${styles.iconColor}`}>
+      <IconComponent className="h-5 w-5" />
+    </div>
+  );
 }
 
-export function CustomToast({ t, title, description, type = 'info' }: CustomToastProps) {
+export function CustomToast({
+  t,
+  title,
+  description,
+  type = 'info',
+  customClassName = '',
+}: CustomToastProps) {
+  const styles = TOAST_STYLES[type] ?? TOAST_STYLES.info;
+  const isError = type === 'error';
+
   return (
     <div
-      role="status"
-      aria-live="polite"
+      role={isError ? 'alert' : 'status'}
+      aria-live={isError ? 'assertive' : 'polite'}
       className={`${
         t.visible ? 'translate-y-0 opacity-100' : '-translate-y-2 opacity-0'
-      } pointer-events-auto flex w-full max-w-sm transform items-start gap-3 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-3.5 text-[var(--color-text-main)] shadow-[var(--shadow-card)] transition-all duration-200`}
+      } pointer-events-auto flex w-full max-w-sm transform items-start gap-3 rounded-2xl border ${
+        styles.container
+      } p-3.5 text-[var(--color-text-main)] shadow-[var(--shadow-card)] transition-all duration-200 ${customClassName}`.trim()}
     >
       <ToastIcon type={type} />
       <div className="min-w-0 flex-1">
@@ -56,7 +81,7 @@ export function CustomToast({ t, title, description, type = 'info' }: CustomToas
           {title}
         </h3>
         {description && (
-          <p className="mt-1 text-xs leading-relaxed text-[var(--color-text-muted)]">
+          <p className="mt-1 text-xs leading-relaxed text-[var(--color-text-secondary)]">
             {description}
           </p>
         )}
@@ -65,7 +90,7 @@ export function CustomToast({ t, title, description, type = 'info' }: CustomToas
         type="button"
         aria-label="Dismiss notification"
         onClick={() => toast.dismiss(t.id)}
-        className="shrink-0 rounded-lg p-1 text-[var(--color-text-muted)] transition-colors hover:bg-[var(--color-surface-subtle)] hover:text-[var(--color-text-main)]"
+        className="shrink-0 rounded-lg p-1 text-[var(--color-text-muted)] transition-colors hover:bg-black/5 dark:hover:bg-white/10 hover:text-[var(--color-text-main)] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--color-primary)] cursor-pointer"
       >
         <X className="h-3.5 w-3.5" />
       </button>

@@ -27,6 +27,7 @@
 
   /* Primary Brand (Outlive Royal Blue) */
   --color-primary: #4279e8;
+  --color-primary-fg: #ffffff;
   --color-primary-hover: #3567d1;
   --color-primary-light: #edf3ff;
   --color-primary-border: #acc3ef;
@@ -39,10 +40,17 @@
   --color-warning: #bb8a3e;
   --color-warning-light: #fbf4e7;
   --color-warning-border: #e6c88b;
+  --color-warning-fg: #ffffff;
 
   --color-danger: #e05252;
   --color-danger-light: #fdeeee;
   --color-danger-border: #f8b4b4;
+  --color-danger-fg: #ffffff;
+
+  --color-info: #0284c7;
+  --color-info-light: #f0f9ff;
+  --color-info-border: #bae6fd;
+  --color-info-fg: #ffffff;
 
   /* Data Visualizations */
   --color-chart-blue: #4279e8;
@@ -63,6 +71,9 @@
 
 [data-theme='dark'] {
   color-scheme: dark;
+  --color-primary-fg: #090d12;
+  --color-warning-fg: #090d12;
+  --color-danger-fg: #090d12;
 
   /* Dark Theme Surfaces (Mil-Spec Tactical Obsidian) */
   --color-canvas: #090d12;
@@ -101,6 +112,11 @@
   --color-danger-light: rgba(224, 82, 82, 0.16);
   --color-danger-border: #8b3232;
 
+  --color-info: #38bdf8;
+  --color-info-light: rgba(56, 189, 248, 0.16);
+  --color-info-border: #0369a1;
+  --color-info-fg: #ffffff;
+
   /* Visualizations */
   --color-chart-blue: #558bf2;
   --color-chart-teal: #31ba9b;
@@ -123,6 +139,9 @@
    ========================================================================== */
 [data-theme='darcula'] {
   color-scheme: dark;
+  --color-primary-fg: #1e2022;
+  --color-warning-fg: #1e2022;
+  --color-danger-fg: #1e2022;
 
   /* Surfaces */
   --color-canvas: #232529;
@@ -183,6 +202,9 @@
    ========================================================================== */
 [data-theme='graphite'] {
   color-scheme: dark;
+  --color-primary-fg: #121212;
+  --color-warning-fg: #121212;
+  --color-danger-fg: #121212;
 
   /* Surfaces */
   --color-canvas: #121212;
@@ -243,6 +265,9 @@
    ========================================================================== */
 [data-theme='tokyo'] {
   color-scheme: dark;
+  --color-primary-fg: #16161e;
+  --color-warning-fg: #16161e;
+  --color-danger-fg: #16161e;
 
   /* Surfaces */
   --color-canvas: #16161e;
@@ -303,6 +328,9 @@
    ========================================================================== */
 [data-theme='catppuccin'] {
   color-scheme: dark;
+  --color-primary-fg: #11111b;
+  --color-warning-fg: #11111b;
+  --color-danger-fg: #11111b;
 
   /* Surfaces */
   --color-canvas: #11111b;
@@ -382,6 +410,9 @@
    ========================================================================== */
 [data-theme='darcula-light'] {
   color-scheme: light;
+  --color-primary-fg: #ffffff;
+  --color-warning-fg: #ffffff;
+  --color-danger-fg: #ffffff;
   --color-canvas: #f3f4f6;
   --color-surface: #ffffff;
   --color-surface-subtle: #f7f7f8;
@@ -430,6 +461,9 @@
    ========================================================================== */
 [data-theme='graphite-light'] {
   color-scheme: light;
+  --color-primary-fg: #ffffff;
+  --color-warning-fg: #ffffff;
+  --color-danger-fg: #ffffff;
   --color-canvas: #f1f2f3;
   --color-surface: #ffffff;
   --color-surface-subtle: #f7f7f7;
@@ -478,6 +512,9 @@
    ========================================================================== */
 [data-theme='tokyo-light'] {
   color-scheme: light;
+  --color-primary-fg: #ffffff;
+  --color-warning-fg: #ffffff;
+  --color-danger-fg: #ffffff;
   --color-canvas: #f2f4fa;
   --color-surface: #ffffff;
   --color-surface-subtle: #f7f8fd;
@@ -526,6 +563,9 @@
    ========================================================================== */
 [data-theme='catppuccin-latte'] {
   color-scheme: light;
+  --color-primary-fg: #ffffff;
+  --color-warning-fg: #ffffff;
+  --color-danger-fg: #ffffff;
   --color-canvas: #eff1f5;
   --color-surface: #ffffff;
   --color-surface-subtle: #e6e9ef;

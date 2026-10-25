@@ -10,8 +10,24 @@ export function toDateOnlyString(date: Date): string {
 }
 
 export function parseDateOnly(dateString: string): Date {
-  const [year, month, day] = dateString.split('-').map(Number);
-  return new Date(year, (month || 1) - 1, day || 1);
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dateString);
+  if (!match) {
+    throw new RangeError(`Invalid date-only value: ${dateString}`);
+  }
+
+  const [, yearString, monthString, dayString] = match;
+  const year = Number(yearString);
+  const month = Number(monthString);
+  const day = Number(dayString);
+  const date = new Date(0);
+  date.setFullYear(year, month - 1, day);
+  date.setHours(0, 0, 0, 0);
+
+  if (date.getFullYear() !== year || date.getMonth() !== month - 1 || date.getDate() !== day) {
+    throw new RangeError(`Invalid date-only value: ${dateString}`);
+  }
+
+  return date;
 }
 
 export function formatDateOnly(

@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 
 export type Alignment = 'start' | 'end';
 export type Placement = 'top' | 'bottom';
@@ -8,6 +8,7 @@ export interface PopupPosition {
   left: number;
   width: number;
   maxHeight: number;
+  maxWidth: number;
   placement: Placement;
 }
 
@@ -23,51 +24,54 @@ export function usePopup<TTrigger extends HTMLElement = HTMLButtonElement>(
   const triggerRef = useRef<TTrigger>(null);
   const popupRef = useRef<HTMLDivElement>(null);
 
-  const open = () => setIsOpen(true);
-  const close = () => setIsOpen(false);
-  const toggle = () => setIsOpen(prev => !prev);
+  const open = useCallback(() => setIsOpen(true), []);
+  const close = useCallback(() => setIsOpen(false), []);
+  const toggle = useCallback(() => setIsOpen(prev => !prev), []);
+
+  const updatePlacement = useCallback(() => {
+    const trigger = triggerRef.current;
+    const popup = popupRef.current;
+
+    if (!trigger || !popup) {
+      return;
+    }
+
+    const triggerRect = trigger.getBoundingClientRect();
+    const popupRect = popup.getBoundingClientRect();
+    const popupHeight = popup.scrollHeight;
+    const availableAbove = Math.max(0, triggerRect.top - POPUP_GAP - VIEWPORT_PADDING);
+    const availableBelow = Math.max(
+      0,
+      window.innerHeight - triggerRect.bottom - POPUP_GAP - VIEWPORT_PADDING,
+    );
+    const fitsAbove = popupHeight <= availableAbove;
+    const fitsBelow = popupHeight <= availableBelow;
+    const placement: Placement =
+      fitsBelow || (!fitsAbove && availableBelow >= availableAbove) ? 'bottom' : 'top';
+    const width = triggerRect.width;
+    const maxHeight = placement === 'bottom' ? availableBelow : availableAbove;
+    const renderedHeight = Math.min(popupHeight, maxHeight);
+    const maxWidth = Math.max(0, window.innerWidth - 2 * VIEWPORT_PADDING);
+    const effectivePopupWidth = popupRect.width > 0 ? popupRect.width : triggerRect.width;
+    const preferredLeft =
+      alignment === 'start' ? triggerRect.left : triggerRect.right - effectivePopupWidth;
+    const maxLeft = Math.max(
+      VIEWPORT_PADDING,
+      window.innerWidth - effectivePopupWidth - VIEWPORT_PADDING,
+    );
+    const left = Math.min(Math.max(VIEWPORT_PADDING, preferredLeft), maxLeft);
+    const top =
+      placement === 'bottom'
+        ? triggerRect.bottom + POPUP_GAP
+        : triggerRect.top - POPUP_GAP - renderedHeight;
+
+    setPopupPosition({ top, left, width, maxHeight, maxWidth, placement });
+  }, [alignment]);
 
   useLayoutEffect(() => {
     if (!isOpen) {
       return;
     }
-
-    const updatePlacement = () => {
-      const trigger = triggerRef.current;
-      const popup = popupRef.current;
-
-      if (!trigger || !popup) {
-        return;
-      }
-
-      const triggerRect = trigger.getBoundingClientRect();
-      const popupRect = popup.getBoundingClientRect();
-      const popupHeight = popup.scrollHeight;
-      const availableAbove = Math.max(0, triggerRect.top - POPUP_GAP - VIEWPORT_PADDING);
-      const availableBelow = Math.max(
-        0,
-        window.innerHeight - triggerRect.bottom - POPUP_GAP - VIEWPORT_PADDING,
-      );
-      const fitsAbove = popupHeight <= availableAbove;
-      const fitsBelow = popupHeight <= availableBelow;
-      const placement: Placement =
-        fitsBelow || (!fitsAbove && availableBelow >= availableAbove) ? 'bottom' : 'top';
-      const width = triggerRect.width;
-      const maxHeight = placement === 'bottom' ? availableBelow : availableAbove;
-      const renderedHeight = Math.min(popupHeight, maxHeight);
-      const preferredLeft =
-        alignment === 'start' ? triggerRect.left : triggerRect.right - popupRect.width;
-      const left = Math.min(
-        Math.max(VIEWPORT_PADDING, preferredLeft),
-        window.innerWidth - popupRect.width - VIEWPORT_PADDING,
-      );
-      const top =
-        placement === 'bottom'
-          ? triggerRect.bottom + POPUP_GAP
-          : triggerRect.top - POPUP_GAP - renderedHeight;
-
-      setPopupPosition({ top, left, width, maxHeight, placement });
-    };
 
     updatePlacement();
     window.addEventListener('resize', updatePlacement);
@@ -80,20 +84,23 @@ export function usePopup<TTrigger extends HTMLElement = HTMLButtonElement>(
     if (triggerRef.current) {
       resizeObserver.observe(triggerRef.current);
     }
+    if (popupRef.current) {
+      resizeObserver.observe(popupRef.current);
+    }
 
     return () => {
       resizeObserver.disconnect();
       window.removeEventListener('resize', updatePlacement);
       window.removeEventListener('scroll', updatePlacement, true);
     };
-  }, [alignment, isOpen]);
+  }, [isOpen, updatePlacement]);
 
   useEffect(() => {
     if (!isOpen) {
       return;
     }
 
-    const handlePointerDown = (event: PointerEvent) => {
+    const handleOutsideInteraction = (event: Event) => {
       if (
         event.target instanceof Node &&
         !containerRef.current?.contains(event.target) &&
@@ -110,11 +117,13 @@ export function usePopup<TTrigger extends HTMLElement = HTMLButtonElement>(
       }
     };
 
-    document.addEventListener('pointerdown', handlePointerDown);
+    document.addEventListener('pointerdown', handleOutsideInteraction);
+    document.addEventListener('focusin', handleOutsideInteraction);
     document.addEventListener('keydown', handleKeyDown);
 
     return () => {
-      document.removeEventListener('pointerdown', handlePointerDown);
+      document.removeEventListener('pointerdown', handleOutsideInteraction);
+      document.removeEventListener('focusin', handleOutsideInteraction);
       document.removeEventListener('keydown', handleKeyDown);
     };
   }, [isOpen]);
@@ -128,5 +137,6 @@ export function usePopup<TTrigger extends HTMLElement = HTMLButtonElement>(
     containerRef,
     triggerRef,
     popupRef,
+    updatePosition: updatePlacement,
   };
 }

@@ -28,17 +28,17 @@ function StatusSelectionDemo() {
           {
             value: 'online',
             label: 'Online',
-            indicatorClassName: 'bg-emerald-500',
+            indicatorClassName: 'bg-[var(--color-status-success)]',
           },
           {
             value: 'starting',
             label: 'Starting',
-            indicatorClassName: 'bg-amber-500',
+            indicatorClassName: 'bg-[var(--color-status-warning)]',
           },
           {
             value: 'offline',
             label: 'Offline',
-            indicatorClassName: 'bg-rose-500',
+            indicatorClassName: 'bg-[var(--color-status-danger)]',
           },
         ]}
       />
@@ -71,12 +71,12 @@ function RegionSelectionDemo() {
           {
             value: 'ashburn',
             label: 'Ashburn (US-East)',
-            icon: <Globe className="h-3.5 w-3.5 text-blue-500" />,
+            icon: <Globe className="h-3.5 w-3.5 text-[var(--color-text-muted)]" />,
           },
           {
             value: 'singapore',
             label: 'Singapore (AP-East)',
-            icon: <Globe className="h-3.5 w-3.5 text-purple-500" />,
+            icon: <Globe className="h-3.5 w-3.5 text-[var(--color-text-muted)]" />,
           },
         ]}
       />
@@ -86,4 +86,24 @@ function RegionSelectionDemo() {
 
 export const WithIcons: StoryObj = {
   render: () => <RegionSelectionDemo />,
+};
+
+export const Disabled: StoryObj = {
+  render: () => (
+    <div className="flex h-56 items-start justify-center p-8">
+      <FloatingMenu
+        disabled
+        ariaLabel="Disabled server selector"
+        value="locked"
+        onChange={() => undefined}
+        options={[
+          {
+            value: 'locked',
+            label: 'Production Cluster (Locked)',
+            indicatorClassName: 'bg-[var(--color-status-danger)]',
+          },
+        ]}
+      />
+    </div>
+  ),
 };
