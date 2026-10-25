@@ -5,6 +5,10 @@ import { Eye, EyeOff, Lock } from 'lucide-react';
 import { Input, type InputProps } from './Input';
 
 export interface PasswordInputProps extends Omit<InputProps, 'type' | 'rightAction'> {
+  /**
+   * Whether to display the show/hide password toggle button.
+   * @default true
+   */
   showToggle?: boolean;
 }
 
@@ -12,7 +16,7 @@ export function PasswordInput({
   leftIcon = Lock,
   showToggle = true,
   ...props
-}: PasswordInputProps & { ref?: React.Ref<HTMLInputElement> }) {
+}: PasswordInputProps) {
   const [show, setShow] = useState(false);
 
   return (
@@ -27,13 +31,9 @@ export function PasswordInput({
             disabled={props.disabled}
             onClick={() => setShow(prev => !prev)}
             aria-label={show ? 'Hide password' : 'Show password'}
-            className="text-[var(--color-text-muted)] enabled:hover:text-[var(--color-text-secondary)] disabled:cursor-not-allowed disabled:opacity-50 transition-colors cursor-pointer shrink-0"
+            className="cursor-pointer rounded p-0.5 text-[var(--color-text-muted)] transition-colors hover:text-[var(--color-text-secondary)] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--color-primary)] disabled:cursor-not-allowed disabled:opacity-50 shrink-0"
           >
-            {show ? (
-              <EyeOff className="w-[17px] h-[17px]" />
-            ) : (
-              <Eye className="w-[17px] h-[17px]" />
-            )}
+            {show ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
           </button>
         ) : undefined
       }

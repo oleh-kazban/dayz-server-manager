@@ -25,6 +25,10 @@ const meta: Meta<typeof Checkbox> = {
       control: 'text',
       description: 'Secondary helper description text',
     },
+    indeterminate: {
+      control: 'boolean',
+      description: 'Tri-state mixed indeterminate state (e.g. bulk selection)',
+    },
     error: {
       control: 'text',
       description: 'Error validation message',
@@ -38,6 +42,27 @@ const meta: Meta<typeof Checkbox> = {
 export default meta;
 
 type Story = StoryObj<typeof Checkbox>;
+
+export const Indeterminate: Story = {
+  name: 'Indeterminate (Mixed State)',
+  render: args => (
+    <div className="w-80">
+      <Checkbox {...args} />
+    </div>
+  ),
+  args: {
+    label: 'Select all mods',
+    description: '3 of 12 community mods currently selected',
+    indeterminate: true,
+    disabled: false,
+  },
+  play: ({ canvasElement }) => {
+    const input = canvasElement.querySelector<HTMLInputElement>('input[type="checkbox"]');
+    if (!input?.indeterminate || input.getAttribute('aria-checked') !== 'mixed') {
+      throw new Error('Indeterminate Checkbox must expose the native and ARIA mixed states.');
+    }
+  },
+};
 
 export const DefaultCheckbox: Story = {
   name: 'Default',
@@ -101,6 +126,13 @@ export const AllStatesGallery: Story = {
           defaultChecked
         />
 
+        <Checkbox
+          {...args}
+          label="Indeterminate option"
+          description="Mixed state (e.g. bulk selection)"
+          indeterminate
+        />
+
         <Checkbox {...args} label="Option with validation error" error="This setting is required" />
 
         <div className="pt-2 border-t border-[var(--color-border)]">
@@ -113,6 +145,12 @@ export const AllStatesGallery: Story = {
               description="Cannot be toggled"
               disabled
               defaultChecked
+            />
+            <Checkbox
+              label="Static Disabled (Indeterminate)"
+              description="Locked mixed selection"
+              disabled
+              indeterminate
             />
             <Checkbox label="Static Disabled (Unchecked)" disabled />
           </div>

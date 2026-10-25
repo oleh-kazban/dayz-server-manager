@@ -2,6 +2,8 @@ import { type Toast, Toaster } from 'react-hot-toast';
 
 import type { Meta, StoryObj } from '@storybook/react';
 
+import { Button } from '../button';
+
 import { CustomToast } from './CustomToast';
 import { showToast } from './toast.utils';
 
@@ -63,64 +65,49 @@ function InteractiveToastDemo() {
     <div className="flex flex-col items-center gap-4">
       <Toaster position="bottom-right" />
       <p className="text-xs text-[var(--color-text-muted)]">
-        Click below to dispatch real animated notifications:
+        Click below to dispatch real animated notifications via shorthand methods:
       </p>
-      <div className="flex flex-wrap gap-2.5">
-        <button
-          type="button"
+      <div className="flex flex-wrap items-center gap-2.5">
+        <Button
+          variant="secondary"
           onClick={() =>
-            showToast({
-              type: 'success',
-              title: 'Backup Created',
-              description: 'Snapshot 2026-10-23_18-45 created in 1.4s.',
-            })
+            showToast.success('Backup Created', 'Snapshot 2026-10-23_18-45 created in 1.4s.')
           }
-          className="rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-emerald-700"
         >
           Success Toast
-        </button>
+        </Button>
 
-        <button
-          type="button"
+        <Button
+          variant="primary"
           onClick={() =>
-            showToast({
-              type: 'info',
-              title: 'Player Connected',
-              description: 'Survivor "Wolfpack" joined (48/50 players).',
-            })
+            showToast.info('Player Connected', 'Survivor "Wolfpack" joined (48/50 players).')
           }
-          className="rounded-lg bg-[var(--color-primary)] px-3 py-1.5 text-xs font-semibold text-white transition hover:opacity-90"
         >
           Info Toast
-        </button>
+        </Button>
 
-        <button
-          type="button"
+        <Button
+          variant="secondary"
           onClick={() =>
-            showToast({
-              type: 'warning',
-              title: 'Scheduled Restart',
-              description: 'Automatic maintenance restart in 5 minutes.',
-            })
+            showToast.warning('Scheduled Restart', 'Automatic maintenance restart in 5 minutes.')
           }
-          className="rounded-lg bg-amber-600 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-amber-700"
         >
           Warning Toast
-        </button>
+        </Button>
 
-        <button
-          type="button"
+        <Button
+          variant="secondary"
+          destructive
           onClick={() =>
-            showToast({
-              type: 'error',
-              title: 'RCON Connection Refused',
-              description: 'BattlEye port 2306 unreachable on host.',
-            })
+            showToast.error('RCON Connection Refused', 'BattlEye port 2306 unreachable on host.')
           }
-          className="rounded-lg bg-[var(--color-danger)] px-3 py-1.5 text-xs font-semibold text-white transition hover:opacity-90"
         >
           Error Toast
-        </button>
+        </Button>
+
+        <Button variant="ghost" onClick={() => showToast.dismiss()}>
+          Dismiss All
+        </Button>
       </div>
     </div>
   );

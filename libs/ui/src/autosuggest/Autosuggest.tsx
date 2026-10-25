@@ -3,6 +3,9 @@ import {
   type FocusEvent,
   type KeyboardEvent,
   type ReactNode,
+  type Ref,
+  type RefObject,
+  useCallback,
   useEffect,
   useId,
   useRef,
@@ -15,59 +18,103 @@ import { Loader2, Search, X } from 'lucide-react';
 import { usePopup } from '../hooks';
 
 export interface AutosuggestProps<T> {
+  /** React 19 ref forwarded directly to the underlying <input> */
+  ref?: Ref<HTMLInputElement>;
+
+  /** Form field identity */
+  id?: string;
+  name?: string;
+  label?: string;
+  error?: string;
+  required?: boolean;
+  disabled?: boolean;
+
+  /** Controlled value & change handler */
   value: string;
   onChange: (_value: string) => void;
+
+  /** Suggestions dataset */
   items: T[];
-  isLoading?: boolean;
-  disabled?: boolean;
+
+  /** Selection callback */
   onSelect: (_item: T) => void;
+
+  /** Resolution accessors */
   getOptionLabel: (_item: T) => string;
   getOptionKey: (_item: T) => string | number;
   renderOption?: (_item: T, _isHighlighted: boolean) => ReactNode;
+
+  /** Operational states */
+  isLoading?: boolean;
+
+  /** Configuration & strings */
   placeholder?: string;
   minChars?: number;
   emptyText?: string;
-  minCharsHint?: string;
+
+  /** Accessibility */
+  'aria-label'?: string;
+
+  /** Root container className */
   className?: string;
-  inputClassName?: string;
-  ariaLabel?: string;
+
+  /** Standard container styling escape hatch */
+  containerClassName?: string;
+
+  /** Legacy alias for containerClassName */
+  customClassName?: string;
 }
 
 export function Autosuggest<T>({
+  ref,
+  id: externalId,
+  name,
+  label,
+  error,
+  required = false,
+  disabled = false,
   value,
   onChange,
   items,
-  isLoading = false,
-  disabled = false,
   onSelect,
   getOptionLabel,
   getOptionKey,
   renderOption,
   placeholder = 'Search...',
-  minChars = 3,
+  minChars = 1,
   emptyText = 'No results found',
-  minCharsHint,
+  isLoading = false,
   className = '',
-  inputClassName = '',
-  ariaLabel,
+  containerClassName = '',
+  customClassName = '',
+  'aria-label': ariaLabel,
 }: AutosuggestProps<T>) {
-  const listboxId = useId();
-  const [highlightedIndex, setHighlightedIndex] = useState(-1);
-  const [prevItems, setPrevItems] = useState(items);
-  const optionRefs = useRef<(HTMLDivElement | null)[]>([]);
+  const generatedId = useId();
+  const inputId = externalId ?? generatedId;
+  const listboxId = `${inputId}-listbox`;
 
-  // Reset highlighted index immediately when result set changes (e.g. async fetch resolution)
-  if (items !== prevItems) {
-    setPrevItems(items);
-    setHighlightedIndex(-1);
-  }
+  const [highlightedIndex, setHighlightedIndex] = useState(-1);
+  const [isSelectionCommitted, setIsSelectionCommitted] = useState(false);
+  const optionRefs = useRef<(HTMLDivElement | null)[]>([]);
 
   const { isOpen, open, close, popupPosition, containerRef, triggerRef, popupRef, updatePosition } =
     usePopup<HTMLInputElement>('start');
 
-  const isQueryTooShort = value.trim().length < minChars;
-  const isPopupOpen = !disabled && isOpen;
-  const hasOptions = isPopupOpen && !isQueryTooShort && !isLoading && items.length > 0;
+  const handleInputRef = useCallback(
+    (element: HTMLInputElement | null) => {
+      triggerRef.current = element;
+      if (typeof ref === 'function') {
+        ref(element);
+      } else if (ref) {
+        (ref as RefObject<HTMLInputElement | null>).current = element;
+      }
+    },
+    [ref, triggerRef],
+  );
+
+  const isQueryMet = value.trim().length >= minChars;
+  const isPopupOpen = !disabled && isOpen && isQueryMet;
+  const hasOptions = isPopupOpen && !isLoading && items.length > 0;
 
   // Derive highlighted index during render to guarantee it never outlives current options
   const isHighlightedValid = hasOptions && highlightedIndex >= 0 && highlightedIndex < items.length;
@@ -80,7 +127,7 @@ export function Autosuggest<T>({
     }
   }, [items, isLoading, isPopupOpen, updatePosition]);
 
-  // Synchronize usePopup internal state if component is disabled while open
+  // Synchronize popup state if component becomes disabled while open
   useEffect(() => {
     if (disabled && isOpen) {
       close();
@@ -88,21 +135,31 @@ export function Autosuggest<T>({
   }, [disabled, isOpen, close]);
 
   const handleOpen = () => {
-    if (!disabled && !isOpen) {
+    if (!disabled && isQueryMet && !isOpen && !isSelectionCommitted) {
       open();
     }
   };
 
   const handleInputChange = (event: ChangeEvent<HTMLInputElement>) => {
     if (disabled) return;
-    onChange(event.target.value);
+    setIsSelectionCommitted(false);
+    const nextValue = event.target.value;
+    onChange(nextValue);
     setHighlightedIndex(-1);
-    if (!isOpen) {
-      open();
+
+    if (nextValue.trim().length >= minChars) {
+      if (!isOpen) {
+        open();
+      }
+    } else {
+      if (isOpen) {
+        close();
+      }
     }
   };
 
   const handleSelect = (item: T) => {
+    setIsSelectionCommitted(true);
     onSelect(item);
     close();
     setHighlightedIndex(-1);
@@ -122,7 +179,9 @@ export function Autosuggest<T>({
 
   const handleClosedKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
     if (event.key !== 'ArrowDown' && event.key !== 'ArrowUp') return;
+    if (!isQueryMet) return;
     event.preventDefault();
+    setIsSelectionCommitted(false);
     open();
     if (items.length > 0) {
       setHighlightedIndex(event.key === 'ArrowDown' ? 0 : items.length - 1);
@@ -150,9 +209,11 @@ export function Autosuggest<T>({
         }
         break;
       case 'Enter':
-        if (effectiveHighlightedIndex >= 0 && effectiveHighlightedIndex < items.length) {
+        if (isPopupOpen) {
           event.preventDefault();
-          handleSelect(items[effectiveHighlightedIndex]);
+          if (effectiveHighlightedIndex >= 0 && effectiveHighlightedIndex < items.length) {
+            handleSelect(items[effectiveHighlightedIndex]);
+          }
         }
         break;
       case 'Escape':
@@ -180,18 +241,6 @@ export function Autosuggest<T>({
   }, [effectiveHighlightedIndex]);
 
   const renderStatus = () => {
-    if (isQueryTooShort) {
-      return (
-        <div
-          role="status"
-          aria-live="polite"
-          className="px-3 py-2.5 text-xs text-[var(--color-text-muted)]"
-        >
-          {minCharsHint ?? `Please type at least ${minChars} characters to search...`}
-        </div>
-      );
-    }
-
     if (isLoading) {
       return (
         <div
@@ -234,7 +283,7 @@ export function Autosuggest<T>({
           aria-selected={isHighlighted}
           onMouseEnter={() => setHighlightedIndex(index)}
           onClick={() => handleSelect(item)}
-          className={`flex cursor-pointer items-center justify-between gap-2 rounded-lg px-3 py-2 text-xs font-medium transition-colors ${
+          className={`flex cursor-pointer items-center justify-between gap-2 rounded-lg px-3 py-2 text-xs transition-colors ${
             isHighlighted
               ? 'bg-[var(--color-primary)]/10 text-[var(--color-primary)]'
               : 'text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-subtle)] hover:text-[var(--color-text-main)]'
@@ -250,28 +299,48 @@ export function Autosuggest<T>({
     });
   };
 
+  const resolvedContainerClass = containerClassName || customClassName || className;
+
   return (
-    <div ref={containerRef} className={`relative ${className}`}>
+    <div ref={containerRef} className={`space-y-1.5 text-left ${resolvedContainerClass}`.trim()}>
+      {label && (
+        <label
+          htmlFor={inputId}
+          className={`block text-xs font-medium select-none ${
+            disabled
+              ? 'cursor-not-allowed opacity-50 text-[var(--color-text-muted)]'
+              : 'text-[var(--color-text-main)]'
+          }`}
+        >
+          {label}
+        </label>
+      )}
+
       <div className="relative flex items-center">
         <Search
           aria-hidden="true"
-          className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--color-text-muted)]"
+          className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)] h-4 w-4"
         />
 
         <input
-          ref={triggerRef}
+          ref={handleInputRef}
+          id={inputId}
+          name={name}
           type="text"
           role="combobox"
           aria-autocomplete="list"
           aria-expanded={isPopupOpen}
-          aria-controls={hasOptions ? listboxId : undefined}
+          aria-controls={isPopupOpen ? listboxId : undefined}
           aria-activedescendant={
             hasOptions && effectiveHighlightedIndex >= 0
               ? `${listboxId}-option-${effectiveHighlightedIndex}`
               : undefined
           }
+          aria-invalid={Boolean(error)}
+          aria-describedby={error ? `${inputId}-error` : undefined}
           disabled={disabled}
           aria-disabled={disabled}
+          required={required}
           value={value}
           onChange={handleInputChange}
           onKeyDown={handleKeyDown}
@@ -279,8 +348,13 @@ export function Autosuggest<T>({
           onBlur={handleBlur}
           onClick={handleOpen}
           placeholder={placeholder}
-          aria-label={ariaLabel ?? placeholder}
-          className={`w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] py-2 pl-9 pr-8 text-xs text-[var(--color-text-main)] outline-none transition-colors placeholder:text-[var(--color-text-muted)] focus:border-[var(--color-primary)] disabled:cursor-not-allowed disabled:opacity-50 disabled:bg-[var(--color-surface-subtle)] [&::-webkit-search-cancel-button]:hidden ${inputClassName}`}
+          className={`w-full h-9 rounded-lg border bg-[var(--color-surface)] font-sans text-xs text-[var(--color-text-main)] shadow-xs outline-none transition-colors placeholder:text-[var(--color-text-muted)] disabled:cursor-not-allowed disabled:opacity-50 disabled:bg-[var(--color-surface-subtle)] [&::-webkit-search-cancel-button]:hidden ${
+            !disabled && value.length > 0 ? 'pl-9 pr-8' : 'pl-9 pr-3.5'
+          } ${
+            error
+              ? 'border-[var(--color-status-danger)] focus:border-[var(--color-status-danger)] focus:ring-1 focus:ring-[var(--color-status-danger)]'
+              : 'border-[var(--color-border)] focus:border-[var(--color-primary)] focus:ring-1 focus:ring-[var(--color-primary)]'
+          }`}
         />
 
         {!disabled && value.length > 0 && (
@@ -288,16 +362,27 @@ export function Autosuggest<T>({
             type="button"
             aria-label="Clear search"
             onClick={() => {
+              setIsSelectionCommitted(false);
               onChange('');
               setHighlightedIndex(-1);
+              close();
               triggerRef.current?.focus();
             }}
-            className="absolute right-2.5 top-1/2 -translate-y-1/2 cursor-pointer rounded-md p-0.5 text-[var(--color-text-muted)] transition-colors hover:text-[var(--color-text-main)]"
+            className="absolute right-2 top-1/2 -translate-y-1/2 cursor-pointer rounded-md p-1 text-[var(--color-text-muted)] transition-colors hover:text-[var(--color-text-main)]"
           >
             <X className="h-3.5 w-3.5" />
           </button>
         )}
       </div>
+
+      {error && (
+        <p
+          id={`${inputId}-error`}
+          className="text-[11px] font-sans text-[var(--color-status-danger)] leading-tight"
+        >
+          {error}
+        </p>
+      )}
 
       {isPopupOpen &&
         createPortal(
@@ -312,18 +397,15 @@ export function Autosuggest<T>({
               top: popupPosition?.top ?? 0,
               left: popupPosition?.left ?? 0,
               width: popupPosition?.width ?? 'auto',
+              maxWidth: popupPosition?.maxWidth ?? 'none',
               ...(popupPosition ? { maxHeight: popupPosition.maxHeight } : {}),
               visibility: popupPosition ? 'visible' : 'hidden',
             }}
             data-placement={popupPosition?.placement}
           >
-            {hasOptions ? (
-              <div id={listboxId} role="listbox" aria-label={ariaLabel ?? 'Search suggestions'}>
-                {renderOptions()}
-              </div>
-            ) : (
-              renderStatus()
-            )}
+            <div id={listboxId} role="listbox" aria-label={ariaLabel ?? 'Search suggestions'}>
+              {hasOptions ? renderOptions() : renderStatus()}
+            </div>
           </div>,
           document.body,
         )}

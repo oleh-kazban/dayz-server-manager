@@ -22,11 +22,6 @@ const meta: Meta<typeof Toggle> = {
       control: 'boolean',
       description: 'Initial state for uncontrolled usage',
     },
-    size: {
-      control: 'select',
-      options: ['sm', 'md', 'lg'],
-      description: 'Visual scale of the toggle switch',
-    },
     color: {
       control: 'select',
       options: ['primary', 'success', 'danger'],
@@ -61,7 +56,6 @@ export const AutoScroll: Story = {
     label: 'Auto-scroll',
     defaultChecked: true,
     labelPosition: 'left',
-    size: 'md',
     disabled: false,
   },
 };
@@ -111,16 +105,6 @@ export const LabelPositions: Story = {
   ),
 };
 
-export const Sizes: Story = {
-  render: args => (
-    <div className="flex flex-col gap-4 p-4">
-      <Toggle size="sm" label="Small (28x16)" defaultChecked disabled={args.disabled} />
-      <Toggle size="md" label="Medium (32x18 - Default)" defaultChecked disabled={args.disabled} />
-      <Toggle size="lg" label="Large (44x24)" defaultChecked disabled={args.disabled} />
-    </div>
-  ),
-};
-
 export const Colors: Story = {
   render: args => (
     <div className="flex flex-col gap-4 p-4">
@@ -130,8 +114,18 @@ export const Colors: Story = {
         defaultChecked
         disabled={args.disabled}
       />
-      <Toggle color="success" label="Success (Emerald)" defaultChecked disabled={args.disabled} />
-      <Toggle color="danger" label="Danger (Rose)" defaultChecked disabled={args.disabled} />
+      <Toggle
+        color="success"
+        label="Success (Status Success)"
+        defaultChecked
+        disabled={args.disabled}
+      />
+      <Toggle
+        color="danger"
+        label="Danger (Status Danger)"
+        defaultChecked
+        disabled={args.disabled}
+      />
     </div>
   ),
 };
@@ -198,13 +192,11 @@ function LogStreamShowcaseDemo(props: Partial<ToggleProps>) {
             checked={autoScroll}
             onChange={e => setAutoScroll(e.target.checked)}
             labelPosition="left"
-            size="md"
             disabled={props.disabled}
           />
 
           <Button
             variant="secondary"
-            size="sm"
             disabled={props.disabled}
             leftIcon={isPaused ? Play : Pause}
             onClick={() => setIsPaused(!isPaused)}
@@ -219,8 +211,8 @@ function LogStreamShowcaseDemo(props: Partial<ToggleProps>) {
         <div>[14:32:16] INFO BattlEye · Client verified · session authorized</div>
         <div>[14:31:52] SAVE Persistence · World persistence saved (1.42s)</div>
         {autoScroll && (
-          <div className="text-[10px] text-emerald-500 font-sans pt-1 flex items-center gap-1.5">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+          <div className="text-[10px] text-[var(--color-status-success)] font-sans pt-1 flex items-center gap-1.5">
+            <span className="w-1.5 h-1.5 rounded-full bg-[var(--color-status-success)] animate-pulse" />
             <span>Auto-scroll active · streaming newest lines</span>
           </div>
         )}
@@ -232,4 +224,16 @@ function LogStreamShowcaseDemo(props: Partial<ToggleProps>) {
 export const LogStreamHeaderShowcase: Story = {
   name: 'Log Stream Controls Showcase',
   render: args => <LogStreamShowcaseDemo {...args} />,
+};
+
+export const StandaloneSwitch: Story = {
+  name: 'Standalone (Icon-only / aria-label)',
+  render: args => (
+    <div className="flex items-center gap-4 p-4">
+      <Toggle ariaLabel="Toggle night acceleration" defaultChecked disabled={args.disabled} />
+      <span className="text-xs text-[var(--color-text-muted)]">
+        Standalone toggle without visual label (accessible via aria-label)
+      </span>
+    </div>
+  ),
 };

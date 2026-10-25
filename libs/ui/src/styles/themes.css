@@ -26,8 +26,8 @@
   --color-text-inverse: #ffffff;
 
   /* Primary Brand (Outlive Royal Blue) */
-  --color-primary: #2b66d9;
-  --color-primary-hover: #2252b3;
+  --color-primary: #4279e8;
+  --color-primary-hover: #3567d1;
   --color-primary-light: #edf3ff;
   --color-primary-border: #acc3ef;
   --color-primary-fg: #ffffff;
@@ -37,15 +37,20 @@
   --color-success-light: #e6f6f0;
   --color-success-border: #73c5b1;
 
-  --color-warning: #a36818;
+  --color-warning: #bb8a3e;
   --color-warning-light: #fbf4e7;
   --color-warning-border: #e6c88b;
   --color-warning-fg: #ffffff;
 
-  --color-danger: #c92a2a;
+  --color-danger: #e05252;
   --color-danger-light: #fdeeee;
-  --color-danger-border: #f3a6a6;
+  --color-danger-border: #f8b4b4;
   --color-danger-fg: #ffffff;
+
+  --color-info: #0284c7;
+  --color-info-light: #f0f9ff;
+  --color-info-border: #bae6fd;
+  --color-info-fg: #ffffff;
 
   /* Data Visualizations */
   --color-chart-blue: #4279e8;
@@ -87,7 +92,7 @@
 
   /* Primary Brand */
   --color-primary: #558bf2;
-  --color-primary-hover: #6ba0ff;
+  --color-primary-hover: #4279e8;
   --color-primary-light: rgba(66, 121, 232, 0.15);
   --color-primary-border: #2c4a87;
   --color-primary-fg: #090d12;
@@ -106,6 +111,11 @@
   --color-danger-light: rgba(224, 82, 82, 0.16);
   --color-danger-border: #8b3232;
   --color-danger-fg: #090d12;
+
+  --color-info: #38bdf8;
+  --color-info-light: rgba(56, 189, 248, 0.16);
+  --color-info-border: #0369a1;
+  --color-info-fg: #ffffff;
 
   /* Visualizations */
   --color-chart-blue: #558bf2;
@@ -149,9 +159,9 @@
   --color-text-inverse: #232529;
 
   /* Primary Brand */
-  --color-primary: #5696ff;
-  --color-primary-hover: #6aa5ff;
-  --color-primary-light: rgba(86, 150, 255, 0.15);
+  --color-primary: #4d90fe;
+  --color-primary-hover: #357ae8;
+  --color-primary-light: rgba(77, 144, 254, 0.15);
   --color-primary-border: #2f5496;
   --color-primary-fg: #1e2022;
 
@@ -160,13 +170,13 @@
   --color-success-light: rgba(98, 151, 85, 0.15);
   --color-success-border: #3c5e34;
 
-  --color-warning: #d4823b;
+  --color-warning: #cc7832;
   --color-warning-light: rgba(204, 120, 50, 0.15);
   --color-warning-border: #804a1e;
   --color-warning-fg: #1e2022;
 
-  --color-danger: #ea7a83;
-  --color-danger-light: rgba(234, 122, 131, 0.15);
+  --color-danger: #cc666e;
+  --color-danger-light: rgba(204, 102, 110, 0.15);
   --color-danger-border: #803e43;
   --color-danger-fg: #1e2022;
 
@@ -212,10 +222,10 @@
   --color-text-inverse: #121212;
 
   /* Primary Brand (Muted Blue-Grey) */
-  --color-primary: #8a99ad;
-  --color-primary-hover: #9eacc0;
-  --color-primary-light: rgba(138, 153, 173, 0.15);
-  --color-primary-border: #4a5768;
+  --color-primary: #6b7a8f;
+  --color-primary-hover: #8292a8;
+  --color-primary-light: rgba(107, 122, 143, 0.15);
+  --color-primary-border: #3e4856;
   --color-primary-fg: #121212;
 
   /* Status Colors (Desaturated) */
@@ -228,9 +238,9 @@
   --color-warning-border: #635236;
   --color-warning-fg: #121212;
 
-  --color-danger: #de7272;
-  --color-danger-light: rgba(222, 114, 114, 0.15);
-  --color-danger-border: #804040;
+  --color-danger: #a65c5c;
+  --color-danger-light: rgba(166, 92, 92, 0.15);
+  --color-danger-border: #663838;
   --color-danger-fg: #121212;
 
   /* Visualizations */

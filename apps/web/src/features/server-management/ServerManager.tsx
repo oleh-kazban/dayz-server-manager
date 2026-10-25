@@ -37,7 +37,7 @@ import {
 } from 'lucide-react';
 
 import { PageContainer } from '@dsm/components';
-import { Button, Tag, type TagColor, Toggle } from '@dsm/ui';
+import { Button, StatusTag, Tag, type TagColor, Toggle } from '@dsm/ui';
 
 const LOG_LEVEL_COLORS: Record<string, TagColor> = {
   INFO: 'sky',
@@ -646,28 +646,21 @@ export function ServerManager() {
 
           {/* Simulated Tactical Markers */}
           <div className="absolute top-48 left-1/2 -translate-x-1/2">
-            <Tag
-              variant="solid"
-              color="primary"
-              shape="pill"
-              size="sm"
-              dot={{ ping: true }}
-              className="shadow-lg"
-            >
+            <StatusTag variant="solid" status="primary" shape="pill" ping className="shadow-lg">
               Wolfpack
-            </Tag>
+            </StatusTag>
           </div>
 
           <div className="absolute bottom-20 left-1/2 -translate-x-12">
-            <Tag variant="solid" color="emerald" shape="pill" size="sm" className="shadow-md">
+            <StatusTag variant="solid" status="success" shape="pill" className="shadow-md">
               TheWanderer
-            </Tag>
+            </StatusTag>
           </div>
 
           <div className="absolute bottom-24 right-44">
-            <Tag variant="solid" color="emerald" shape="pill" size="sm" className="shadow-md">
+            <StatusTag variant="solid" status="success" shape="pill" className="shadow-md">
               Rook
-            </Tag>
+            </StatusTag>
           </div>
 
           {/* Map Footer Legend */}
@@ -829,14 +822,15 @@ export function ServerManager() {
                     <Tag
                       key={tag}
                       variant="neutral"
-                      size="lg"
                       onRemove={() => {}}
                       removeAriaLabel={`Remove ${tag}`}
                     >
                       {tag}
                     </Tag>
                   ))}
-                  <Tag.Add size="lg">Add tag</Tag.Add>
+                  <Button variant="secondary" leftIcon={Plus}>
+                    Add tag
+                  </Button>
                 </div>
               </div>
             </div>
@@ -1061,7 +1055,6 @@ export function ServerManager() {
                         <Shield className="w-3.5 h-3.5 text-[var(--color-text-muted)] inline-block" />
                       ) : (
                         <Button
-                          size="sm"
                           variant="ghost"
                           aria-label={`Options for ${m.name}`}
                           leftIcon={MoreHorizontal}
@@ -1249,11 +1242,9 @@ export function ServerManager() {
                   <td className="p-3 text-[var(--color-text-secondary)]">{player.location}</td>
                   <td className="p-3 pr-4 text-right">
                     <div className="flex items-center justify-end gap-2 text-[11px]">
-                      <Button variant="text" size="sm">
-                        Profile
-                      </Button>
+                      <Button variant="text">Profile</Button>
                       <span className="text-[var(--color-border)]">·</span>
-                      <Button variant="text" destructive size="sm">
+                      <Button variant="text" destructive>
                         Kick
                       </Button>
                     </div>
@@ -1264,7 +1255,7 @@ export function ServerManager() {
           </table>
           <div className="flex items-center justify-between p-3 border-t border-[var(--color-border)] text-[11px] text-[var(--color-text-muted)]">
             <span>Showing 3 of 48 online players</span>
-            <Button variant="text" size="sm" rightIcon={ArrowRight}>
+            <Button variant="text" rightIcon={ArrowRight}>
               View all players
             </Button>
           </div>
@@ -1289,7 +1280,6 @@ export function ServerManager() {
                 defaultChecked
                 aria-label="Enforce whitelist"
                 labelPosition="left"
-                size="sm"
               />
             </div>
 
@@ -1300,7 +1290,7 @@ export function ServerManager() {
                     <div className="font-medium text-[var(--color-text-main)]">{item.name}</div>
                     <div className="text-[10px] text-[var(--color-text-muted)]">{item.date}</div>
                   </div>
-                  <Button variant="text" destructive size="sm">
+                  <Button variant="text" destructive>
                     Remove
                   </Button>
                 </div>
@@ -1314,9 +1304,7 @@ export function ServerManager() {
                 defaultValue="76561198012345678"
                 className="flex-1 px-3 py-1.5 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-subtle)] text-xs text-[var(--color-text-main)] focus:outline-none"
               />
-              <Button variant="primary" size="sm">
-                Whitelist
-              </Button>
+              <Button variant="primary">Whitelist</Button>
             </div>
             <p className="text-[10px] text-[var(--color-text-muted)]">
               Only whitelisted players can join while enforcement is enabled.
@@ -1335,7 +1323,7 @@ export function ServerManager() {
                   8
                 </span>
               </div>
-              <Button variant="text" size="sm" rightIcon={ArrowUpRight}>
+              <Button variant="text" rightIcon={ArrowUpRight}>
                 View ban history
               </Button>
             </div>
@@ -1349,9 +1337,7 @@ export function ServerManager() {
                       Expires: {ban.expires}
                     </div>
                   </div>
-                  <Button variant="text" size="sm">
-                    Unban
-                  </Button>
+                  <Button variant="text">Unban</Button>
                 </div>
               ))}
             </div>
@@ -1372,7 +1358,7 @@ export function ServerManager() {
                   <option value="7 days">7 days</option>
                   <option value="Permanent">Permanent</option>
                 </select>
-                <Button variant="secondary" destructive size="sm">
+                <Button variant="secondary" destructive>
                   Ban player
                 </Button>
               </div>
@@ -1404,7 +1390,7 @@ export function ServerManager() {
           </div>
 
           <div className="flex items-center gap-2.5 shrink-0">
-            <Tag variant="subtle" color="amber" size="sm">
+            <Tag variant="subtle" color="amber">
               1 update available
             </Tag>
             <button
@@ -1471,7 +1457,7 @@ export function ServerManager() {
                     </td>
                     <td className="p-3">
                       {mod.status === 'Update' ? (
-                        <Tag variant="subtle" color="amber" size="sm">
+                        <Tag variant="subtle" color="amber">
                           Update
                         </Tag>
                       ) : (
@@ -1493,7 +1479,7 @@ export function ServerManager() {
               </tbody>
             </table>
             <div className="p-3 border-t border-[var(--color-border)] text-center text-xs">
-              <Button variant="text" size="sm" rightIcon={ArrowRight}>
+              <Button variant="text" rightIcon={ArrowRight}>
                 Show all 12 mods
               </Button>
             </div>
@@ -1603,7 +1589,6 @@ export function ServerManager() {
               defaultChecked
               aria-label="Toggle log auto-scroll"
               labelPosition="left"
-              size="md"
             />
             <button
               type="button"
@@ -1709,7 +1694,6 @@ export function ServerManager() {
                     <Tag
                       variant="subtle"
                       color={LOG_LEVEL_COLORS[log.level] || 'sky'}
-                      size="sm"
                       uppercase
                       mono
                     >
@@ -1817,13 +1801,9 @@ export function ServerManager() {
                     <td className="p-3 font-mono text-[var(--color-text-muted)]">{b.size}</td>
                     <td className="p-3 pr-4 text-right">
                       <div className="flex items-center justify-end gap-2 text-[11px]">
-                        <Button variant="text" size="sm">
-                          Download
-                        </Button>
+                        <Button variant="text">Download</Button>
                         <span className="text-[var(--color-border)]">·</span>
-                        <Button variant="text" size="sm">
-                          Restore
-                        </Button>
+                        <Button variant="text">Restore</Button>
                       </div>
                     </td>
                   </tr>
@@ -1833,7 +1813,7 @@ export function ServerManager() {
 
             <div className="p-3 border-t border-[var(--color-border)] flex items-center justify-between text-xs text-[var(--color-text-muted)]">
               <span>14 backups · 66.2 MB of 5 GB used</span>
-              <Button variant="text" size="sm" rightIcon={ArrowRight}>
+              <Button variant="text" rightIcon={ArrowRight}>
                 View full history
               </Button>
             </div>
@@ -2000,13 +1980,11 @@ export function ServerManager() {
                   <td className="p-3 pr-4 text-right">
                     <div className="flex items-center justify-end gap-1.5">
                       <Button
-                        size="sm"
                         variant="ghost"
                         aria-label={`Run ${task.title} now`}
                         leftIcon={Play}
                       />
                       <Button
-                        size="sm"
                         variant="ghost"
                         aria-label={`Edit ${task.title}`}
                         leftIcon={Settings}

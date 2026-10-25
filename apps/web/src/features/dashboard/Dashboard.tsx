@@ -758,7 +758,7 @@ export function Dashboard() {
             <div className="flex items-center justify-between gap-4">
               <h3 className="text-base font-semibold text-[var(--color-text-main)]">Server logs</h3>
               <div className="flex items-center gap-3">
-                <Toggle label="Auto-scroll" defaultChecked labelPosition="left" size="md" />
+                <Toggle label="Auto-scroll" defaultChecked labelPosition="left" />
                 <button
                   type="button"
                   className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] hover:bg-[var(--color-surface-hover)] text-xs text-[var(--color-text-secondary)] transition-colors"

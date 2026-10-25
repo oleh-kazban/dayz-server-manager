@@ -1,6 +1,8 @@
 import type { Meta, StoryObj } from '@storybook/react';
 import { Mail, Search } from 'lucide-react';
 
+import { Button } from '../button';
+
 import { Input } from './Input';
 import { PasswordInput } from './PasswordInput';
 
@@ -137,4 +139,31 @@ export const Disabled: Story = {
   args: {
     disabled: true,
   },
+};
+
+export const InputDrivenUniformity: Story = {
+  name: 'Geometric Uniformity (Canonical 36px)',
+  render: () => (
+    <div className="flex flex-col gap-6 p-6 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] max-w-md w-full">
+      <div>
+        <h4 className="text-xs font-semibold text-[var(--color-text-main)]">
+          Input & Button Physical Parity (§2.2.1)
+        </h4>
+        <p className="mt-1 text-xs text-[var(--color-text-muted)]">
+          Input and Button share identical height (36px / h-9), border radius (8px / rounded-lg),
+          surface styling, and typography scale.
+        </p>
+      </div>
+
+      <div className="space-y-2">
+        <span className="text-[10px] font-semibold tracking-wider text-[var(--color-text-muted)] uppercase">
+          Standard Pair (36px)
+        </span>
+        <div className="flex items-center gap-2">
+          <Input placeholder="Standard input (36px)" className="flex-1" />
+          <Button variant="primary">Button (36px)</Button>
+        </div>
+      </div>
+    </div>
+  ),
 };

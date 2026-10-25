@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 
 import { Button } from '../button';
+import { StatusTag } from '../status-tag';
 import { Tag } from '../tag';
 import { Toggle } from '../toggle';
 
@@ -31,21 +32,21 @@ const meta: Meta<typeof Card> = {
   argTypes: {
     title: {
       control: 'text',
-      description: 'Primary header title text or element',
+      description: 'Card title',
     },
     subtitle: {
       control: 'text',
-      description: 'Secondary header subtitle text or element',
+      description: 'Optional card subtitle',
     },
-    variant: {
+    titleLevel: {
       control: 'select',
-      options: ['default', 'subtle', 'flat', 'ghost'],
-      description: 'Card visual style',
+      options: ['h2', 'h3', 'h4', 'h5'],
+      description: 'Semantic heading element for card title',
     },
-    padding: {
+    as: {
       control: 'select',
-      options: ['none', 'sm', 'md', 'lg'],
-      description: 'Inner padding scale',
+      options: ['div', 'section', 'article'],
+      description: 'Semantic HTML container element',
     },
   },
 };
@@ -57,6 +58,25 @@ type Story = StoryObj<typeof Card>;
 /* ====================================================================
    BASIC STORIES
    ==================================================================== */
+
+export const HeaderlessContent: Story = {
+  args: {
+    children: (
+      <div className="flex items-center justify-between text-xs">
+        <div>
+          <span className="text-[var(--color-text-muted)]">Active Players</span>
+          <p className="text-2xl font-bold text-[var(--color-text-main)] mt-1">48 / 60</p>
+        </div>
+        <StatusTag status="success">Optimal</StatusTag>
+      </div>
+    ),
+  },
+  render: args => (
+    <div className="w-[300px]">
+      <Card {...args} />
+    </div>
+  ),
+};
 
 export const Default: Story = {
   args: {
@@ -91,7 +111,7 @@ export const WithHeaderActionsAndFooter: Story = {
     title: 'Player activity',
     subtitle: 'A living world, around the clock',
     actions: (
-      <Button variant="secondary" size="sm" rightIcon={ChevronDown}>
+      <Button variant="secondary" rightIcon={ChevronDown}>
         Last 24 hours
       </Button>
     ),
@@ -122,8 +142,8 @@ function ServerLogsShowcaseDemo() {
         title="Server logs"
         actions={
           <div className="flex items-center gap-3">
-            <Toggle label="Auto-scroll" defaultChecked labelPosition="left" size="md" />
-            <Button variant="secondary" size="sm" leftIcon={Download}>
+            <Toggle label="Auto-scroll" defaultChecked labelPosition="left" />
+            <Button variant="secondary" leftIcon={Download}>
               Export
             </Button>
           </div>
@@ -159,42 +179,42 @@ function ServerLogsShowcaseDemo() {
           <div className="p-3.5 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-subtle)] font-mono text-[11px] text-[var(--color-text-secondary)] space-y-1.5">
             <div className="flex items-center gap-2">
               <span className="text-[var(--color-text-muted)]">14:32:18</span>
-              <Tag variant="subtle" color="info" size="sm" uppercase mono>
+              <Tag variant="subtle" color="info" uppercase mono>
                 INFO
               </Tag>
               <span>Player &quot;Wolfpack&quot; connected (Steam: …3812)</span>
             </div>
             <div className="flex items-center gap-2">
               <span className="text-[var(--color-text-muted)]">14:32:16</span>
-              <Tag variant="subtle" color="info" size="sm" uppercase mono>
+              <Tag variant="subtle" color="info" uppercase mono>
                 INFO
               </Tag>
               <span>BattlEye client verified · Session authorized</span>
             </div>
             <div className="flex items-center gap-2">
               <span className="text-[var(--color-text-muted)]">14:28:04</span>
-              <Tag variant="subtle" color="success" size="sm" uppercase mono>
+              <Tag variant="subtle" color="success" uppercase mono>
                 SAVE
               </Tag>
               <span>World persistence saved successfully (1.42s)</span>
             </div>
             <div className="flex items-center gap-2">
               <span className="text-[var(--color-text-muted)]">14:24:00</span>
-              <Tag variant="subtle" color="info" size="sm" uppercase mono>
+              <Tag variant="subtle" color="info" uppercase mono>
                 INFO
               </Tag>
               <span>Backup complete → chernarus_2026-10-20_1424</span>
             </div>
             <div className="flex items-center gap-2">
               <span className="text-[var(--color-text-muted)]">14:20:31</span>
-              <Tag variant="subtle" color="warning" size="sm" uppercase mono>
+              <Tag variant="subtle" color="warning" uppercase mono>
                 WARN
               </Tag>
               <span>Player &quot;Rook&quot; high latency detected (182 ms)</span>
             </div>
             <div className="flex items-center gap-2">
               <span className="text-[var(--color-text-muted)]">14:18:02</span>
-              <Tag variant="subtle" color="info" size="sm" uppercase mono>
+              <Tag variant="subtle" color="info" uppercase mono>
                 INFO
               </Tag>
               <span>Scheduled restart in 3h 42m · Players notified</span>
@@ -222,7 +242,7 @@ export const InstalledModsShowcase: Story = {
       <Card
         title="Installed mods"
         actions={
-          <Button variant="text" size="sm" rightIcon={ArrowUpRight}>
+          <Button variant="text" rightIcon={ArrowUpRight}>
             Manage
           </Button>
         }
@@ -230,9 +250,7 @@ export const InstalledModsShowcase: Story = {
         <div className="space-y-4">
           <div className="flex items-center justify-between text-xs">
             <span className="font-mono text-[var(--color-text-muted)]">12 active mods</span>
-            <Tag variant="subtle" color="amber" size="sm" dot>
-              1 update available
-            </Tag>
+            <StatusTag status="warning">1 update available</StatusTag>
           </div>
 
           <div className="space-y-3">
@@ -307,9 +325,9 @@ export const ServerPerformanceShowcase: Story = {
       <Card
         title="Server performance"
         actions={
-          <Tag variant="subtle" color="emerald" shape="pill" size="sm" dot>
+          <StatusTag status="success" shape="pill">
             Healthy
-          </Tag>
+          </StatusTag>
         }
       >
         <div className="grid grid-cols-12 gap-5 items-center">
@@ -411,7 +429,7 @@ export const PlayerActivityShowcase: Story = {
         title="Player activity"
         subtitle="A living world, around the clock"
         actions={
-          <Button variant="secondary" size="sm" rightIcon={ChevronDown}>
+          <Button variant="secondary" rightIcon={ChevronDown}>
             Last 24 hours
           </Button>
         }

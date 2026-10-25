@@ -10,44 +10,80 @@ import {
 
 import { AlertCircle, AlertTriangle, Info, X } from 'lucide-react';
 
+import { Button } from '../button';
+
 export type ConfirmationVariant = 'primary' | 'warning' | 'danger';
 
 export interface ConfirmationProps {
+  /**
+   * Main dialog headline.
+   */
   title: string;
+
+  /**
+   * Explanatory text or content for the confirmation.
+   */
   description?: ReactNode;
+
+  /**
+   * Cancel button label.
+   * @default 'Cancel'
+   */
   cancelLabel?: string;
+
+  /**
+   * Confirm button label.
+   * @default 'Confirm'
+   */
   confirmLabel?: string;
+
+  /**
+   * Semantic visual treatment.
+   * @default 'primary'
+   */
   variant?: ConfirmationVariant;
+
+  /**
+   * Lockout countdown in seconds before confirmation button is enabled.
+   * @default 0
+   */
   timerValue?: number;
-  confirmClassName?: string;
+
+  /**
+   * Displays loading spinner and locks dialog during asynchronous operations.
+   * @default false
+   */
+  isLoading?: boolean;
+
+  /**
+   * Callback fired when dialog is dismissed or canceled.
+   */
   onCancel: () => void;
+
+  /**
+   * Callback fired when confirmed.
+   */
   onConfirm: () => void;
 }
-
-const VARIANT_CONFIRM_CLASSES: Record<ConfirmationVariant, string> = {
-  primary: 'bg-[var(--color-primary)] text-[var(--color-primary-fg)] hover:opacity-90',
-  warning: 'bg-[var(--color-warning)] text-[var(--color-warning-fg)] hover:opacity-90',
-  danger: 'bg-[var(--color-status-danger)] text-[var(--color-status-danger-fg)] hover:opacity-90',
-};
 
 function VariantIcon({ variant }: { variant: ConfirmationVariant }) {
   switch (variant) {
     case 'danger':
       return (
-        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[var(--color-danger)]/10 text-[var(--color-danger)]">
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[var(--color-status-danger-light)] text-[var(--color-status-danger)]">
           <AlertTriangle className="h-5 w-5" />
         </div>
       );
     case 'warning':
       return (
-        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[var(--color-warning)]/10 text-[var(--color-warning)]">
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[var(--color-status-warning-light)] text-[var(--color-status-warning)]">
           <AlertCircle className="h-5 w-5" />
         </div>
       );
     case 'primary':
     default:
       return (
-        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[var(--color-primary)]/10 text-[var(--color-primary)]">
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[var(--color-primary-light)] text-[var(--color-primary)]">
           <Info className="h-5 w-5" />
         </div>
       );
@@ -61,35 +97,43 @@ export function Confirmation({
   confirmLabel = 'Confirm',
   variant = 'primary',
   timerValue = 0,
-  confirmClassName,
+  isLoading = false,
   onCancel,
   onConfirm,
 }: ConfirmationProps) {
-  const [remainingTime, setRemainingTime] = useState(timerValue);
   const [prevTimerValue, setPrevTimerValue] = useState(timerValue);
+  const [remainingTime, setRemainingTime] = useState(timerValue);
 
-  // Synchronize remainingTime if timerValue changes dynamically without unmounting
   if (timerValue !== prevTimerValue) {
     setPrevTimerValue(timerValue);
     setRemainingTime(timerValue);
   }
 
-  const isConfirmDisabled = remainingTime > 0;
+  const isConfirmDisabled = remainingTime > 0 || isLoading;
   const dialogRef = useRef<HTMLDialogElement>(null);
   const titleId = useId();
   const descriptionId = useId();
 
   useEffect(() => {
-    if (remainingTime <= 0) return;
+    if (timerValue <= 0) {
+      return;
+    }
 
     const interval = setInterval(() => {
-      setRemainingTime(prev => prev - 1);
+      setRemainingTime(prev => {
+        if (prev <= 1) {
+          clearInterval(interval);
+          return 0;
+        }
+        return prev - 1;
+      });
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [remainingTime]);
+  }, [timerValue]);
 
   const handleClose = (event: SyntheticEvent<HTMLDialogElement>) => {
+    if (isLoading) return;
     if (event.currentTarget.returnValue === 'confirm') {
       onConfirm();
     } else {
@@ -98,6 +142,7 @@ export function Confirmation({
   };
 
   const handleDialogClick = (event: MouseEvent<HTMLDialogElement>) => {
+    if (isLoading) return;
     if (event.target === event.currentTarget) {
       dialogRef.current?.close('cancel');
     }
@@ -113,6 +158,11 @@ export function Confirmation({
       role="alertdialog"
       aria-labelledby={titleId}
       aria-describedby={description ? descriptionId : undefined}
+      onCancel={event => {
+        if (isLoading) {
+          event.preventDefault();
+        }
+      }}
       onClose={handleClose}
       onClick={handleDialogClick}
       className="m-auto w-full max-w-md rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-0 text-[var(--color-text-main)] shadow-[var(--shadow-card)] backdrop:bg-black/50 backdrop:backdrop-blur-xs"
@@ -138,35 +188,34 @@ export function Confirmation({
               )}
             </div>
           </div>
-          <button
-            type="button"
+          <Button
+            variant="ghost"
+            isIconOnly
+            leftIcon={X}
             aria-label="Close dialog"
+            disabled={isLoading}
             onClick={() => dialogRef.current?.close('cancel')}
-            className="rounded-lg p-1 text-[var(--color-text-muted)] transition-colors hover:bg-[var(--color-surface-subtle)] hover:text-[var(--color-text-main)]"
-          >
-            <X className="h-4 w-4" />
-          </button>
+          />
         </div>
 
         <div className="mt-6 flex justify-end gap-2.5">
-          <button
-            type="button"
+          <Button
+            variant="secondary"
             autoFocus
+            disabled={isLoading}
             onClick={() => dialogRef.current?.close('cancel')}
-            className="rounded-lg border border-[var(--color-border)] px-4 py-2 text-xs font-semibold text-[var(--color-text-secondary)] transition-colors hover:bg-[var(--color-surface-subtle)] hover:text-[var(--color-text-main)]"
           >
             {cancelLabel}
-          </button>
-          <button
-            type="button"
-            onClick={() => dialogRef.current?.close('confirm')}
+          </Button>
+          <Button
+            variant="primary"
+            destructive={variant === 'danger' || variant === 'warning'}
+            isLoading={isLoading}
             disabled={isConfirmDisabled}
-            className={`rounded-lg px-4 py-2 text-xs font-semibold transition-all disabled:cursor-not-allowed disabled:opacity-40 ${
-              confirmClassName ?? VARIANT_CONFIRM_CLASSES[variant]
-            }`}
+            onClick={() => dialogRef.current?.close('confirm')}
           >
-            {isConfirmDisabled ? `${confirmLabel} (${remainingTime}s)` : confirmLabel}
-          </button>
+            {remainingTime > 0 ? `${confirmLabel} (${remainingTime}s)` : confirmLabel}
+          </Button>
         </div>
       </div>
     </dialog>

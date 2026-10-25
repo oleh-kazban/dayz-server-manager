@@ -27,6 +27,14 @@ const meta: Meta<typeof Autosuggest> = {
     layout: 'centered',
   },
   argTypes: {
+    label: {
+      control: 'text',
+      description: 'Field label rendered above the input',
+    },
+    error: {
+      control: 'text',
+      description: 'Validation error message displaying danger state',
+    },
     minChars: {
       control: 'number',
       description: 'Minimum characters required before displaying results',
@@ -46,10 +54,6 @@ const meta: Meta<typeof Autosuggest> = {
     emptyText: {
       control: 'text',
       description: 'Message displayed when zero items match',
-    },
-    minCharsHint: {
-      control: 'text',
-      description: 'Custom message displayed when character count is below minChars',
     },
   },
   args: {
@@ -76,13 +80,14 @@ function InteractiveDemo(props: Partial<AutosuggestProps<DayZItem>>) {
       : [];
 
   return (
-    <div className="flex w-80 flex-col gap-4">
+    <div className="flex w-80 flex-col">
       <Autosuggest<DayZItem>
+        label={props.label}
+        error={props.error}
         value={value}
         onChange={setValue}
         items={filteredItems}
         minChars={minChars}
-        minCharsHint={props.minCharsHint}
         isLoading={props.isLoading}
         disabled={props.disabled}
         placeholder={props.placeholder ?? 'Search types.xml items...'}
@@ -104,9 +109,16 @@ function InteractiveDemo(props: Partial<AutosuggestProps<DayZItem>>) {
       />
 
       {selected && (
-        <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-3 text-xs text-[var(--color-text-main)] shadow-xs">
-          <p className="font-semibold">{selected.name}</p>
-          <p className="text-[var(--color-text-muted)]">Category: {selected.category}</p>
+        <div className="mt-6 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-3.5 text-xs text-[var(--color-text-main)] shadow-xs">
+          <span className="block text-[10px] uppercase font-semibold text-[var(--color-text-muted)] tracking-wider mb-1.5">
+            Committed Selection
+          </span>
+          <p className="font-semibold text-sm">{selected.name}</p>
+          <div className="flex items-center gap-2 mt-1 text-[var(--color-text-muted)]">
+            <span>Category: {selected.category}</span>
+            <span>·</span>
+            <span>Tier {selected.tier}</span>
+          </div>
         </div>
       )}
     </div>
@@ -117,11 +129,29 @@ export const Interactive: Story = {
   render: args => <InteractiveDemo {...(args as Partial<AutosuggestProps<DayZItem>>)} />,
   args: {
     minChars: 1,
-    minCharsHint: 'Please type more characters to query types.xml...',
     placeholder: 'Search types.xml items...',
     emptyText: 'No DayZ items found',
     disabled: false,
     isLoading: false,
+  },
+};
+
+export const WithLabel: Story = {
+  render: args => <InteractiveDemo {...(args as Partial<AutosuggestProps<DayZItem>>)} />,
+  args: {
+    label: 'Item Prototype (types.xml)',
+    placeholder: 'Select a DayZ class name...',
+    minChars: 1,
+  },
+};
+
+export const WithError: Story = {
+  render: args => <InteractiveDemo {...(args as Partial<AutosuggestProps<DayZItem>>)} />,
+  args: {
+    label: 'Weapon Attachment',
+    value: 'M4_Suppressor_Invalid',
+    error: 'Unrecognized classname. Verify item exists in types.xml or enabled mod pbos.',
+    minChars: 1,
   },
 };
 
@@ -140,14 +170,13 @@ function MinCharsDemo(props: Partial<AutosuggestProps<DayZItem>>) {
   return (
     <div className="flex w-80 flex-col gap-2">
       <p className="text-xs text-[var(--color-text-secondary)]">
-        Focus or type 1-2 characters to see the threshold notice (minChars = 3):
+        The popup stays suppressed until 3 or more characters are entered (minChars = 3):
       </p>
       <Autosuggest<DayZItem>
         value={value}
         onChange={setValue}
         items={filteredItems}
         minChars={3}
-        minCharsHint="Type 3 or more characters to query types.xml..."
         placeholder="Type at least 3 characters..."
         disabled={props.disabled}
         getOptionKey={item => item.id}

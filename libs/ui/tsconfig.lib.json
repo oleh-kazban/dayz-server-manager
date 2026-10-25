@@ -1,3 +1,12 @@
 {
-  "extends": "./tsconfig.json"
+  "extends": "./tsconfig.json",
+  "exclude": [
+    "src/**/*.spec.ts",
+    "src/**/*.spec.tsx",
+    "src/**/*.test.ts",
+    "src/**/*.test.tsx",
+    "src/vitest-env.d.ts",
+    "vitest.config.ts",
+    "test-setup.ts"
+  ]
 }

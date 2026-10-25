@@ -9,6 +9,7 @@ export interface CustomToastProps {
   title: string;
   description?: string;
   type?: ToastType;
+  customClassName?: string;
 }
 
 const TOAST_STYLES: Record<
@@ -19,20 +20,20 @@ const TOAST_STYLES: Record<
   }
 > = {
   success: {
-    container: 'border-[var(--color-success-border)] bg-[var(--color-success-light)]',
-    iconColor: 'text-[var(--color-success)]',
+    container: 'border-[var(--color-status-success-border)] bg-[var(--color-status-success-light)]',
+    iconColor: 'text-[var(--color-status-success)]',
   },
   info: {
     container: 'border-[var(--color-primary-border)] bg-[var(--color-primary-light)]',
     iconColor: 'text-[var(--color-primary)]',
   },
   warning: {
-    container: 'border-[var(--color-warning-border)] bg-[var(--color-warning-light)]',
-    iconColor: 'text-[var(--color-warning)]',
+    container: 'border-[var(--color-status-warning-border)] bg-[var(--color-status-warning-light)]',
+    iconColor: 'text-[var(--color-status-warning)]',
   },
   error: {
-    container: 'border-[var(--color-danger-border)] bg-[var(--color-danger-light)]',
-    iconColor: 'text-[var(--color-danger)]',
+    container: 'border-[var(--color-status-danger-border)] bg-[var(--color-status-danger-light)]',
+    iconColor: 'text-[var(--color-status-danger)]',
   },
 };
 
@@ -54,18 +55,25 @@ function ToastIcon({ type }: { type: ToastType }) {
   );
 }
 
-export function CustomToast({ t, title, description, type = 'info' }: CustomToastProps) {
+export function CustomToast({
+  t,
+  title,
+  description,
+  type = 'info',
+  customClassName = '',
+}: CustomToastProps) {
   const styles = TOAST_STYLES[type] ?? TOAST_STYLES.info;
+  const isError = type === 'error';
 
   return (
     <div
-      role="status"
-      aria-live="polite"
+      role={isError ? 'alert' : 'status'}
+      aria-live={isError ? 'assertive' : 'polite'}
       className={`${
         t.visible ? 'translate-y-0 opacity-100' : '-translate-y-2 opacity-0'
       } pointer-events-auto flex w-full max-w-sm transform items-start gap-3 rounded-2xl border ${
         styles.container
-      } p-3.5 text-[var(--color-text-main)] shadow-[var(--shadow-card)] transition-all duration-200`}
+      } p-3.5 text-[var(--color-text-main)] shadow-[var(--shadow-card)] transition-all duration-200 ${customClassName}`.trim()}
     >
       <ToastIcon type={type} />
       <div className="min-w-0 flex-1">
@@ -82,7 +90,7 @@ export function CustomToast({ t, title, description, type = 'info' }: CustomToas
         type="button"
         aria-label="Dismiss notification"
         onClick={() => toast.dismiss(t.id)}
-        className="shrink-0 rounded-lg p-1 text-[var(--color-text-muted)] transition-colors hover:bg-black/5 dark:hover:bg-white/10 hover:text-[var(--color-text-main)]"
+        className="shrink-0 rounded-lg p-1 text-[var(--color-text-muted)] transition-colors hover:bg-black/5 dark:hover:bg-white/10 hover:text-[var(--color-text-main)] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--color-primary)] cursor-pointer"
       >
         <X className="h-3.5 w-3.5" />
       </button>

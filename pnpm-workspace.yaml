@@ -11,3 +11,6 @@ onlyBuiltDependencies:
   - esbuild
   - msw
   - nx
+
+overrides:
+  undici: 7.29.0

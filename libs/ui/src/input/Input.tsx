@@ -1,13 +1,36 @@
-import { useId } from 'react';
+import {
+  type ComponentType,
+  type InputHTMLAttributes,
+  type MouseEvent,
+  type ReactNode,
+  type Ref,
+  useId,
+  useRef,
+} from 'react';
 
-import { LucideIcon } from 'lucide-react';
+import { type LucideIcon } from 'lucide-react';
 
-export interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
-  leftIcon?: LucideIcon;
-  rightAction?: React.ReactNode;
+export interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
+  /** Label displayed above the input field */
   label?: string;
+
+  /** Validation error message; switches field to error treatment and links aria-describedby */
   error?: string;
+
+  /** Leading icon component */
+  leftIcon?: LucideIcon | ComponentType<{ className?: string }>;
+
+  /** Trailing slot for action buttons or indicators */
+  rightAction?: ReactNode;
+
+  /** Root container styling escape hatch */
+  customClassName?: string;
+
+  /** Standard container styling escape hatch */
   containerClassName?: string;
+
+  /** React 19 native DOM ref */
+  ref?: Ref<HTMLInputElement>;
 }
 
 export function Input({
@@ -18,15 +41,36 @@ export function Input({
   label,
   error,
   disabled = false,
-  containerClassName = '',
   className = '',
+  customClassName = '',
+  containerClassName = '',
   ...props
-}: InputProps & { ref?: React.Ref<HTMLInputElement> }) {
+}: InputProps) {
   const generatedId = useId();
   const inputId = externalId ?? generatedId;
 
+  const internalInputRef = useRef<HTMLInputElement>(null);
+
+  const handleInputRef = (element: HTMLInputElement | null) => {
+    internalInputRef.current = element;
+    if (typeof ref === 'function') {
+      ref(element);
+    } else if (ref && 'current' in ref) {
+      (ref as { current: HTMLInputElement | null }).current = element;
+    }
+  };
+
+  const handleContainerClick = (e: MouseEvent<HTMLDivElement>) => {
+    if ((e.target as HTMLElement).closest('button, a')) {
+      return;
+    }
+    internalInputRef.current?.focus();
+  };
+
+  const resolvedContainerClass = containerClassName || customClassName || '';
+
   return (
-    <div className={`space-y-2 text-left ${containerClassName}`}>
+    <div className={`space-y-1.5 text-left ${resolvedContainerClass}`.trim()}>
       {label && (
         <label
           htmlFor={inputId}
@@ -41,19 +85,19 @@ export function Input({
       )}
 
       <div
-        className={`flex items-center gap-3 h-12 px-3.5 rounded-lg border transition-colors ${
-          disabled
-            ? 'opacity-50 cursor-not-allowed bg-[var(--color-surface-subtle)]/60'
-            : 'bg-[var(--color-surface-subtle)]'
+        onClick={handleContainerClick}
+        className={`flex items-center rounded-lg border bg-[var(--color-surface)] shadow-xs transition-colors cursor-text h-9 px-3.5 gap-2.5 ${
+          disabled ? 'opacity-50 cursor-not-allowed bg-[var(--color-surface-subtle)]' : ''
         } ${
           error
-            ? 'border-[var(--color-danger)] focus-within:border-[var(--color-danger)]'
-            : 'border-[var(--color-border)] focus-within:border-[var(--color-primary)]'
+            ? 'border-[var(--color-status-danger)] focus-within:border-[var(--color-status-danger)] focus-within:ring-1 focus-within:ring-[var(--color-status-danger)]'
+            : 'border-[var(--color-border)] focus-within:border-[var(--color-primary)] focus-within:ring-1 focus-within:ring-[var(--color-primary)]'
         }`}
       >
         {LeftIcon && (
           <LeftIcon
-            className={`w-[17px] h-[17px] text-[var(--color-text-muted)] shrink-0 ${
+            aria-hidden="true"
+            className={`w-4 h-4 text-[var(--color-text-muted)] shrink-0 select-none ${
               disabled ? 'opacity-50' : ''
             }`}
           />
@@ -61,20 +105,23 @@ export function Input({
 
         <input
           {...props}
-          ref={ref}
+          ref={handleInputRef}
           id={inputId}
           disabled={disabled}
           aria-disabled={disabled}
           aria-invalid={Boolean(error)}
           aria-describedby={error ? `${inputId}-error` : undefined}
-          className={`w-full bg-transparent text-xs text-[var(--color-text-main)] placeholder-[var(--color-text-muted)] outline-none disabled:cursor-not-allowed ${className}`}
+          className={`w-full h-full min-w-0 self-stretch bg-transparent border-0 p-0 font-sans text-xs text-[var(--color-text-main)] placeholder:text-[var(--color-text-muted)] outline-none focus:outline-none focus:ring-0 disabled:cursor-not-allowed ${className}`.trim()}
         />
 
-        {rightAction}
+        {rightAction && <div className="shrink-0 flex items-center">{rightAction}</div>}
       </div>
 
       {error && (
-        <p id={`${inputId}-error`} className="text-[11px] text-[var(--color-danger)] leading-tight">
+        <p
+          id={`${inputId}-error`}
+          className="text-[11px] font-sans text-[var(--color-status-danger)] leading-tight"
+        >
           {error}
         </p>
       )}

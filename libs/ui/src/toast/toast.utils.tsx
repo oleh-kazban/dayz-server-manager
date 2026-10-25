@@ -7,6 +7,7 @@ export interface ShowToastOptions {
   description?: string;
   type?: ToastType;
   duration?: number;
+  customClassName?: string;
 }
 
 export function showToast({
@@ -14,9 +15,34 @@ export function showToast({
   description,
   type = 'info',
   duration = 4000,
-}: ShowToastOptions) {
+  customClassName,
+}: ShowToastOptions): string {
   return toast.custom(
-    t => <CustomToast t={t} title={title} description={description} type={type} />,
+    t => (
+      <CustomToast
+        t={t}
+        title={title}
+        description={description}
+        type={type}
+        customClassName={customClassName}
+      />
+    ),
     { duration },
   );
 }
+
+showToast.success = (title: string, description?: string, duration?: number) =>
+  showToast({ title, description, type: 'success', duration });
+
+showToast.error = (title: string, description?: string, duration?: number) =>
+  showToast({ title, description, type: 'error', duration });
+
+showToast.warning = (title: string, description?: string, duration?: number) =>
+  showToast({ title, description, type: 'warning', duration });
+
+showToast.info = (title: string, description?: string, duration?: number) =>
+  showToast({ title, description, type: 'info', duration });
+
+showToast.dismiss = (toastId?: string) => {
+  toast.dismiss(toastId);
+};

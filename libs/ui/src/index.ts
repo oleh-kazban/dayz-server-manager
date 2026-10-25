@@ -8,6 +8,7 @@ export * from './hooks';
 export * from './input';
 export * from './loader';
 export * from './menu';
+export * from './status-tag';
 export * from './tag';
 export * from './toast';
 export * from './toggle';

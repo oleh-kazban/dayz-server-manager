@@ -32,11 +32,6 @@ const meta: Meta<typeof Button> = {
       options: ['primary', 'secondary', 'ghost', 'text'],
       description: 'Visual stylistic variant of the button',
     },
-    size: {
-      control: 'select',
-      options: ['sm', 'md', 'lg'],
-      description: 'Physical dimension and padding scale (sm: 32px, md: 36px, lg: 40px)',
-    },
     destructive: {
       control: 'boolean',
       description: 'Applies destructive/danger styling across any variant',
@@ -131,7 +126,6 @@ export const Disabled: Story = {
 export const IconButton: Story = {
   args: {
     variant: 'secondary',
-    size: 'md',
     leftIcon: Settings,
     'aria-label': 'Server settings',
   },
@@ -214,10 +208,11 @@ export const AllVariants: Story = {
 };
 
 /* ====================================================================
-   ALL SIZES & ICON BUTTONS (Unified Rhythm: 32px / 36px / 40px)
+   CANONICAL GEOMETRY & ICON BUTTONS (Standard: 36px)
    ==================================================================== */
 
-export const AllSizes: Story = {
+export const ButtonGeometry: Story = {
+  name: 'Standard Geometry (36px)',
   parameters: {
     controls: { include: ['disabled', 'isLoading'] },
   },
@@ -229,31 +224,20 @@ export const AllSizes: Story = {
         </h4>
         <div className="flex items-center gap-3">
           <Button
-            size="sm"
             variant="secondary"
             disabled={args.disabled}
             isLoading={args.isLoading}
             leftIcon={Download}
           >
-            Small (h-8 / 32px)
+            Standard Button (36px)
           </Button>
           <Button
-            size="md"
-            variant="secondary"
+            variant="primary"
             disabled={args.disabled}
             isLoading={args.isLoading}
             leftIcon={Download}
           >
-            Medium (h-9 / 36px)
-          </Button>
-          <Button
-            size="lg"
-            variant="secondary"
-            disabled={args.disabled}
-            isLoading={args.isLoading}
-            leftIcon={Download}
-          >
-            Large (h-10 / 40px)
+            Primary Action (36px)
           </Button>
         </div>
       </div>
@@ -264,7 +248,6 @@ export const AllSizes: Story = {
         </h4>
         <div className="flex items-center gap-3">
           <Button
-            size="sm"
             variant="secondary"
             disabled={args.disabled}
             isLoading={args.isLoading}
@@ -272,31 +255,21 @@ export const AllSizes: Story = {
             aria-label="List view"
           />
           <Button
-            size="md"
             variant="secondary"
             disabled={args.disabled}
             isLoading={args.isLoading}
             leftIcon={LayoutGrid}
             aria-label="Grid view"
           />
-          <Button
-            size="lg"
-            variant="secondary"
-            disabled={args.disabled}
-            isLoading={args.isLoading}
-            leftIcon={Columns3}
-            aria-label="Columns view"
-          />
         </div>
       </div>
 
       <div>
         <h4 className="text-xs font-semibold text-[var(--color-text-muted)] uppercase mb-3">
-          Ghost Icon Triggers
+          Ghost Icon Triggers (Table Row Actions)
         </h4>
         <div className="flex items-center gap-3">
           <Button
-            size="sm"
             variant="ghost"
             disabled={args.disabled}
             isLoading={args.isLoading}
@@ -304,7 +277,6 @@ export const AllSizes: Story = {
             aria-label="Edit"
           />
           <Button
-            size="sm"
             variant="ghost"
             disabled={args.disabled}
             isLoading={args.isLoading}
@@ -312,7 +284,6 @@ export const AllSizes: Story = {
             aria-label="Duplicate"
           />
           <Button
-            size="sm"
             variant="ghost"
             destructive
             disabled={args.disabled}
@@ -321,7 +292,6 @@ export const AllSizes: Story = {
             aria-label="Delete"
           />
           <Button
-            size="sm"
             variant="ghost"
             disabled={args.disabled}
             isLoading={args.isLoading}
@@ -420,7 +390,6 @@ export const FigmaToolbarShowcase: Story = {
 
           <div className="flex items-center gap-1 border border-[var(--color-border)] rounded-lg p-0.5 bg-[var(--color-surface)]">
             <Button
-              size="sm"
               variant="ghost"
               disabled={args.disabled}
               isLoading={args.isLoading}
@@ -428,7 +397,6 @@ export const FigmaToolbarShowcase: Story = {
               aria-label="Compact density"
             />
             <Button
-              size="sm"
               variant="secondary"
               disabled={args.disabled}
               isLoading={args.isLoading}
@@ -446,7 +414,6 @@ export const FigmaToolbarShowcase: Story = {
         <div className="flex items-center gap-2">
           <Button
             variant="secondary"
-            size="sm"
             disabled={args.disabled}
             isLoading={args.isLoading}
             leftIcon={SquarePen}
@@ -455,7 +422,6 @@ export const FigmaToolbarShowcase: Story = {
           </Button>
           <Button
             variant="secondary"
-            size="sm"
             disabled={args.disabled}
             isLoading={args.isLoading}
             leftIcon={Copy}
@@ -465,14 +431,13 @@ export const FigmaToolbarShowcase: Story = {
           <Button
             variant="secondary"
             destructive
-            size="sm"
             disabled={args.disabled}
             isLoading={args.isLoading}
             leftIcon={Trash2}
           >
             Delete
           </Button>
-          <Button variant="ghost" size="sm" disabled={args.disabled} isLoading={args.isLoading}>
+          <Button variant="ghost" disabled={args.disabled} isLoading={args.isLoading}>
             Clear selection
           </Button>
         </div>
@@ -580,7 +545,6 @@ export const TableActionsShowcase: Story = {
               <td className="p-3 pr-4 text-right">
                 <div className="inline-flex items-center gap-1.5">
                   <Button
-                    size="sm"
                     variant="ghost"
                     disabled={args.disabled}
                     isLoading={args.isLoading}
@@ -588,7 +552,6 @@ export const TableActionsShowcase: Story = {
                     aria-label="Run task now"
                   />
                   <Button
-                    size="sm"
                     variant="ghost"
                     disabled={args.disabled}
                     isLoading={args.isLoading}
@@ -608,7 +571,6 @@ export const TableActionsShowcase: Story = {
               <td className="p-3 pr-4 text-right">
                 <div className="inline-flex items-center gap-1">
                   <Button
-                    size="sm"
                     variant="ghost"
                     disabled={args.disabled}
                     isLoading={args.isLoading}
@@ -616,7 +578,6 @@ export const TableActionsShowcase: Story = {
                     aria-label="Edit item"
                   />
                   <Button
-                    size="sm"
                     variant="ghost"
                     disabled={args.disabled}
                     isLoading={args.isLoading}
@@ -624,7 +585,6 @@ export const TableActionsShowcase: Story = {
                     aria-label="Duplicate item"
                   />
                   <Button
-                    size="sm"
                     variant="ghost"
                     disabled={args.disabled}
                     isLoading={args.isLoading}
@@ -678,7 +638,6 @@ export const TableActionsShowcase: Story = {
             <Button
               variant="secondary"
               destructive
-              size="sm"
               disabled={args.disabled}
               isLoading={args.isLoading}
             >

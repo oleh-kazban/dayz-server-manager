@@ -29,6 +29,18 @@
       "options": {
         "command": "storybook build -c libs/ui/.storybook -o dist/storybook/ui"
       }
+    },
+    "test": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "vitest run --config libs/ui/vitest.config.ts"
+      }
+    },
+    "test:coverage": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "vitest run --coverage --config libs/ui/vitest.config.ts"
+      }
     }
   }
 }

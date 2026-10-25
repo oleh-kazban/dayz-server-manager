@@ -1,6 +1,5 @@
 import {
   type ButtonHTMLAttributes,
-  Children,
   cloneElement,
   type ComponentType,
   isValidElement,
@@ -12,8 +11,6 @@ import { Loader2, type LucideIcon } from 'lucide-react';
 
 export type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'text';
 
-export type ButtonSize = 'sm' | 'md' | 'lg';
-
 export type ButtonIcon =
   | LucideIcon
   | ComponentType<{ className?: string; 'aria-hidden'?: boolean | 'true' | 'false' }>
@@ -21,16 +18,15 @@ export type ButtonIcon =
 
 export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   /**
+   * React 19 ref forwarded directly to the native <button> element.
+   */
+  ref?: Ref<HTMLButtonElement>;
+
+  /**
    * Visual style variant of the button.
    * @default 'secondary'
    */
   variant?: ButtonVariant;
-
-  /**
-   * Dimensional scale (sm: 32px, md: 36px, lg: 40px).
-   * @default 'md'
-   */
-  size?: ButtonSize;
 
   /**
    * Applies destructive/danger styling across all variants.
@@ -55,15 +51,15 @@ export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 }
 
 /* --------------------------------------------------------------------------
-   STYLE CONFIGURATIONS (100% CSS Variable Tokens)
+   STYLE CONFIGURATIONS (100% CSS Variable Tokens — Canonical 36px / h-9)
    -------------------------------------------------------------------------- */
 
 const VARIANT_CLASSES: Record<ButtonVariant, { standard: string; destructive: string }> = {
   primary: {
     standard:
-      'bg-[var(--color-primary)] text-[var(--color-primary-fg)] enabled:hover:bg-[var(--color-primary-hover)] enabled:active:opacity-95 shadow-xs border border-transparent focus-visible:ring-[var(--color-primary)]',
+      'bg-[var(--color-primary)] text-white enabled:hover:bg-[var(--color-primary-hover)] enabled:active:opacity-95 shadow-xs border border-transparent focus-visible:ring-[var(--color-primary)]',
     destructive:
-      'bg-[var(--color-status-danger)] text-[var(--color-status-danger-fg)] enabled:hover:opacity-90 enabled:active:opacity-95 shadow-xs border border-transparent focus-visible:ring-[var(--color-status-danger)]',
+      'bg-[var(--color-status-danger)] text-white enabled:hover:opacity-90 enabled:active:opacity-95 shadow-xs border border-transparent focus-visible:ring-[var(--color-status-danger)]',
   },
   secondary: {
     standard:
@@ -85,43 +81,24 @@ const VARIANT_CLASSES: Record<ButtonVariant, { standard: string; destructive: st
   },
 };
 
-const SIZE_CLASSES: Record<ButtonSize, string> = {
-  sm: 'h-8 px-2.5 py-1 text-xs gap-1.5 rounded-lg font-medium',
-  md: 'h-9 px-3.5 py-1.5 text-xs gap-2 rounded-lg font-medium',
-  lg: 'h-10 px-4 py-2 text-sm gap-2.5 rounded-xl font-medium',
-};
+const BUTTON_DIMENSION_CLASS = 'h-9 px-3.5 py-1.5 text-xs gap-2 rounded-lg font-medium';
+const ICON_ONLY_DIMENSION_CLASS = 'h-9 w-9 p-0 rounded-lg justify-center shrink-0';
+const TEXT_DIMENSION_CLASS = 'text-xs gap-1.5 font-medium';
+const ICON_CLASS = 'w-4 h-4 shrink-0';
 
-const ICON_ONLY_CLASSES: Record<ButtonSize, string> = {
-  sm: 'h-8 w-8 p-0 rounded-lg justify-center shrink-0',
-  md: 'h-9 w-9 p-0 rounded-lg justify-center shrink-0',
-  lg: 'h-10 w-10 p-0 rounded-xl justify-center shrink-0',
-};
-
-const TEXT_SIZE_CLASSES: Record<ButtonSize, string> = {
-  sm: 'text-xs gap-1 font-medium',
-  md: 'text-xs gap-1.5 font-medium',
-  lg: 'text-sm gap-2 font-medium',
-};
-
-const ICON_SIZE_CLASSES: Record<ButtonSize, string> = {
-  sm: 'w-3.5 h-3.5 shrink-0',
-  md: 'w-4 h-4 shrink-0',
-  lg: 'w-4 h-4 shrink-0',
-};
-
-function renderIcon(icon: ButtonIcon | undefined, size: ButtonSize) {
+function renderIcon(icon: ButtonIcon | undefined) {
   if (!icon) return null;
 
   if (isValidElement(icon)) {
     const element = icon as ReactElement<{ className?: string; 'aria-hidden'?: boolean }>;
     return cloneElement(element, {
-      className: `${ICON_SIZE_CLASSES[size]} ${element.props.className ?? ''}`.trim(),
+      className: `${ICON_CLASS} ${element.props.className ?? ''}`.trim(),
       'aria-hidden': true,
     });
   }
 
   const IconComponent = icon as ComponentType<{ className?: string; 'aria-hidden'?: boolean }>;
-  return <IconComponent className={ICON_SIZE_CLASSES[size]} aria-hidden={true} />;
+  return <IconComponent className={ICON_CLASS} aria-hidden={true} />;
 }
 
 /* --------------------------------------------------------------------------
@@ -132,7 +109,6 @@ export function Button({
   ref,
   type = 'button',
   variant = 'secondary',
-  size = 'md',
   destructive = false,
   leftIcon,
   rightIcon,
@@ -143,28 +119,27 @@ export function Button({
   className = '',
   children,
   ...props
-}: ButtonProps & { ref?: Ref<HTMLButtonElement> }) {
+}: ButtonProps) {
   const isButtonDisabled = disabled || isLoading;
   const isText = variant === 'text';
 
-  // React renders booleans, null, and undefined as nothing.
-  // Use React.Children.toArray which automatically strips booleans, null, and undefined,
-  // then filter out empty strings to detect genuine rendered content (e.g. preserves 0 and non-empty strings/elements).
-  const renderedChildren = Children.toArray(children).filter(
-    child => child !== '' && typeof child !== 'boolean',
-  );
-  const hasChildren = renderedChildren.length > 0;
+  const hasChildren =
+    children !== undefined &&
+    children !== null &&
+    children !== false &&
+    children !== '' &&
+    (!Array.isArray(children) || children.length > 0);
 
   // Automatically determine if the button is icon-only (when no content children provided).
   // The text variant is an inline hyperlink action, so isIconOnly does not apply to it.
   const isIconOnly =
     !isText && (explicitIconOnly ?? (!hasChildren && Boolean(leftIcon || rightIcon)));
 
-  let dimensionClass = SIZE_CLASSES[size];
+  let dimensionClass = BUTTON_DIMENSION_CLASS;
   if (isText) {
-    dimensionClass = TEXT_SIZE_CLASSES[size];
+    dimensionClass = TEXT_DIMENSION_CLASS;
   } else if (isIconOnly) {
-    dimensionClass = ICON_ONLY_CLASSES[size];
+    dimensionClass = ICON_ONLY_DIMENSION_CLASS;
   }
 
   let alignmentClass = '';
@@ -183,18 +158,17 @@ export function Button({
       type={type}
       disabled={isButtonDisabled}
       aria-busy={isLoading}
-      aria-disabled={isButtonDisabled}
       className={`inline-flex items-center select-none transition-colors duration-150 cursor-pointer disabled:cursor-not-allowed disabled:opacity-50 disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-surface)] ${alignmentClass} ${variantStyle} ${dimensionClass} ${className}`.trim()}
     >
       {isLoading ? (
-        <Loader2 className={`animate-spin ${ICON_SIZE_CLASSES[size]}`} aria-hidden="true" />
+        <Loader2 className={`animate-spin ${ICON_CLASS}`} aria-hidden="true" />
       ) : (
-        renderIcon(leftIcon, size)
+        renderIcon(leftIcon)
       )}
 
       {hasChildren && <span>{children}</span>}
 
-      {!isLoading && renderIcon(rightIcon, size)}
+      {!isLoading && renderIcon(rightIcon)}
     </button>
   );
 }

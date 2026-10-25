@@ -52,11 +52,12 @@ export function usePopup<TTrigger extends HTMLElement = HTMLButtonElement>(
     const maxHeight = placement === 'bottom' ? availableBelow : availableAbove;
     const renderedHeight = Math.min(popupHeight, maxHeight);
     const maxWidth = Math.max(0, window.innerWidth - 2 * VIEWPORT_PADDING);
+    const effectivePopupWidth = popupRect.width > 0 ? popupRect.width : triggerRect.width;
     const preferredLeft =
-      alignment === 'start' ? triggerRect.left : triggerRect.right - popupRect.width;
+      alignment === 'start' ? triggerRect.left : triggerRect.right - effectivePopupWidth;
     const maxLeft = Math.max(
       VIEWPORT_PADDING,
-      window.innerWidth - popupRect.width - VIEWPORT_PADDING,
+      window.innerWidth - effectivePopupWidth - VIEWPORT_PADDING,
     );
     const left = Math.min(Math.max(VIEWPORT_PADDING, preferredLeft), maxLeft);
     const top =
