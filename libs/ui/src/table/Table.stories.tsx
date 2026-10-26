@@ -328,22 +328,27 @@ export const CentralEconomyWorkbench: Story = {
     return (
       <div className="w-full max-w-6xl mx-auto rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-xs overflow-hidden font-sans">
         {/* Layer 1: Header Tabs & Action Buttons */}
-        <div className="flex items-center justify-between px-5 pt-3.5 border-b border-[var(--color-border)] bg-[var(--color-surface)]">
-          <Tabs value={activeTab} onChange={setActiveTab} variant="underline">
-            <TabList>
-              <TabTrigger value="all" count="1,248">
+        <div className="flex items-center justify-between px-5 border-b border-[var(--color-border)] bg-[var(--color-surface)]">
+          <Tabs
+            value={activeTab}
+            onChange={setActiveTab}
+            variant="underline"
+            containerClassName="space-y-0"
+          >
+            <TabList bordered={false} className="gap-8">
+              <TabTrigger value="all" count="1,248" className="py-3.5">
                 All items
               </TabTrigger>
-              <TabTrigger value="modified" count="24">
+              <TabTrigger value="modified" count="24" className="py-3.5">
                 Modified
               </TabTrigger>
-              <TabTrigger value="warnings" count="3">
+              <TabTrigger value="warnings" count="3" className="py-3.5">
                 Warnings
               </TabTrigger>
             </TabList>
           </Tabs>
 
-          <div className="flex items-center gap-2.5 pb-2">
+          <div className="flex items-center gap-2.5 py-2">
             <Button variant="secondary" className="h-8 px-3 text-xs font-medium">
               <Upload className="w-3.5 h-3.5 mr-1.5" /> Import XML
             </Button>

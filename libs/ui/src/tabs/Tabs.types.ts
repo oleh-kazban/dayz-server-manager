@@ -62,6 +62,12 @@ export interface TabListProps {
   'aria-label'?: string;
   /** Child <TabTrigger> elements */
   children?: ReactNode;
+  /**
+   * Whether to render a bottom border in underline variant.
+   * Set to false when embedded inside an already-bordered container (e.g. card header).
+   * @default true
+   */
+  bordered?: boolean;
   /** Additional styling classes */
   className?: string;
 }

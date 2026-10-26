@@ -20,7 +20,7 @@ function getBadgeClasses(variant: 'segmented' | 'underline', isActive: boolean):
   if (variant === 'segmented') {
     return 'bg-[var(--color-surface)] text-[var(--color-text-muted)]';
   }
-  return 'bg-[var(--color-surface-subtle)] text-[var(--color-text-muted)] border border-[var(--color-border)]/50';
+  return 'bg-[var(--color-surface-subtle)] text-[var(--color-text-muted)]';
 }
 
 function getTriggerVariantStyles(variant: 'segmented' | 'underline', isActive: boolean): string {
@@ -30,8 +30,8 @@ function getTriggerVariantStyles(variant: 'segmented' | 'underline', isActive: b
       : 'text-[var(--color-text-secondary)] hover:text-[var(--color-text-main)] hover:bg-[var(--color-surface)]/50 border border-transparent';
   }
   return isActive
-    ? 'text-[var(--color-primary)] font-semibold border-b-2 border-[var(--color-primary)]'
-    : 'text-[var(--color-text-secondary)] hover:text-[var(--color-text-main)] border-b-2 border-transparent hover:border-[var(--color-border)]';
+    ? 'text-[var(--color-primary)] font-semibold border-b-2 border-[var(--color-primary)] -mb-px'
+    : 'text-[var(--color-text-secondary)] hover:text-[var(--color-text-main)] border-b-2 border-transparent hover:border-[var(--color-border)] -mb-px';
 }
 
 function TabCountBadge({
@@ -107,7 +107,7 @@ export function TabTrigger({
   // Base styling per variant
   const variantStyles = getTriggerVariantStyles(variant, isActive);
 
-  const sizeStyles = variant === 'segmented' ? 'h-8 px-3 rounded-lg' : 'h-9 px-1.5';
+  const sizeStyles = variant === 'segmented' ? 'h-8 px-3 rounded-lg' : 'px-1.5 py-3';
 
   return (
     <button
@@ -135,7 +135,21 @@ export function TabTrigger({
    TAB LIST
    -------------------------------------------------------------------------- */
 
-export function TabList({ ref, 'aria-label': ariaLabel, children, className = '' }: TabListProps) {
+function getTabListBaseStyles(variant: 'segmented' | 'underline', bordered: boolean): string {
+  if (variant === 'segmented') {
+    return 'inline-flex items-center gap-1 p-1 rounded-xl bg-[var(--color-surface-subtle)] border border-[var(--color-border)] shadow-xs';
+  }
+  const borderClass = bordered ? 'border-b border-[var(--color-border)]' : '';
+  return `flex items-center gap-6 -mb-px ${borderClass}`.trim();
+}
+
+export function TabList({
+  ref,
+  'aria-label': ariaLabel,
+  children,
+  bordered = true,
+  className = '',
+}: TabListProps) {
   const { variant, fullWidth, tabRefs, orderedTabValues, setActiveValue } = useTabsContext();
 
   const handleKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
@@ -200,10 +214,7 @@ export function TabList({ ref, 'aria-label': ariaLabel, children, className = ''
     }
   };
 
-  const baseContainerStyles =
-    variant === 'segmented'
-      ? 'inline-flex items-center gap-1 p-1 rounded-xl bg-[var(--color-surface-subtle)] border border-[var(--color-border)] shadow-xs'
-      : 'flex items-center gap-6 border-b border-[var(--color-border)]';
+  const baseContainerStyles = getTabListBaseStyles(variant, bordered);
   const widthStyle = fullWidth ? 'w-full' : '';
   const containerStyles = `${baseContainerStyles} ${widthStyle}`.trim();
 
