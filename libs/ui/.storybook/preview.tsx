@@ -1,4 +1,4 @@
-import type { Preview } from '@storybook/react';
+import type { Preview } from '@storybook/tanstack-react';
 
 // Import design system tokens & theme definitions
 import '../src/styles/theme.css';
@@ -12,7 +12,7 @@ const preview: Preview = {
       },
     },
     backgrounds: {
-      disable: true,
+      disabled: true,
     },
   },
   globalTypes: {

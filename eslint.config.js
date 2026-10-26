@@ -1,3 +1,4 @@
+// For more info, see https://github.com/storybookjs/eslint-plugin-storybook#configuration-flat-config-format
 import { fixupPluginRules } from '@eslint/compat';
 import js from '@eslint/js';
 import nxEslintPlugin from '@nx/eslint-plugin';
@@ -7,6 +8,7 @@ import reactHooks from 'eslint-plugin-react-hooks';
 import reactRefresh from 'eslint-plugin-react-refresh';
 import simpleImportSort from 'eslint-plugin-simple-import-sort';
 import sonarjs from 'eslint-plugin-sonarjs';
+import storybook from 'eslint-plugin-storybook';
 import globals from 'globals';
 import tseslint from 'typescript-eslint';
 
@@ -131,4 +133,5 @@ export default tseslint.config(
     },
   },
   eslintConfigPrettier,
+  storybook.configs['flat/recommended'],
 );

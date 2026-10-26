@@ -1,4 +1,4 @@
-import type { Meta, StoryObj } from '@storybook/react';
+import type { Meta, StoryObj } from '@storybook/react-vite';
 
 import { Checkbox } from './Checkbox';
 
@@ -95,7 +95,6 @@ export const Disabled: Story = {
 };
 
 export const WithError: Story = {
-  name: 'With Error',
   render: args => (
     <div className="w-80">
       <Checkbox {...args} />
@@ -109,7 +108,6 @@ export const WithError: Story = {
 };
 
 export const AllStatesGallery: Story = {
-  name: 'All States Gallery',
   render: args => (
     <div className="space-y-4 p-6 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] w-96">
       <div className="border-b border-[var(--color-border)] pb-2 text-xs font-semibold text-[var(--color-text-main)]">

@@ -1,4 +1,4 @@
-import type { Meta, StoryObj } from '@storybook/react';
+import type { Meta, StoryObj } from '@storybook/react-vite';
 import { Download, Power, RefreshCw, Sliders, Trash2 } from 'lucide-react';
 
 import { DotsFloatingMenu } from './DotsFloatingMenu';

@@ -1,6 +1,6 @@
 import { type Toast, Toaster } from 'react-hot-toast';
 
-import type { Meta, StoryObj } from '@storybook/react';
+import type { Meta, StoryObj } from '@storybook/react-vite';
 
 import { Button } from '../button';
 
