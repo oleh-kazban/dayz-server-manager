@@ -1,4 +1,4 @@
-import type { Meta, StoryObj } from '@storybook/react';
+import type { Meta, StoryObj } from '@storybook/react-vite';
 import { Mail, Search } from 'lucide-react';
 
 import { Button } from '../button';
@@ -58,7 +58,6 @@ export const DefaultInput: Story = {
 };
 
 export const WithLeftIcon: Story = {
-  name: 'With Left Icon',
   render: args => (
     <div className="w-80">
       <Input {...args} leftIcon={Mail} />
@@ -72,7 +71,6 @@ export const WithLeftIcon: Story = {
 };
 
 export const WithSearchIcon: Story = {
-  name: 'With Search Icon',
   render: args => (
     <div className="w-80">
       <Input {...args} leftIcon={Search} />
@@ -86,7 +84,6 @@ export const WithSearchIcon: Story = {
 };
 
 export const WithError: Story = {
-  name: 'With Error',
   render: args => (
     <div className="w-80">
       <Input {...args} />
@@ -101,7 +98,6 @@ export const WithError: Story = {
 };
 
 export const PasswordField: Story = {
-  name: 'Password Field',
   render: args => (
     <div className="w-80">
       <PasswordInput {...args} />

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 
-import type { Meta, StoryObj } from '@storybook/react';
+import type { Meta, StoryObj } from '@storybook/react-vite';
 import { Plus, Shield, Tag as TagIconLucide, User } from 'lucide-react';
 
 import { Button } from '../button';
