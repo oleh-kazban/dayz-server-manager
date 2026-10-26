@@ -171,6 +171,19 @@ describe('TableColumnVisibility', () => {
     expect(handleReset).toHaveBeenCalledTimes(1);
   });
 
+  it('renders popover header with title, subtitle, and visible column count', async () => {
+    const user = userEvent.setup();
+
+    render(<TableColumnVisibility columns={mockColumns} onColumnVisibilityChange={vi.fn()} />);
+
+    await user.click(screen.getByRole('button', { name: /columns/i }));
+
+    expect(screen.getByText('Visible columns')).toBeInTheDocument();
+    expect(screen.getByText('Choose what appears in your table.')).toBeInTheDocument();
+    // 3 of 5 visible in mockColumns
+    expect(screen.getByText('3 of 5')).toBeInTheDocument();
+  });
+
   it('forwards ref to button element and supports disabled state', () => {
     const buttonRef = createRef<HTMLButtonElement>();
 

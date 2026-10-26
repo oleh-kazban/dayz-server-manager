@@ -72,6 +72,7 @@ export function Table({
   containerRef,
   density = 'comfortable',
   striped = false,
+  variant = 'standalone',
   containerClassName = '',
   className = '',
   children,
@@ -79,11 +80,16 @@ export function Table({
 }: TableProps) {
   const contextValue = useMemo(() => ({ density, striped }), [density, striped]);
 
+  const containerVariantClass =
+    variant === 'embedded'
+      ? 'border-y border-[var(--color-border)] bg-transparent'
+      : 'rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-xs';
+
   return (
     <TableContext.Provider value={contextValue}>
       <div
         ref={containerRef}
-        className={`w-full overflow-hidden rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-xs ${containerClassName}`.trim()}
+        className={`w-full overflow-hidden ${containerVariantClass} ${containerClassName}`.trim()}
       >
         <div className="w-full overflow-x-auto">
           <table

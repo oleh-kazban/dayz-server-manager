@@ -33,6 +33,14 @@ export interface TableProps extends TableHTMLAttributes<HTMLTableElement> {
    */
   striped?: boolean;
 
+  /**
+   * Container rendering variant.
+   * - 'standalone': includes rounded border, surface background, and shadow.
+   * - 'embedded': border-y without rounded corners or shadow, designed for Card/Workbench shells.
+   * @default 'standalone'
+   */
+  variant?: 'standalone' | 'embedded';
+
   /** Outer card container styling escape hatch */
   containerClassName?: string;
 
@@ -200,6 +208,18 @@ export interface TableColumnVisibilityProps {
    * @default 'Columns'
    */
   triggerLabel?: string;
+
+  /**
+   * Popover dialog title heading.
+   * @default 'Visible columns'
+   */
+  title?: string;
+
+  /**
+   * Popover dialog descriptive subtitle.
+   * @default 'Choose what appears in your table.'
+   */
+  subtitle?: string;
 
   /**
    * Popover placement alignment relative to trigger.

@@ -16,6 +16,8 @@ export function TableColumnVisibility({
   onReset,
   onShowAll,
   triggerLabel = 'Columns',
+  title = 'Visible columns',
+  subtitle = 'Choose what appears in your table.',
   alignment = 'end',
   searchPlaceholder = 'Find a column...',
   popupClassName = '',
@@ -116,8 +118,19 @@ export function TableColumnVisibility({
               maxHeight: popupPosition?.maxHeight ?? 400,
               visibility: popupPosition ? 'visible' : 'hidden',
             }}
-            className={`z-50 w-64 bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl shadow-lg p-2.5 flex flex-col gap-2 font-sans select-none animate-in fade-in zoom-in-95 duration-100 ${popupClassName}`.trim()}
+            className={`z-50 w-72 bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl shadow-lg p-3 flex flex-col gap-2.5 font-sans select-none animate-in fade-in zoom-in-95 duration-100 ${popupClassName}`.trim()}
           >
+            {/* Header matching Editor.png */}
+            <div className="flex flex-col gap-0.5 px-0.5 pt-0.5">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-semibold text-[var(--color-text-main)]">{title}</span>
+                <span className="text-[11px] font-mono text-[var(--color-text-muted)]">
+                  {columns.length - hiddenCount} of {columns.length}
+                </span>
+              </div>
+              <p className="text-[11px] text-[var(--color-text-muted)]">{subtitle}</p>
+            </div>
+
             {/* Search Input */}
             <div className="relative flex items-center">
               <Search
@@ -145,7 +158,7 @@ export function TableColumnVisibility({
             </div>
 
             {/* Column List */}
-            <div className="max-h-56 overflow-y-auto space-y-0.5 py-0.5 pr-0.5">
+            <div className="max-h-60 overflow-y-auto space-y-0.5 py-0.5 pr-0.5">
               {filteredColumns.length === 0 ? (
                 <div className="py-4 text-center text-xs text-[var(--color-text-muted)]">
                   No columns found
@@ -156,13 +169,9 @@ export function TableColumnVisibility({
                   return (
                     <div
                       key={col.id}
-                      className="flex items-center justify-between px-2 py-1.5 rounded-lg hover:bg-[var(--color-surface-subtle)]/70 transition-colors group"
+                      className="flex items-center justify-between px-2 py-1.5 rounded-lg hover:bg-[var(--color-surface-subtle)]/70 transition-colors group cursor-pointer"
                     >
                       <div className="flex items-center gap-2 min-w-0 flex-1">
-                        <GripVertical
-                          aria-hidden="true"
-                          className="w-3 h-3 text-[var(--color-text-muted)] opacity-40 group-hover:opacity-80 shrink-0"
-                        />
                         <Checkbox
                           id={`col-toggle-${col.id}`}
                           checked={col.isVisible}
@@ -172,13 +181,18 @@ export function TableColumnVisibility({
                           className="text-xs"
                         />
                       </div>
-                      {isLocked && (
+                      {isLocked ? (
                         <span title="Locked column">
                           <Lock
                             aria-label="Locked column"
-                            className="w-3 h-3 text-[var(--color-text-muted)] shrink-0 ml-1.5"
+                            className="w-3.5 h-3.5 text-[var(--color-text-muted)] opacity-60 shrink-0"
                           />
                         </span>
+                      ) : (
+                        <GripVertical
+                          aria-hidden="true"
+                          className="w-3.5 h-3.5 text-[var(--color-text-muted)] opacity-40 group-hover:opacity-80 shrink-0"
+                        />
                       )}
                     </div>
                   );

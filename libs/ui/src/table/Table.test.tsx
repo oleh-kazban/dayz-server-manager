@@ -197,6 +197,16 @@ describe('Table', () => {
     expect(tableRef.current).toBeInstanceOf(HTMLTableElement);
     expect(containerRef.current).toBeInstanceOf(HTMLDivElement);
   });
+
+  it('supports embedded variant without rounded corners or shadow', () => {
+    const containerRef = createRef<HTMLDivElement>();
+
+    render(<Table variant="embedded" containerRef={containerRef} />);
+
+    expect(containerRef.current).toHaveClass('border-y');
+    expect(containerRef.current).not.toHaveClass('rounded-xl');
+    expect(containerRef.current).not.toHaveClass('shadow-xs');
+  });
 });
 
 describe('TableBulkActions', () => {
