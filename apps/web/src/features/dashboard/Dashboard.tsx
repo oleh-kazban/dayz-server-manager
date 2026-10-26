@@ -163,7 +163,7 @@ export function Dashboard() {
       <section aria-label="Key Performance Indicators">
         <div className="grid grid-cols-12 gap-4 lg:gap-4">
           {/* Metric 1: Players Online */}
-          <div className="col-span-12 sm:col-span-6 lg:col-span-3 figma-card p-4 flex flex-col justify-between min-h-[114px]">
+          <div className="col-span-12 sm:col-span-6 lg:col-span-3 ui-card p-4 flex flex-col justify-between min-h-[114px]">
             <div className="flex items-center justify-between text-xs text-[var(--color-text-secondary)]">
               <span>Players online</span>
               <Users className="w-4 h-4 text-[var(--color-text-muted)]" />
@@ -194,7 +194,7 @@ export function Dashboard() {
           </div>
 
           {/* Metric 2: Average Latency */}
-          <div className="col-span-12 sm:col-span-6 lg:col-span-3 figma-card p-4 flex flex-col justify-between min-h-[114px]">
+          <div className="col-span-12 sm:col-span-6 lg:col-span-3 ui-card p-4 flex flex-col justify-between min-h-[114px]">
             <div className="flex items-center justify-between text-xs text-[var(--color-text-secondary)]">
               <span>Average latency</span>
               <Radio className="w-4 h-4 text-[var(--color-text-muted)]" />
@@ -225,7 +225,7 @@ export function Dashboard() {
           </div>
 
           {/* Metric 3: Server FPS */}
-          <div className="col-span-12 sm:col-span-6 lg:col-span-3 figma-card p-4 flex flex-col justify-between min-h-[114px]">
+          <div className="col-span-12 sm:col-span-6 lg:col-span-3 ui-card p-4 flex flex-col justify-between min-h-[114px]">
             <div className="flex items-center justify-between text-xs text-[var(--color-text-secondary)]">
               <span>Server FPS</span>
               <Activity className="w-4 h-4 text-[var(--color-text-muted)]" />
@@ -256,7 +256,7 @@ export function Dashboard() {
           </div>
 
           {/* Metric 4: Unique Players */}
-          <div className="col-span-12 sm:col-span-6 lg:col-span-3 figma-card p-4 flex flex-col justify-between min-h-[114px]">
+          <div className="col-span-12 sm:col-span-6 lg:col-span-3 ui-card p-4 flex flex-col justify-between min-h-[114px]">
             <div className="flex items-center justify-between text-xs text-[var(--color-text-secondary)]">
               <span>Unique players</span>
               <UserCheck className="w-4 h-4 text-[var(--color-text-muted)]" />
@@ -293,7 +293,7 @@ export function Dashboard() {
       <section aria-label="Player Analytics">
         <div className="grid grid-cols-12 gap-5">
           {/* Card 1: Player Activity Chart (8 Cols) */}
-          <div className="col-span-12 lg:col-span-8 figma-card p-5 flex flex-col justify-between min-h-[284px]">
+          <div className="col-span-12 lg:col-span-8 ui-card p-5 flex flex-col justify-between min-h-[284px]">
             {/* Heading & Filter */}
             <div className="flex items-center justify-between gap-4">
               <div>
@@ -432,7 +432,7 @@ export function Dashboard() {
           </div>
 
           {/* Card 2: Players by Region (4 Cols) */}
-          <div className="col-span-12 lg:col-span-4 figma-card p-5 flex flex-col justify-between min-h-[284px]">
+          <div className="col-span-12 lg:col-span-4 ui-card p-5 flex flex-col justify-between min-h-[284px]">
             <div className="flex items-center justify-between">
               <div>
                 <h3 className="text-base font-semibold text-[var(--color-text-main)]">
@@ -553,7 +553,7 @@ export function Dashboard() {
       <section aria-label="Server Operations">
         <div className="grid grid-cols-12 gap-5">
           {/* Card 1: Server Performance (6 Cols) */}
-          <div className="col-span-12 lg:col-span-6 figma-card p-5 flex flex-col justify-between min-h-[248px]">
+          <div className="col-span-12 lg:col-span-6 ui-card p-5 flex flex-col justify-between min-h-[248px]">
             <div className="flex items-center justify-between">
               <h3 className="text-base font-semibold text-[var(--color-text-main)]">
                 Server performance
@@ -666,7 +666,7 @@ export function Dashboard() {
           </div>
 
           {/* Card 2: Recent Events (6 Cols) */}
-          <div className="col-span-12 lg:col-span-6 figma-card p-5 flex flex-col justify-between min-h-[248px]">
+          <div className="col-span-12 lg:col-span-6 ui-card p-5 flex flex-col justify-between min-h-[248px]">
             <div className="flex items-center justify-between">
               <h3 className="text-base font-semibold text-[var(--color-text-main)]">
                 Recent events
@@ -753,7 +753,7 @@ export function Dashboard() {
         {/* Logs & Mods Row */}
         <div className="grid grid-cols-12 gap-5">
           {/* Server Logs (8 Cols) */}
-          <div className="col-span-12 lg:col-span-8 figma-card p-5 space-y-3.5">
+          <div className="col-span-12 lg:col-span-8 ui-card p-5 space-y-3.5">
             {/* Header Controls */}
             <div className="flex items-center justify-between gap-4">
               <h3 className="text-base font-semibold text-[var(--color-text-main)]">Server logs</h3>
@@ -850,7 +850,7 @@ export function Dashboard() {
           </div>
 
           {/* Installed Mods (4 Cols) */}
-          <div className="col-span-12 lg:col-span-4 figma-card p-5 flex flex-col justify-between min-h-[278px]">
+          <div className="col-span-12 lg:col-span-4 ui-card p-5 flex flex-col justify-between min-h-[278px]">
             <div className="flex items-center justify-between">
               <h3 className="text-base font-semibold text-[var(--color-text-main)]">
                 Installed mods
@@ -932,7 +932,7 @@ export function Dashboard() {
           <h3 className="text-sm font-semibold text-[var(--color-text-main)]">Quick actions</h3>
           <div className="grid grid-cols-12 gap-4 lg:gap-5">
             {/* Action 1: Create Backup */}
-            <div className="col-span-12 sm:col-span-6 lg:col-span-3 figma-card p-4 flex items-center justify-between hover:border-[var(--color-primary-border)] transition-colors cursor-pointer group">
+            <div className="col-span-12 sm:col-span-6 lg:col-span-3 ui-card p-4 flex items-center justify-between hover:border-[var(--color-primary-border)] transition-colors cursor-pointer group">
               <div className="flex items-center gap-3 min-w-0">
                 <div className="w-8 h-8 rounded-lg bg-[var(--color-primary-light)] text-[var(--color-primary)] flex items-center justify-center shrink-0">
                   <Archive className="w-4 h-4" />
@@ -950,7 +950,7 @@ export function Dashboard() {
             </div>
 
             {/* Action 2: Send Announcement */}
-            <div className="col-span-12 sm:col-span-6 lg:col-span-3 figma-card p-4 flex items-center justify-between hover:border-[var(--color-primary-border)] transition-colors cursor-pointer group">
+            <div className="col-span-12 sm:col-span-6 lg:col-span-3 ui-card p-4 flex items-center justify-between hover:border-[var(--color-primary-border)] transition-colors cursor-pointer group">
               <div className="flex items-center gap-3 min-w-0">
                 <div className="w-8 h-8 rounded-lg bg-[var(--color-primary-light)] text-[var(--color-primary)] flex items-center justify-center shrink-0">
                   <MessageSquare className="w-4 h-4" />
@@ -968,7 +968,7 @@ export function Dashboard() {
             </div>
 
             {/* Action 3: Schedule Restart */}
-            <div className="col-span-12 sm:col-span-6 lg:col-span-3 figma-card p-4 flex items-center justify-between hover:border-[var(--color-primary-border)] transition-colors cursor-pointer group">
+            <div className="col-span-12 sm:col-span-6 lg:col-span-3 ui-card p-4 flex items-center justify-between hover:border-[var(--color-primary-border)] transition-colors cursor-pointer group">
               <div className="flex items-center gap-3 min-w-0">
                 <div className="w-8 h-8 rounded-lg bg-[var(--color-primary-light)] text-[var(--color-primary)] flex items-center justify-center shrink-0">
                   <Clock className="w-4 h-4" />
@@ -986,7 +986,7 @@ export function Dashboard() {
             </div>
 
             {/* Action 4: Configuration Files */}
-            <div className="col-span-12 sm:col-span-6 lg:col-span-3 figma-card p-4 flex items-center justify-between hover:border-[var(--color-primary-border)] transition-colors cursor-pointer group">
+            <div className="col-span-12 sm:col-span-6 lg:col-span-3 ui-card p-4 flex items-center justify-between hover:border-[var(--color-primary-border)] transition-colors cursor-pointer group">
               <div className="flex items-center gap-3 min-w-0">
                 <div className="w-8 h-8 rounded-lg bg-[var(--color-primary-light)] text-[var(--color-primary)] flex items-center justify-center shrink-0">
                   <FileCode className="w-4 h-4" />

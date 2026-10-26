@@ -33,7 +33,7 @@ import { Button, Tag, type TagColor } from '@dsm/ui';
 
 /* --------------------------------------------------------------------------
    DUMMY PRESENTATION DATA TYPES & CONSTANTS
-   Zero business logic - pure presentation markup matching Figma node 23:1938
+   Zero business logic - pure presentation markup matching design specification
    -------------------------------------------------------------------------- */
 
 interface ItemRow {
@@ -688,7 +688,7 @@ export function Editor() {
 
             {/* --------------------------------------------------------------
                 SECTION 7: FLOATING COLUMNS SWITCHER POPOVER
-                Faithfully rendered from Figma node 23:1938
+                Faithfully rendered from design specification
                 -------------------------------------------------------------- */}
             <div className="hidden xl:block absolute right-4 top-14 w-72 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-2xl p-4 z-20 space-y-3">
               <div className="flex items-center justify-between pb-1 border-b border-[var(--color-border)]">

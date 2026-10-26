@@ -1,5 +1,7 @@
 @import './fonts.css';
 @import './themes.css';
+@import '../../../../libs/ui/src/styles/keyframes.css';
+@import '../../../../libs/ui/src/card/Card.css';
 @import 'tailwindcss';
 @source '../../../../libs/ui/src';
 
@@ -66,21 +68,6 @@ body {
   min-height: 100vh;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-}
-
-/* Card Surface Utility */
-.figma-card {
-  background-color: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: 12px;
-  box-shadow: var(--shadow-card);
-  transition:
-    box-shadow 0.2s ease,
-    border-color 0.2s ease;
-}
-
-.figma-card:hover {
-  box-shadow: var(--shadow-card-hover);
 }
 
 /* Custom Scrollbar */

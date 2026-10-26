@@ -1,5 +1,7 @@
 @import './fonts.css';
 @import './themes.css';
+@import './keyframes.css';
+@import '../card/Card.css';
 @import 'tailwindcss';
 
 @theme {
@@ -26,7 +28,6 @@
   --color-primary-light: var(--color-primary-light);
   --color-primary-border: var(--color-primary-border);
   --color-primary-fg: var(--color-primary-fg);
-  --color-primary-fg: var(--color-primary-fg);
 
   --color-status-success: var(--color-success);
   --color-status-success-light: var(--color-success-light);
@@ -35,11 +36,9 @@
   --color-status-warning-light: var(--color-warning-light);
   --color-status-warning-border: var(--color-warning-border);
   --color-status-warning-fg: var(--color-warning-fg);
-  --color-status-warning-fg: var(--color-warning-fg);
   --color-status-danger: var(--color-danger);
   --color-status-danger-light: var(--color-danger-light);
   --color-status-danger-border: var(--color-danger-border);
-  --color-status-danger-fg: var(--color-danger-fg);
   --color-status-danger-fg: var(--color-danger-fg);
   --color-status-info: var(--color-info);
   --color-status-info-light: var(--color-info-light);
@@ -70,21 +69,6 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* Card Surface Utility */
-.figma-card {
-  background-color: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: 12px;
-  box-shadow: var(--shadow-card);
-  transition:
-    box-shadow 0.2s ease,
-    border-color 0.2s ease;
-}
-
-.figma-card:hover {
-  box-shadow: var(--shadow-card-hover);
-}
-
 /* Custom Scrollbar */
 ::-webkit-scrollbar {
   width: 6px;
@@ -102,61 +86,6 @@ body {
 
 ::-webkit-scrollbar-thumb:hover {
   background: var(--color-scrollbar-thumb-hover);
-}
-
-/* Loader Animations */
-@keyframes loader-bounce {
-  0%,
-  100% {
-    transform: translateY(0);
-    animation-timing-function: cubic-bezier(0.8, 0, 1, 1);
-  }
-
-  50% {
-    transform: translateY(var(--loader-bounce-height, -8px));
-    animation-timing-function: cubic-bezier(0, 0, 0.2, 1);
-  }
-}
-
-@keyframes loader-pulse {
-  0%,
-  80%,
-  100% {
-    opacity: 0.35;
-    transform: scale(0.75);
-  }
-
-  40% {
-    opacity: 1;
-    transform: scale(1);
-  }
-}
-
-.animate-loader-bounce {
-  animation: loader-bounce 0.8s infinite ease-in-out;
-}
-
-.animate-loader-pulse {
-  animation: loader-pulse 1.2s infinite ease-in-out;
-}
-
-/* Progress Bar Indeterminate Animation */
-@keyframes progress-indeterminate {
-  0% {
-    transform: translateX(-100%);
-  }
-
-  50% {
-    transform: translateX(100%);
-  }
-
-  100% {
-    transform: translateX(250%);
-  }
-}
-
-.animate-progress-indeterminate {
-  animation: progress-indeterminate 1.5s infinite ease-in-out;
 }
 
 /* WebKit Autofill Harmonization (preserves theme surface & text color) */
