@@ -5,6 +5,7 @@ import { Copy, Edit3, PackageSearch, Trash2 } from 'lucide-react';
 
 import { Button } from '../button';
 import { Checkbox } from '../checkbox';
+import { Pagination } from '../pagination';
 import { Tag, type TagColor } from '../tag';
 
 import { TableBulkActions } from './TableBulkActions';
@@ -150,6 +151,8 @@ export const CentralEconomyWorkbench: Story = {
     const [sortCol, setSortCol] = useState<'name' | 'nominal'>('name');
     const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
     const [density, setDensity] = useState<TableDensity>('comfortable');
+    const [page, setPage] = useState(1);
+    const [pageSize, setPageSize] = useState(25);
     const [columns, setColumns] = useState<TableColumnItem[]>(INITIAL_COLUMNS);
 
     const isColVisible = (id: string) => columns.find(c => c.id === id)?.isVisible ?? true;
@@ -353,6 +356,22 @@ export const CentralEconomyWorkbench: Story = {
             })}
           </TableBody>
         </Table>
+
+        {/* Pagination Footer matching Editor.png */}
+        <div className="pt-2">
+          <Pagination
+            page={page}
+            totalPages={6}
+            totalItems={142}
+            pageSize={pageSize}
+            pageSizeOptions={[10, 25, 50, 100]}
+            onPageChange={setPage}
+            onPageSizeChange={newSize => {
+              setPageSize(newSize);
+              setPage(1);
+            }}
+          />
+        </div>
       </div>
     );
   },
