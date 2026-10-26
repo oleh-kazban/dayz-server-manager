@@ -188,7 +188,7 @@ export function TableHead({
       scope="col"
       aria-sort={ariaSort}
       onClick={onSort}
-      className={`font-semibold text-xs text-[var(--color-text-secondary)] select-none whitespace-nowrap ${paddingClass} ${textAlignClass} ${
+      className={`font-semibold text-xs text-[var(--color-text-secondary)] select-none whitespace-nowrap ${paddingClass} first:pl-5 last:pr-5 ${textAlignClass} ${
         isSortable
           ? 'cursor-pointer group hover:text-[var(--color-text-main)] transition-colors'
           : ''
@@ -217,7 +217,7 @@ export function TableCell({
   return (
     <td
       ref={ref}
-      className={`align-middle text-xs font-sans text-[var(--color-text-main)] ${paddingClass} ${textAlignClass} ${className}`.trim()}
+      className={`align-middle text-xs font-sans text-[var(--color-text-main)] ${paddingClass} first:pl-5 last:pr-5 ${textAlignClass} ${className}`.trim()}
       {...props}
     >
       {children}

@@ -58,12 +58,12 @@ export function Pagination({
       ref={ref}
       role="navigation"
       aria-label="Pagination"
-      className={`flex flex-wrap items-center justify-between gap-3 text-xs font-sans text-[var(--color-text-secondary)] ${className}`.trim()}
+      className={`flex items-center justify-between gap-4 text-xs font-sans text-[var(--color-text-secondary)] ${className}`.trim()}
       {...props}
     >
       {/* Left section: Item range counter */}
       {showItemCount && totalItems !== undefined ? (
-        <div className="text-[var(--color-text-muted)] select-none">
+        <div className="text-[var(--color-text-muted)] select-none shrink-0">
           {formatItemCount(fromItem, toItem, totalItems)}
         </div>
       ) : (
@@ -71,7 +71,7 @@ export function Pagination({
       )}
 
       {/* Right section: Page size selector and page buttons */}
-      <div className="flex flex-wrap items-center gap-4">
+      <div className="flex items-center gap-4 shrink-0">
         {/* Rows per page selector */}
         {showPageSize && onPageSizeChange && (
           <div className="flex items-center gap-2">

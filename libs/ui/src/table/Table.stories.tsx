@@ -443,27 +443,35 @@ export const CentralEconomyWorkbench: Story = {
           </div>
         </div>
 
-        {/* Layer 4: Bulk Actions Bar (Conditional) */}
+        {/* Layer 4: Bulk Actions Bar (Flush above table) */}
         {selectedIds.length > 0 && (
-          <div className="px-5 pb-3">
-            <TableBulkActions
-              selectedCount={selectedIds.length}
-              onClearSelection={() => setSelectedIds([])}
+          <TableBulkActions
+            selectedCount={selectedIds.length}
+            onClearSelection={() => setSelectedIds([])}
+          >
+            <Button
+              variant="ghost"
+              leftIcon={<Edit3 className="w-3.5 h-3.5" />}
+              className="h-7 px-2 text-xs text-[var(--color-primary)] font-medium"
             >
-              <Button variant="ghost" className="h-7 px-2 text-xs text-[var(--color-primary)]">
-                <Edit3 className="w-3.5 h-3.5 mr-1" /> Bulk edit
-              </Button>
-              <Button variant="ghost" className="h-7 px-2 text-xs text-[var(--color-primary)]">
-                <Copy className="w-3.5 h-3.5 mr-1" /> Duplicate
-              </Button>
-              <Button
-                variant="ghost"
-                className="h-7 px-2 text-xs text-[var(--color-status-danger)]"
-              >
-                <Trash2 className="w-3.5 h-3.5 mr-1" /> Delete
-              </Button>
-            </TableBulkActions>
-          </div>
+              Bulk edit
+            </Button>
+            <Button
+              variant="ghost"
+              leftIcon={<Copy className="w-3.5 h-3.5" />}
+              className="h-7 px-2 text-xs text-[var(--color-primary)] font-medium"
+            >
+              Duplicate
+            </Button>
+            <Button
+              variant="ghost"
+              destructive
+              leftIcon={<Trash2 className="w-3.5 h-3.5" />}
+              className="h-7 px-2 text-xs font-medium"
+            >
+              Delete
+            </Button>
+          </TableBulkActions>
         )}
 
         {/* Layer 5: Embedded Table */}
@@ -608,31 +616,32 @@ export const CentralEconomyWorkbench: Story = {
           </TableBody>
         </Table>
 
-        {/* Layer 6: Footer with Item Range, Legend & Pagination */}
-        <div className="flex flex-wrap items-center justify-between gap-4 px-5 py-3 bg-[var(--color-surface)] border-t border-[var(--color-border)]">
-          <div className="flex items-center gap-4 text-xs text-[var(--color-text-muted)] select-none">
-            <span>Showing 1–15 of 1,248 items</span>
-            <span className="flex items-center gap-1.5">
-              <span className="w-2 h-2 rounded-full bg-amber-500 shrink-0" />
-              Modified item
-            </span>
-          </div>
-
-          <Pagination
-            page={page}
-            totalPages={84}
-            totalItems={1248}
-            pageSize={pageSize}
-            pageSizeOptions={[15, 25, 50, 100]}
-            onPageChange={setPage}
-            onPageSizeChange={newSize => {
-              setPageSize(newSize);
-              setPage(1);
-            }}
-            showItemCount={false}
-            showFirstLast
-          />
-        </div>
+        {/* Layer 6: Footer with Item Range, Legend & Pagination (Single flush line) */}
+        <Pagination
+          className="px-5 py-3 bg-[var(--color-surface)] border-t border-[var(--color-border)]"
+          page={page}
+          totalPages={84}
+          totalItems={1248}
+          pageSize={pageSize}
+          pageSizeOptions={[15, 25, 50, 100]}
+          onPageChange={setPage}
+          onPageSizeChange={newSize => {
+            setPageSize(newSize);
+            setPage(1);
+          }}
+          formatItemCount={(from, to, total) => (
+            <div className="flex items-center gap-4 text-xs text-[var(--color-text-muted)] select-none">
+              <span>
+                Showing {from}–{to} of {total.toLocaleString()} items
+              </span>
+              <span className="flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-amber-500 shrink-0" />
+                Modified item
+              </span>
+            </div>
+          )}
+          showFirstLast
+        />
       </div>
     );
   },

@@ -158,7 +158,7 @@ export function Button({
       type={type}
       disabled={isButtonDisabled}
       aria-busy={isLoading}
-      className={`inline-flex items-center select-none transition-colors duration-150 cursor-pointer disabled:cursor-not-allowed disabled:opacity-50 disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-surface)] ${alignmentClass} ${variantStyle} ${dimensionClass} ${className}`.trim()}
+      className={`inline-flex items-center whitespace-nowrap select-none transition-colors duration-150 cursor-pointer disabled:cursor-not-allowed disabled:opacity-50 disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-surface)] ${alignmentClass} ${variantStyle} ${dimensionClass} ${className}`.trim()}
     >
       {isLoading ? (
         <Loader2 className={`animate-spin ${ICON_CLASS}`} aria-hidden="true" />
@@ -166,7 +166,9 @@ export function Button({
         renderIcon(leftIcon)
       )}
 
-      {hasChildren && <span>{children}</span>}
+      {hasChildren && (
+        <span className="inline-flex items-center gap-1.5 whitespace-nowrap">{children}</span>
+      )}
 
       {!isLoading && renderIcon(rightIcon)}
     </button>

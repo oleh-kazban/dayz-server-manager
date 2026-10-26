@@ -20,17 +20,17 @@ export function getPaginationItems(
   const shouldShowLeftDots = leftSiblingIndex > 2;
   const shouldShowRightDots = rightSiblingIndex < totalPages - 1;
 
+  const boundaryCount = 1 + 2 * siblingCount;
+
   if (!shouldShowLeftDots && shouldShowRightDots) {
-    const leftItemCount = 3 + 2 * siblingCount;
-    const leftRange = Array.from({ length: leftItemCount }, (_, i) => i + 1);
+    const leftRange = Array.from({ length: boundaryCount }, (_, i) => i + 1);
     return [...leftRange, 'ellipsis-right', totalPages];
   }
 
   if (shouldShowLeftDots && !shouldShowRightDots) {
-    const rightItemCount = 3 + 2 * siblingCount;
     const rightRange = Array.from(
-      { length: rightItemCount },
-      (_, i) => totalPages - rightItemCount + 1 + i,
+      { length: boundaryCount },
+      (_, i) => totalPages - boundaryCount + 1 + i,
     );
     return [1, 'ellipsis-left', ...rightRange];
   }
