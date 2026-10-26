@@ -8,6 +8,7 @@ export * from './date-picker';
 export * from './hero-banner';
 export * from './hooks';
 export * from './input';
+export * from './kpi-card';
 export * from './loader';
 export * from './menu';
 export * from './notice';
