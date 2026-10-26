@@ -10,6 +10,7 @@ export * from './input';
 export * from './loader';
 export * from './menu';
 export * from './notice';
+export * from './notification-menu';
 export * from './pagination';
 export * from './progress-bar';
 export * from './select';
