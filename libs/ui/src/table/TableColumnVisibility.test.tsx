@@ -1,6 +1,6 @@
 import { createRef } from 'react';
 
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
@@ -198,5 +198,90 @@ describe('TableColumnVisibility', () => {
 
     expect(buttonRef.current).toBeInstanceOf(HTMLButtonElement);
     expect(buttonRef.current).toBeDisabled();
+  });
+
+  it('does not render reorder grip buttons when onColumnsReorder is not provided', async () => {
+    const user = userEvent.setup();
+    render(<TableColumnVisibility columns={mockColumns} onColumnVisibilityChange={vi.fn()} />);
+
+    await user.click(screen.getByRole('button', { name: /columns/i }));
+
+    expect(screen.queryByLabelText(/reorder.*column/i)).not.toBeInTheDocument();
+  });
+
+  it('renders reorder grip buttons and handles keyboard reordering', async () => {
+    const user = userEvent.setup();
+    const handleReorder = vi.fn();
+
+    render(
+      <TableColumnVisibility
+        columns={mockColumns}
+        onColumnVisibilityChange={vi.fn()}
+        onColumnsReorder={handleReorder}
+      />,
+    );
+
+    await user.click(screen.getByRole('button', { name: /columns/i }));
+
+    const categoryGrip = screen.getByRole('button', { name: 'Reorder Category column' });
+    expect(categoryGrip).toBeInTheDocument();
+
+    // Reorder Category downwards
+    categoryGrip.focus();
+    await user.keyboard('{ArrowDown}');
+
+    expect(handleReorder).toHaveBeenCalledTimes(1);
+    const reordered = handleReorder.mock.calls[0][0] as TableColumnItem[];
+    // Category (originally index 1) moved to index 2 (after Nominal)
+    expect(reordered[1].id).toBe('nominal');
+    expect(reordered[2].id).toBe('category');
+  });
+
+  it('handles drag and drop reordering', async () => {
+    const user = userEvent.setup();
+    const handleReorder = vi.fn();
+
+    render(
+      <TableColumnVisibility
+        columns={mockColumns}
+        onColumnVisibilityChange={vi.fn()}
+        onColumnsReorder={handleReorder}
+      />,
+    );
+
+    await user.click(screen.getByRole('button', { name: /columns/i }));
+
+    const categoryGrip = screen.getByRole('button', { name: 'Reorder Category column' });
+    const categoryRow = categoryGrip.closest('[draggable="true"]') as HTMLElement;
+    expect(categoryRow).toBeInTheDocument();
+
+    const nominalGrip = screen.getByRole('button', { name: 'Reorder Nominal column' });
+    const nominalRow = nominalGrip.closest('[draggable="true"]') as HTMLElement;
+
+    // Simulate drag start, dragover, and drop using fireEvent
+    fireEvent.dragStart(categoryRow, {
+      dataTransfer: {
+        setData: vi.fn(),
+        effectAllowed: 'move',
+        dropEffect: 'move',
+      },
+    });
+
+    fireEvent.dragOver(nominalRow, {
+      clientY: 100,
+      currentTarget: {
+        getBoundingClientRect: () => ({ top: 80, height: 40 }),
+      },
+      dataTransfer: {
+        dropEffect: 'move',
+      },
+    });
+
+    fireEvent.drop(nominalRow);
+
+    expect(handleReorder).toHaveBeenCalledTimes(1);
+    const reordered = handleReorder.mock.calls[0][0] as TableColumnItem[];
+    expect(reordered[1].id).toBe('nominal');
+    expect(reordered[2].id).toBe('category');
   });
 });

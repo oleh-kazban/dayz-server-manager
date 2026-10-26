@@ -291,8 +291,6 @@ export const CentralEconomyWorkbench: Story = {
     const [pageSize, setPageSize] = useState(15);
     const [columns, setColumns] = useState<TableColumnItem[]>(INITIAL_COLUMNS);
 
-    const isColVisible = (id: string) => columns.find(c => c.id === id)?.isVisible ?? true;
-
     const handleColumnVisibilityChange = (columnId: string, isVisible: boolean) => {
       setColumns(prev => prev.map(col => (col.id === columnId ? { ...col, isVisible } : col)));
     };
@@ -322,6 +320,162 @@ export const CentralEconomyWorkbench: Story = {
       } else {
         setSortCol(col);
         setSortDir('asc');
+      }
+    };
+
+    const renderHeaderCell = (col: TableColumnItem) => {
+      switch (col.id) {
+        case 'name':
+          return (
+            <TableHead
+              key={col.id}
+              sortDirection={sortCol === 'name' ? sortDir : false}
+              onSort={() => handleSort('name')}
+            >
+              Classname
+            </TableHead>
+          );
+        case 'category':
+          return <TableHead key={col.id}>Category</TableHead>;
+        case 'nominal':
+          return (
+            <TableHead
+              key={col.id}
+              align="right"
+              sortDirection={sortCol === 'nominal' ? sortDir : false}
+              onSort={() => handleSort('nominal')}
+            >
+              Nominal
+            </TableHead>
+          );
+        case 'min':
+          return (
+            <TableHead key={col.id} align="right">
+              Min
+            </TableHead>
+          );
+        case 'lifetime':
+          return (
+            <TableHead key={col.id} align="right">
+              Lifetime (s)
+            </TableHead>
+          );
+        case 'restock':
+          return (
+            <TableHead key={col.id} align="right">
+              Restock (s)
+            </TableHead>
+          );
+        case 'quantity':
+          return <TableHead key={col.id}>Quantity</TableHead>;
+        case 'usage':
+          return <TableHead key={col.id}>Usage</TableHead>;
+        case 'status':
+          return <TableHead key={col.id}>Status</TableHead>;
+        case 'tier':
+          return <TableHead key={col.id}>Tier</TableHead>;
+        case 'flags':
+          return <TableHead key={col.id}>Flags</TableHead>;
+        case 'cost':
+          return (
+            <TableHead key={col.id} align="right">
+              Cost
+            </TableHead>
+          );
+        default:
+          return null;
+      }
+    };
+
+    const renderDataCell = (col: TableColumnItem, item: EconomyItem) => {
+      switch (col.id) {
+        case 'name':
+          return (
+            <TableCell key={col.id} className="font-mono font-medium">
+              <span className="flex items-center gap-1.5">
+                {item.name}
+                {item.isModified && (
+                  <span
+                    className="w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0"
+                    title="Modified item"
+                  />
+                )}
+              </span>
+            </TableCell>
+          );
+        case 'category':
+          return (
+            <TableCell key={col.id}>
+              <Tag color={item.categoryColor}>{item.category}</Tag>
+            </TableCell>
+          );
+        case 'nominal':
+          return (
+            <TableCell key={col.id} align="right" className="font-mono">
+              {item.nominal}
+            </TableCell>
+          );
+        case 'min':
+          return (
+            <TableCell key={col.id} align="right" className="font-mono">
+              {item.min}
+            </TableCell>
+          );
+        case 'lifetime':
+          return (
+            <TableCell key={col.id} align="right" className="font-mono">
+              {item.lifetime.toLocaleString()}
+            </TableCell>
+          );
+        case 'restock':
+          return (
+            <TableCell key={col.id} align="right" className="font-mono">
+              {item.restock.toLocaleString()}
+            </TableCell>
+          );
+        case 'quantity':
+          return (
+            <TableCell key={col.id} className="font-mono text-[var(--color-text-muted)]">
+              {item.quantity}
+            </TableCell>
+          );
+        case 'usage':
+          return <TableCell key={col.id}>{item.usage}</TableCell>;
+        case 'status':
+          return (
+            <TableCell key={col.id}>
+              <span
+                className={`inline-flex items-center gap-1.5 font-medium ${
+                  item.status === 'Active'
+                    ? 'text-[var(--color-status-success)]'
+                    : 'text-[var(--color-text-muted)]'
+                }`}
+              >
+                <span className="w-1.5 h-1.5 rounded-full bg-current shrink-0" />
+                {item.status}
+              </span>
+            </TableCell>
+          );
+        case 'tier':
+          return (
+            <TableCell key={col.id} className="font-mono text-xs text-[var(--color-text-muted)]">
+              Tier 1
+            </TableCell>
+          );
+        case 'flags':
+          return (
+            <TableCell key={col.id} className="text-xs text-[var(--color-text-muted)]">
+              CountInCargo
+            </TableCell>
+          );
+        case 'cost':
+          return (
+            <TableCell key={col.id} align="right" className="font-mono">
+              100
+            </TableCell>
+          );
+        default:
+          return null;
       }
     };
 
@@ -405,6 +559,7 @@ export const CentralEconomyWorkbench: Story = {
           <TableColumnVisibility
             columns={columns}
             onColumnVisibilityChange={handleColumnVisibilityChange}
+            onColumnsReorder={setColumns}
             onReset={handleResetColumns}
           />
         </div>
@@ -491,30 +646,7 @@ export const CentralEconomyWorkbench: Story = {
                   aria-label="Select all rows"
                 />
               </TableHead>
-              {isColVisible('name') && (
-                <TableHead
-                  sortDirection={sortCol === 'name' ? sortDir : false}
-                  onSort={() => handleSort('name')}
-                >
-                  Classname
-                </TableHead>
-              )}
-              {isColVisible('category') && <TableHead>Category</TableHead>}
-              {isColVisible('nominal') && (
-                <TableHead
-                  align="right"
-                  sortDirection={sortCol === 'nominal' ? sortDir : false}
-                  onSort={() => handleSort('nominal')}
-                >
-                  Nominal
-                </TableHead>
-              )}
-              {isColVisible('min') && <TableHead align="right">Min</TableHead>}
-              {isColVisible('lifetime') && <TableHead align="right">Lifetime (s)</TableHead>}
-              {isColVisible('restock') && <TableHead align="right">Restock (s)</TableHead>}
-              {isColVisible('quantity') && <TableHead>Quantity</TableHead>}
-              {isColVisible('usage') && <TableHead>Usage</TableHead>}
-              {isColVisible('status') && <TableHead>Status</TableHead>}
+              {columns.filter(c => c.isVisible).map(renderHeaderCell)}
               <TableHead className="w-20" aria-label="Row actions" />
             </TableRow>
           </TableHeader>
@@ -531,64 +663,7 @@ export const CentralEconomyWorkbench: Story = {
                       aria-label={`Select ${item.name}`}
                     />
                   </TableCell>
-                  {isColVisible('name') && (
-                    <TableCell className="font-mono font-medium">
-                      <span className="flex items-center gap-1.5">
-                        {item.name}
-                        {item.isModified && (
-                          <span
-                            className="w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0"
-                            title="Modified item"
-                          />
-                        )}
-                      </span>
-                    </TableCell>
-                  )}
-                  {isColVisible('category') && (
-                    <TableCell>
-                      <Tag color={item.categoryColor}>{item.category}</Tag>
-                    </TableCell>
-                  )}
-                  {isColVisible('nominal') && (
-                    <TableCell align="right" className="font-mono">
-                      {item.nominal}
-                    </TableCell>
-                  )}
-                  {isColVisible('min') && (
-                    <TableCell align="right" className="font-mono">
-                      {item.min}
-                    </TableCell>
-                  )}
-                  {isColVisible('lifetime') && (
-                    <TableCell align="right" className="font-mono">
-                      {item.lifetime.toLocaleString()}
-                    </TableCell>
-                  )}
-                  {isColVisible('restock') && (
-                    <TableCell align="right" className="font-mono">
-                      {item.restock.toLocaleString()}
-                    </TableCell>
-                  )}
-                  {isColVisible('quantity') && (
-                    <TableCell className="font-mono text-[var(--color-text-muted)]">
-                      {item.quantity}
-                    </TableCell>
-                  )}
-                  {isColVisible('usage') && <TableCell>{item.usage}</TableCell>}
-                  {isColVisible('status') && (
-                    <TableCell>
-                      <span
-                        className={`inline-flex items-center gap-1.5 font-medium ${
-                          item.status === 'Active'
-                            ? 'text-[var(--color-status-success)]'
-                            : 'text-[var(--color-text-muted)]'
-                        }`}
-                      >
-                        <span className="w-1.5 h-1.5 rounded-full bg-current shrink-0" />
-                        {item.status}
-                      </span>
-                    </TableCell>
-                  )}
+                  {columns.filter(c => c.isVisible).map(col => renderDataCell(col, item))}
                   {/* Row Actions on Hover */}
                   <TableCell align="right">
                     <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -663,6 +738,7 @@ export const ColumnVisibilityMenu: Story = {
           onColumnVisibilityChange={(id, isVisible) =>
             setCols(prev => prev.map(c => (c.id === id ? { ...c, isVisible } : c)))
           }
+          onColumnsReorder={setCols}
           onReset={() => setCols(INITIAL_COLUMNS)}
         />
       </div>

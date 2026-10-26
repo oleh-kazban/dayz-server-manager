@@ -1,4 +1,10 @@
-import { type KeyboardEvent as ReactKeyboardEvent, useId, useMemo, useState } from 'react';
+import {
+  type DragEvent as ReactDragEvent,
+  type KeyboardEvent as ReactKeyboardEvent,
+  useId,
+  useMemo,
+  useState,
+} from 'react';
 import { createPortal } from 'react-dom';
 
 import { ChevronDown, GripVertical, Lock, Search, SlidersHorizontal, X } from 'lucide-react';
@@ -7,12 +13,142 @@ import { Button } from '../button';
 import { Checkbox } from '../checkbox';
 import { usePopup } from '../hooks';
 
-import { type TableColumnVisibilityProps } from './Table.types';
+import { type TableColumnItem, type TableColumnVisibilityProps } from './Table.types';
+
+interface ColumnItemRowProps {
+  col: TableColumnItem;
+  canReorder: boolean;
+  isDragging: boolean;
+  isDragOver: boolean;
+  dragOverPosition: 'above' | 'below';
+  onVisibilityChange: (columnId: string, isVisible: boolean) => void;
+  onDragStart: (e: ReactDragEvent, colId: string) => void;
+  onDragOver: (e: ReactDragEvent, colId: string) => void;
+  onDragLeave: (colId: string) => void;
+  onDrop: (e: ReactDragEvent, targetId: string) => void;
+  onDragEnd: () => void;
+  onMoveColumn: (colId: string, direction: 'up' | 'down') => void;
+}
+
+function ColumnRowTrailingIcon({
+  isLocked,
+  canReorder,
+  label,
+  colId,
+  onMoveColumn,
+}: {
+  isLocked: boolean;
+  canReorder: boolean;
+  label: string;
+  colId: string;
+  onMoveColumn: (colId: string, direction: 'up' | 'down') => void;
+}) {
+  if (isLocked) {
+    return (
+      <span title="Locked column">
+        <Lock
+          aria-label="Locked column"
+          className="w-3.5 h-3.5 text-[var(--color-text-muted)] opacity-60 shrink-0"
+        />
+      </span>
+    );
+  }
+
+  if (canReorder) {
+    return (
+      <button
+        type="button"
+        aria-label={`Reorder ${label} column`}
+        title={`Drag or use arrow keys to reorder ${label}`}
+        onKeyDown={e => {
+          if (e.key === 'ArrowUp') {
+            e.preventDefault();
+            onMoveColumn(colId, 'up');
+          } else if (e.key === 'ArrowDown') {
+            e.preventDefault();
+            onMoveColumn(colId, 'down');
+          }
+        }}
+        className="p-1 -mr-1 rounded hover:bg-[var(--color-surface-hover)] focus:outline-none focus-visible:ring-1 focus-visible:ring-[var(--color-primary)] cursor-grab active:cursor-grabbing text-[var(--color-text-muted)] opacity-40 group-hover:opacity-80 shrink-0"
+      >
+        <GripVertical aria-hidden="true" className="w-3.5 h-3.5" />
+      </button>
+    );
+  }
+
+  return null;
+}
+
+function getDropIndicatorClass(isDragOver: boolean, position: 'above' | 'below'): string {
+  if (!isDragOver) {
+    return '';
+  }
+  return position === 'above'
+    ? 'border-t-2 border-[var(--color-primary)]'
+    : 'border-b-2 border-[var(--color-primary)]';
+}
+
+function ColumnItemRow({
+  col,
+  canReorder,
+  isDragging,
+  isDragOver,
+  dragOverPosition,
+  onVisibilityChange,
+  onDragStart,
+  onDragOver,
+  onDragLeave,
+  onDrop,
+  onDragEnd,
+  onMoveColumn,
+}: ColumnItemRowProps) {
+  const isLocked = col.canHide === false;
+  const isDraggable = !isLocked && canReorder;
+  const dropIndicatorClass = getDropIndicatorClass(isDragOver, dragOverPosition);
+  const draggingClass = isDragging ? 'opacity-40 bg-[var(--color-surface-subtle)]' : '';
+
+  const dragHandlers = isDraggable
+    ? {
+        draggable: true,
+        onDragStart: (e: ReactDragEvent) => onDragStart(e, col.id),
+        onDragOver: (e: ReactDragEvent) => onDragOver(e, col.id),
+        onDragLeave: () => onDragLeave(col.id),
+        onDrop: (e: ReactDragEvent) => onDrop(e, col.id),
+        onDragEnd,
+      }
+    : {};
+
+  return (
+    <div
+      {...dragHandlers}
+      className={`flex items-center justify-between px-2 py-1.5 rounded-lg hover:bg-[var(--color-surface-subtle)]/70 transition-all group ${dropIndicatorClass} ${draggingClass}`}
+    >
+      <div className="flex items-center gap-2 min-w-0 flex-1">
+        <Checkbox
+          id={`col-toggle-${col.id}`}
+          checked={col.isVisible}
+          disabled={isLocked}
+          onChange={e => onVisibilityChange(col.id, e.target.checked)}
+          label={col.label}
+          className="text-xs"
+        />
+      </div>
+      <ColumnRowTrailingIcon
+        isLocked={isLocked}
+        canReorder={canReorder}
+        label={col.label}
+        colId={col.id}
+        onMoveColumn={onMoveColumn}
+      />
+    </div>
+  );
+}
 
 export function TableColumnVisibility({
   ref,
   columns,
   onColumnVisibilityChange,
+  onColumnsReorder,
   onReset,
   onShowAll,
   triggerLabel = 'Columns',
@@ -24,6 +160,9 @@ export function TableColumnVisibility({
   disabled = false,
 }: TableColumnVisibilityProps) {
   const [searchQuery, setSearchQuery] = useState('');
+  const [draggedId, setDraggedId] = useState<string | null>(null);
+  const [dragOverId, setDragOverId] = useState<string | null>(null);
+  const [dragOverPosition, setDragOverPosition] = useState<'above' | 'below'>('above');
   const menuId = useId();
   const searchInputId = `${menuId}-search`;
 
@@ -67,6 +206,83 @@ export function TableColumnVisibility({
       close();
       triggerRef.current?.focus();
     }
+  };
+
+  const handleDragStart = (e: ReactDragEvent, colId: string) => {
+    e.dataTransfer.setData('text/plain', colId);
+    e.dataTransfer.effectAllowed = 'move';
+    setDraggedId(colId);
+  };
+
+  const handleDragOver = (e: ReactDragEvent, colId: string) => {
+    if (!draggedId || draggedId === colId) return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+
+    const rect = e.currentTarget.getBoundingClientRect();
+    const midY = rect.top + rect.height / 2;
+    const position = e.clientY < midY ? 'above' : 'below';
+
+    setDragOverId(colId);
+    setDragOverPosition(position);
+  };
+
+  const handleDragLeave = (colId: string) => {
+    if (dragOverId === colId) {
+      setDragOverId(null);
+    }
+  };
+
+  const handleDrop = (e: ReactDragEvent, targetId: string) => {
+    e.preventDefault();
+    if (!draggedId || draggedId === targetId || !onColumnsReorder) {
+      setDraggedId(null);
+      setDragOverId(null);
+      return;
+    }
+
+    const sourceIndex = columns.findIndex(c => c.id === draggedId);
+    let targetIndex = columns.findIndex(c => c.id === targetId);
+
+    if (sourceIndex === -1 || targetIndex === -1) {
+      setDraggedId(null);
+      setDragOverId(null);
+      return;
+    }
+
+    if (dragOverPosition === 'below' && sourceIndex > targetIndex) {
+      targetIndex += 1;
+    } else if (dragOverPosition === 'above' && sourceIndex < targetIndex) {
+      targetIndex -= 1;
+    }
+
+    const next = [...columns];
+    const [moved] = next.splice(sourceIndex, 1);
+    next.splice(targetIndex, 0, moved);
+
+    onColumnsReorder(next);
+    setDraggedId(null);
+    setDragOverId(null);
+  };
+
+  const handleDragEnd = () => {
+    setDraggedId(null);
+    setDragOverId(null);
+  };
+
+  const handleMoveColumn = (colId: string, direction: 'up' | 'down') => {
+    if (!onColumnsReorder) return;
+    const index = columns.findIndex(c => c.id === colId);
+    if (index === -1) return;
+
+    const targetIndex = direction === 'up' ? index - 1 : index + 1;
+    if (targetIndex < 0 || targetIndex >= columns.length) return;
+    if (targetIndex === 0 && columns[0].canHide === false) return;
+
+    const next = [...columns];
+    const [moved] = next.splice(index, 1);
+    next.splice(targetIndex, 0, moved);
+    onColumnsReorder(next);
   };
 
   const chevronClass = isOpen ? 'rotate-180' : '';
@@ -164,39 +380,23 @@ export function TableColumnVisibility({
                   No columns found
                 </div>
               ) : (
-                filteredColumns.map(col => {
-                  const isLocked = col.canHide === false;
-                  return (
-                    <div
-                      key={col.id}
-                      className="flex items-center justify-between px-2 py-1.5 rounded-lg hover:bg-[var(--color-surface-subtle)]/70 transition-colors group cursor-pointer"
-                    >
-                      <div className="flex items-center gap-2 min-w-0 flex-1">
-                        <Checkbox
-                          id={`col-toggle-${col.id}`}
-                          checked={col.isVisible}
-                          disabled={isLocked}
-                          onChange={e => onColumnVisibilityChange(col.id, e.target.checked)}
-                          label={col.label}
-                          className="text-xs"
-                        />
-                      </div>
-                      {isLocked ? (
-                        <span title="Locked column">
-                          <Lock
-                            aria-label="Locked column"
-                            className="w-3.5 h-3.5 text-[var(--color-text-muted)] opacity-60 shrink-0"
-                          />
-                        </span>
-                      ) : (
-                        <GripVertical
-                          aria-hidden="true"
-                          className="w-3.5 h-3.5 text-[var(--color-text-muted)] opacity-40 group-hover:opacity-80 shrink-0"
-                        />
-                      )}
-                    </div>
-                  );
-                })
+                filteredColumns.map(col => (
+                  <ColumnItemRow
+                    key={col.id}
+                    col={col}
+                    canReorder={Boolean(onColumnsReorder)}
+                    isDragging={draggedId === col.id}
+                    isDragOver={dragOverId === col.id}
+                    dragOverPosition={dragOverPosition}
+                    onVisibilityChange={onColumnVisibilityChange}
+                    onDragStart={handleDragStart}
+                    onDragOver={handleDragOver}
+                    onDragLeave={handleDragLeave}
+                    onDrop={handleDrop}
+                    onDragEnd={handleDragEnd}
+                    onMoveColumn={handleMoveColumn}
+                  />
+                ))
               )}
             </div>
 

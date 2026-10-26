@@ -194,6 +194,12 @@ export interface TableColumnVisibilityProps {
   onColumnVisibilityChange: (columnId: string, isVisible: boolean) => void;
 
   /**
+   * Callback fired when columns are reordered via drag-and-drop or keyboard controls.
+   * Enables draggable column reordering in the menu.
+   */
+  onColumnsReorder?: (reorderedColumns: TableColumnItem[]) => void;
+
+  /**
    * Optional callback to reset column visibility to initial defaults.
    */
   onReset?: () => void;
