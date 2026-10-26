@@ -112,7 +112,7 @@ function NotificationItemRow({ item, onItemClick, onDismissItem }: NotificationI
 
   return (
     <div
-      className={`group relative flex items-start gap-3 p-2.5 rounded-xl transition-all ${
+      className={`group relative flex items-start gap-2.5 px-2.5 py-2 rounded-xl transition-all ${
         isUnread
           ? 'bg-[var(--color-surface-subtle)] border border-[var(--color-border)] shadow-2xs hover:border-[var(--color-border-hover)]'
           : 'bg-transparent border border-transparent hover:bg-[var(--color-surface-subtle)]'
@@ -120,18 +120,18 @@ function NotificationItemRow({ item, onItemClick, onDismissItem }: NotificationI
     >
       {/* Circular Severity Badge */}
       <div
-        className={`w-8 h-8 rounded-full shrink-0 flex items-center justify-center ${config.bgClass} ${config.colorClass}`}
+        className={`w-8 h-8 rounded-full shrink-0 flex items-center justify-center mt-0.5 ${config.bgClass} ${config.colorClass}`}
       >
         <IconComponent className="w-4 h-4" aria-hidden="true" />
       </div>
 
       {/* Main Content */}
-      <div className="flex-1 min-w-0">
+      <div className="flex-1 min-w-0 flex flex-col">
         {onItemClick ? (
           <button
             type="button"
             onClick={() => onItemClick(item)}
-            className="w-full text-left focus-visible:outline-none cursor-pointer"
+            className="block w-full text-left focus-visible:outline-none cursor-pointer"
           >
             <div className="flex items-center justify-between gap-2">
               <div className="flex items-center gap-1.5 min-w-0">
@@ -163,7 +163,7 @@ function NotificationItemRow({ item, onItemClick, onDismissItem }: NotificationI
             )}
           </button>
         ) : (
-          <div>
+          <div className="w-full">
             <div className="flex items-center justify-between gap-2">
               <div className="flex items-center gap-1.5 min-w-0">
                 {isUnread && (
@@ -213,7 +213,7 @@ function NotificationItemRow({ item, onItemClick, onDismissItem }: NotificationI
           type="button"
           aria-label={`Dismiss notification: ${item.title}`}
           onClick={() => onDismissItem(item.id)}
-          className="opacity-0 group-hover:opacity-100 focus:opacity-100 p-1 rounded-md text-[var(--color-text-muted)] hover:text-[var(--color-text-main)] hover:bg-[var(--color-surface-hover)] transition-all cursor-pointer shrink-0 -mt-0.5"
+          className="opacity-0 group-hover:opacity-100 focus:opacity-100 p-1 rounded-md text-[var(--color-text-muted)] hover:text-[var(--color-text-main)] hover:bg-[var(--color-surface-hover)] transition-all cursor-pointer shrink-0"
         >
           <X className="w-3.5 h-3.5" />
         </button>
