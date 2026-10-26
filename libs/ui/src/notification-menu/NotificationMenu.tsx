@@ -72,11 +72,13 @@ interface NotificationHeaderProps {
 
 function NotificationHeader({ unreadCount, onMarkAllAsRead }: NotificationHeaderProps) {
   return (
-    <div className="flex items-center justify-between px-3.5 py-2.5 border-b border-[var(--color-border)] bg-[var(--color-surface)]">
+    <div className="flex items-center justify-between px-3.5 py-3 border-b border-[var(--color-border-subtle)] bg-[var(--color-surface)]">
       <div className="flex items-center gap-2">
-        <span className="text-xs font-semibold text-[var(--color-text-main)]">Notifications</span>
+        <span className="text-xs font-semibold text-[var(--color-text-main)] tracking-tight">
+          Notifications
+        </span>
         {unreadCount > 0 && (
-          <span className="px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-[var(--color-primary-light)] text-[var(--color-primary)] border border-[var(--color-primary-border)]">
+          <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-[var(--color-primary-light)] text-[var(--color-primary)]">
             {unreadCount} new
           </span>
         )}
@@ -86,7 +88,7 @@ function NotificationHeader({ unreadCount, onMarkAllAsRead }: NotificationHeader
         <button
           type="button"
           onClick={onMarkAllAsRead}
-          className="flex items-center gap-1 text-[11px] font-medium text-[var(--color-primary)] hover:underline focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--color-primary)] rounded cursor-pointer"
+          className="flex items-center gap-1.5 text-[11px] font-medium text-[var(--color-text-muted)] hover:text-[var(--color-primary)] transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--color-primary)] rounded cursor-pointer"
         >
           <Check className="w-3 h-3 stroke-[2.5]" aria-hidden="true" />
           <span>Mark all as read</span>
@@ -110,75 +112,83 @@ function NotificationItemRow({ item, onItemClick, onDismissItem }: NotificationI
 
   return (
     <div
-      className={`group relative flex items-start gap-3 px-3.5 py-3 transition-colors text-left ${
+      className={`group relative flex items-start gap-3 p-2.5 rounded-xl transition-all ${
         isUnread
-          ? 'bg-[var(--color-primary-light)]/20 hover:bg-[var(--color-primary-light)]/30'
-          : 'bg-transparent hover:bg-[var(--color-surface-subtle)]'
+          ? 'bg-[var(--color-surface-subtle)] border border-[var(--color-border)] shadow-2xs hover:border-[var(--color-border-hover)]'
+          : 'bg-transparent border border-transparent hover:bg-[var(--color-surface-subtle)]'
       }`}
     >
-      {/* Unread indicator pip */}
-      {isUnread && (
-        <span
-          aria-hidden="true"
-          className="absolute left-1.5 top-4 w-1.5 h-1.5 rounded-full bg-[var(--color-primary)]"
-        />
-      )}
-
-      {/* Severity Icon Badge */}
+      {/* Circular Severity Badge */}
       <div
-        className={`w-7 h-7 rounded-lg shrink-0 flex items-center justify-center ${config.bgClass} ${config.colorClass}`}
+        className={`w-8 h-8 rounded-full shrink-0 flex items-center justify-center ${config.bgClass} ${config.colorClass}`}
       >
-        <IconComponent className="w-3.5 h-3.5" aria-hidden="true" />
+        <IconComponent className="w-4 h-4" aria-hidden="true" />
       </div>
 
-      {/* Content */}
-      <div className="flex-1 min-w-0 pr-4">
+      {/* Main Content */}
+      <div className="flex-1 min-w-0">
         {onItemClick ? (
           <button
             type="button"
             onClick={() => onItemClick(item)}
             className="w-full text-left focus-visible:outline-none cursor-pointer"
           >
-            <div className="flex items-baseline justify-between gap-2">
-              <span
-                className={`text-xs block truncate ${
-                  isUnread
-                    ? 'font-semibold text-[var(--color-text-main)]'
-                    : 'font-medium text-[var(--color-text-main)]'
-                }`}
-              >
-                {item.title}
-              </span>
-              <span className="text-[10px] text-[var(--color-text-muted)] font-mono shrink-0">
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-1.5 min-w-0">
+                {isUnread && (
+                  <span
+                    className="w-1.5 h-1.5 rounded-full bg-[var(--color-primary)] shrink-0"
+                    aria-hidden="true"
+                  />
+                )}
+                <span
+                  className={`text-xs block truncate ${
+                    isUnread
+                      ? 'font-semibold text-[var(--color-text-main)]'
+                      : 'font-medium text-[var(--color-text-secondary)]'
+                  }`}
+                >
+                  {item.title}
+                </span>
+              </div>
+              <span className="text-[10px] text-[var(--color-text-muted)] font-normal shrink-0">
                 {formatTimestamp(item.timestamp)}
               </span>
             </div>
 
             {item.description && (
-              <p className="text-[11px] text-[var(--color-text-secondary)] line-clamp-2 mt-0.5 leading-snug">
+              <p className="text-[11px] text-[var(--color-text-muted)] line-clamp-2 mt-0.5 leading-relaxed">
                 {item.description}
               </p>
             )}
           </button>
         ) : (
           <div>
-            <div className="flex items-baseline justify-between gap-2">
-              <span
-                className={`text-xs block truncate ${
-                  isUnread
-                    ? 'font-semibold text-[var(--color-text-main)]'
-                    : 'font-medium text-[var(--color-text-main)]'
-                }`}
-              >
-                {item.title}
-              </span>
-              <span className="text-[10px] text-[var(--color-text-muted)] font-mono shrink-0">
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-1.5 min-w-0">
+                {isUnread && (
+                  <span
+                    className="w-1.5 h-1.5 rounded-full bg-[var(--color-primary)] shrink-0"
+                    aria-hidden="true"
+                  />
+                )}
+                <span
+                  className={`text-xs block truncate ${
+                    isUnread
+                      ? 'font-semibold text-[var(--color-text-main)]'
+                      : 'font-medium text-[var(--color-text-secondary)]'
+                  }`}
+                >
+                  {item.title}
+                </span>
+              </div>
+              <span className="text-[10px] text-[var(--color-text-muted)] font-normal shrink-0">
                 {formatTimestamp(item.timestamp)}
               </span>
             </div>
 
             {item.description && (
-              <p className="text-[11px] text-[var(--color-text-secondary)] line-clamp-2 mt-0.5 leading-snug">
+              <p className="text-[11px] text-[var(--color-text-muted)] line-clamp-2 mt-0.5 leading-relaxed">
                 {item.description}
               </p>
             )}
@@ -189,9 +199,10 @@ function NotificationItemRow({ item, onItemClick, onDismissItem }: NotificationI
           <button
             type="button"
             onClick={() => item.onAction?.(item)}
-            className="mt-1.5 text-[11px] font-semibold text-[var(--color-primary)] hover:underline inline-flex items-center cursor-pointer"
+            className="mt-2 inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-[11px] font-semibold bg-[var(--color-primary-light)] text-[var(--color-primary)] hover:bg-[var(--color-primary)] hover:text-white transition-colors cursor-pointer"
           >
-            {item.actionLabel} &rarr;
+            <span>{item.actionLabel}</span>
+            <span aria-hidden="true">&rarr;</span>
           </button>
         )}
       </div>
@@ -202,7 +213,7 @@ function NotificationItemRow({ item, onItemClick, onDismissItem }: NotificationI
           type="button"
           aria-label={`Dismiss notification: ${item.title}`}
           onClick={() => onDismissItem(item.id)}
-          className="opacity-0 group-hover:opacity-100 focus:opacity-100 p-1 rounded text-[var(--color-text-muted)] hover:text-[var(--color-text-main)] hover:bg-[var(--color-surface-hover)] transition-all cursor-pointer absolute right-2 top-2.5"
+          className="opacity-0 group-hover:opacity-100 focus:opacity-100 p-1 rounded-md text-[var(--color-text-muted)] hover:text-[var(--color-text-main)] hover:bg-[var(--color-surface-hover)] transition-all cursor-pointer shrink-0 -mt-0.5"
         >
           <X className="w-3.5 h-3.5" />
         </button>
@@ -219,12 +230,11 @@ function NotificationEmptyState({
   emptyDescription?: string;
 }) {
   return (
-    <div className="py-8 px-4 text-center select-none">
-      <BellOff
-        className="w-8 h-8 mx-auto mb-2 text-[var(--color-text-muted)] opacity-40"
-        aria-hidden="true"
-      />
-      <p className="text-xs font-medium text-[var(--color-text-main)]">
+    <div className="py-10 px-4 text-center select-none">
+      <div className="w-10 h-10 rounded-full bg-[var(--color-surface-subtle)] border border-[var(--color-border)] flex items-center justify-center mx-auto mb-2.5 text-[var(--color-text-muted)]">
+        <BellOff className="w-5 h-5 opacity-60" aria-hidden="true" />
+      </div>
+      <p className="text-xs font-semibold text-[var(--color-text-main)]">
         {emptyText ?? 'No notifications'}
       </p>
       <p className="text-[11px] text-[var(--color-text-muted)] mt-0.5">
@@ -307,7 +317,7 @@ export function NotificationMenu({
 
         {unreadCount > 0 && (
           <span
-            className="absolute -top-1 -right-1 flex h-4 min-w-4 px-1 items-center justify-center rounded-full bg-[var(--color-primary)] text-[10px] font-bold text-white shadow-xs pointer-events-none leading-none"
+            className="absolute -top-1.5 -right-1.5 flex h-4 min-w-4 px-1 items-center justify-center rounded-full bg-[var(--color-primary)] text-[10px] font-bold text-white shadow-xs ring-2 ring-[var(--color-surface)] pointer-events-none leading-none"
             aria-hidden="true"
           >
             {unreadCount > 99 ? '99+' : unreadCount}
@@ -330,13 +340,13 @@ export function NotificationMenu({
               zIndex: 50,
               visibility: popupPosition ? 'visible' : 'hidden',
             }}
-            className={`w-84 sm:w-96 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-xl overflow-hidden font-sans select-none animate-in fade-in zoom-in-95 duration-100 flex flex-col ${popupClassName}`.trim()}
+            className={`w-96 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-2xl overflow-hidden font-sans select-none animate-in fade-in zoom-in-95 duration-100 flex flex-col ${popupClassName}`.trim()}
           >
             {/* Header */}
             <NotificationHeader unreadCount={unreadCount} onMarkAllAsRead={onMarkAllAsRead} />
 
             {/* Notification items list */}
-            <div className="max-h-80 overflow-y-auto divide-y divide-[var(--color-border-subtle)]">
+            <div className="max-h-84 overflow-y-auto p-1.5 space-y-1">
               {notifications.length === 0 ? (
                 <NotificationEmptyState emptyText={emptyText} emptyDescription={emptyDescription} />
               ) : (
@@ -353,11 +363,11 @@ export function NotificationMenu({
 
             {/* Footer */}
             {onViewAll && (
-              <div className="p-2 border-t border-[var(--color-border)] bg-[var(--color-surface-subtle)]/50 text-center">
+              <div className="p-2 border-t border-[var(--color-border-subtle)] bg-[var(--color-surface)]">
                 <button
                   type="button"
                   onClick={onViewAll}
-                  className="w-full py-1 text-xs font-medium text-[var(--color-primary)] hover:text-[var(--color-primary-hover)] transition-colors rounded focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--color-primary)] cursor-pointer"
+                  className="w-full py-1.5 text-xs font-medium text-[var(--color-text-secondary)] hover:text-[var(--color-primary)] hover:bg-[var(--color-surface-subtle)] transition-colors rounded-lg focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--color-primary)] cursor-pointer text-center"
                 >
                   {viewAllLabel} &rarr;
                 </button>
