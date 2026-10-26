@@ -11,12 +11,7 @@ import type { LucideIcon } from 'lucide-react';
 export type StatusTagDomainStatus = 'online' | 'offline' | 'restarting' | 'stopped';
 
 export type StatusTagSemanticStatus =
-  | 'success'
-  | 'warning'
-  | 'danger'
-  | 'info'
-  | 'neutral'
-  | 'primary';
+  'success' | 'warning' | 'danger' | 'info' | 'neutral' | 'primary';
 
 export type StatusTagStatus = StatusTagSemanticStatus | StatusTagDomainStatus;
 

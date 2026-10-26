@@ -66,7 +66,8 @@
   /* Elevation & Shadows */
   --shadow-card: 0 3px 14px rgba(36, 60, 88, 0.06);
   --shadow-card-hover: 0 6px 20px rgba(36, 60, 88, 0.09);
-  --shadow-dropdown: 0 10px 25px -5px rgba(36, 60, 88, 0.12), 0 8px 10px -6px rgba(36, 60, 88, 0.08);
+  --shadow-dropdown:
+    0 10px 25px -5px rgba(36, 60, 88, 0.12), 0 8px 10px -6px rgba(36, 60, 88, 0.08);
 }
 
 [data-theme='dark'] {
@@ -453,7 +454,8 @@
   --color-scrollbar-thumb-hover: rgba(75, 85, 99, 0.46);
   --shadow-card: 0 3px 14px rgba(40, 48, 60, 0.06);
   --shadow-card-hover: 0 6px 20px rgba(40, 48, 60, 0.1);
-  --shadow-dropdown: 0 10px 25px -5px rgba(40, 48, 60, 0.13), 0 8px 10px -6px rgba(40, 48, 60, 0.08);
+  --shadow-dropdown:
+    0 10px 25px -5px rgba(40, 48, 60, 0.13), 0 8px 10px -6px rgba(40, 48, 60, 0.08);
 }
 
 /* ==========================================================================
@@ -504,7 +506,8 @@
   --color-scrollbar-thumb-hover: rgba(82, 88, 95, 0.45);
   --shadow-card: 0 3px 12px rgba(28, 32, 36, 0.055);
   --shadow-card-hover: 0 6px 18px rgba(28, 32, 36, 0.09);
-  --shadow-dropdown: 0 10px 24px -5px rgba(28, 32, 36, 0.12), 0 8px 10px -6px rgba(28, 32, 36, 0.07);
+  --shadow-dropdown:
+    0 10px 24px -5px rgba(28, 32, 36, 0.12), 0 8px 10px -6px rgba(28, 32, 36, 0.07);
 }
 
 /* ==========================================================================
@@ -555,7 +558,8 @@
   --color-scrollbar-thumb-hover: rgba(84, 93, 122, 0.46);
   --shadow-card: 0 3px 14px rgba(44, 52, 86, 0.06);
   --shadow-card-hover: 0 6px 20px rgba(44, 52, 86, 0.1);
-  --shadow-dropdown: 0 10px 25px -5px rgba(44, 52, 86, 0.13), 0 8px 10px -6px rgba(44, 52, 86, 0.08);
+  --shadow-dropdown:
+    0 10px 25px -5px rgba(44, 52, 86, 0.13), 0 8px 10px -6px rgba(44, 52, 86, 0.08);
 }
 
 /* ==========================================================================
@@ -606,6 +610,6 @@
   --color-scrollbar-thumb-hover: rgba(98, 101, 130, 0.46);
   --shadow-card: 0 3px 14px rgba(76, 79, 105, 0.06);
   --shadow-card-hover: 0 6px 20px rgba(76, 79, 105, 0.1);
-  --shadow-dropdown: 0 10px 25px -5px rgba(76, 79, 105, 0.13),
-    0 8px 10px -6px rgba(76, 79, 105, 0.08);
+  --shadow-dropdown:
+    0 10px 25px -5px rgba(76, 79, 105, 0.13), 0 8px 10px -6px rgba(76, 79, 105, 0.08);
 }
