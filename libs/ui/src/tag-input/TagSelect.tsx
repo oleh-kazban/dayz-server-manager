@@ -21,11 +21,19 @@ interface TagSelectOptionItemProps {
   isHighlighted: boolean;
   disabled: boolean;
   onToggle: (option: TagOption) => void;
+  onMouseEnter: () => void;
 }
 
-function getOptionStateClass(isSelected: boolean, isHighlighted: boolean): string {
+function getOptionStateClass(
+  isSelected: boolean,
+  isHighlighted: boolean,
+  isDisabled: boolean,
+): string {
+  if (isDisabled) {
+    return 'opacity-40 cursor-not-allowed pointer-events-none text-[var(--color-text-muted)]';
+  }
   if (isSelected) {
-    return 'bg-[var(--color-primary)]/10 text-[var(--color-primary)] font-medium';
+    return 'bg-[var(--color-primary)]/10 text-[var(--color-primary)] font-semibold';
   }
   if (isHighlighted) {
     return 'bg-[var(--color-surface-subtle)] text-[var(--color-text-main)]';
@@ -39,9 +47,10 @@ function TagSelectOptionItem({
   isHighlighted,
   disabled,
   onToggle,
+  onMouseEnter,
 }: TagSelectOptionItemProps) {
   const isOptionDisabled = disabled || option.disabled;
-  const stateClass = getOptionStateClass(isSelected, isHighlighted);
+  const stateClass = getOptionStateClass(isSelected, isHighlighted, Boolean(isOptionDisabled));
 
   return (
     <button
@@ -49,12 +58,13 @@ function TagSelectOptionItem({
       role="option"
       aria-selected={isSelected}
       disabled={isOptionDisabled}
+      onMouseEnter={onMouseEnter}
       onClick={() => onToggle(option)}
-      className={`w-full flex items-center justify-between px-2.5 py-1.5 text-xs rounded-lg transition-colors text-left cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed ${stateClass}`}
+      className={`w-full flex items-center justify-between px-3 py-2 text-xs font-sans rounded-lg transition-colors text-left cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed ${stateClass}`}
     >
-      <div className="flex items-center gap-2 min-w-0">
+      <div className="flex items-center gap-2.5 min-w-0 flex-1">
         <div
-          className={`w-3.5 h-3.5 rounded border flex items-center justify-center shrink-0 transition-colors ${
+          className={`w-4 h-4 rounded border flex items-center justify-center shrink-0 transition-colors ${
             isSelected
               ? 'bg-[var(--color-primary)] border-[var(--color-primary)] text-white'
               : 'border-[var(--color-border)] bg-[var(--color-surface)]'
@@ -62,12 +72,21 @@ function TagSelectOptionItem({
         >
           {isSelected && <Check className="w-2.5 h-2.5 stroke-[3]" />}
         </div>
-        <span className="truncate">{option.label}</span>
+        {option.icon && <span className="shrink-0 text-current">{option.icon}</span>}
+        <div className="min-w-0 flex-1">
+          <span className="truncate block font-medium">{option.label}</span>
+          {option.description && (
+            <span className="text-[11px] text-[var(--color-text-muted)] block truncate mt-0.5 font-normal">
+              {option.description}
+            </span>
+          )}
+        </div>
       </div>
 
       {option.color && (
         <span
-          className="w-2 h-2 rounded-full shrink-0"
+          aria-hidden="true"
+          className="w-2 h-2 rounded-full shrink-0 ml-2"
           style={{
             backgroundColor: `var(--color-status-${option.color}, var(--color-${option.color}, #94a3b8))`,
           }}
@@ -311,7 +330,7 @@ export function TagSelect({
             </div>
 
             {/* Options List */}
-            <div className="max-h-52 overflow-y-auto space-y-0.5 pr-0.5">
+            <div className="max-h-60 overflow-y-auto space-y-0.5 pr-0.5">
               {filteredOptions.length === 0 ? (
                 <div className="py-4 text-center text-xs text-[var(--color-text-muted)]">
                   {emptyText}
@@ -329,6 +348,7 @@ export function TagSelect({
                       value.length >= maxSelections
                     }
                     onToggle={toggleOption}
+                    onMouseEnter={() => setHighlightedIndex(idx)}
                   />
                 ))
               )}

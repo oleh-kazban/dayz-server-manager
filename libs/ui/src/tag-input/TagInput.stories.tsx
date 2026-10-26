@@ -18,25 +18,105 @@ const meta: Meta = {
 export default meta;
 
 const SAMPLE_SUGGESTIONS: TagOption[] = [
-  { value: 'military', label: 'Military', color: 'rose' },
-  { value: 'police', label: 'Police', color: 'blue' },
-  { value: 'hunting', label: 'Hunting', color: 'emerald' },
-  { value: 'town', label: 'Town', color: 'amber' },
-  { value: 'village', label: 'Village', color: 'teal' },
-  { value: 'industrial', label: 'Industrial', color: 'purple' },
-  { value: 'medic', label: 'Medic', color: 'danger' },
-  { value: 'coast', label: 'Coast', color: 'cyan' },
+  {
+    value: 'military',
+    label: 'Military',
+    description: 'High-tier combat bases, airfields & barracks',
+    color: 'rose',
+  },
+  {
+    value: 'police',
+    label: 'Police',
+    description: 'Municipal stations, patrol cars & sidearms',
+    color: 'blue',
+  },
+  {
+    value: 'hunting',
+    label: 'Hunting',
+    description: 'Cabins, deer stands & wilderness survival gear',
+    color: 'emerald',
+  },
+  {
+    value: 'town',
+    label: 'Town',
+    description: 'Urban residential buildings & commercial shops',
+    color: 'amber',
+  },
+  {
+    value: 'village',
+    label: 'Village',
+    description: 'Rural dwellings, sheds & agricultural tools',
+    color: 'teal',
+  },
+  {
+    value: 'industrial',
+    label: 'Industrial',
+    description: 'Warehouses, factories, train yards & harbors',
+    color: 'purple',
+  },
+  {
+    value: 'medic',
+    label: 'Medic',
+    description: 'Hospitals, clinics & first aid stations',
+    color: 'danger',
+  },
+  {
+    value: 'coast',
+    label: 'Coast',
+    description: 'Fresh spawn beaches, lighthouses & fishing boats',
+    color: 'cyan',
+  },
 ];
 
 const CATEGORY_OPTIONS: TagOption[] = [
-  { value: 'weapons', label: 'Weapons', color: 'rose' },
-  { value: 'ammunition', label: 'Ammunition', color: 'amber' },
-  { value: 'clothing', label: 'Clothing', color: 'emerald' },
-  { value: 'food', label: 'Food & Drink', color: 'teal' },
-  { value: 'medical', label: 'Medical Supplies', color: 'danger' },
-  { value: 'tools', label: 'Tools & Hardware', color: 'blue' },
-  { value: 'containers', label: 'Containers', color: 'purple' },
-  { value: 'electronics', label: 'Electronics', color: 'cyan' },
+  {
+    value: 'weapons',
+    label: 'Weapons',
+    description: 'Firearms, melee items and attachments',
+    color: 'rose',
+  },
+  {
+    value: 'ammunition',
+    label: 'Ammunition',
+    description: 'Boxed bullets, loose rounds and magazines',
+    color: 'amber',
+  },
+  {
+    value: 'clothing',
+    label: 'Clothing',
+    description: 'Jackets, vests, backpacks and footwear',
+    color: 'emerald',
+  },
+  {
+    value: 'food',
+    label: 'Food & Drink',
+    description: 'Canned food, produce, soda and canteens',
+    color: 'teal',
+  },
+  {
+    value: 'medical',
+    label: 'Medical Supplies',
+    description: 'Bandages, blood bags, morphine and saline',
+    color: 'danger',
+  },
+  {
+    value: 'tools',
+    label: 'Tools & Hardware',
+    description: 'Axes, shovels, pliers and sharpening stones',
+    color: 'blue',
+  },
+  {
+    value: 'containers',
+    label: 'Containers',
+    description: 'Barrels, sea chests and protective cases',
+    color: 'purple',
+  },
+  {
+    value: 'electronics',
+    label: 'Electronics',
+    description: 'Radios, batteries, NVGs and GPS receivers',
+    color: 'cyan',
+  },
 ];
 
 export const DefaultTagInput: StoryObj = {

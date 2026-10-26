@@ -29,13 +29,31 @@ function getContainerBorderClasses(hasError: boolean): string {
   return 'border-[var(--color-border)] focus-within:border-[var(--color-primary)] focus-within:ring-1 focus-within:ring-[var(--color-primary)]';
 }
 
+function getSuggestionItemClasses(isHighlighted: boolean, isDisabled: boolean): string {
+  if (isDisabled) {
+    return 'opacity-40 cursor-not-allowed pointer-events-none text-[var(--color-text-muted)]';
+  }
+  if (isHighlighted) {
+    return 'bg-[var(--color-surface-subtle)] text-[var(--color-text-main)]';
+  }
+  return 'text-[var(--color-text-main)] hover:bg-[var(--color-surface-subtle)]';
+}
+
 interface SuggestionsPopupProps {
   isOpen: boolean;
-  popupPosition: { top: number; left: number; width?: number } | null;
+  popupPosition: {
+    top: number;
+    left: number;
+    width?: number;
+    maxWidth?: number;
+    maxHeight?: number;
+  } | null;
   popupRef: Ref<HTMLDivElement>;
   filteredSuggestions: TagOption[];
   highlightedIndex: number;
+  popupClassName?: string;
   onSelect: (option: TagOption) => void;
+  onHighlight: (index: number) => void;
 }
 
 function SuggestionsPopup({
@@ -44,11 +62,19 @@ function SuggestionsPopup({
   popupRef,
   filteredSuggestions,
   highlightedIndex,
+  popupClassName = '',
   onSelect,
+  onHighlight,
 }: SuggestionsPopupProps) {
   if (!isOpen || filteredSuggestions.length === 0) {
     return null;
   }
+
+  const popupWidth = popupPosition ? `${popupPosition.width}px` : 'auto';
+  const popupMaxWidth = popupPosition?.maxWidth ? `${popupPosition.maxWidth}px` : 'none';
+  const popupMaxHeight = popupPosition?.maxHeight ? `${popupPosition.maxHeight}px` : undefined;
+  const popupTop = popupPosition ? `${popupPosition.top}px` : '0px';
+  const popupLeft = popupPosition ? `${popupPosition.left}px` : '0px';
 
   return createPortal(
     <div
@@ -57,19 +83,19 @@ function SuggestionsPopup({
       aria-label="Tag suggestions"
       style={{
         position: 'fixed',
-        top: popupPosition?.top ?? 0,
-        left: popupPosition?.left ?? 0,
-        width: Math.max(popupPosition?.width ?? 0, 180),
+        top: popupTop,
+        left: popupLeft,
+        width: popupWidth,
+        maxWidth: popupMaxWidth,
+        maxHeight: popupMaxHeight,
         zIndex: 50,
         visibility: popupPosition ? 'visible' : 'hidden',
       }}
-      className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl shadow-lg p-1 max-h-52 overflow-y-auto font-sans animate-in fade-in zoom-in-95 duration-100"
+      className={`bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl shadow-lg p-1 max-h-60 overflow-y-auto font-sans animate-in fade-in zoom-in-95 duration-100 space-y-0.5 ${popupClassName}`.trim()}
     >
       {filteredSuggestions.map((opt, idx) => {
         const isHighlighted = idx === highlightedIndex;
-        const highlightClass = isHighlighted
-          ? 'bg-[var(--color-surface-subtle)] text-[var(--color-primary)] font-medium'
-          : 'text-[var(--color-text-main)] hover:bg-[var(--color-surface-subtle)]';
+        const itemClass = getSuggestionItemClasses(isHighlighted, Boolean(opt.disabled));
 
         return (
           <button
@@ -78,17 +104,37 @@ function SuggestionsPopup({
             role="option"
             aria-selected={isHighlighted}
             disabled={opt.disabled}
+            onMouseEnter={() => {
+              if (!opt.disabled) {
+                onHighlight(idx);
+              }
+            }}
             onMouseDown={e => {
               e.preventDefault();
               onSelect(opt);
             }}
-            className={`w-full flex items-center justify-between px-2.5 py-1.5 text-xs rounded-lg transition-colors text-left cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed ${highlightClass}`}
+            className={`w-full flex items-center justify-between px-3 py-2 text-xs font-sans rounded-lg transition-colors text-left cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed ${itemClass}`}
           >
-            <span>{opt.label}</span>
+            <div className="flex items-center gap-2.5 min-w-0 flex-1">
+              {opt.icon && <span className="shrink-0 text-current">{opt.icon}</span>}
+              <div className="min-w-0 flex-1">
+                <span className="truncate block font-medium">{opt.label}</span>
+                {opt.description && (
+                  <span className="text-[11px] text-[var(--color-text-muted)] block truncate mt-0.5 font-normal">
+                    {opt.description}
+                  </span>
+                )}
+              </div>
+            </div>
+
             {opt.color && (
-              <span className="text-[10px] text-[var(--color-text-muted)] font-mono">
-                {opt.color}
-              </span>
+              <span
+                aria-hidden="true"
+                className="w-2 h-2 rounded-full shrink-0 ml-2"
+                style={{
+                  backgroundColor: `var(--color-status-${opt.color}, var(--color-${opt.color}, #94a3b8))`,
+                }}
+              />
             )}
           </button>
         );
@@ -129,6 +175,7 @@ export function TagInput({
   disabled = false,
   readOnly = false,
   containerClassName = '',
+  popupClassName = '',
   className = '',
 }: TagInputProps) {
   const generatedId = useId();
@@ -344,7 +391,9 @@ export function TagInput({
         popupRef={popupRef}
         filteredSuggestions={filteredSuggestions}
         highlightedIndex={highlightedIndex}
+        popupClassName={popupClassName}
         onSelect={opt => commitTag(opt.value)}
+        onHighlight={setHighlightedIndex}
       />
 
       {displayError && (

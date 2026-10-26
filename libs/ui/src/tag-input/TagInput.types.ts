@@ -5,6 +5,8 @@ import type { TagColor } from '../tag';
 export interface TagOption {
   value: string;
   label: string;
+  description?: string;
+  icon?: ReactNode;
   color?: TagColor;
   disabled?: boolean;
 }
@@ -57,6 +59,9 @@ export interface TagInputProps {
 
   /** Container styling escape hatch */
   containerClassName?: string;
+
+  /** Suggestion popover menu styling escape hatch */
+  popupClassName?: string;
 
   /** Input styling escape hatch */
   className?: string;
