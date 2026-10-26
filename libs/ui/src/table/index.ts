@@ -15,6 +15,8 @@ export {
   type TableBulkActionsProps,
   type TableCaptionProps,
   type TableCellProps,
+  type TableColumnItem,
+  type TableColumnVisibilityProps,
   type TableDensity,
   type TableEmptyProps,
   type TableFooterProps,
@@ -25,4 +27,5 @@ export {
   type TableSortDirection,
 } from './Table.types';
 export { TableBulkActions } from './TableBulkActions';
+export { TableColumnVisibility } from './TableColumnVisibility';
 export { TableContext, useTableContext } from './TableContext';

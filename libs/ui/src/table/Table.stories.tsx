@@ -7,8 +7,19 @@ import { Button } from '../button';
 import { Checkbox } from '../checkbox';
 import { Tag, type TagColor } from '../tag';
 
-import { Table, TableBody, TableCell, TableEmpty, TableHead, TableHeader, TableRow } from './Table';
 import { TableBulkActions } from './TableBulkActions';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  type TableColumnItem,
+  TableColumnVisibility,
+  type TableDensity,
+  TableEmpty,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from './';
 
 const meta: Meta<typeof Table> = {
   title: 'Data Display/Table',
@@ -121,11 +132,33 @@ const SAMPLE_ITEMS: EconomyItem[] = [
   },
 ];
 
+const INITIAL_COLUMNS: TableColumnItem[] = [
+  { id: 'name', label: 'Classname', isVisible: true, canHide: false },
+  { id: 'category', label: 'Category', isVisible: true },
+  { id: 'nominal', label: 'Nominal', isVisible: true },
+  { id: 'min', label: 'Min', isVisible: true },
+  { id: 'lifetime', label: 'Lifetime', isVisible: true },
+  { id: 'restock', label: 'Restock', isVisible: true },
+  { id: 'quantity', label: 'Quantity', isVisible: true },
+  { id: 'usage', label: 'Usage', isVisible: true },
+  { id: 'status', label: 'Status', isVisible: true },
+];
+
 export const CentralEconomyWorkbench: Story = {
   render: () => {
     const [selectedIds, setSelectedIds] = useState<string[]>(['ak101', 'ak74', 'akm']);
     const [sortCol, setSortCol] = useState<'name' | 'nominal'>('name');
     const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
+    const [density, setDensity] = useState<TableDensity>('comfortable');
+    const [columns, setColumns] = useState<TableColumnItem[]>(INITIAL_COLUMNS);
+
+    const isColVisible = (id: string) => columns.find(c => c.id === id)?.isVisible ?? true;
+
+    const handleColumnVisibilityChange = (columnId: string, isVisible: boolean) => {
+      setColumns(prev => prev.map(col => (col.id === columnId ? { ...col, isVisible } : col)));
+    };
+
+    const handleResetColumns = () => setColumns(INITIAL_COLUMNS);
 
     const allSelected = selectedIds.length === SAMPLE_ITEMS.length;
     const isIndeterminate = selectedIds.length > 0 && !allSelected;
@@ -154,7 +187,49 @@ export const CentralEconomyWorkbench: Story = {
     };
 
     return (
-      <div className="space-y-0 w-full max-w-5xl">
+      <div className="space-y-3 w-full max-w-5xl">
+        {/* Table Toolbar matching Editor.png */}
+        <div className="flex items-center justify-between gap-3">
+          <div className="text-xs text-[var(--color-text-muted)] font-medium">
+            Central Economy Items ({SAMPLE_ITEMS.length})
+          </div>
+          <div className="flex items-center gap-2">
+            {/* Density Toggle */}
+            <div className="flex items-center rounded-lg border border-[var(--color-border)] p-0.5 bg-[var(--color-surface)]">
+              <button
+                type="button"
+                onClick={() => setDensity('comfortable')}
+                className={`px-2 py-1 text-xs rounded-md transition-colors ${
+                  density === 'comfortable'
+                    ? 'bg-[var(--color-surface-subtle)] text-[var(--color-text-main)] font-semibold shadow-xs'
+                    : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-main)]'
+                }`}
+              >
+                Comfortable
+              </button>
+              <button
+                type="button"
+                onClick={() => setDensity('compact')}
+                className={`px-2 py-1 text-xs rounded-md transition-colors ${
+                  density === 'compact'
+                    ? 'bg-[var(--color-surface-subtle)] text-[var(--color-text-main)] font-semibold shadow-xs'
+                    : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-main)]'
+                }`}
+              >
+                Compact
+              </button>
+            </div>
+
+            {/* Column Visibility Control */}
+            <TableColumnVisibility
+              columns={columns}
+              onColumnVisibilityChange={handleColumnVisibilityChange}
+              onReset={handleResetColumns}
+            />
+          </div>
+        </div>
+
+        {/* Bulk Action Bar */}
         <TableBulkActions
           selectedCount={selectedIds.length}
           onClearSelection={() => setSelectedIds([])}
@@ -170,7 +245,8 @@ export const CentralEconomyWorkbench: Story = {
           </Button>
         </TableBulkActions>
 
-        <Table>
+        {/* Table */}
+        <Table density={density}>
           <TableHeader>
             <TableRow>
               <TableHead className="w-10">
@@ -181,26 +257,30 @@ export const CentralEconomyWorkbench: Story = {
                   aria-label="Select all rows"
                 />
               </TableHead>
-              <TableHead
-                sortDirection={sortCol === 'name' ? sortDir : false}
-                onSort={() => handleSort('name')}
-              >
-                Classname
-              </TableHead>
-              <TableHead>Category</TableHead>
-              <TableHead
-                align="right"
-                sortDirection={sortCol === 'nominal' ? sortDir : false}
-                onSort={() => handleSort('nominal')}
-              >
-                Nominal
-              </TableHead>
-              <TableHead align="right">Min</TableHead>
-              <TableHead align="right">Lifetime (s)</TableHead>
-              <TableHead align="right">Restock (s)</TableHead>
-              <TableHead>Quantity</TableHead>
-              <TableHead>Usage</TableHead>
-              <TableHead>Status</TableHead>
+              {isColVisible('name') && (
+                <TableHead
+                  sortDirection={sortCol === 'name' ? sortDir : false}
+                  onSort={() => handleSort('name')}
+                >
+                  Classname
+                </TableHead>
+              )}
+              {isColVisible('category') && <TableHead>Category</TableHead>}
+              {isColVisible('nominal') && (
+                <TableHead
+                  align="right"
+                  sortDirection={sortCol === 'nominal' ? sortDir : false}
+                  onSort={() => handleSort('nominal')}
+                >
+                  Nominal
+                </TableHead>
+              )}
+              {isColVisible('min') && <TableHead align="right">Min</TableHead>}
+              {isColVisible('lifetime') && <TableHead align="right">Lifetime (s)</TableHead>}
+              {isColVisible('restock') && <TableHead align="right">Restock (s)</TableHead>}
+              {isColVisible('quantity') && <TableHead>Quantity</TableHead>}
+              {isColVisible('usage') && <TableHead>Usage</TableHead>}
+              {isColVisible('status') && <TableHead>Status</TableHead>}
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -216,47 +296,81 @@ export const CentralEconomyWorkbench: Story = {
                       aria-label={`Select ${item.name}`}
                     />
                   </TableCell>
-                  <TableCell className="font-mono font-medium">
-                    <span className="flex items-center gap-1.5">
-                      {item.name}
-                      {item.isModified && (
-                        <span
-                          className="w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0"
-                          title="Modified item"
-                        />
-                      )}
-                    </span>
-                  </TableCell>
-                  <TableCell>
-                    <Tag color={item.categoryColor}>{item.category}</Tag>
-                  </TableCell>
-                  <TableCell align="right" className="font-mono">
-                    {item.nominal}
-                  </TableCell>
-                  <TableCell align="right" className="font-mono">
-                    {item.min}
-                  </TableCell>
-                  <TableCell align="right" className="font-mono">
-                    {item.lifetime.toLocaleString()}
-                  </TableCell>
-                  <TableCell align="right" className="font-mono">
-                    {item.restock.toLocaleString()}
-                  </TableCell>
-                  <TableCell className="font-mono text-[var(--color-text-muted)]">
-                    {item.quantity}
-                  </TableCell>
-                  <TableCell>{item.usage}</TableCell>
-                  <TableCell>
-                    <span className="inline-flex items-center gap-1 text-[var(--color-status-success)] font-medium">
-                      <span className="w-1.5 h-1.5 rounded-full bg-current shrink-0" />
-                      {item.status}
-                    </span>
-                  </TableCell>
+                  {isColVisible('name') && (
+                    <TableCell className="font-mono font-medium">
+                      <span className="flex items-center gap-1.5">
+                        {item.name}
+                        {item.isModified && (
+                          <span
+                            className="w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0"
+                            title="Modified item"
+                          />
+                        )}
+                      </span>
+                    </TableCell>
+                  )}
+                  {isColVisible('category') && (
+                    <TableCell>
+                      <Tag color={item.categoryColor}>{item.category}</Tag>
+                    </TableCell>
+                  )}
+                  {isColVisible('nominal') && (
+                    <TableCell align="right" className="font-mono">
+                      {item.nominal}
+                    </TableCell>
+                  )}
+                  {isColVisible('min') && (
+                    <TableCell align="right" className="font-mono">
+                      {item.min}
+                    </TableCell>
+                  )}
+                  {isColVisible('lifetime') && (
+                    <TableCell align="right" className="font-mono">
+                      {item.lifetime.toLocaleString()}
+                    </TableCell>
+                  )}
+                  {isColVisible('restock') && (
+                    <TableCell align="right" className="font-mono">
+                      {item.restock.toLocaleString()}
+                    </TableCell>
+                  )}
+                  {isColVisible('quantity') && (
+                    <TableCell className="font-mono text-[var(--color-text-muted)]">
+                      {item.quantity}
+                    </TableCell>
+                  )}
+                  {isColVisible('usage') && <TableCell>{item.usage}</TableCell>}
+                  {isColVisible('status') && (
+                    <TableCell>
+                      <span className="inline-flex items-center gap-1 text-[var(--color-status-success)] font-medium">
+                        <span className="w-1.5 h-1.5 rounded-full bg-current shrink-0" />
+                        {item.status}
+                      </span>
+                    </TableCell>
+                  )}
                 </TableRow>
               );
             })}
           </TableBody>
         </Table>
+      </div>
+    );
+  },
+};
+
+export const ColumnVisibilityMenu: Story = {
+  render: () => {
+    const [cols, setCols] = useState<TableColumnItem[]>(INITIAL_COLUMNS);
+
+    return (
+      <div className="p-4 flex items-center justify-start">
+        <TableColumnVisibility
+          columns={cols}
+          onColumnVisibilityChange={(id, isVisible) =>
+            setCols(prev => prev.map(c => (c.id === id ? { ...c, isVisible } : c)))
+          }
+          onReset={() => setCols(INITIAL_COLUMNS)}
+        />
       </div>
     );
   },

@@ -150,3 +150,76 @@ export interface TableBulkActionsProps extends HTMLAttributes<HTMLDivElement> {
 
   className?: string;
 }
+
+export interface TableColumnItem {
+  /** Unique column identifier */
+  id: string;
+
+  /** Display label */
+  label: string;
+
+  /** Current visibility state */
+  isVisible: boolean;
+
+  /**
+   * Whether this column can be hidden.
+   * If false, column visibility toggle is disabled with a lock icon.
+   * @default true
+   */
+  canHide?: boolean;
+}
+
+export interface TableColumnVisibilityProps {
+  /**
+   * Ref forwarded to the trigger button element.
+   */
+  ref?: Ref<HTMLButtonElement>;
+
+  /**
+   * List of configurable table columns.
+   */
+  columns: TableColumnItem[];
+
+  /**
+   * Callback fired when a column's visibility changes.
+   */
+  onColumnVisibilityChange: (columnId: string, isVisible: boolean) => void;
+
+  /**
+   * Optional callback to reset column visibility to initial defaults.
+   */
+  onReset?: () => void;
+
+  /**
+   * Optional callback to show all columns.
+   */
+  onShowAll?: () => void;
+
+  /**
+   * Trigger button label text.
+   * @default 'Columns'
+   */
+  triggerLabel?: string;
+
+  /**
+   * Popover placement alignment relative to trigger.
+   * @default 'end'
+   */
+  alignment?: 'start' | 'end';
+
+  /**
+   * Search input placeholder.
+   * @default 'Find a column...'
+   */
+  searchPlaceholder?: string;
+
+  /**
+   * Custom CSS class applied to the popover menu container.
+   */
+  popupClassName?: string;
+
+  /**
+   * Disables the column visibility menu trigger.
+   */
+  disabled?: boolean;
+}
