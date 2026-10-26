@@ -328,12 +328,12 @@ export const CentralEconomyWorkbench: Story = {
     return (
       <div className="w-full max-w-6xl mx-auto rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-xs overflow-hidden font-sans">
         {/* Layer 1: Header Tabs & Action Buttons */}
-        <div className="flex items-center justify-between px-5 border-b border-[var(--color-border)] bg-[var(--color-surface)]">
+        <div className="flex items-end justify-between px-5 border-b border-[var(--color-border)] bg-[var(--color-surface)]">
           <Tabs
             value={activeTab}
             onChange={setActiveTab}
             variant="underline"
-            containerClassName="space-y-0"
+            containerClassName="flex items-end"
           >
             <TabList bordered={false} className="gap-8">
               <TabTrigger value="all" count="1,248" className="py-3.5">
@@ -348,7 +348,7 @@ export const CentralEconomyWorkbench: Story = {
             </TabList>
           </Tabs>
 
-          <div className="flex items-center gap-2.5 py-2">
+          <div className="flex items-center gap-2.5 py-2.5 self-center">
             <Button variant="secondary" className="h-8 px-3 text-xs font-medium">
               <Upload className="w-3.5 h-3.5 mr-1.5" /> Import XML
             </Button>

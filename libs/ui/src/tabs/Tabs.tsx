@@ -312,7 +312,7 @@ export function Tabs({
 
   return (
     <TabsContext.Provider value={contextValue}>
-      <div ref={ref} className={`space-y-4 ${containerClassName}`.trim()}>
+      <div ref={ref} className={`${containerClassName || 'space-y-4'}`.trim()}>
         {items && items.length > 0 ? (
           <TabList aria-label={ariaLabel}>
             {items.map((item: TabItem) => (
