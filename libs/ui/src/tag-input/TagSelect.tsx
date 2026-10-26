@@ -4,7 +4,7 @@ import { createPortal } from 'react-dom';
 import { Check, ChevronDown, Search, X } from 'lucide-react';
 
 import { usePopup } from '../hooks';
-import { Tag } from '../tag';
+import { getTagDotColor, Tag } from '../tag';
 
 import { type TagOption, type TagSelectProps } from './TagInput.types';
 
@@ -88,7 +88,7 @@ function TagSelectOptionItem({
           aria-hidden="true"
           className="w-2 h-2 rounded-full shrink-0 ml-2"
           style={{
-            backgroundColor: `var(--color-status-${option.color}, var(--color-${option.color}, #94a3b8))`,
+            backgroundColor: getTagDotColor(option.color),
           }}
         />
       )}

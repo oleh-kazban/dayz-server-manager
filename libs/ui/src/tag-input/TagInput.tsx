@@ -13,7 +13,7 @@ import {
 import { createPortal } from 'react-dom';
 
 import { usePopup } from '../hooks';
-import { Tag } from '../tag';
+import { getTagDotColor, Tag } from '../tag';
 
 import { type TagInputProps, type TagOption } from './TagInput.types';
 
@@ -132,7 +132,7 @@ function SuggestionsPopup({
                 aria-hidden="true"
                 className="w-2 h-2 rounded-full shrink-0 ml-2"
                 style={{
-                  backgroundColor: `var(--color-status-${opt.color}, var(--color-${opt.color}, #94a3b8))`,
+                  backgroundColor: getTagDotColor(opt.color),
                 }}
               />
             )}
