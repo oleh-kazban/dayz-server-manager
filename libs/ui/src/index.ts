@@ -24,4 +24,5 @@ export * from './tag';
 export * from './tag-input';
 export * from './toast';
 export * from './toggle';
+export * from './tooltip';
 export * from './utils';
