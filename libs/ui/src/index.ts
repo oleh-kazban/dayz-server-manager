@@ -9,6 +9,7 @@ export * from './input';
 export * from './loader';
 export * from './menu';
 export * from './notice';
+export * from './progress-bar';
 export * from './select';
 export * from './status-tag';
 export * from './tabs';
