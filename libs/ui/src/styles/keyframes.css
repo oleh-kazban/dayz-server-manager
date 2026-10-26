@@ -52,3 +52,10 @@
 .animate-progress-indeterminate {
   animation: progress-indeterminate 1.5s infinite ease-in-out;
 }
+
+/* Shimmer Wave Animation */
+@keyframes shimmer {
+  100% {
+    transform: translateX(100%);
+  }
+}

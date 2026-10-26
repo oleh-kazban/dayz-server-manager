@@ -17,6 +17,7 @@ export * from './notification-menu';
 export * from './pagination';
 export * from './progress-bar';
 export * from './select';
+export * from './skeleton';
 export * from './status-tag';
 export * from './table';
 export * from './tabs';
