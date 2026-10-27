@@ -2,8 +2,6 @@ import {
   type ChangeEvent,
   type FocusEvent,
   type KeyboardEvent,
-  type ReactNode,
-  type Ref,
   type RefObject,
   useCallback,
   useEffect,
@@ -17,53 +15,9 @@ import { Loader2, Search, X } from 'lucide-react';
 
 import { usePopup } from '../hooks';
 
-export interface AutosuggestProps<T> {
-  /** React 19 ref forwarded directly to the underlying <input> */
-  ref?: Ref<HTMLInputElement>;
+import type { AutosuggestProps } from './Autosuggest.types';
 
-  /** Form field identity */
-  id?: string;
-  name?: string;
-  label?: string;
-  error?: string;
-  required?: boolean;
-  disabled?: boolean;
-
-  /** Controlled value & change handler */
-  value: string;
-  onChange: (_value: string) => void;
-
-  /** Suggestions dataset */
-  items: T[];
-
-  /** Selection callback */
-  onSelect: (_item: T) => void;
-
-  /** Resolution accessors */
-  getOptionLabel: (_item: T) => string;
-  getOptionKey: (_item: T) => string | number;
-  renderOption?: (_item: T, _isHighlighted: boolean) => ReactNode;
-
-  /** Operational states */
-  isLoading?: boolean;
-
-  /** Configuration & strings */
-  placeholder?: string;
-  minChars?: number;
-  emptyText?: string;
-
-  /** Accessibility */
-  'aria-label'?: string;
-
-  /** Root container className */
-  className?: string;
-
-  /** Standard container styling escape hatch */
-  containerClassName?: string;
-
-  /** Legacy alias for containerClassName */
-  customClassName?: string;
-}
+export type { AutosuggestProps };
 
 export function Autosuggest<T>({
   ref,

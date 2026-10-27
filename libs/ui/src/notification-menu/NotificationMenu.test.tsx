@@ -202,4 +202,22 @@ describe('NotificationMenu', () => {
 
     expect(ref.current).toBeInstanceOf(HTMLButtonElement);
   });
+
+  it('supports functional callback ref', () => {
+    const refCallback = vi.fn();
+    render(<NotificationMenu ref={refCallback} notifications={sampleNotifications} />);
+
+    expect(refCallback).toHaveBeenCalledWith(expect.any(HTMLButtonElement));
+  });
+
+  it('closes dialog if component becomes disabled while open', () => {
+    const { rerender } = render(<NotificationMenu notifications={sampleNotifications} />);
+
+    const trigger = screen.getByRole('button', { name: /Notifications/i });
+    fireEvent.click(trigger);
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+
+    rerender(<NotificationMenu notifications={sampleNotifications} disabled />);
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  });
 });

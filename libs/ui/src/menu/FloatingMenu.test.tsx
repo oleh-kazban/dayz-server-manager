@@ -4,7 +4,8 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
-import { FloatingMenu, type FloatingMenuOption } from './FloatingMenu';
+import { FloatingMenu } from './FloatingMenu';
+import type { FloatingMenuOption } from './FloatingMenu.types';
 
 type ServerEnv = 'production' | 'staging' | 'test';
 

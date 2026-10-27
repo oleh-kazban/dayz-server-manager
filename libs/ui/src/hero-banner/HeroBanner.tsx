@@ -168,7 +168,7 @@ export function HeroBanner({
   return (
     <Component
       ref={ref}
-      className={`relative rounded-2xl overflow-hidden min-h-[180px] p-6 sm:p-7 flex flex-col justify-between shadow-[var(--shadow-card)] border border-[#203b50]/20 bg-[#142534] text-white ${className}`.trim()}
+      className={`relative rounded-2xl overflow-hidden min-h-[180px] p-6 sm:p-7 flex flex-col justify-between shadow-[var(--shadow-card)] border border-[var(--color-border-subtle)] bg-[var(--color-surface-elevated)] text-white ${className}`.trim()}
       {...props}
     >
       {/* Chernarus Panorama Scrim & Wallpaper */}

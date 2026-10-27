@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 
 import { usePopup } from '../hooks';
+import { formatTimestamp } from '../utils';
 
 import {
   type NotificationItem,
@@ -46,24 +47,6 @@ const SEVERITY_CONFIG: Record<
     bgClass: 'bg-[var(--color-status-danger-light)]',
   },
 };
-
-function formatTimestamp(timestamp: string | Date): string {
-  if (typeof timestamp === 'string') return timestamp;
-  try {
-    const diffMs = Date.now() - timestamp.getTime();
-    const diffSec = Math.floor(diffMs / 1000);
-    if (diffSec < 60) return 'Just now';
-    const diffMin = Math.floor(diffSec / 60);
-    if (diffMin < 60) return `${diffMin}m ago`;
-    const diffHours = Math.floor(diffMin / 60);
-    if (diffHours < 24) return `${diffHours}h ago`;
-    const diffDays = Math.floor(diffHours / 24);
-    if (diffDays < 7) return `${diffDays}d ago`;
-    return timestamp.toLocaleDateString();
-  } catch {
-    return String(timestamp);
-  }
-}
 
 interface NotificationHeaderProps {
   unreadCount: number;

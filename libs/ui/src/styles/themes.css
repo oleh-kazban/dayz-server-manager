@@ -12,6 +12,7 @@
   --color-surface: #ffffff;
   --color-surface-subtle: #f7f9fc;
   --color-surface-hover: #f1f5f9;
+  --color-surface-elevated: #ffffff;
   --color-sidebar: #ffffff;
 
   /* Borders & Dividers */
@@ -78,6 +79,7 @@
   --color-surface: #101620;
   --color-surface-subtle: #161e2b;
   --color-surface-hover: #1c2637;
+  --color-surface-elevated: #161e2b;
   --color-sidebar: #0d121a;
 
   /* Borders & Dividers */

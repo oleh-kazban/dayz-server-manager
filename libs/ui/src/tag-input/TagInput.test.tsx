@@ -159,4 +159,39 @@ describe('TagInput', () => {
 
     expect(ref.current).toBeInstanceOf(HTMLInputElement);
   });
+
+  it('supports functional callback ref for input', () => {
+    const refCallback = vi.fn();
+    render(<TagInput ref={refCallback} value={[]} onChange={vi.fn()} />);
+
+    expect(refCallback).toHaveBeenCalledWith(expect.any(HTMLInputElement));
+  });
+
+  it('commits tag on blur if input contains text', () => {
+    const onChange = vi.fn();
+    render(<TagInput value={[]} onChange={onChange} />);
+
+    const input = screen.getByRole('textbox');
+    fireEvent.change(input, { target: { value: 'blurred_tag' } });
+    fireEvent.blur(input);
+
+    expect(onChange).toHaveBeenCalledWith(['blurred_tag']);
+  });
+
+  it('renders suggestions popup when typing and commits selected suggestion', () => {
+    const onChange = vi.fn();
+    const suggestions = ['chergo', 'chernarus', 'livonia'];
+
+    render(<TagInput value={[]} suggestions={suggestions} onChange={onChange} />);
+
+    const input = screen.getByRole('textbox');
+    fireEvent.focus(input);
+    fireEvent.change(input, { target: { value: 'chern' } });
+
+    const suggestionOption = screen.getByRole('option', { name: 'chernarus' });
+    expect(suggestionOption).toBeInTheDocument();
+
+    fireEvent.mouseDown(suggestionOption);
+    expect(onChange).toHaveBeenCalledWith(['chernarus']);
+  });
 });

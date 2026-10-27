@@ -1,2 +1,6 @@
-export * from './NotificationMenu';
-export * from './NotificationMenu.types';
+export { NotificationMenu } from './NotificationMenu';
+export type {
+  NotificationItem,
+  NotificationMenuProps,
+  NotificationSeverity,
+} from './NotificationMenu.types';

@@ -12,6 +12,7 @@
   --color-surface: var(--color-surface);
   --color-surface-subtle: var(--color-surface-subtle);
   --color-surface-hover: var(--color-surface-hover);
+  --color-surface-elevated: var(--color-surface-elevated);
   --color-sidebar: var(--color-sidebar);
 
   --color-border: var(--color-border);

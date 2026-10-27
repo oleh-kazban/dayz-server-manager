@@ -4,7 +4,7 @@ import { FlavorText } from '../../flavor-text';
 
 export function SignInHero() {
   return (
-    <div className="w-full lg:w-[480px] xl:w-[520px] lg:min-h-[520px] relative p-5 sm:p-8 lg:p-10 flex flex-col justify-between overflow-hidden shrink-0 bg-[#102a40]">
+    <div className="w-full lg:w-[480px] xl:w-[520px] lg:min-h-[520px] relative p-5 sm:p-8 lg:p-10 flex flex-col justify-between overflow-hidden shrink-0 bg-[var(--color-surface-subtle)]">
       {/* Chernarus Panorama & Scrim */}
       <div
         className="absolute inset-0 bg-cover bg-center pointer-events-none"
@@ -19,7 +19,7 @@ export function SignInHero() {
       />
 
       {/* Top Workspace Badge */}
-      <div className="relative z-10 flex items-center gap-2 text-[#CCDAE5]">
+      <div className="relative z-10 flex items-center gap-2 text-[var(--color-text-secondary)]">
         <Server className="w-4 h-4 shrink-0" />
         <span className="text-[10px] font-medium tracking-widest uppercase">
           YOUR SERVER. YOUR WORLD.
@@ -30,7 +30,7 @@ export function SignInHero() {
       <div className="relative z-10 space-y-6 mt-8 sm:mt-12 lg:mt-0">
         <div className="space-y-3">
           <FlavorText variant="hero" />
-          <p className="text-xs sm:text-[13px] text-[#CCDAE5] leading-[1.7] max-w-sm">
+          <p className="text-xs sm:text-[13px] text-[var(--color-text-secondary)] leading-[1.7] max-w-sm">
             Keep your community connected. Manage your servers, players, and everything in between.
           </p>
         </div>
@@ -43,7 +43,7 @@ export function SignInHero() {
             <span className="text-[11px] font-medium text-white block leading-tight">
               A secure home for your community
             </span>
-            <span className="text-[10px] text-[#CCDAE5] block leading-tight">
+            <span className="text-[10px] text-[var(--color-text-muted)] block leading-tight">
               Access managed by your workspace administrator
             </span>
           </div>

@@ -27,7 +27,19 @@
     "typecheck": {
       "executor": "nx:run-commands",
       "options": {
-        "command": "tsc -p apps/web/tsconfig.app.json --noEmit"
+        "command": "tsc -p apps/web/tsconfig.app.json --noEmit && tsc -p apps/web/tsconfig.spec.json --noEmit"
+      }
+    },
+    "test": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "vitest run --config apps/web/vitest.config.ts"
+      }
+    },
+    "test:coverage": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "vitest run --coverage --config apps/web/vitest.config.ts"
       }
     }
   }

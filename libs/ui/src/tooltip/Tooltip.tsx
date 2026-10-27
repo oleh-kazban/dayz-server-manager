@@ -149,7 +149,7 @@ export function Tooltip({
               left: coords ? `${coords.left}px` : '-9999px',
               opacity: coords ? 1 : 0,
             }}
-            className={`z-50 px-2.5 py-1 text-xs font-medium text-slate-100 bg-[#0e1924] border border-slate-700/60 rounded-md shadow-md pointer-events-none select-none transition-opacity duration-150 ${className}`.trim()}
+            className={`z-50 px-2.5 py-1 text-xs font-medium text-[var(--color-text-main)] bg-[var(--color-surface-elevated)] border border-[var(--color-border)] rounded-md shadow-md pointer-events-none select-none transition-opacity duration-150 ${className}`.trim()}
           >
             {content}
           </div>,

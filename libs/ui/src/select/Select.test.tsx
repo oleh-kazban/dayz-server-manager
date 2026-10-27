@@ -1,6 +1,6 @@
 import { createRef, useState } from 'react';
 
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
@@ -173,14 +173,48 @@ describe('Select', () => {
     await user.keyboard('{ArrowDown}');
     expect(screen.getByRole('listbox')).toBeInTheDocument();
 
-    // ArrowDown moves down, skipping disabled opt2 (lands on opt3)
-    await user.keyboard('{ArrowDown}');
-    // Enter commits selection
-    await user.keyboard('{Enter}');
+    // End key jumps to last enabled option (Option Four)
+    await user.keyboard('{End}');
+    // Home key jumps to first enabled option (Option One)
+    await user.keyboard('{Home}');
 
-    expect(handleChange).toHaveBeenCalledWith('opt3', TEST_OPTIONS[2]);
-    expect(combobox).toHaveTextContent('Option Three');
+    // ArrowUp wraps to last option
+    await user.keyboard('{ArrowUp}');
+
+    // Space commits selection
+    await user.keyboard(' ');
+
+    expect(handleChange).toHaveBeenCalledWith('opt4', TEST_OPTIONS[3]);
+    expect(combobox).toHaveTextContent('Option Four');
     expect(screen.queryByRole('listbox')).not.toBeInTheDocument();
+  });
+
+  it('opens combobox on Space or ArrowUp when closed and closes on Tab', () => {
+    render(<Select label="Key Open Select" options={TEST_OPTIONS} />);
+
+    const combobox = screen.getByRole('combobox');
+
+    // ArrowUp opens combobox
+    fireEvent.keyDown(combobox, { key: 'ArrowUp' });
+    expect(screen.getByRole('listbox')).toBeInTheDocument();
+
+    // Tab closes combobox
+    fireEvent.keyDown(combobox, { key: 'Tab' });
+    expect(screen.queryByRole('listbox')).not.toBeInTheDocument();
+
+    // Space opens combobox
+    fireEvent.keyDown(combobox, { key: ' ' });
+    expect(screen.getByRole('listbox')).toBeInTheDocument();
+  });
+
+  it('clicking container outside button focuses combobox and toggles open state', () => {
+    render(<Select label="Container Select" options={TEST_OPTIONS} />);
+
+    const combobox = screen.getByRole('combobox');
+    const containerDiv = combobox.parentElement!;
+    fireEvent.click(containerDiv);
+
+    expect(screen.getByRole('listbox')).toBeInTheDocument();
   });
 
   it('closes dropdown and refocuses trigger on Escape', async () => {

@@ -1,6 +1,6 @@
 import { useCallback, useState } from 'react';
 
-import { StorageDriver } from './storage.types';
+import type { StorageDriver } from './storage.types';
 
 export function useStorage<T>(
   key: string,

@@ -2,7 +2,8 @@ import { useEffect, useRef, useState } from 'react';
 
 import type { Meta, StoryObj } from '@storybook/react-vite';
 
-import { Autosuggest, type AutosuggestProps } from './Autosuggest';
+import { Autosuggest } from './Autosuggest';
+import type { AutosuggestProps } from './Autosuggest.types';
 
 interface DayZItem {
   id: string;

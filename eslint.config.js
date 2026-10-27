@@ -29,6 +29,7 @@ export default tseslint.config(
       'coverage/**',
       'apps/web/public/mockServiceWorker.js',
       '...sandbox/**',
+      '.github/**',
     ],
   },
   js.configs.recommended,

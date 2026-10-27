@@ -5,7 +5,8 @@ import userEvent from '@testing-library/user-event';
 import { Settings } from 'lucide-react';
 import { describe, expect, it, vi } from 'vitest';
 
-import { DotsFloatingMenu, type DotsFloatingMenuOption } from './DotsFloatingMenu';
+import { DotsFloatingMenu } from './DotsFloatingMenu';
+import type { DotsFloatingMenuOption } from './FloatingMenu.types';
 
 describe('DotsFloatingMenu', () => {
   it('renders trigger button and opens menu with options', async () => {

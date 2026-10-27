@@ -1,35 +1,13 @@
-import {
-  type KeyboardEvent as ReactKeyboardEvent,
-  type ReactNode,
-  type Ref,
-  useEffect,
-  useId,
-  useRef,
-} from 'react';
+import { type KeyboardEvent as ReactKeyboardEvent, useEffect, useId, useRef } from 'react';
 import { createPortal } from 'react-dom';
 
 import { Check, ChevronDown } from 'lucide-react';
 
-import { type Alignment, usePopup } from '../hooks';
+import { usePopup } from '../hooks';
 
-export interface FloatingMenuOption<T> {
-  value: T;
-  label: string;
-  icon?: ReactNode;
-  className?: string;
-  indicatorClassName?: string;
-}
+import type { FloatingMenuOption, FloatingMenuProps } from './FloatingMenu.types';
 
-export interface FloatingMenuProps<T extends string> {
-  options: FloatingMenuOption<T>[];
-  value: T;
-  onChange: (value: T) => void;
-  ariaLabel: string;
-  alignment?: Alignment;
-  disabled?: boolean;
-  customClassName?: string;
-  ref?: Ref<HTMLButtonElement>;
-}
+export type { FloatingMenuOption, FloatingMenuProps };
 
 function OptionIndicator({
   isSelected,

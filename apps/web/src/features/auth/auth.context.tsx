@@ -1,6 +1,6 @@
 import { createContext, useContext } from 'react';
 
-import { AuthContextValue } from './auth.types';
+import type { AuthContextValue } from './auth.types';
 
 export const AUTH_STORAGE_KEY = 'dsm-auth-session';
 

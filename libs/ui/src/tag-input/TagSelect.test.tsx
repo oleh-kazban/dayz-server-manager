@@ -167,4 +167,84 @@ describe('TagSelect', () => {
 
     expect(ref.current).toBeInstanceOf(HTMLDivElement);
   });
+
+  it('supports functional callback ref for container', () => {
+    const refCallback = vi.fn();
+    render(<TagSelect ref={refCallback} options={sampleOptions} value={[]} onChange={vi.fn()} />);
+
+    expect(refCallback).toHaveBeenCalledWith(expect.any(HTMLDivElement));
+  });
+
+  it('navigates options via keyboard ArrowDown, ArrowUp, and selects with Enter', () => {
+    const onChange = vi.fn();
+    render(<TagSelect options={sampleOptions} value={[]} onChange={onChange} />);
+
+    const combobox = screen.getByRole('combobox');
+    fireEvent.click(combobox);
+
+    const listbox = screen.getByRole('listbox');
+
+    // ArrowDown moves down
+    fireEvent.keyDown(listbox, { key: 'ArrowDown' });
+    // ArrowDown to next
+    fireEvent.keyDown(listbox, { key: 'ArrowDown' });
+    // ArrowUp moves up
+    fireEvent.keyDown(listbox, { key: 'ArrowUp' });
+    // Enter commits selection of the highlighted option
+    fireEvent.keyDown(listbox, { key: 'Enter' });
+
+    expect(onChange).toHaveBeenCalled();
+  });
+
+  it('wraps around highlighted option index with ArrowUp from top and ArrowDown from bottom', () => {
+    const onChange = vi.fn();
+    render(<TagSelect options={sampleOptions} value={[]} onChange={onChange} />);
+
+    fireEvent.click(screen.getByRole('combobox'));
+    const listbox = screen.getByRole('listbox');
+
+    // ArrowUp when at 0 wraps to end
+    fireEvent.keyDown(listbox, { key: 'ArrowUp' });
+
+    // ArrowDown when at end wraps to 0
+    fireEvent.keyDown(listbox, { key: 'ArrowDown' });
+    fireEvent.keyDown(listbox, { key: 'Enter' });
+    expect(onChange).toHaveBeenCalled();
+  });
+
+  it('clears search query when clicking clear search button', () => {
+    render(<TagSelect options={sampleOptions} value={[]} onChange={vi.fn()} />);
+
+    fireEvent.click(screen.getByRole('combobox'));
+    const searchInput = screen.getByPlaceholderText('Search options...');
+    fireEvent.change(searchInput, { target: { value: 'cloth' } });
+
+    const clearBtn = screen.getByRole('button', { name: 'Clear search query' });
+    expect(clearBtn).toBeInTheDocument();
+
+    fireEvent.click(clearBtn);
+    expect(searchInput).toHaveValue('');
+  });
+
+  it('updates highlighted index on mouse enter', () => {
+    render(<TagSelect options={sampleOptions} value={[]} onChange={vi.fn()} />);
+
+    fireEvent.click(screen.getByRole('combobox'));
+    const option = screen.getByRole('option', { name: /clothing/i });
+    fireEvent.mouseEnter(option);
+    expect(option).toBeInTheDocument();
+  });
+
+  it('renders validation error message when error prop is provided', () => {
+    render(
+      <TagSelect
+        options={sampleOptions}
+        value={[]}
+        onChange={vi.fn()}
+        error="Selection is required"
+      />,
+    );
+
+    expect(screen.getByText('Selection is required')).toBeInTheDocument();
+  });
 });

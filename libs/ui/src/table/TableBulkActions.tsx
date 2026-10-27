@@ -18,7 +18,7 @@ export function TableBulkActions({
       ref={ref}
       role="region"
       aria-label="Table bulk actions"
-      className={`flex items-center justify-between gap-4 px-5 py-2.5 bg-[#edf5fd] dark:bg-[var(--color-primary)]/10 border-y border-[#d0e4f7] dark:border-[var(--color-primary)]/20 text-xs font-sans transition-all ${className}`.trim()}
+      className={`flex items-center justify-between gap-4 px-5 py-2.5 bg-[var(--color-primary-light)] border-y border-[var(--color-primary-border)] text-xs font-sans transition-all ${className}`.trim()}
       {...props}
     >
       <div className="flex items-center gap-6 min-w-0">
