@@ -1,0 +1,14 @@
+/* Card Surface Utility */
+.ui-card {
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  box-shadow: var(--shadow-card);
+  transition:
+    box-shadow 0.2s ease,
+    border-color 0.2s ease;
+}
+
+.ui-card:hover {
+  box-shadow: var(--shadow-card-hover);
+}

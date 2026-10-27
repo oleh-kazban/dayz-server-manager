@@ -1,35 +1,13 @@
-import {
-  type KeyboardEvent as ReactKeyboardEvent,
-  type ReactNode,
-  type Ref,
-  useEffect,
-  useId,
-  useRef,
-} from 'react';
+import { type KeyboardEvent as ReactKeyboardEvent, useEffect, useId, useRef } from 'react';
 import { createPortal } from 'react-dom';
 
 import { MoreVertical } from 'lucide-react';
 
-import { type Alignment, usePopup } from '../hooks';
+import { usePopup } from '../hooks';
 
-export interface DotsFloatingMenuOption {
-  label: string;
-  onSelect: () => void;
-  icon?: ReactNode;
-  disabled?: boolean;
-  destructive?: boolean;
-  className?: string;
-}
+import type { DotsFloatingMenuOption, DotsFloatingMenuProps } from './FloatingMenu.types';
 
-export interface DotsFloatingMenuProps {
-  options: DotsFloatingMenuOption[];
-  ariaLabel: string;
-  alignment?: Alignment;
-  disabled?: boolean;
-  icon?: ReactNode;
-  customClassName?: string;
-  ref?: Ref<HTMLButtonElement>;
-}
+export type { DotsFloatingMenuOption, DotsFloatingMenuProps };
 
 function getOptionClassName(option: DotsFloatingMenuOption): string {
   if (option.className) {

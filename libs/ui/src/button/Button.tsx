@@ -1,54 +1,10 @@
-import {
-  type ButtonHTMLAttributes,
-  cloneElement,
-  type ComponentType,
-  isValidElement,
-  type ReactElement,
-  type Ref,
-} from 'react';
+import { cloneElement, type ComponentType, isValidElement, type ReactElement } from 'react';
 
-import { Loader2, type LucideIcon } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 
-export type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'text';
+import type { ButtonIcon, ButtonProps, ButtonVariant } from './Button.types';
 
-export type ButtonIcon =
-  | LucideIcon
-  | ComponentType<{ className?: string; 'aria-hidden'?: boolean | 'true' | 'false' }>
-  | ReactElement;
-
-export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
-  /**
-   * React 19 ref forwarded directly to the native <button> element.
-   */
-  ref?: Ref<HTMLButtonElement>;
-
-  /**
-   * Visual style variant of the button.
-   * @default 'secondary'
-   */
-  variant?: ButtonVariant;
-
-  /**
-   * Applies destructive/danger styling across all variants.
-   * @default false
-   */
-  destructive?: boolean;
-
-  /** Leading icon or component */
-  leftIcon?: ButtonIcon;
-
-  /** Trailing icon or component */
-  rightIcon?: ButtonIcon;
-
-  /** Force square icon-only button aspect ratio (auto-detected if no children) */
-  isIconOnly?: boolean;
-
-  /** Displays a loading spinner and disables user interaction */
-  isLoading?: boolean;
-
-  /** Expands the button to 100% of the parent container's width */
-  fullWidth?: boolean;
-}
+export type { ButtonIcon, ButtonProps, ButtonVariant };
 
 /* --------------------------------------------------------------------------
    STYLE CONFIGURATIONS (100% CSS Variable Tokens — Canonical 36px / h-9)
@@ -158,7 +114,7 @@ export function Button({
       type={type}
       disabled={isButtonDisabled}
       aria-busy={isLoading}
-      className={`inline-flex items-center select-none transition-colors duration-150 cursor-pointer disabled:cursor-not-allowed disabled:opacity-50 disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-surface)] ${alignmentClass} ${variantStyle} ${dimensionClass} ${className}`.trim()}
+      className={`inline-flex items-center whitespace-nowrap select-none transition-colors duration-150 cursor-pointer disabled:cursor-not-allowed disabled:opacity-50 disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-surface)] ${alignmentClass} ${variantStyle} ${dimensionClass} ${className}`.trim()}
     >
       {isLoading ? (
         <Loader2 className={`animate-spin ${ICON_CLASS}`} aria-hidden="true" />
@@ -166,7 +122,9 @@ export function Button({
         renderIcon(leftIcon)
       )}
 
-      {hasChildren && <span>{children}</span>}
+      {hasChildren && (
+        <span className="inline-flex items-center gap-1.5 whitespace-nowrap">{children}</span>
+      )}
 
       {!isLoading && renderIcon(rightIcon)}
     </button>

@@ -305,11 +305,11 @@ export const ButtonGeometry: Story = {
 };
 
 /* ====================================================================
-   FIGMA SHOWCASE (Directly matching Editor & Server Management screens)
+   WORKBENCH SHOWCASE (Directly matching Editor & Server Management screens)
    ==================================================================== */
 
-export const FigmaToolbarShowcase: Story = {
-  name: 'Figma Toolbar & Selection Bar',
+export const WorkbenchToolbarShowcase: Story = {
+  name: 'Workbench Toolbar & Selection Bar',
   parameters: {
     controls: { include: ['disabled', 'isLoading'] },
   },

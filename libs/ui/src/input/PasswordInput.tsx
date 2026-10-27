@@ -2,15 +2,10 @@ import { useState } from 'react';
 
 import { Eye, EyeOff, Lock } from 'lucide-react';
 
-import { Input, type InputProps } from './Input';
+import { Input } from './Input';
+import type { PasswordInputProps } from './Input.types';
 
-export interface PasswordInputProps extends Omit<InputProps, 'type' | 'rightAction'> {
-  /**
-   * Whether to display the show/hide password toggle button.
-   * @default true
-   */
-  showToggle?: boolean;
-}
+export type { PasswordInputProps };
 
 export function PasswordInput({
   leftIcon = Lock,

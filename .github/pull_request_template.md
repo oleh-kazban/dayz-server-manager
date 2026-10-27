@@ -1,6 +1,9 @@
 ## Description
 
-<!-- Provide a brief description of the architectural context, changes, and motivation -->
+<!--
+Provide a brief description of the architectural context, changes, and motivation.
+Tip: In GitHub, click the Copilot icon in the toolbar and select 'Summary' to auto-generate this section.
+-->
 
 ## Ticket / Issue
 
@@ -16,7 +19,7 @@
 
 ## Checklist
 
-- [ ] Self-review completed
-- [ ] Monorepo verification passed locally (`pnpm lint`, `pnpm typecheck`, `pnpm check:cycles`)
-- [ ] Formatted with Prettier (`pnpm format:check`)
+- [ ] Self-review completed against `.agents/skills/code-review.md`
+- [ ] Verification passed locally (`pnpm nx run-many -t typecheck`, `pnpm eslint <path> --max-warnings 0`)
+- [ ] Two-level test coverage policy satisfied (>= 80% global / 100% affected code)
 - [ ] Screenshots or recordings attached (for UI changes)

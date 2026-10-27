@@ -18,7 +18,10 @@
     "format:check": "prettier --check .",
     "test": "nx run-many -t test",
     "test:ui": "nx run ui:test",
-    "test:coverage": "nx run ui:test:coverage",
+    "test:ui:coverage": "nx run ui:test:coverage",
+    "test:web": "nx run web:test",
+    "test:web:coverage": "nx run web:test:coverage",
+    "test:coverage": "nx run-many -t test:coverage",
     "storybook": "nx run ui:storybook",
     "build-storybook": "nx run ui:build-storybook",
     "graph": "nx graph"

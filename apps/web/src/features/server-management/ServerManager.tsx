@@ -48,7 +48,7 @@ const LOG_LEVEL_COLORS: Record<string, TagColor> = {
 
 /* --------------------------------------------------------------------------
    DUMMY PRESENTATION DATA
-   Zero business logic - pure presentation markup matching Figma node 33:15345
+   Zero business logic - pure presentation markup matching design specification
    -------------------------------------------------------------------------- */
 
 const KPI_CARDS = [

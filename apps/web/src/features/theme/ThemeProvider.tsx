@@ -1,14 +1,15 @@
-import { ReactNode, useCallback, useEffect, useMemo, useState } from 'react';
+import { type ReactNode, useCallback, useEffect, useMemo, useState } from 'react';
 
 import { localStorageDriver } from '@dsm/core/storage';
 
 import { THEME_STORAGE_KEY, ThemeContext } from './theme.context';
 import {
-  DarkThemeId,
-  LightThemeId,
-  ThemeContextValue,
-  ThemeMode,
-  ThemeSettings,
+  type DarkThemeId,
+  type LightThemeId,
+  type ThemeContextValue,
+  type ThemeMode,
+  type ThemeSettings,
+  themeSettingsSchema,
 } from './theme.types';
 
 const DEFAULT_THEME_SETTINGS: ThemeSettings = {
@@ -17,26 +18,12 @@ const DEFAULT_THEME_SETTINGS: ThemeSettings = {
   preferredDark: 'darcula',
 };
 
-interface StoredThemeSettings {
-  mode?: ThemeMode;
-  preferredLight?: LightThemeId;
-  preferredDark?: DarkThemeId;
-  prefferedLight?: LightThemeId;
-  prefferedDark?: DarkThemeId;
-}
-
 function getInitialSettings(): ThemeSettings {
-  const stored = localStorageDriver.get<StoredThemeSettings>(
+  return localStorageDriver.get<ThemeSettings>(
     THEME_STORAGE_KEY,
     DEFAULT_THEME_SETTINGS,
+    themeSettingsSchema,
   );
-  return {
-    mode: stored.mode ?? DEFAULT_THEME_SETTINGS.mode,
-    preferredLight:
-      stored.preferredLight ?? stored.prefferedLight ?? DEFAULT_THEME_SETTINGS.preferredLight,
-    preferredDark:
-      stored.preferredDark ?? stored.prefferedDark ?? DEFAULT_THEME_SETTINGS.preferredDark,
-  };
 }
 
 export function ThemeProvider({ children }: { children: ReactNode }) {

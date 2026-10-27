@@ -1,37 +1,8 @@
-import {
-  type ComponentType,
-  type InputHTMLAttributes,
-  type MouseEvent,
-  type ReactNode,
-  type Ref,
-  useId,
-  useRef,
-} from 'react';
+import { type MouseEvent, useId, useRef } from 'react';
 
-import { type LucideIcon } from 'lucide-react';
+import type { InputProps } from './Input.types';
 
-export interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
-  /** Label displayed above the input field */
-  label?: string;
-
-  /** Validation error message; switches field to error treatment and links aria-describedby */
-  error?: string;
-
-  /** Leading icon component */
-  leftIcon?: LucideIcon | ComponentType<{ className?: string }>;
-
-  /** Trailing slot for action buttons or indicators */
-  rightAction?: ReactNode;
-
-  /** Root container styling escape hatch */
-  customClassName?: string;
-
-  /** Standard container styling escape hatch */
-  containerClassName?: string;
-
-  /** React 19 native DOM ref */
-  ref?: Ref<HTMLInputElement>;
-}
+export type { InputProps };
 
 export function Input({
   ref,

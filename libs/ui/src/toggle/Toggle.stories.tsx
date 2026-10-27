@@ -5,7 +5,8 @@ import { Pause, Play } from 'lucide-react';
 
 import { Button } from '../button';
 
-import { Toggle, type ToggleProps } from './Toggle';
+import { Toggle } from './Toggle';
+import type { ToggleProps } from './Toggle.types';
 
 const meta: Meta<typeof Toggle> = {
   title: 'Components/Toggle',

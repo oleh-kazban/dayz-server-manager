@@ -1,13 +1,13 @@
 import { localStorageDriver, sessionStorageDriver } from '@dsm/core/storage';
 
 import { AUTH_STORAGE_KEY } from './auth.context';
-import { AuthUser } from './auth.types';
+import { type AuthUser, authUserSchema } from './auth.types';
 
 export const authStorage = {
   get(): AuthUser | null {
     return (
-      sessionStorageDriver.get<AuthUser | null>(AUTH_STORAGE_KEY, null) ??
-      localStorageDriver.get<AuthUser | null>(AUTH_STORAGE_KEY, null)
+      sessionStorageDriver.get<AuthUser | null>(AUTH_STORAGE_KEY, null, authUserSchema) ??
+      localStorageDriver.get<AuthUser | null>(AUTH_STORAGE_KEY, null, authUserSchema)
     );
   },
 

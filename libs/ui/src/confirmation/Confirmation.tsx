@@ -1,70 +1,12 @@
-import {
-  type MouseEvent,
-  type ReactNode,
-  type SyntheticEvent,
-  useEffect,
-  useId,
-  useRef,
-  useState,
-} from 'react';
+import { type MouseEvent, type SyntheticEvent, useEffect, useId, useRef, useState } from 'react';
 
 import { AlertCircle, AlertTriangle, Info, X } from 'lucide-react';
 
 import { Button } from '../button';
 
-export type ConfirmationVariant = 'primary' | 'warning' | 'danger';
+import type { ConfirmationProps, ConfirmationVariant } from './Confirmation.types';
 
-export interface ConfirmationProps {
-  /**
-   * Main dialog headline.
-   */
-  title: string;
-
-  /**
-   * Explanatory text or content for the confirmation.
-   */
-  description?: ReactNode;
-
-  /**
-   * Cancel button label.
-   * @default 'Cancel'
-   */
-  cancelLabel?: string;
-
-  /**
-   * Confirm button label.
-   * @default 'Confirm'
-   */
-  confirmLabel?: string;
-
-  /**
-   * Semantic visual treatment.
-   * @default 'primary'
-   */
-  variant?: ConfirmationVariant;
-
-  /**
-   * Lockout countdown in seconds before confirmation button is enabled.
-   * @default 0
-   */
-  timerValue?: number;
-
-  /**
-   * Displays loading spinner and locks dialog during asynchronous operations.
-   * @default false
-   */
-  isLoading?: boolean;
-
-  /**
-   * Callback fired when dialog is dismissed or canceled.
-   */
-  onCancel: () => void;
-
-  /**
-   * Callback fired when confirmed.
-   */
-  onConfirm: () => void;
-}
+export type { ConfirmationProps, ConfirmationVariant };
 
 function VariantIcon({ variant }: { variant: ConfirmationVariant }) {
   switch (variant) {
