@@ -1,4 +1,4 @@
-import { localStorageDriver, sessionStorageDriver } from '@dsm/core/storage';
+import { localStorageDriver, sessionStorageDriver } from '@dsm/web/core/storage';
 
 import { AUTH_STORAGE_KEY } from './auth.context';
 import { type AuthUser, authUserSchema } from './auth.types';

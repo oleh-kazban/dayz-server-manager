@@ -113,7 +113,14 @@ export function usePopup<TTrigger extends HTMLElement = HTMLButtonElement>(
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
         setIsOpen(false);
-        triggerRef.current?.focus();
+        const target = triggerRef.current;
+        if (target) {
+          if (typeof target.focus === 'function' && target.tabIndex >= 0) {
+            target.focus();
+          } else {
+            target.querySelector<HTMLElement>('button, input, [tabindex="0"]')?.focus();
+          }
+        }
       }
     };
 

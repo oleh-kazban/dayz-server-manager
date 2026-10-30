@@ -1,7 +1,7 @@
 import { render, screen } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 
-import { ThemeProvider } from '@dsm/features/theme';
+import { ThemeProvider } from '@dsm/web/features/theme';
 
 import { Header } from './Header';
 

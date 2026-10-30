@@ -302,6 +302,14 @@ export function Select<T = string>({
         </label>
       )}
 
+      {name && (
+        <input
+          type="hidden"
+          name={name}
+          value={activeValue !== null && activeValue !== undefined ? String(activeValue) : ''}
+        />
+      )}
+
       <div
         ref={triggerRef}
         onClick={handleContainerClick}
@@ -312,7 +320,6 @@ export function Select<T = string>({
         <button
           ref={handleButtonRef}
           id={selectId}
-          name={name}
           type="button"
           role="combobox"
           aria-haspopup="listbox"

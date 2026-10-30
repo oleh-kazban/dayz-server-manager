@@ -91,7 +91,15 @@ export function Confirmation({
   };
 
   useEffect(() => {
-    dialogRef.current?.showModal();
+    const dialog = dialogRef.current;
+    if (dialog && !dialog.open) {
+      dialog.showModal();
+    }
+    return () => {
+      if (dialog && dialog.open) {
+        dialog.close();
+      }
+    };
   }, []);
 
   return (

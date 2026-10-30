@@ -28,8 +28,8 @@ import {
   Upload,
 } from 'lucide-react';
 
-import { PageContainer } from '@dsm/components';
 import { Button, Tag, type TagColor } from '@dsm/ui';
+import { PageContainer } from '@dsm/web/components';
 
 /* --------------------------------------------------------------------------
    DUMMY PRESENTATION DATA TYPES & CONSTANTS

@@ -1,6 +1,6 @@
 import { type ReactNode, useCallback, useEffect, useMemo, useState } from 'react';
 
-import { localStorageDriver } from '@dsm/core/storage';
+import { localStorageDriver } from '@dsm/web/core/storage';
 
 import { THEME_STORAGE_KEY, ThemeContext } from './theme.context';
 import {

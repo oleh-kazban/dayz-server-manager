@@ -30,8 +30,8 @@ import {
   Users,
 } from 'lucide-react';
 
-import { PageContainer } from '@dsm/components';
 import { Toggle } from '@dsm/ui';
+import { PageContainer } from '@dsm/web/components';
 
 export function Dashboard() {
   return (

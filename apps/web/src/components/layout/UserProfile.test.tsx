@@ -1,9 +1,9 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { AuthProvider } from '@dsm/features/auth';
-import { authStorage } from '@dsm/features/auth/auth.storage';
-import type { AuthUser } from '@dsm/features/auth/auth.types';
+import { AuthProvider } from '@dsm/web/features/auth';
+import { authStorage } from '@dsm/web/features/auth/auth.storage';
+import type { AuthUser } from '@dsm/web/features/auth/auth.types';
 
 import { UserProfile } from './UserProfile';
 

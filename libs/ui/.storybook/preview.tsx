@@ -1,4 +1,4 @@
-import type { Preview } from '@storybook/tanstack-react';
+import type { Preview } from '@storybook/react';
 
 // Import design system tokens & theme definitions
 import '../src/styles/theme.css';
@@ -26,6 +26,13 @@ const preview: Preview = {
           { value: 'light', title: 'Light' },
           { value: 'dark', title: 'Dark' },
           { value: 'darcula', title: 'Darcula' },
+          { value: 'graphite', title: 'Graphite' },
+          { value: 'tokyo', title: 'Tokyo' },
+          { value: 'catppuccin', title: 'Catppuccin' },
+          { value: 'darcula-light', title: 'Darcula Light' },
+          { value: 'graphite-light', title: 'Graphite Light' },
+          { value: 'tokyo-light', title: 'Tokyo Light' },
+          { value: 'catppuccin-latte', title: 'Catppuccin Latte' },
         ],
         showName: true,
         dynamicTitle: true,

@@ -36,8 +36,8 @@ import {
   Users,
 } from 'lucide-react';
 
-import { PageContainer } from '@dsm/components';
 import { Button, StatusTag, Tag, type TagColor, Toggle } from '@dsm/ui';
+import { PageContainer } from '@dsm/web/components';
 
 const LOG_LEVEL_COLORS: Record<string, TagColor> = {
   INFO: 'sky',

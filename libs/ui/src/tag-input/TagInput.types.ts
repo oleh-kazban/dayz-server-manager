@@ -74,6 +74,9 @@ export interface TagSelectProps {
   /** Form field identity */
   id?: string;
 
+  /** HTML form input name for form serialization */
+  name?: string;
+
   /** Accessible field label rendered above the control */
   label?: string;
 

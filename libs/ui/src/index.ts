@@ -202,8 +202,8 @@ export type { TagInputProps, TagOption, TagSelectProps } from './tag-input';
 export { TagInput, TagSelect } from './tag-input';
 
 // Toast
-export type { CustomToastProps, ShowToastOptions, ToastType } from './toast';
-export { CustomToast, showToast } from './toast';
+export type { CustomToastProps, ShowToastOptions, ToasterProps, ToastType } from './toast';
+export { CustomToast, showToast, Toaster } from './toast';
 
 // Toggle
 export type { ToggleColor, ToggleProps } from './toggle';

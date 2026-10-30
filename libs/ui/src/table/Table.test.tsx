@@ -144,6 +144,36 @@ describe('Table', () => {
     expect(screen.getByRole('columnheader')).toHaveAttribute('aria-sort', 'descending');
   });
 
+  it('supports keyboard sorting via Enter and Space and includes tabIndex=0 and role="columnheader"', async () => {
+    const user = userEvent.setup();
+    const handleSort = vi.fn();
+
+    render(
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead sortDirection="asc" onSort={handleSort}>
+              Sortable Col
+            </TableHead>
+          </TableRow>
+        </TableHeader>
+      </Table>,
+    );
+
+    const head = screen.getByRole('columnheader', { name: /Sortable Col/i });
+    expect(head).toHaveAttribute('tabIndex', '0');
+    expect(head).toHaveAttribute('role', 'columnheader');
+
+    head.focus();
+    expect(head).toHaveFocus();
+
+    await user.keyboard('{Enter}');
+    expect(handleSort).toHaveBeenCalledTimes(1);
+
+    await user.keyboard(' ');
+    expect(handleSort).toHaveBeenCalledTimes(2);
+  });
+
   it('renders alignment classes correctly', () => {
     render(
       <Table>

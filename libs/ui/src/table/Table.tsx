@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { type KeyboardEvent, useMemo } from 'react';
 
 import { ArrowDown, ArrowUp, ArrowUpDown } from 'lucide-react';
 
@@ -182,15 +182,27 @@ export function TableHead({
   const sortIcon = renderSortIcon(sortDirection);
   const ariaSort = getAriaSort(sortDirection);
 
+  const handleKeyDown = (e: KeyboardEvent<HTMLTableCellElement>) => {
+    props.onKeyDown?.(e);
+    if (e.defaultPrevented) return;
+    if (isSortable && (e.key === 'Enter' || e.key === ' ')) {
+      e.preventDefault();
+      onSort?.();
+    }
+  };
+
   return (
     <th
       ref={ref}
       scope="col"
+      role={isSortable ? 'columnheader' : undefined}
+      tabIndex={isSortable ? (props.tabIndex ?? 0) : props.tabIndex}
       aria-sort={ariaSort}
       onClick={onSort}
+      onKeyDown={handleKeyDown}
       className={`font-semibold text-xs text-[var(--color-text-secondary)] select-none whitespace-nowrap ${paddingClass} first:pl-5 last:pr-5 ${textAlignClass} ${
         isSortable
-          ? 'cursor-pointer group hover:text-[var(--color-text-main)] transition-colors'
+          ? 'cursor-pointer group hover:text-[var(--color-text-main)] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)]'
           : ''
       } ${className}`.trim()}
       {...props}

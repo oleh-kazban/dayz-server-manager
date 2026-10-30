@@ -156,4 +156,40 @@ describe('Confirmation', () => {
     fireEvent.click(dialog);
     expect(handleCancel).toHaveBeenCalledTimes(1);
   });
+
+  it('safely handles React StrictMode / repeated mount and unmount without throwing DOMException', () => {
+    vi.useRealTimers();
+    const handleCancel = vi.fn();
+    const handleConfirm = vi.fn();
+
+    expect(() => {
+      const { unmount } = render(
+        <Confirmation
+          title="StrictMode Test 1"
+          description="Ensuring clean lifecycle"
+          onCancel={handleCancel}
+          onConfirm={handleConfirm}
+        />,
+      );
+      unmount();
+
+      const secondRender = render(
+        <Confirmation
+          title="StrictMode Test 2"
+          description="Ensuring clean lifecycle"
+          onCancel={handleCancel}
+          onConfirm={handleConfirm}
+        />,
+      );
+      secondRender.rerender(
+        <Confirmation
+          title="StrictMode Test 2 Updated"
+          description="Ensuring clean lifecycle"
+          onCancel={handleCancel}
+          onConfirm={handleConfirm}
+        />,
+      );
+      secondRender.unmount();
+    }).not.toThrow();
+  });
 });

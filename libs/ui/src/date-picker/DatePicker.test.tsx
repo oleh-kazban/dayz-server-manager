@@ -61,7 +61,7 @@ describe('DatePicker', () => {
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
 
-  it('renders validation error and links aria-describedby', () => {
+  it('renders validation error and links aria-describedby with danger token color class', () => {
     render(
       <DatePicker
         id="schedule-date"
@@ -74,7 +74,9 @@ describe('DatePicker', () => {
     const trigger = screen.getByRole('button', { name: /select date/i });
     expect(trigger).toHaveAttribute('aria-invalid', 'true');
     expect(trigger).toHaveAttribute('aria-describedby', 'schedule-date-error');
-    expect(screen.getByText('Date must be in the future')).toBeInTheDocument();
+    const errorEl = screen.getByText('Date must be in the future');
+    expect(errorEl).toBeInTheDocument();
+    expect(errorEl).toHaveClass('text-[var(--color-status-danger)]');
   });
 
   it('supports disabled state and suppresses popup', async () => {
@@ -111,7 +113,7 @@ describe('DatePicker', () => {
     expect(trigger).toHaveTextContent(/oct 15, 2025/i);
   });
 
-  it('handles native form invalid validation message', () => {
+  it('handles native form invalid validation message with danger status color class', () => {
     const { container } = render(<DatePicker required onChange={vi.fn()} />);
 
     const hiddenInput = container.querySelector('input[type="date"]');
@@ -121,7 +123,31 @@ describe('DatePicker', () => {
       fireEvent.invalid(hiddenInput);
     }
 
-    expect(screen.getByText(/a date is required/i)).toBeInTheDocument();
+    const message = screen.getByText(/a date is required/i);
+    expect(message).toBeInTheDocument();
+    expect(message).toHaveClass('text-[var(--color-status-danger)]');
+  });
+
+  it('submits form with date value from hidden input without button name interference', () => {
+    let submittedData: Record<string, string> = {};
+    const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+      e.preventDefault();
+      const formData = new FormData(e.currentTarget);
+      submittedData = Object.fromEntries(formData.entries()) as Record<string, string>;
+    };
+
+    render(
+      <form onSubmit={handleSubmit} data-testid="test-form">
+        <DatePicker name="eventDate" value="2025-10-25" onChange={vi.fn()} />
+        <button type="submit">Submit</button>
+      </form>,
+    );
+
+    const trigger = screen.getByRole('button', { name: /select date/i });
+    expect(trigger).not.toHaveAttribute('name');
+
+    fireEvent.submit(screen.getByTestId('test-form'));
+    expect(submittedData).toEqual({ eventDate: '2025-10-25' });
   });
 
   it('forwards React 19 ref to trigger button', () => {

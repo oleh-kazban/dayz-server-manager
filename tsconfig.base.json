@@ -18,7 +18,7 @@
     "paths": {
       "@dsm/ui": ["libs/ui/src/index.ts"],
       "@dsm/ui/*": ["libs/ui/src/*"],
-      "@dsm/*": ["apps/web/src/*"]
+      "@dsm/web/*": ["apps/web/src/*"]
     }
   },
   "exclude": ["node_modules", "tmp", "dist"]

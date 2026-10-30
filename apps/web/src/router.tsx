@@ -7,7 +7,7 @@ import {
   redirect,
 } from '@tanstack/react-router';
 
-import { AppShell } from '@dsm/components';
+import { AppShell } from '@dsm/web/components';
 
 import type { AuthContextValue } from './features/auth';
 

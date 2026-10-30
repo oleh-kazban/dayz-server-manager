@@ -48,7 +48,7 @@ export function Pagination({
     totalItems !== undefined ? Math.min(safePage * pageSize, totalItems) : safePage * pageSize;
 
   const navButtonBase =
-    'inline-flex items-center justify-center h-8 min-w-8 px-2 text-xs font-medium rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text-secondary)] transition-colors select-none focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)]';
+    'inline-flex items-center justify-center h-9 min-w-9 px-2 text-xs font-medium rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text-secondary)] transition-colors select-none focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)]';
   const navButtonInteractive =
     'hover:bg-[var(--color-surface-hover)] hover:text-[var(--color-text-main)] active:bg-[var(--color-surface-subtle)] cursor-pointer';
   const navButtonDisabled = 'opacity-40 cursor-not-allowed';
@@ -86,7 +86,7 @@ export function Pagination({
               value={pageSize}
               disabled={disabled}
               onChange={e => onPageSizeChange(Number(e.target.value))}
-              className="h-8 px-2 text-xs font-medium rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text-main)] shadow-2xs hover:bg-[var(--color-surface-hover)] focus:outline-none focus:ring-1 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)] cursor-pointer disabled:cursor-not-allowed disabled:opacity-50 transition-colors"
+              className="h-9 px-2.5 py-1 text-xs font-medium rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text-main)] shadow-2xs hover:bg-[var(--color-surface-hover)] focus:outline-none focus:ring-1 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)] cursor-pointer disabled:cursor-not-allowed disabled:opacity-50 transition-colors"
             >
               {pageSizeOptions.map(size => (
                 <option key={size} value={size}>
@@ -134,7 +134,7 @@ export function Pagination({
                 <span
                   key={item}
                   aria-hidden="true"
-                  className="inline-flex items-center justify-center h-8 min-w-8 px-1 text-xs text-[var(--color-text-muted)] select-none"
+                  className="inline-flex items-center justify-center h-9 min-w-9 px-1 text-xs text-[var(--color-text-muted)] select-none"
                 >
                   ...
                 </span>
@@ -151,7 +151,7 @@ export function Pagination({
                 disabled={disabled}
                 aria-current={isCurrent ? 'page' : undefined}
                 aria-label={`Page ${item}`}
-                className={`inline-flex items-center justify-center h-8 min-w-8 px-2 text-xs font-mono font-medium rounded-lg border transition-colors select-none focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)] ${
+                className={`inline-flex items-center justify-center h-9 min-w-9 px-2 text-xs font-mono font-medium rounded-lg border transition-colors select-none focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)] ${
                   isCurrent
                     ? 'border-[var(--color-primary)] bg-[var(--color-primary)] text-white shadow-xs font-semibold'
                     : 'border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-hover)] hover:text-[var(--color-text-main)] active:bg-[var(--color-surface-subtle)] cursor-pointer'

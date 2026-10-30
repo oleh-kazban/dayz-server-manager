@@ -165,7 +165,6 @@ export function DatePicker({
         <button
           ref={handleTriggerRef}
           id={inputId}
-          name={name}
           type="button"
           aria-haspopup="dialog"
           aria-expanded={isPopupOpen}
@@ -208,7 +207,7 @@ export function DatePicker({
       {displayedError && (
         <p
           id={`${inputId}-error`}
-          className="text-[11px] font-sans text-[var(--color-text-main)] leading-tight"
+          className="text-[11px] font-sans text-[var(--color-status-danger)] leading-tight"
         >
           {displayedError}
         </p>

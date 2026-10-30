@@ -1,7 +1,7 @@
 import { render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { AuthProvider } from '@dsm/features/auth';
+import { AuthProvider } from '@dsm/web/features/auth';
 
 import { Sidebar } from './Sidebar';
 

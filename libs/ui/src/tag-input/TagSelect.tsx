@@ -99,6 +99,7 @@ function TagSelectOptionItem({
 export function TagSelect({
   ref,
   id: externalId,
+  name,
   label,
   error,
   placeholder = 'Select options...',
@@ -213,6 +214,7 @@ export function TagSelect({
 
   return (
     <div className={`space-y-1.5 text-left ${containerClassName}`.trim()}>
+      {name && value.map(val => <input key={val} type="hidden" name={name} value={val} />)}
       {label && (
         <label
           htmlFor={selectId}

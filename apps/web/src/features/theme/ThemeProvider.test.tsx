@@ -1,7 +1,7 @@
 import { act, render, renderHook, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it } from 'vitest';
 
-import { localStorageDriver } from '@dsm/core/storage';
+import { localStorageDriver } from '@dsm/web/core/storage';
 
 import { THEME_STORAGE_KEY, useTheme } from './theme.context';
 import { ThemeProvider } from './ThemeProvider';

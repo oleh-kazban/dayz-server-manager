@@ -1,4 +1,4 @@
-import { FlavorText } from '@dsm/features/flavor-text';
+import { FlavorText } from '@dsm/web/features/flavor-text';
 
 export function Footer() {
   return (

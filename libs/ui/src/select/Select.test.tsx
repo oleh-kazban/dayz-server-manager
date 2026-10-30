@@ -264,4 +264,31 @@ describe('Select', () => {
     expect(ref.current).toBeInstanceOf(HTMLButtonElement);
     expect(ref.current?.getAttribute('role')).toBe('combobox');
   });
+
+  it('renders a hidden input with the selected value when name is provided', () => {
+    const { container } = render(
+      <Select name="serverRegion" value="opt3" options={TEST_OPTIONS} label="Region" />,
+    );
+
+    const hiddenInput = container.querySelector('input[type="hidden"]');
+    expect(hiddenInput).toBeInTheDocument();
+    expect(hiddenInput).toHaveAttribute('name', 'serverRegion');
+    expect(hiddenInput).toHaveAttribute('value', 'opt3');
+  });
+
+  it('updates hidden input value in uncontrolled mode when option is selected', async () => {
+    const user = userEvent.setup();
+    const { container } = render(
+      <Select name="serverRegion" defaultValue="opt1" options={TEST_OPTIONS} label="Region" />,
+    );
+
+    const hiddenInput = container.querySelector('input[type="hidden"]');
+    expect(hiddenInput).toHaveAttribute('value', 'opt1');
+
+    const combobox = screen.getByRole('combobox');
+    await user.click(combobox);
+    await user.click(screen.getByRole('option', { name: 'Option Four' }));
+
+    expect(hiddenInput).toHaveAttribute('value', 'opt4');
+  });
 });

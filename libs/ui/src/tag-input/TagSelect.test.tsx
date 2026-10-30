@@ -247,4 +247,49 @@ describe('TagSelect', () => {
 
     expect(screen.getByText('Selection is required')).toBeInTheDocument();
   });
+
+  it('renders hidden inputs for each selected tag when name is provided', () => {
+    const { container } = render(
+      <TagSelect
+        name="itemCategories"
+        options={sampleOptions}
+        value={['weapons', 'medical']}
+        onChange={vi.fn()}
+      />,
+    );
+
+    const hiddenInputs = container.querySelectorAll('input[type="hidden"]');
+    expect(hiddenInputs).toHaveLength(2);
+    expect(hiddenInputs[0]).toHaveAttribute('name', 'itemCategories');
+    expect(hiddenInputs[0]).toHaveAttribute('value', 'weapons');
+    expect(hiddenInputs[1]).toHaveAttribute('name', 'itemCategories');
+    expect(hiddenInputs[1]).toHaveAttribute('value', 'medical');
+  });
+
+  it('submits selected values as form data with multiple values under the name', () => {
+    let submittedEntries: [string, FormDataEntryValue][] = [];
+    const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+      e.preventDefault();
+      const formData = new FormData(e.currentTarget);
+      submittedEntries = Array.from(formData.entries());
+    };
+
+    render(
+      <form onSubmit={handleSubmit} data-testid="tag-form">
+        <TagSelect
+          name="tags"
+          options={sampleOptions}
+          value={['clothing', 'tools']}
+          onChange={vi.fn()}
+        />
+        <button type="submit">Save</button>
+      </form>,
+    );
+
+    fireEvent.submit(screen.getByTestId('tag-form'));
+    expect(submittedEntries).toEqual([
+      ['tags', 'clothing'],
+      ['tags', 'tools'],
+    ]);
+  });
 });
