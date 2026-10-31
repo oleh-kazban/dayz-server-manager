@@ -1,3 +1,7 @@
 {
-  "inherits": [{ "path": "D:/Projects/sdlc-skills-repo/presets/react-vite-spa.json" }]
+  "inherits": [
+    {
+      "path": "D:/Projects/sdlc-skills-repo/PRESETS/react-vite-spa.json"
+    }
+  ]
 }
