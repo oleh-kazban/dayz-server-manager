@@ -26,7 +26,7 @@ describe('Breadcrumbs', () => {
   it('renders data-driven breadcrumbs with semantic nav landmark and ordered list', () => {
     render(<Breadcrumbs items={TEST_ITEMS} />);
 
-    const nav = screen.getByRole('navigation', { name: 'Breadcrumb' });
+    const nav = screen.getByRole('navigation', { name: 'Breadcrumbs' });
     expect(nav).toBeInTheDocument();
 
     const list = screen.getByRole('list');
@@ -177,5 +177,32 @@ describe('Breadcrumbs', () => {
     expect(navRef.current).toBeInstanceOf(HTMLElement);
     expect(navRef.current?.tagName.toLowerCase()).toBe('nav');
     expect(linkRef.current).toBeInstanceOf(HTMLAnchorElement);
+  });
+
+  it('forwards explicit attributes on BreadcrumbLink', () => {
+    render(
+      <Breadcrumbs>
+        <BreadcrumbList>
+          <BreadcrumbItem>
+            <BreadcrumbLink
+              id="ext-link"
+              title="Documentation Title"
+              aria-label="Docs external page"
+              href="https://example.com"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              Docs
+            </BreadcrumbLink>
+          </BreadcrumbItem>
+        </BreadcrumbList>
+      </Breadcrumbs>,
+    );
+
+    const link = screen.getByRole('link', { name: 'Docs external page' });
+    expect(link).toHaveAttribute('id', 'ext-link');
+    expect(link).toHaveAttribute('title', 'Documentation Title');
+    expect(link).toHaveAttribute('target', '_blank');
+    expect(link).toHaveAttribute('rel', 'noopener noreferrer');
   });
 });

@@ -1,4 +1,4 @@
-import { type ComponentType, isValidElement, type ReactNode } from 'react';
+import { type ComponentType, isValidElement, type ReactNode, useId } from 'react';
 
 import { AlertTriangle, CheckCircle2, CircleAlert, Info, type LucideIcon, X } from 'lucide-react';
 
@@ -17,7 +17,7 @@ interface VariantTheme {
 const THEMES: Record<NormalizedVariant, VariantTheme> = {
   info: {
     containerClasses:
-      'bg-[var(--color-primary)]/5 border-[var(--color-primary)]/30 text-[var(--color-text-main)]',
+      'border-[var(--color-primary-border)] bg-[var(--color-primary-light)] text-[var(--color-primary)]',
     iconClasses: 'text-[var(--color-primary)]',
     defaultIcon: Info,
     role: 'status',
@@ -25,7 +25,7 @@ const THEMES: Record<NormalizedVariant, VariantTheme> = {
   },
   warning: {
     containerClasses:
-      'bg-[var(--color-status-warning)]/10 border-[var(--color-status-warning)]/30 text-[var(--color-text-main)]',
+      'border-[var(--color-status-warning-border)] bg-[var(--color-status-warning-light)] text-[var(--color-status-warning)]',
     iconClasses: 'text-[var(--color-status-warning)]',
     defaultIcon: AlertTriangle,
     role: 'alert',
@@ -33,7 +33,7 @@ const THEMES: Record<NormalizedVariant, VariantTheme> = {
   },
   error: {
     containerClasses:
-      'bg-[var(--color-status-danger)]/10 border-[var(--color-status-danger)]/30 text-[var(--color-text-main)]',
+      'border-[var(--color-status-danger-border)] bg-[var(--color-status-danger-light)] text-[var(--color-status-danger)]',
     iconClasses: 'text-[var(--color-status-danger)]',
     defaultIcon: CircleAlert,
     role: 'alert',
@@ -41,7 +41,7 @@ const THEMES: Record<NormalizedVariant, VariantTheme> = {
   },
   success: {
     containerClasses:
-      'bg-[var(--color-status-success)]/10 border-[var(--color-status-success)]/30 text-[var(--color-text-main)]',
+      'border-[var(--color-status-success-border)] bg-[var(--color-status-success-light)] text-[var(--color-status-success)]',
     iconClasses: 'text-[var(--color-status-success)]',
     defaultIcon: CheckCircle2,
     role: 'status',
@@ -72,6 +72,7 @@ function resolveIcon(icon: NoticeProps['icon'], theme: VariantTheme): ReactNode 
 
 export function Notice({
   ref,
+  id,
   variant = 'info',
   title,
   children,
@@ -81,8 +82,9 @@ export function Notice({
   closeLabel = 'Dismiss notice',
   className = '',
   role: customRole,
-  ...props
 }: NoticeProps) {
+  const generatedId = useId();
+  const titleId = id ? `${id}-title` : `notice-title-${generatedId}`;
   const normalizedVariant: NormalizedVariant = variant === 'danger' ? 'error' : variant;
   const theme = THEMES[normalizedVariant];
   const renderedIcon = resolveIcon(icon, theme);
@@ -91,10 +93,11 @@ export function Notice({
   return (
     <div
       ref={ref}
+      id={id}
       role={activeRole}
       aria-live={theme.ariaLive}
+      aria-labelledby={title ? titleId : undefined}
       className={`relative flex items-start gap-3 p-3.5 rounded-xl border text-xs font-sans transition-all shadow-xs ${theme.containerClasses} ${className}`.trim()}
-      {...props}
     >
       {renderedIcon && (
         <span className={`shrink-0 mt-0.5 ${theme.iconClasses}`}>{renderedIcon}</span>
@@ -102,7 +105,9 @@ export function Notice({
 
       <div className="flex-1 min-w-0 space-y-1">
         {title && (
-          <h5 className="font-semibold text-[var(--color-text-main)] leading-snug">{title}</h5>
+          <h5 id={titleId} className="font-semibold text-[var(--color-text-main)] leading-snug">
+            {title}
+          </h5>
         )}
         {children && (
           <div className="text-[var(--color-text-secondary)] leading-relaxed">{children}</div>
@@ -115,7 +120,7 @@ export function Notice({
           type="button"
           onClick={onClose}
           aria-label={closeLabel}
-          className="shrink-0 -mr-2 -mt-2 h-9 w-9 inline-flex items-center justify-center rounded-lg text-[var(--color-text-muted)] hover:text-[var(--color-text-main)] hover:bg-[var(--color-surface)]/60 transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--color-primary)] cursor-pointer"
+          className="shrink-0 -mr-2 -mt-2 h-9 w-9 inline-flex items-center justify-center rounded-lg text-[var(--color-text-muted)] hover:text-[var(--color-text-main)] hover:bg-[var(--color-surface-hover)] transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--color-primary)] cursor-pointer"
         >
           <X className="w-4 h-4" />
         </button>

@@ -2,6 +2,8 @@ import { useId, useMemo } from 'react';
 
 import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from 'lucide-react';
 
+import { Select, type SelectOption } from '../select';
+
 import { type PaginationProps } from './Pagination.types';
 import { getPaginationItems } from './pagination.utils';
 
@@ -14,6 +16,8 @@ function renderDefaultItemCount(from: number, to: number, total: number) {
 
 export function Pagination({
   ref,
+  id,
+  style,
   page,
   totalPages,
   onPageChange,
@@ -29,9 +33,14 @@ export function Pagination({
   pageSizeLabel = 'Rows per page:',
   disabled = false,
   className = '',
-  ...props
+  'aria-label': ariaLabel = 'Pagination Navigation',
 }: PaginationProps) {
   const selectId = useId();
+
+  const pageSizeSelectOptions: SelectOption<number>[] = useMemo(
+    () => pageSizeOptions.map(size => ({ value: size, label: String(size) })),
+    [pageSizeOptions],
+  );
 
   const safePage = Math.max(1, Math.min(page, Math.max(1, totalPages)));
 
@@ -56,10 +65,11 @@ export function Pagination({
   return (
     <nav
       ref={ref}
+      id={id}
+      style={style}
       role="navigation"
-      aria-label="Pagination"
+      aria-label={ariaLabel}
       className={`flex items-center justify-between gap-4 text-xs font-sans text-[var(--color-text-secondary)] ${className}`.trim()}
-      {...props}
     >
       {/* Left section: Item range counter */}
       {showItemCount && totalItems !== undefined ? (
@@ -77,23 +87,21 @@ export function Pagination({
           <div className="flex items-center gap-2">
             <label
               htmlFor={selectId}
-              className="text-xs text-[var(--color-text-muted)] select-none"
+              className="text-xs text-[var(--color-text-muted)] select-none shrink-0"
             >
               {pageSizeLabel}
             </label>
-            <select
+            <Select<number>
               id={selectId}
               value={pageSize}
+              options={pageSizeSelectOptions}
               disabled={disabled}
-              onChange={e => onPageSizeChange(Number(e.target.value))}
-              className="h-9 px-2.5 py-1 text-xs font-medium rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text-main)] shadow-2xs hover:bg-[var(--color-surface-hover)] focus:outline-none focus:ring-1 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)] cursor-pointer disabled:cursor-not-allowed disabled:opacity-50 transition-colors"
-            >
-              {pageSizeOptions.map(size => (
-                <option key={size} value={size}>
-                  {size}
-                </option>
-              ))}
-            </select>
+              onChange={val => {
+                if (val !== null) onPageSizeChange(val);
+              }}
+              aria-label={pageSizeLabel}
+              containerClassName="w-20"
+            />
           </div>
         )}
 

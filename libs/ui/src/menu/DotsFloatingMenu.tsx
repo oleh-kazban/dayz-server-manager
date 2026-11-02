@@ -26,6 +26,7 @@ export function DotsFloatingMenu({
   alignment = 'end',
   disabled = false,
   customClassName = '',
+  containerClassName = '',
   icon,
 }: DotsFloatingMenuProps) {
   const menuId = useId();
@@ -110,7 +111,7 @@ export function DotsFloatingMenu({
   };
 
   return (
-    <div ref={containerRef} className="relative inline-block">
+    <div ref={containerRef} className={`relative inline-block ${containerClassName}`.trim()}>
       <button
         ref={handleTriggerRef}
         type="button"
@@ -132,7 +133,7 @@ export function DotsFloatingMenu({
             id={menuId}
             role="menu"
             aria-label={ariaLabel}
-            className="fixed z-50 min-w-40 overflow-y-auto rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-1 font-sans text-xs text-[var(--color-text-main)] shadow-[var(--shadow-card)]"
+            className="fixed z-50 min-w-40 overflow-y-auto rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-1 font-sans text-xs text-[var(--color-text-main)] shadow-[var(--shadow-dropdown)]"
             style={{
               top: popupPosition?.top ?? 0,
               left: popupPosition?.left ?? 0,

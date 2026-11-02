@@ -58,7 +58,9 @@ export function Loader({
     >
       <span className="sr-only">{label}</span>
 
-      {variant === 'spinner' && <Loader2 className={`animate-spin ${sizeConfig.icon}`} />}
+      {variant === 'spinner' && (
+        <Loader2 aria-hidden="true" className={`animate-spin ${sizeConfig.icon}`} />
+      )}
 
       {variant === 'dots' && (
         <div
@@ -93,7 +95,10 @@ export function Loader({
       )}
 
       {showLabel && (
-        <span className={`font-medium font-sans text-[var(--color-text-muted)] ${sizeConfig.text}`}>
+        <span
+          aria-hidden="true"
+          className={`font-medium font-sans text-[var(--color-text-muted)] ${sizeConfig.text}`}
+        >
           {label}
         </span>
       )}

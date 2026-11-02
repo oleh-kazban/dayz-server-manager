@@ -100,11 +100,11 @@ export const WithLeadingIcon: Story = {
 };
 
 /* ====================================================================
-   SCREENSHOT 1: LOG LEVELS SHOWCASE (INFO, SAVE, WARN, ERROR)
+   LOG LEVELS SHOWCASE (INFO, SAVE, WARN, ERROR)
    ==================================================================== */
 
 export const LogLevelsShowcase: Story = {
-  name: 'Log Levels (Screenshot 1)',
+  name: 'Log Levels',
   render: args => (
     <div className="p-6 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] space-y-4 max-w-md w-full">
       <div>
@@ -158,11 +158,11 @@ export const LogLevelsShowcase: Story = {
 };
 
 /* ====================================================================
-   SCREENSHOT 2: TACTICAL MAP PILLS SHOWCASE
+   TACTICAL MAP PILLS SHOWCASE
    ==================================================================== */
 
 export const TacticalPillsShowcase: Story = {
-  name: 'Tactical Map Pills (Screenshot 2)',
+  name: 'Tactical Map Pills',
   render: args => (
     <div className="p-8 rounded-2xl border border-zinc-800 bg-[#141b16] space-y-6 max-w-sm w-full text-white">
       <div className="text-xs text-zinc-400">Tactical Radar / GPS Player Badges</div>
@@ -194,11 +194,11 @@ export const TacticalPillsShowcase: Story = {
 };
 
 /* ====================================================================
-   SCREENSHOT 3: CATEGORIES SHOWCASE
+   CATEGORIES SHOWCASE
    ==================================================================== */
 
 export const CategoriesShowcase: Story = {
-  name: 'Economy Categories (Screenshot 3)',
+  name: 'Economy Categories',
   render: args => (
     <div className="p-6 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] space-y-4 max-w-xs w-full">
       <div className="border-b border-[var(--color-border)] pb-2 flex items-center justify-between">
@@ -239,7 +239,7 @@ export const CategoriesShowcase: Story = {
 };
 
 /* ====================================================================
-   SCREENSHOT 4: SERVER TAGS SHOWCASE (Interactive Add & Dismiss)
+   SERVER TAGS SHOWCASE (Interactive Add & Dismiss)
    ==================================================================== */
 
 function ServerTagsDemo({ disabled = false }: { disabled?: boolean }) {
@@ -288,7 +288,7 @@ function ServerTagsDemo({ disabled = false }: { disabled?: boolean }) {
 }
 
 export const ServerTagsShowcase: Story = {
-  name: 'Server Tags & Add Trigger (Screenshot 4)',
+  name: 'Server Tags & Add Trigger',
   render: args => <ServerTagsDemo disabled={args.disabled} />,
 };
 

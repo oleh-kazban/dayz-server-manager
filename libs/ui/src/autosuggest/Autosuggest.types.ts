@@ -38,7 +38,7 @@ export interface AutosuggestProps<T> {
   /** Accessibility */
   'aria-label'?: string;
 
-  /** Root container className */
+  /** Styling class applied directly to the underlying <input> element */
   className?: string;
 
   /** Standard container styling escape hatch */

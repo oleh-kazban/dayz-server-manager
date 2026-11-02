@@ -1,9 +1,9 @@
-import type { HTMLAttributes, ReactNode, Ref } from 'react';
+import type { CSSProperties, HTMLAttributes, ReactNode, Ref } from 'react';
 
 export type EmptyStateVariant = 'default' | 'dashed' | 'compact';
 export type EmptyStateTitleTag = 'h2' | 'h3' | 'h4' | 'h5';
 
-export interface EmptyStateProps extends Omit<HTMLAttributes<HTMLDivElement>, 'title'> {
+export interface EmptyStateProps {
   /**
    * Decorative icon or visual badge.
    */
@@ -44,10 +44,28 @@ export interface EmptyStateProps extends Omit<HTMLAttributes<HTMLDivElement>, 't
    */
   ref?: Ref<HTMLDivElement>;
 
+  /** Custom container class */
+  className?: string;
+
+  /** HTML id */
+  id?: string;
+
+  /** Inline styles */
+  style?: CSSProperties;
+
   /**
    * Custom child elements for slot-based compound composition.
    */
   children?: ReactNode;
+
+  /** Test automation identifier */
+  'data-testid'?: string;
+
+  /** Accessible label */
+  'aria-label'?: string;
+
+  /** Accessible labelling element ID */
+  'aria-labelledby'?: string;
 }
 
 export interface EmptyStateIconProps extends HTMLAttributes<HTMLDivElement> {

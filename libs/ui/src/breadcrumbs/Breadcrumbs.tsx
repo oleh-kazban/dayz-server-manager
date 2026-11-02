@@ -45,7 +45,11 @@ export function BreadcrumbLink({
   asChild = false,
   children,
   className = '',
-  ...props
+  'aria-label': ariaLabel,
+  target,
+  rel,
+  id,
+  title,
 }: BreadcrumbLinkProps) {
   const baseClasses =
     `hover:text-[var(--color-text-main)] transition-colors inline-flex items-center gap-1.5 font-medium focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--color-primary)] rounded ${className}`.trim();
@@ -59,7 +63,17 @@ export function BreadcrumbLink({
 
   if (href) {
     return (
-      <a ref={ref} href={href} onClick={onClick} className={baseClasses} {...props}>
+      <a
+        ref={ref}
+        id={id}
+        title={title}
+        href={href}
+        target={target}
+        rel={rel}
+        aria-label={ariaLabel}
+        onClick={onClick}
+        className={baseClasses}
+      >
         {icon && <span className="shrink-0 text-current">{icon}</span>}
         {children}
       </a>
@@ -68,7 +82,14 @@ export function BreadcrumbLink({
 
   if (onClick) {
     return (
-      <button type="button" onClick={onClick} className={baseClasses}>
+      <button
+        id={id}
+        title={title}
+        aria-label={ariaLabel}
+        type="button"
+        onClick={onClick}
+        className={baseClasses}
+      >
         {icon && <span className="shrink-0 text-current">{icon}</span>}
         {children}
       </button>
@@ -76,7 +97,7 @@ export function BreadcrumbLink({
   }
 
   return (
-    <span className={baseClasses}>
+    <span id={id} title={title} aria-label={ariaLabel} className={baseClasses}>
       {icon && <span className="shrink-0 text-current">{icon}</span>}
       {children}
     </span>
@@ -174,7 +195,7 @@ export function Breadcrumbs({
   maxItems,
   itemsBeforeCollapse = 1,
   itemsAfterCollapse = 2,
-  'aria-label': ariaLabel = 'Breadcrumb',
+  'aria-label': ariaLabel = 'Breadcrumbs',
   className = '',
   ...props
 }: BreadcrumbsProps) {

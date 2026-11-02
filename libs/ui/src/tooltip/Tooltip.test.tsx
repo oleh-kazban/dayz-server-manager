@@ -148,11 +148,15 @@ describe('Tooltip Component', () => {
     expect(screen.queryByRole('tooltip')).not.toBeInTheDocument();
   });
 
-  it('hides tooltip when Escape key is pressed', () => {
+  it('hides tooltip and stops event propagation when Escape key is pressed while visible', () => {
+    const parentKeyDown = vi.fn();
+
     render(
-      <Tooltip content="Escapable tooltip">
-        <button type="button">Trigger</button>
-      </Tooltip>,
+      <div onKeyDown={parentKeyDown}>
+        <Tooltip content="Escapable tooltip">
+          <button type="button">Trigger</button>
+        </Tooltip>
+      </div>,
     );
 
     const button = screen.getByRole('button', { name: /trigger/i });
@@ -162,6 +166,25 @@ describe('Tooltip Component', () => {
 
     fireEvent.keyDown(button, { key: 'Escape' });
     expect(screen.queryByRole('tooltip')).not.toBeInTheDocument();
+    expect(parentKeyDown).not.toHaveBeenCalled();
+  });
+
+  it('allows Escape key event to bubble normally when tooltip is not visible', () => {
+    const parentKeyDown = vi.fn();
+
+    render(
+      <div onKeyDown={parentKeyDown}>
+        <Tooltip content="Escapable tooltip">
+          <button type="button">Trigger</button>
+        </Tooltip>
+      </div>,
+    );
+
+    const button = screen.getByRole('button', { name: /trigger/i });
+    expect(screen.queryByRole('tooltip')).not.toBeInTheDocument();
+
+    fireEvent.keyDown(button, { key: 'Escape' });
+    expect(parentKeyDown).toHaveBeenCalledTimes(1);
   });
 
   it('does not show when disabled is true', () => {

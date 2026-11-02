@@ -49,7 +49,7 @@ export function Autosuggest<T>({
 
   const [highlightedIndex, setHighlightedIndex] = useState(-1);
   const [isSelectionCommitted, setIsSelectionCommitted] = useState(false);
-  const optionRefs = useRef<(HTMLDivElement | null)[]>([]);
+  const optionRefs = useRef<(HTMLButtonElement | null)[]>([]);
 
   const { isOpen, open, close, popupPosition, containerRef, triggerRef, popupRef, updatePosition } =
     usePopup<HTMLInputElement>('start');
@@ -226,18 +226,23 @@ export function Autosuggest<T>({
       const label = getOptionLabel(item);
 
       return (
-        <div
+        <button
           key={key}
           id={`${listboxId}-option-${index}`}
           ref={element => {
             optionRefs.current[index] = element;
           }}
+          type="button"
           role="option"
           tabIndex={-1}
           aria-selected={isHighlighted}
           onMouseEnter={() => setHighlightedIndex(index)}
+          onMouseDown={e => {
+            e.preventDefault();
+            handleSelect(item);
+          }}
           onClick={() => handleSelect(item)}
-          className={`flex cursor-pointer items-center justify-between gap-2 rounded-lg px-3 py-2 text-xs transition-colors ${
+          className={`flex w-full text-left font-sans border-0 outline-none bg-transparent cursor-pointer items-center justify-between gap-2 rounded-lg px-3 py-2 text-xs transition-colors ${
             isHighlighted
               ? 'bg-[var(--color-primary)]/10 text-[var(--color-primary)]'
               : 'text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-subtle)] hover:text-[var(--color-text-main)]'
@@ -248,12 +253,12 @@ export function Autosuggest<T>({
           ) : (
             <span className="truncate">{label}</span>
           )}
-        </div>
+        </button>
       );
     });
   };
 
-  const resolvedContainerClass = containerClassName || customClassName || className;
+  const resolvedContainerClass = containerClassName || customClassName || '';
 
   return (
     <div ref={containerRef} className={`space-y-1.5 text-left ${resolvedContainerClass}`.trim()}>
@@ -308,7 +313,7 @@ export function Autosuggest<T>({
             error
               ? 'border-[var(--color-status-danger)] focus:border-[var(--color-status-danger)] focus:ring-1 focus:ring-[var(--color-status-danger)]'
               : 'border-[var(--color-border)] focus:border-[var(--color-primary)] focus:ring-1 focus:ring-[var(--color-primary)]'
-          }`}
+          } ${className}`.trim()}
         />
 
         {!disabled && value.length > 0 && (
@@ -342,10 +347,6 @@ export function Autosuggest<T>({
         createPortal(
           <div
             ref={popupRef}
-            onMouseDown={event => {
-              // Prevent input blur before option onClick executes
-              event.preventDefault();
-            }}
             className="fixed z-50 overflow-y-auto rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-1 text-[var(--color-text-main)] shadow-[var(--shadow-card)]"
             style={{
               top: popupPosition?.top ?? 0,

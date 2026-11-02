@@ -130,7 +130,7 @@ export const WithHeaderActionsAndFooter: Story = {
 };
 
 /* ====================================================================
-   SCREENSHOT 1: SERVER LOGS CARD
+   SERVER LOGS CARD
    ==================================================================== */
 
 function ServerLogsShowcaseDemo() {
@@ -227,16 +227,16 @@ function ServerLogsShowcaseDemo() {
 }
 
 export const ServerLogsShowcase: Story = {
-  name: 'Server Logs Card (Screenshot 1)',
+  name: 'Server Logs Card',
   render: () => <ServerLogsShowcaseDemo />,
 };
 
 /* ====================================================================
-   SCREENSHOT 2: INSTALLED MODS CARD
+   INSTALLED MODS CARD
    ==================================================================== */
 
 export const InstalledModsShowcase: Story = {
-  name: 'Installed Mods Card (Screenshot 2)',
+  name: 'Installed Mods Card',
   render: () => (
     <div className="w-[380px]">
       <Card
@@ -315,11 +315,11 @@ export const InstalledModsShowcase: Story = {
 };
 
 /* ====================================================================
-   SCREENSHOT 3: SERVER PERFORMANCE CARD
+   SERVER PERFORMANCE CARD
    ==================================================================== */
 
 export const ServerPerformanceShowcase: Story = {
-  name: 'Server Performance Card (Screenshot 3)',
+  name: 'Server Performance Card',
   render: () => (
     <div className="w-[480px]">
       <Card
@@ -418,11 +418,11 @@ export const ServerPerformanceShowcase: Story = {
 };
 
 /* ====================================================================
-   SCREENSHOT 4: PLAYER ACTIVITY CARD
+   PLAYER ACTIVITY CARD
    ==================================================================== */
 
 export const PlayerActivityShowcase: Story = {
-  name: 'Player Activity Card (Screenshot 4)',
+  name: 'Player Activity Card',
   render: () => (
     <div className="w-[580px]">
       <Card
@@ -496,11 +496,11 @@ export const PlayerActivityShowcase: Story = {
 };
 
 /* ====================================================================
-   SCREENSHOT 5: PLAYERS BY REGION (WITH FOOTER)
+   PLAYERS BY REGION (WITH FOOTER)
    ==================================================================== */
 
 export const PlayersByRegionShowcase: Story = {
-  name: 'Players By Region Card with Footer (Screenshot 5)',
+  name: 'Players By Region Card with Footer',
   render: () => (
     <div className="w-[360px]">
       <Card

@@ -45,6 +45,9 @@ export interface DatePickerProps {
   /** Standard container styling escape hatch */
   containerClassName?: string;
 
+  /** Styling class applied directly to the trigger button */
+  className?: string;
+
   /** Change callback with ISO date string or undefined when cleared */
   onChange: (value: string | undefined) => void;
 

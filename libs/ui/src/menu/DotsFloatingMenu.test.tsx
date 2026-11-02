@@ -109,4 +109,21 @@ describe('DotsFloatingMenu', () => {
     expect(screen.getByTestId('settings-icon')).toBeInTheDocument();
     expect(ref.current).toBeInstanceOf(HTMLButtonElement);
   });
+
+  it('applies containerClassName to the outer wrapper and shadow-[var(--shadow-dropdown)] to menu', async () => {
+    const user = userEvent.setup();
+    const { container } = render(
+      <DotsFloatingMenu
+        options={[{ label: 'Action', onSelect: vi.fn() }]}
+        ariaLabel="Actions"
+        containerClassName="custom-dots-wrapper"
+      />,
+    );
+
+    expect(container.firstChild).toHaveClass('custom-dots-wrapper');
+
+    await user.click(screen.getByRole('button', { name: /actions/i }));
+    const menu = screen.getByRole('menu', { name: /actions/i });
+    expect(menu).toHaveClass('shadow-[var(--shadow-dropdown)]');
+  });
 });

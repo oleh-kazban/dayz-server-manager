@@ -447,7 +447,7 @@ export const WorkbenchToolbarShowcase: Story = {
 };
 
 export const TableActionsShowcase: Story = {
-  name: 'Table Actions (Screenshots Showcase)',
+  name: 'Table Actions',
   parameters: {
     controls: { include: ['disabled', 'isLoading'] },
   },

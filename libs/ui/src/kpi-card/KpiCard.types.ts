@@ -1,8 +1,8 @@
-import type { HTMLAttributes, ReactNode, Ref } from 'react';
+import type { CSSProperties, HTMLAttributes, ReactNode, Ref } from 'react';
 
 export type KpiTrend = 'positive' | 'negative' | 'neutral' | 'warning';
 
-export interface KpiCardProps extends Omit<HTMLAttributes<HTMLDivElement>, 'title'> {
+export interface KpiCardProps {
   /**
    * Metric label string or node (e.g. "Players online", "Average latency").
    */
@@ -57,10 +57,28 @@ export interface KpiCardProps extends Omit<HTMLAttributes<HTMLDivElement>, 'titl
    */
   ref?: Ref<HTMLDivElement>;
 
+  /** Custom container class */
+  className?: string;
+
+  /** HTML id */
+  id?: string;
+
+  /** Inline styles */
+  style?: CSSProperties;
+
   /**
    * Custom children for slot-based composition.
    */
   children?: ReactNode;
+
+  /** Test automation identifier */
+  'data-testid'?: string;
+
+  /** Accessible label */
+  'aria-label'?: string;
+
+  /** Accessible labelling element ID */
+  'aria-labelledby'?: string;
 }
 
 export interface KpiCardHeaderProps extends HTMLAttributes<HTMLDivElement> {

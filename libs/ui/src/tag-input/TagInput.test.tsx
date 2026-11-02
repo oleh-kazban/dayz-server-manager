@@ -32,7 +32,7 @@ describe('TagInput', () => {
     const onChange = vi.fn();
     render(<TagInput value={['first']} onChange={onChange} />);
 
-    const input = screen.getByRole('textbox');
+    const input = screen.getByRole('combobox');
 
     // Type new tag and press Enter
     fireEvent.change(input, { target: { value: 'second' } });
@@ -52,7 +52,7 @@ describe('TagInput', () => {
     const onChange = vi.fn();
     render(<TagInput value={['military']} onChange={onChange} />);
 
-    const input = screen.getByRole('textbox');
+    const input = screen.getByRole('combobox');
     fireEvent.change(input, { target: { value: 'military' } });
     fireEvent.keyDown(input, { key: 'Enter' });
 
@@ -65,7 +65,7 @@ describe('TagInput', () => {
     render(<TagInput value={['one', 'two']} maxTags={2} onChange={onChange} />);
 
     // Input should be hidden when maxTags is reached
-    expect(screen.queryByRole('textbox')).not.toBeInTheDocument();
+    expect(screen.queryByRole('combobox')).not.toBeInTheDocument();
   });
 
   it('removes tag on tag remove button click', () => {
@@ -82,7 +82,7 @@ describe('TagInput', () => {
     const onChange = vi.fn();
     render(<TagInput value={['first', 'second']} onChange={onChange} />);
 
-    const input = screen.getByRole('textbox');
+    const input = screen.getByRole('combobox');
     fireEvent.keyDown(input, { key: 'Backspace' });
 
     expect(onChange).toHaveBeenCalledWith(['first']);
@@ -92,7 +92,7 @@ describe('TagInput', () => {
     const onChange = vi.fn();
     render(<TagInput value={['first', 'second']} onChange={onChange} />);
 
-    const input = screen.getByRole('textbox');
+    const input = screen.getByRole('combobox');
     fireEvent.change(input, { target: { value: 'typing' } });
     fireEvent.keyDown(input, { key: 'Backspace' });
 
@@ -105,7 +105,7 @@ describe('TagInput', () => {
       <TagInput value={[]} suggestions={['military', 'police', 'hunting']} onChange={onChange} />,
     );
 
-    const input = screen.getByRole('textbox');
+    const input = screen.getByRole('combobox');
     fireEvent.focus(input);
     fireEvent.change(input, { target: { value: 'pol' } });
 
@@ -130,7 +130,7 @@ describe('TagInput', () => {
       />,
     );
 
-    const input = screen.getByRole('textbox');
+    const input = screen.getByRole('combobox');
     fireEvent.change(input, { target: { value: 'invalid' } });
     fireEvent.keyDown(input, { key: 'Enter' });
 
@@ -147,7 +147,7 @@ describe('TagInput', () => {
     const onChange = vi.fn();
     render(<TagInput value={['locked']} disabled onChange={onChange} />);
 
-    const input = screen.getByRole('textbox');
+    const input = screen.getByRole('combobox');
     expect(input).toBeDisabled();
 
     // Remove buttons should not be present
@@ -172,7 +172,7 @@ describe('TagInput', () => {
     const onChange = vi.fn();
     render(<TagInput value={[]} onChange={onChange} />);
 
-    const input = screen.getByRole('textbox');
+    const input = screen.getByRole('combobox');
     fireEvent.change(input, { target: { value: 'blurred_tag' } });
     fireEvent.blur(input);
 
@@ -183,7 +183,7 @@ describe('TagInput', () => {
     const onChange = vi.fn();
     render(<TagInput value={[]} onChange={onChange} addOnBlur />);
 
-    const input = screen.getByRole('textbox');
+    const input = screen.getByRole('combobox');
     fireEvent.change(input, { target: { value: 'blurred_tag' } });
     fireEvent.blur(input);
 
@@ -196,7 +196,7 @@ describe('TagInput', () => {
 
     render(<TagInput value={[]} suggestions={suggestions} onChange={onChange} />);
 
-    const input = screen.getByRole('textbox');
+    const input = screen.getByRole('combobox');
     fireEvent.focus(input);
     fireEvent.change(input, { target: { value: 'chern' } });
 
@@ -219,7 +219,7 @@ describe('TagInput', () => {
       />,
     );
 
-    const input = screen.getByRole('textbox');
+    const input = screen.getByRole('combobox');
     await user.type(input, 'pol');
 
     expect(screen.getByRole('listbox')).toBeInTheDocument();
@@ -230,5 +230,78 @@ describe('TagInput', () => {
     expect(input).toHaveFocus();
     expect(onChange).not.toHaveBeenCalled();
     expect(input).toHaveValue('pol');
+  });
+
+  it('manages combobox ARIA attributes based on open/closed state', async () => {
+    const user = userEvent.setup();
+    render(
+      <TagInput
+        id="tag-combobox"
+        value={[]}
+        suggestions={['military', 'police']}
+        onChange={vi.fn()}
+      />,
+    );
+
+    const combobox = screen.getByRole('combobox');
+    expect(combobox).toHaveAttribute('aria-autocomplete', 'list');
+    expect(combobox).toHaveAttribute('aria-expanded', 'false');
+    expect(combobox).not.toHaveAttribute('aria-controls');
+    expect(combobox).not.toHaveAttribute('aria-activedescendant');
+
+    await user.type(combobox, 'pol');
+    expect(combobox).toHaveAttribute('aria-expanded', 'true');
+    expect(combobox).toHaveAttribute('aria-controls', 'tag-combobox-listbox');
+    expect(combobox).not.toHaveAttribute('aria-activedescendant');
+
+    await user.keyboard('{ArrowDown}');
+    expect(combobox).toHaveAttribute('aria-activedescendant', 'tag-combobox-listbox-option-0');
+  });
+
+  it('skips disabled suggestions on ArrowDown navigation and prevents Enter from committing them', async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    const suggestions = [
+      { value: 'opt1', label: 'Option 1' },
+      { value: 'opt2', label: 'Option 2', disabled: true },
+      { value: 'opt3', label: 'Option 3' },
+    ];
+
+    render(
+      <TagInput id="disabled-test" value={[]} suggestions={suggestions} onChange={onChange} />,
+    );
+
+    const combobox = screen.getByRole('combobox');
+    await user.type(combobox, 'opt');
+
+    // ArrowDown moves to index 0 (opt1)
+    await user.keyboard('{ArrowDown}');
+    expect(combobox).toHaveAttribute('aria-activedescendant', 'disabled-test-listbox-option-0');
+
+    // Next ArrowDown skips disabled index 1 (opt2), lands on index 2 (opt3)
+    await user.keyboard('{ArrowDown}');
+    expect(combobox).toHaveAttribute('aria-activedescendant', 'disabled-test-listbox-option-2');
+
+    // ArrowUp skips disabled index 1 (opt2), lands back on index 0 (opt1)
+    await user.keyboard('{ArrowUp}');
+    expect(combobox).toHaveAttribute('aria-activedescendant', 'disabled-test-listbox-option-0');
+
+    // Verify disabled option element
+    const disabledOption = screen.getByRole('option', { name: 'Option 2' });
+    expect(disabledOption).toBeDisabled();
+    fireEvent.mouseDown(disabledOption);
+    expect(onChange).not.toHaveBeenCalled();
+
+    // Enter commits currently highlighted enabled option (opt1), never opt2
+    await user.keyboard('{Enter}');
+    expect(onChange).toHaveBeenCalledWith(['opt1']);
+  });
+
+  it('applies customClassName to the container wrapper', () => {
+    const { container } = render(
+      <TagInput value={[]} onChange={vi.fn()} customClassName="taginput-custom-container" />,
+    );
+
+    expect(container.firstChild).toHaveClass('taginput-custom-container');
   });
 });

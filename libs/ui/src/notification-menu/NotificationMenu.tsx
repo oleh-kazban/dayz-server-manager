@@ -265,6 +265,12 @@ export function NotificationMenu({
     }
   }, [disabled, isOpen, close]);
 
+  useEffect(() => {
+    if (isOpen) {
+      popupRef.current?.focus();
+    }
+  }, [isOpen, popupRef]);
+
   const handleKeyDown = (event: ReactKeyboardEvent<HTMLDivElement>) => {
     if (event.key === 'Escape') {
       event.preventDefault();
@@ -315,6 +321,7 @@ export function NotificationMenu({
             id={panelId}
             role="dialog"
             aria-label={ariaLabel ?? 'Notifications'}
+            tabIndex={-1}
             onKeyDown={handleKeyDown}
             style={{
               position: 'fixed',
@@ -323,7 +330,7 @@ export function NotificationMenu({
               zIndex: 50,
               visibility: popupPosition ? 'visible' : 'hidden',
             }}
-            className={`w-96 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-2xl overflow-hidden font-sans select-none animate-in fade-in zoom-in-95 duration-100 flex flex-col ${popupClassName}`.trim()}
+            className={`w-96 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-[var(--shadow-dropdown)] overflow-hidden font-sans select-none animate-in fade-in zoom-in-95 duration-100 flex flex-col focus:outline-none ${popupClassName}`.trim()}
           >
             {/* Header */}
             <NotificationHeader unreadCount={unreadCount} onMarkAllAsRead={onMarkAllAsRead} />

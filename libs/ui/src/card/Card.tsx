@@ -1,3 +1,5 @@
+import type { Ref } from 'react';
+
 import type { CardHeadingLevel, CardProps } from './Card.types';
 
 export type { CardHeadingLevel, CardProps };
@@ -18,7 +20,7 @@ export function Card({
 
   return (
     <Component
-      ref={ref}
+      ref={ref as Ref<HTMLDivElement>}
       id={id}
       className={`rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-5 shadow-[var(--shadow-card)] transition-all duration-200 ${className}`}
     >

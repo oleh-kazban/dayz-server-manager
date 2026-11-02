@@ -63,6 +63,9 @@ export interface TagInputProps {
   /** Container styling escape hatch */
   containerClassName?: string;
 
+  /** Root container styling escape hatch */
+  customClassName?: string;
+
   /** Suggestion popover menu styling escape hatch */
   popupClassName?: string;
 
@@ -118,6 +121,9 @@ export interface TagSelectProps {
 
   /** Container styling escape hatch */
   containerClassName?: string;
+
+  /** Root container styling escape hatch */
+  customClassName?: string;
 
   /** Popover menu styling escape hatch */
   popupClassName?: string;

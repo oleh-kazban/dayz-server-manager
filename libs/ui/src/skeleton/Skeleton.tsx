@@ -16,8 +16,15 @@ export function Skeleton({
   lines = 1,
   className = '',
   style,
+  role: propRole,
+  'aria-label': propAriaLabel,
+  'aria-hidden': propAriaHidden,
   ...props
 }: SkeletonProps) {
+  const isAriaHidden = propAriaHidden === true || propAriaHidden === 'true';
+  const role = isAriaHidden ? undefined : (propRole ?? 'status');
+  const ariaLabel = isAriaHidden ? undefined : (propAriaLabel ?? 'Loading...');
+
   const isMultiLine = variant === 'text' && lines > 1;
   const variantClass = getSkeletonVariantClass(variant);
   const animationClass = getSkeletonAnimationClass(animation);
@@ -41,8 +48,9 @@ export function Skeleton({
     return (
       <div
         ref={ref}
-        role="status"
-        aria-label="Loading..."
+        role={role}
+        aria-label={ariaLabel}
+        aria-hidden={isAriaHidden ? true : undefined}
         className={`flex flex-col gap-2 ${className}`.trim()}
         style={containerStyle}
         {...props}
@@ -73,8 +81,9 @@ export function Skeleton({
   return (
     <div
       ref={ref}
-      role="status"
-      aria-label="Loading..."
+      role={role}
+      aria-label={ariaLabel}
+      aria-hidden={isAriaHidden ? true : undefined}
       data-testid="skeleton"
       style={inlineStyles}
       className={`${baseClasses} ${defaultHeightClass} ${defaultWidthClass} ${className}`.trim()}

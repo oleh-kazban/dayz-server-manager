@@ -65,6 +65,7 @@ export function DatePicker({
   placeholder = 'Select date',
   label,
   error,
+  className = '',
   customClassName = '',
   containerClassName = '',
   ariaLabel = 'Select date',
@@ -181,7 +182,7 @@ export function DatePicker({
             displayedError
               ? 'border-[var(--color-status-danger)] focus-visible:border-[var(--color-status-danger)] focus-visible:ring-1 focus-visible:ring-[var(--color-status-danger)]'
               : 'border-[var(--color-border)] focus-visible:border-[var(--color-primary)] focus-visible:ring-1 focus-visible:ring-[var(--color-primary)]'
-          }`}
+          } ${className}`.trim()}
         >
           <span className="flex items-center gap-2 truncate">
             <Calendar className="h-4 w-4 shrink-0 text-[var(--color-text-muted)]" />

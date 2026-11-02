@@ -11,6 +11,7 @@ export function EmptyStateIcon({ ref, className = '', children, ...props }: Empt
   return (
     <div
       ref={ref}
+      aria-hidden="true"
       data-testid="empty-state-icon"
       className={`p-3 rounded-full bg-[var(--color-surface-subtle)] text-[var(--color-text-muted)] border border-[var(--color-border)]/60 shadow-xs mb-3.5 shrink-0 ${className}`.trim()}
       {...props}
@@ -81,8 +82,12 @@ export function EmptyState({
   action,
   variant = 'default',
   className = '',
+  id,
+  style,
   children,
-  ...props
+  'data-testid': dataTestId,
+  'aria-label': ariaLabel,
+  'aria-labelledby': ariaLabelledBy,
 }: EmptyStateProps) {
   const variantClasses = getEmptyStateVariantClasses(variant);
   const titleClasses = getEmptyStateTitleClasses(variant);
@@ -90,8 +95,12 @@ export function EmptyState({
   return (
     <div
       ref={ref}
+      id={id}
+      style={style}
+      data-testid={dataTestId}
+      aria-label={ariaLabel}
+      aria-labelledby={ariaLabelledBy}
       className={`flex flex-col items-center justify-center text-center max-w-md mx-auto ${variantClasses} ${className}`.trim()}
-      {...props}
     >
       {children ?? (
         <>

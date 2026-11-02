@@ -19,6 +19,7 @@ export interface FloatingMenuProps<T extends string> {
   alignment?: Alignment;
   disabled?: boolean;
   customClassName?: string;
+  containerClassName?: string;
   ref?: Ref<HTMLButtonElement>;
 }
 
@@ -38,5 +39,6 @@ export interface DotsFloatingMenuProps {
   disabled?: boolean;
   icon?: ReactNode;
   customClassName?: string;
+  containerClassName?: string;
   ref?: Ref<HTMLButtonElement>;
 }

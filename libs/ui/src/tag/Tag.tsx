@@ -104,7 +104,7 @@ export function Tag({
   leftIcon,
   rightIcon,
   onRemove,
-  removeAriaLabel,
+  removeAriaLabel: removeAriaLabelProp,
   uppercase = false,
   mono = false,
   disabled = false,
@@ -121,6 +121,8 @@ export function Tag({
     }
   };
 
+  const computedRemoveAriaLabel =
+    removeAriaLabelProp || (typeof children === 'string' ? `Remove ${children}` : 'Remove tag');
   const mergedClass = customClassName || className;
 
   return (
@@ -150,7 +152,7 @@ export function Tag({
           type="button"
           disabled={disabled}
           onClick={handleRemove}
-          aria-label={removeAriaLabel || 'Remove tag'}
+          aria-label={computedRemoveAriaLabel}
           className={`${REMOVE_BUTTON_SHAPE_CLASSES[shape]} ${
             shape === 'pill' ? '-mr-1' : '-mr-[7px]'
           } p-0.5 text-inherit transition-opacity focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-current ${

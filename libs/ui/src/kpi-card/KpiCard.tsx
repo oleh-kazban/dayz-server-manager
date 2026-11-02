@@ -90,6 +90,7 @@ export function KpiCardSparkline({
     return (
       <svg
         ref={ref}
+        aria-hidden="true"
         data-testid="kpi-sparkline"
         width={width}
         height={height}
@@ -105,12 +106,13 @@ export function KpiCardSparkline({
 
   if (!data || data.length === 0) return null;
 
-  const stroke = color ?? 'var(--color-chart-teal, #27a88c)';
+  const stroke = color ?? 'var(--color-chart-teal)';
   const d = generateSparklinePath(data, width, height);
 
   return (
     <svg
       ref={ref}
+      aria-hidden="true"
       data-testid="kpi-sparkline"
       width={width}
       height={height}
@@ -136,8 +138,12 @@ export function KpiCard({
   sparklineColor,
   isLoading = false,
   className = '',
+  id,
+  style,
   children,
-  ...props
+  'data-testid': dataTestId,
+  'aria-label': ariaLabel,
+  'aria-labelledby': ariaLabelledBy,
 }: KpiCardProps) {
   const resolvedSparklineColor = getDefaultSparklineStroke(trend, sparklineColor);
 
@@ -152,8 +158,12 @@ export function KpiCard({
   return (
     <div
       ref={ref}
+      id={id}
+      style={style}
+      data-testid={dataTestId}
+      aria-label={ariaLabel}
+      aria-labelledby={ariaLabelledBy}
       className={`p-4 flex flex-col justify-between min-h-[114px] rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-[var(--shadow-card)] transition-all ${className}`.trim()}
-      {...props}
     >
       {isLoading ? (
         <div data-testid="kpi-skeleton" className="animate-pulse space-y-3">

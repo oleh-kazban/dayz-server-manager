@@ -51,6 +51,9 @@ export interface TabsProps {
   /** Accessible label for the tablist */
   ariaLabel?: string;
 
+  /** Accessible label for screen readers */
+  'aria-label'?: string;
+
   /** Additional classes applied to the outermost container */
   containerClassName?: string;
 }
@@ -60,6 +63,8 @@ export interface TabListProps {
   ref?: Ref<HTMLDivElement>;
   /** Accessible label for screen readers */
   'aria-label'?: string;
+  /** Accessible label for screen readers (camelCase alias) */
+  ariaLabel?: string;
   /** Child <TabTrigger> elements */
   children?: ReactNode;
   /**

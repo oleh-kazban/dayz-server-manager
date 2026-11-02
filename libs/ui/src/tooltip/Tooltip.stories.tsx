@@ -125,8 +125,8 @@ export const ImmediateFocus: Story = {
     <div className="space-y-3 max-w-sm text-center">
       <p className="text-xs text-[var(--color-text-muted)]">
         Press{' '}
-        <kbd className="px-1 py-0.5 rounded bg-slate-200 dark:bg-slate-700 text-[10px]">Tab</kbd> to
-        navigate. Notice tooltips appear immediately on focus without hover delay.
+        <kbd className="px-1 py-0.5 rounded bg-[var(--color-surface-subtle)] text-[10px]">Tab</kbd>{' '}
+        to navigate. Notice tooltips appear immediately on focus without hover delay.
       </p>
       <div className="flex items-center justify-center gap-3">
         <Tooltip content="First action tooltip">

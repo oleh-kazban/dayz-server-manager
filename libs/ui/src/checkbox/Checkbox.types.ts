@@ -41,7 +41,6 @@ export interface CheckboxProps {
   value?: string | number | readonly string[];
   disabled?: boolean;
   required?: boolean;
-  autoFocus?: boolean;
   tabIndex?: number;
 
   /**

@@ -1,10 +1,10 @@
-import { type ComponentType, type HTMLAttributes, type ReactNode, type Ref } from 'react';
+import { type ComponentType, type ReactNode, type Ref } from 'react';
 
 import { type LucideIcon } from 'lucide-react';
 
 export type NoticeVariant = 'info' | 'warning' | 'error' | 'danger' | 'success';
 
-export interface NoticeProps extends Omit<HTMLAttributes<HTMLDivElement>, 'title'> {
+export interface NoticeProps {
   /** React 19 native DOM ref forwarded to the root element */
   ref?: Ref<HTMLDivElement>;
 
@@ -40,6 +40,12 @@ export interface NoticeProps extends Omit<HTMLAttributes<HTMLDivElement>, 'title
    * @default 'Dismiss notice'
    */
   closeLabel?: string;
+
+  /** ARIA role for container */
+  role?: string;
+
+  /** HTML id attribute */
+  id?: string;
 
   /** Optional root container className escape hatch */
   className?: string;

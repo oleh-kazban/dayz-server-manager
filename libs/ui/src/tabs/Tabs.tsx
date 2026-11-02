@@ -146,10 +146,12 @@ function getTabListBaseStyles(variant: 'segmented' | 'underline', bordered: bool
 export function TabList({
   ref,
   'aria-label': ariaLabel,
+  ariaLabel: ariaLabelProp,
   children,
   bordered = true,
   className = '',
 }: TabListProps) {
+  const effectiveAriaLabel = ariaLabelProp ?? ariaLabel;
   const { variant, fullWidth, tabRefs, orderedTabValues, setActiveValue } = useTabsContext();
 
   const handleKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
@@ -223,7 +225,7 @@ export function TabList({
       ref={ref}
       role="tablist"
       aria-orientation="horizontal"
-      aria-label={ariaLabel}
+      aria-label={effectiveAriaLabel}
       onKeyDown={handleKeyDown}
       className={`${containerStyles} ${className}`.trim()}
     >
@@ -280,9 +282,11 @@ export function Tabs({
   items,
   children,
   fullWidth = false,
-  ariaLabel,
+  'aria-label': ariaLabel,
+  ariaLabel: ariaLabelProp,
   containerClassName = '',
 }: TabsProps) {
+  const effectiveAriaLabel = ariaLabelProp ?? ariaLabel;
   const generatedId = useId();
   const isControlled = value !== undefined;
 
@@ -314,7 +318,7 @@ export function Tabs({
     <TabsContext.Provider value={contextValue}>
       <div ref={ref} className={`${containerClassName || 'space-y-4'}`.trim()}>
         {items && items.length > 0 ? (
-          <TabList aria-label={ariaLabel}>
+          <TabList aria-label={effectiveAriaLabel}>
             {items.map((item: TabItem) => (
               <TabTrigger
                 key={item.id}

@@ -92,11 +92,24 @@ describe('Tag', () => {
       </Tag>,
     );
 
-    const removeButton = screen.getByRole('button', { name: /remove tag/i });
+    const removeButton = screen.getByRole('button', { name: /remove locked mod/i });
     expect(removeButton).toBeDisabled();
 
     await user.click(removeButton);
     expect(handleRemove).not.toHaveBeenCalled();
+  });
+
+  it('falls back to "Remove tag" aria-label when children is not a string', () => {
+    const handleRemove = vi.fn();
+
+    render(
+      <Tag onRemove={handleRemove}>
+        <span>Complex Mod</span>
+      </Tag>,
+    );
+
+    const removeButton = screen.getByRole('button', { name: 'Remove tag' });
+    expect(removeButton).toBeInTheDocument();
   });
 
   it('forwards React 19 ref to root span badge', () => {

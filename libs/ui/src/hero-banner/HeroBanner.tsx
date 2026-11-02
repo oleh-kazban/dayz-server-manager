@@ -159,8 +159,12 @@ export function HeroBanner({
   actions,
   className = '',
   contentClassName = '',
+  id,
+  style,
   children,
-  ...props
+  'data-testid': dataTestId,
+  'aria-label': ariaLabel,
+  'aria-labelledby': ariaLabelledBy,
 }: HeroBannerProps) {
   const hasDirectTop = Boolean(eyebrow || title || subtitle || aside);
   const hasDirectBottom = Boolean(meta || actions);
@@ -168,8 +172,12 @@ export function HeroBanner({
   return (
     <Component
       ref={ref}
+      id={id}
+      style={style}
+      data-testid={dataTestId}
+      aria-label={ariaLabel}
+      aria-labelledby={ariaLabelledBy}
       className={`relative rounded-2xl overflow-hidden min-h-[180px] p-6 sm:p-7 flex flex-col justify-between shadow-[var(--shadow-card)] border border-[var(--color-border-subtle)] bg-[var(--color-surface-elevated)] text-white ${className}`.trim()}
-      {...props}
     >
       {/* Chernarus Panorama Scrim & Wallpaper */}
       {backgroundImage && (

@@ -291,4 +291,50 @@ describe('Select', () => {
 
     expect(hiddenInput).toHaveAttribute('value', 'opt4');
   });
+
+  it('updates aria-activedescendant when navigating options via ArrowDown and ArrowUp', async () => {
+    const user = userEvent.setup();
+    render(<Select id="custom-select" label="Options" options={TEST_OPTIONS} />);
+
+    const combobox = screen.getByRole('combobox');
+    await user.click(combobox);
+    expect(combobox).toHaveAttribute('aria-expanded', 'true');
+    expect(combobox).not.toHaveAttribute('aria-activedescendant');
+
+    // ArrowDown navigates to index 0
+    await user.keyboard('{ArrowDown}');
+    expect(combobox).toHaveAttribute('aria-activedescendant', 'custom-select-listbox-opt-0');
+
+    // ArrowDown skips disabled option (opt2 at index 1), moves to index 2
+    await user.keyboard('{ArrowDown}');
+    expect(combobox).toHaveAttribute('aria-activedescendant', 'custom-select-listbox-opt-2');
+
+    // ArrowDown moves to index 3
+    await user.keyboard('{ArrowDown}');
+    expect(combobox).toHaveAttribute('aria-activedescendant', 'custom-select-listbox-opt-3');
+
+    // ArrowUp moves back to index 2
+    await user.keyboard('{ArrowUp}');
+    expect(combobox).toHaveAttribute('aria-activedescendant', 'custom-select-listbox-opt-2');
+  });
+
+  it('renders trigger container with focus-within:border-[var(--color-primary)] class', () => {
+    const { container } = render(<Select label="Test Select" options={TEST_OPTIONS} />);
+    const triggerContainer = container.querySelector(
+      '.focus-within\\:border-\\[var\\(--color-primary\\)\\]',
+    );
+    expect(triggerContainer).toBeInTheDocument();
+  });
+
+  it('applies explicit width and omits w-full when containerClassName has width class, defaulting to w-full otherwise', () => {
+    const { container, rerender } = render(
+      <Select label="Width Test" options={TEST_OPTIONS} containerClassName="w-20" />,
+    );
+
+    expect(container.firstElementChild).toHaveClass('w-20');
+    expect(container.firstElementChild).not.toHaveClass('w-full');
+
+    rerender(<Select label="Width Test" options={TEST_OPTIONS} />);
+    expect(container.firstElementChild).toHaveClass('w-full');
+  });
 });

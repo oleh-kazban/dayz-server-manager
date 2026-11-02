@@ -1,6 +1,7 @@
 import { createRef } from 'react';
 
 import { fireEvent, render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
 import { TagSelect } from './TagSelect';
@@ -291,5 +292,53 @@ describe('TagSelect', () => {
       ['tags', 'clothing'],
       ['tags', 'tools'],
     ]);
+  });
+
+  it('supports keyboard navigation while open: opening, navigating, toggling, and closing', async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+
+    render(
+      <TagSelect id="keyboard-tag-select" options={sampleOptions} value={[]} onChange={onChange} />,
+    );
+
+    const combobox = screen.getByRole('combobox');
+    combobox.focus();
+    expect(combobox).toHaveFocus();
+    expect(combobox).toHaveAttribute('aria-expanded', 'false');
+
+    // Press ArrowDown to open popup
+    await user.keyboard('{ArrowDown}');
+    expect(combobox).toHaveAttribute('aria-expanded', 'true');
+    expect(combobox).toHaveAttribute('aria-activedescendant', 'keyboard-tag-select-listbox-opt-0');
+
+    // ArrowDown navigates to next option (index 1)
+    await user.keyboard('{ArrowDown}');
+    expect(combobox).toHaveAttribute('aria-activedescendant', 'keyboard-tag-select-listbox-opt-1');
+
+    // ArrowUp navigates back to index 0
+    await user.keyboard('{ArrowUp}');
+    expect(combobox).toHaveAttribute('aria-activedescendant', 'keyboard-tag-select-listbox-opt-0');
+
+    // Enter toggles highlighted option (index 0: 'weapons')
+    await user.keyboard('{Enter}');
+    expect(onChange).toHaveBeenCalledWith(['weapons']);
+
+    // Escape closes the popup
+    await user.keyboard('{Escape}');
+    expect(combobox).toHaveAttribute('aria-expanded', 'false');
+  });
+
+  it('applies customClassName to the container wrapper', () => {
+    const { container } = render(
+      <TagSelect
+        options={sampleOptions}
+        value={[]}
+        onChange={vi.fn()}
+        customClassName="tagselect-custom-wrapper"
+      />,
+    );
+
+    expect(container.firstChild).toHaveClass('tagselect-custom-wrapper');
   });
 });

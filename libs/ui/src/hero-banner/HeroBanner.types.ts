@@ -1,9 +1,9 @@
-import type { HTMLAttributes, ReactNode, Ref } from 'react';
+import type { CSSProperties, HTMLAttributes, ReactNode, Ref } from 'react';
 
 export type HeroBannerContainerTag = 'div' | 'section' | 'article' | 'header';
 export type HeroBannerTitleTag = 'h1' | 'h2' | 'h3' | 'h4';
 
-export interface HeroBannerProps extends Omit<HTMLAttributes<HTMLDivElement>, 'title'> {
+export interface HeroBannerProps {
   /**
    * Root semantic container element.
    * @default 'div'
@@ -69,14 +69,34 @@ export interface HeroBannerProps extends Omit<HTMLAttributes<HTMLDivElement>, 't
   ref?: Ref<HTMLDivElement>;
 
   /**
+   * Custom container class.
+   */
+  className?: string;
+
+  /**
    * Custom classes for the inner z-10 content wrapper.
    */
   contentClassName?: string;
+
+  /** HTML id */
+  id?: string;
+
+  /** Inline styles */
+  style?: CSSProperties;
 
   /**
    * Custom child content for pure compound slot composition.
    */
   children?: ReactNode;
+
+  /** Test automation identifier */
+  'data-testid'?: string;
+
+  /** Accessible label */
+  'aria-label'?: string;
+
+  /** Accessible labelling element ID */
+  'aria-labelledby'?: string;
 }
 
 export interface HeroBannerTopProps extends HTMLAttributes<HTMLDivElement> {

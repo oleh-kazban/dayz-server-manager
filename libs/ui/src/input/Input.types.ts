@@ -25,10 +25,12 @@ export interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
   ref?: Ref<HTMLInputElement>;
 }
 
-export interface PasswordInputProps extends Omit<InputProps, 'type' | 'rightAction'> {
-  /**
-   * Whether to display the show/hide password toggle button.
-   * @default true
-   */
+export interface PasswordInputProps extends InputHTMLAttributes<HTMLInputElement> {
+  label?: string;
+  error?: string;
+  leftIcon?: LucideIcon | ComponentType<{ className?: string }>;
+  customClassName?: string;
+  containerClassName?: string;
+  ref?: Ref<HTMLInputElement>;
   showToggle?: boolean;
 }

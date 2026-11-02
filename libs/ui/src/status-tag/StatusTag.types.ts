@@ -1,4 +1,4 @@
-import type { ElementType, HTMLAttributes, ReactNode, Ref } from 'react';
+import type { ElementType, ReactNode, Ref } from 'react';
 
 import type { LucideIcon } from 'lucide-react';
 
@@ -15,7 +15,7 @@ export type StatusTagShape = 'rounded' | 'pill';
 
 export type StatusTagIcon = LucideIcon | ElementType | ReactNode;
 
-export interface StatusTagProps extends HTMLAttributes<HTMLSpanElement> {
+export interface StatusTagProps {
   /**
    * React 19 ref forwarded directly to the native <span> element.
    */
@@ -39,6 +39,22 @@ export interface StatusTagProps extends HTMLAttributes<HTMLSpanElement> {
    * @default 'rounded'
    */
   shape?: StatusTagShape;
+
+  /**
+   * Explicit label content (takes precedence over default status label, overridden by children).
+   */
+  label?: ReactNode;
+
+  /**
+   * Main text or element content (takes precedence over label and default status label).
+   */
+  children?: ReactNode;
+
+  /**
+   * Controls rendering of the telemetry status dot indicator.
+   * @default true
+   */
+  dot?: boolean;
 
   /**
    * Enables radar pulsating ring animation around the status dot.
@@ -67,4 +83,18 @@ export interface StatusTagProps extends HTMLAttributes<HTMLSpanElement> {
    * Single external class escape hatch.
    */
   customClassName?: string;
+
+  /**
+   * Standard className escape hatch.
+   */
+  className?: string;
+
+  /** HTML id attribute */
+  id?: string;
+
+  /** ARIA role for status tag */
+  role?: string;
+
+  /** Accessible label */
+  'aria-label'?: string;
 }

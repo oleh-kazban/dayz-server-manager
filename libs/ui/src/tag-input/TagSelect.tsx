@@ -10,12 +10,13 @@ import { type TagOption, type TagSelectProps } from './TagInput.types';
 
 function getTriggerBorderClasses(hasError: boolean): string {
   if (hasError) {
-    return 'border-[var(--color-status-danger)] focus:border-[var(--color-status-danger)] focus:ring-1 focus:ring-[var(--color-status-danger)]';
+    return 'border-[var(--color-status-danger)] focus-visible:border-[var(--color-status-danger)] focus-visible:ring-1 focus-visible:ring-[var(--color-status-danger)]';
   }
-  return 'border-[var(--color-border)] focus:border-[var(--color-primary)] focus:ring-1 focus:ring-[var(--color-primary)]';
+  return 'border-[var(--color-border)] focus-visible:border-[var(--color-primary)] focus-visible:ring-1 focus-visible:ring-[var(--color-primary)]';
 }
 
 interface TagSelectOptionItemProps {
+  id?: string;
   option: TagOption;
   isSelected: boolean;
   isHighlighted: boolean;
@@ -42,6 +43,7 @@ function getOptionStateClass(
 }
 
 function TagSelectOptionItem({
+  id,
   option,
   isSelected,
   isHighlighted,
@@ -54,6 +56,7 @@ function TagSelectOptionItem({
 
   return (
     <button
+      id={id}
       type="button"
       role="option"
       aria-selected={isSelected}
@@ -113,17 +116,19 @@ export function TagSelect({
   disabled = false,
   readOnly = false,
   containerClassName = '',
+  customClassName = '',
   popupClassName = '',
   className = '',
 }: TagSelectProps) {
   const generatedId = useId();
   const selectId = externalId ?? generatedId;
+  const listboxId = `${selectId}-listbox`;
   const searchInputId = `${selectId}-search`;
 
   const [searchQuery, setSearchQuery] = useState('');
   const [highlightedIndex, setHighlightedIndex] = useState(0);
 
-  const { isOpen, toggle, close, triggerRef, popupRef, popupPosition } =
+  const { isOpen, toggle, close, containerRef, triggerRef, popupRef, popupPosition } =
     usePopup<HTMLDivElement>('start');
 
   const optionsMap = useMemo(() => {
@@ -175,9 +180,37 @@ export function TagSelect({
   const handleTriggerKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
     if (disabled || readOnly) return;
 
-    if (e.key === ' ' || e.key === 'Enter' || e.key === 'ArrowDown') {
+    if (!isOpen) {
+      if (e.key === ' ' || e.key === 'Enter' || e.key === 'ArrowDown') {
+        e.preventDefault();
+        toggle();
+      }
+      return;
+    }
+
+    if (e.key === 'Escape') {
       e.preventDefault();
-      if (!isOpen) toggle();
+      close();
+      return;
+    }
+
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      setHighlightedIndex(prev => (prev < filteredOptions.length - 1 ? prev + 1 : 0));
+      return;
+    }
+
+    if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      setHighlightedIndex(prev => (prev > 0 ? prev - 1 : filteredOptions.length - 1));
+      return;
+    }
+
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      if (highlightedIndex >= 0 && filteredOptions[highlightedIndex]) {
+        toggleOption(filteredOptions[highlightedIndex]);
+      }
     }
   };
 
@@ -211,9 +244,10 @@ export function TagSelect({
   const disabledClasses = disabled
     ? 'opacity-50 cursor-not-allowed bg-[var(--color-surface-subtle)]'
     : 'cursor-pointer';
+  const resolvedContainerClass = containerClassName || customClassName || '';
 
   return (
-    <div className={`space-y-1.5 text-left ${containerClassName}`.trim()}>
+    <div ref={containerRef} className={`space-y-1.5 text-left ${resolvedContainerClass}`.trim()}>
       {name && value.map(val => <input key={val} type="hidden" name={name} value={val} />)}
       {label && (
         <label
@@ -234,12 +268,18 @@ export function TagSelect({
         role="combobox"
         aria-haspopup="listbox"
         aria-expanded={isOpen}
+        aria-controls={isOpen ? listboxId : undefined}
+        aria-activedescendant={
+          isOpen && highlightedIndex >= 0 && filteredOptions.length > 0
+            ? `${listboxId}-opt-${highlightedIndex}`
+            : undefined
+        }
         aria-invalid={Boolean(error)}
         aria-describedby={error ? `${selectId}-error` : undefined}
         tabIndex={disabled ? -1 : 0}
         onClick={!disabled && !readOnly ? toggle : undefined}
         onKeyDown={handleTriggerKeyDown}
-        className={`flex items-center justify-between min-h-9 px-2.5 py-1 gap-1.5 rounded-lg border bg-[var(--color-surface)] shadow-xs transition-colors focus:outline-none ${borderClasses} ${disabledClasses} ${className}`.trim()}
+        className={`flex items-center justify-between min-h-9 px-2.5 py-1 gap-1.5 rounded-lg border bg-[var(--color-surface)] shadow-xs transition-colors focus-visible:outline-none ${borderClasses} ${disabledClasses} ${className}`.trim()}
       >
         <div className="flex flex-wrap items-center gap-1.5 flex-1 min-w-0">
           {value.length === 0 ? (
@@ -288,6 +328,7 @@ export function TagSelect({
         createPortal(
           <div
             ref={popupRef}
+            id={listboxId}
             role="listbox"
             aria-multiselectable="true"
             aria-label={label ?? 'Options'}
@@ -341,6 +382,7 @@ export function TagSelect({
                 filteredOptions.map((opt, idx) => (
                   <TagSelectOptionItem
                     key={opt.value}
+                    id={`${listboxId}-opt-${idx}`}
                     option={opt}
                     isSelected={value.includes(opt.value)}
                     isHighlighted={idx === highlightedIndex}

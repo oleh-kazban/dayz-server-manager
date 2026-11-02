@@ -44,4 +44,9 @@ export interface SkeletonProps extends HTMLAttributes<HTMLDivElement> {
    * Forwarded React 19 ref for the root container.
    */
   ref?: Ref<HTMLDivElement>;
+
+  /**
+   * Hides the skeleton from assistive technologies when paired with explicit aria-busy parent.
+   */
+  'aria-hidden'?: boolean | 'true' | 'false';
 }

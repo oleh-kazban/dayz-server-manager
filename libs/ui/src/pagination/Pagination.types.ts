@@ -1,6 +1,6 @@
-import { type HTMLAttributes, type ReactNode, type Ref } from 'react';
+import { type CSSProperties, type ReactNode, type Ref } from 'react';
 
-export interface PaginationProps extends Omit<HTMLAttributes<HTMLElement>, 'onChange'> {
+export interface PaginationProps {
   /**
    * React 19 ref forwarded directly to the root `<nav>` element.
    */
@@ -83,4 +83,25 @@ export interface PaginationProps extends Omit<HTMLAttributes<HTMLElement>, 'onCh
    * @default false
    */
   disabled?: boolean;
+
+  /**
+   * Standard className escape hatch.
+   */
+  className?: string;
+
+  /**
+   * HTML id attribute.
+   */
+  id?: string;
+
+  /**
+   * Accessible landmark label.
+   * @default 'Pagination Navigation'
+   */
+  'aria-label'?: string;
+
+  /**
+   * Inline style.
+   */
+  style?: CSSProperties;
 }

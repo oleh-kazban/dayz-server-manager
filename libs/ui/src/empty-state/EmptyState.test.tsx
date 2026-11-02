@@ -104,4 +104,11 @@ describe('EmptyState Component', () => {
     expect(rootRef.current).toBeInstanceOf(HTMLDivElement);
     expect(titleRef.current).toBeInstanceOf(HTMLHeadingElement);
   });
+
+  it('marks icon container with aria-hidden="true"', () => {
+    render(<EmptyState icon={<span>ICON</span>} title="Empty" />);
+
+    const iconContainer = screen.getByTestId('empty-state-icon');
+    expect(iconContainer).toHaveAttribute('aria-hidden', 'true');
+  });
 });

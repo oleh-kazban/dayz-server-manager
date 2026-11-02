@@ -231,11 +231,72 @@ describe('Table', () => {
   it('supports embedded variant without rounded corners or shadow', () => {
     const containerRef = createRef<HTMLDivElement>();
 
-    render(<Table variant="embedded" containerRef={containerRef} />);
+    const { rerender } = render(<Table variant="standalone" containerRef={containerRef} />);
+    expect(containerRef.current).toHaveClass('shadow-[var(--shadow-card)]');
+    expect(containerRef.current).toHaveClass('rounded-xl');
+
+    rerender(<Table variant="embedded" containerRef={containerRef} />);
 
     expect(containerRef.current).toHaveClass('border-y');
     expect(containerRef.current).not.toHaveClass('rounded-xl');
-    expect(containerRef.current).not.toHaveClass('shadow-xs');
+    expect(containerRef.current).not.toHaveClass('shadow-[var(--shadow-card)]');
+  });
+
+  it('handles aria-sort="none" for unsorted sortable columns and omits aria-sort for non-sortable columns', () => {
+    const handleSort = vi.fn();
+    render(
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead sortDirection={false} onSort={handleSort}>
+              Unsorted Column
+            </TableHead>
+            <TableHead onSort={handleSort}>Sortable Without Direction</TableHead>
+            <TableHead>Non-Sortable Column</TableHead>
+          </TableRow>
+        </TableHeader>
+      </Table>,
+    );
+
+    const unsortedCol = screen.getByRole('columnheader', { name: /Unsorted Column/i });
+    expect(unsortedCol).toHaveAttribute('aria-sort', 'none');
+
+    const sortableWithoutDir = screen.getByRole('columnheader', {
+      name: /Sortable Without Direction/i,
+    });
+    expect(sortableWithoutDir).toHaveAttribute('aria-sort', 'none');
+
+    const nonSortableCol = screen.getByRole('columnheader', { name: /Non-Sortable Column/i });
+    expect(nonSortableCol).not.toHaveAttribute('aria-sort');
+  });
+
+  it('configures scrollable table region with role, tabIndex, and default or custom accessible name', () => {
+    const { rerender } = render(
+      <Table>
+        <TableBody>
+          <TableRow>
+            <TableCell>Data</TableCell>
+          </TableRow>
+        </TableBody>
+      </Table>,
+    );
+
+    let region = screen.getByRole('region', { name: 'Scrollable table' });
+    expect(region).toBeInTheDocument();
+    expect(region).toHaveAttribute('tabIndex', '0');
+
+    rerender(
+      <Table aria-label="Server activity table">
+        <TableBody>
+          <TableRow>
+            <TableCell>Data</TableCell>
+          </TableRow>
+        </TableBody>
+      </Table>,
+    );
+
+    region = screen.getByRole('region', { name: 'Server activity table' });
+    expect(region).toBeInTheDocument();
   });
 });
 

@@ -126,7 +126,8 @@ export function Tooltip({
   }, [clearTimer, clearCloseTimer]);
 
   const handleKeyDown = (e: KeyboardEvent<HTMLSpanElement>) => {
-    if (e.key === 'Escape') {
+    if (e.key === 'Escape' && isVisible) {
+      e.stopPropagation();
       hideTooltip();
     }
   };

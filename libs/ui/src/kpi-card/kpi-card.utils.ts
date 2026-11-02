@@ -18,14 +18,14 @@ export function getDefaultSparklineStroke(trend?: KpiTrend, customColor?: string
   if (customColor) return customColor;
   switch (trend) {
     case 'positive':
-      return 'var(--color-status-success, #27a88c)';
+      return 'var(--color-status-success)';
     case 'negative':
-      return 'var(--color-status-danger, #e05252)';
+      return 'var(--color-status-danger)';
     case 'warning':
-      return 'var(--color-status-warning, #bb8a3e)';
+      return 'var(--color-status-warning)';
     case 'neutral':
     default:
-      return 'var(--color-chart-teal, #27a88c)';
+      return 'var(--color-chart-teal)';
   }
 }
 

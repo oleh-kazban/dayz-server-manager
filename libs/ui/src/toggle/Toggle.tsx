@@ -50,9 +50,7 @@ export function Toggle({
   onChange,
   onBlur,
   onFocus,
-  ariaLabel,
-  'aria-label': ariaLabelAttr,
-  ariaDescribedBy,
+  'aria-label': ariaLabel,
   'aria-describedby': ariaDescribedByAttr,
   customClassName = '',
   containerClassName = '',
@@ -65,8 +63,9 @@ export function Toggle({
   const [internalChecked, setInternalChecked] = useState(Boolean(defaultChecked));
   const isChecked = isControlled ? externalChecked : internalChecked;
 
-  const effectiveAriaLabel = ariaLabel ?? ariaLabelAttr;
-  const effectiveAriaDescribedBy = ariaDescribedBy ?? ariaDescribedByAttr ?? descriptionId;
+  const computedDescribedBy =
+    [ariaDescribedByAttr, description ? descriptionId : null].filter(Boolean).join(' ') ||
+    undefined;
 
   const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
     if (disabled) return;
@@ -119,8 +118,8 @@ export function Toggle({
         type="checkbox"
         role="switch"
         aria-checked={isChecked}
-        aria-label={effectiveAriaLabel}
-        aria-describedby={effectiveAriaDescribedBy}
+        aria-label={ariaLabel}
+        aria-describedby={computedDescribedBy}
         checked={isChecked}
         disabled={disabled}
         onChange={handleChange}

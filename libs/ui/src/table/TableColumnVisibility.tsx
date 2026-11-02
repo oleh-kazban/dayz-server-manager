@@ -1,4 +1,11 @@
-import { type KeyboardEvent as ReactKeyboardEvent, useId, useMemo, useState } from 'react';
+import {
+  type KeyboardEvent as ReactKeyboardEvent,
+  useEffect,
+  useId,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import { createPortal } from 'react-dom';
 
 import { ChevronDown, GripVertical, Lock, Search, SlidersHorizontal, X } from 'lucide-react';
@@ -129,11 +136,18 @@ export function TableColumnVisibility({
   disabled = false,
 }: TableColumnVisibilityProps) {
   const [searchQuery, setSearchQuery] = useState('');
+  const searchInputRef = useRef<HTMLInputElement>(null);
   const menuId = useId();
   const searchInputId = `${menuId}-search`;
 
   const { isOpen, toggle, close, popupPosition, triggerRef, popupRef } =
     usePopup<HTMLButtonElement>(alignment);
+
+  useEffect(() => {
+    if (isOpen) {
+      searchInputRef.current?.focus();
+    }
+  }, [isOpen]);
 
   const { getItemProps, getHandleProps, isItemDragging, getItemDropIndicator } =
     useSortableList<TableColumnItem>({
@@ -223,6 +237,7 @@ export function TableColumnVisibility({
             ref={popupRef}
             id={menuId}
             role="dialog"
+            tabIndex={-1}
             aria-label="Toggle column visibility"
             onKeyDown={handleKeyDown}
             style={{
@@ -232,7 +247,7 @@ export function TableColumnVisibility({
               maxHeight: popupPosition?.maxHeight ?? 400,
               visibility: popupPosition ? 'visible' : 'hidden',
             }}
-            className={`z-50 w-72 bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl shadow-lg p-3 flex flex-col gap-2.5 font-sans select-none animate-in fade-in zoom-in-95 duration-100 ${popupClassName}`.trim()}
+            className={`z-50 w-72 bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl shadow-[var(--shadow-dropdown)] p-3 flex flex-col gap-2.5 font-sans select-none animate-in fade-in zoom-in-95 duration-100 ${popupClassName}`.trim()}
           >
             {/* Header matching Editor.png */}
             <div className="flex flex-col gap-0.5 px-0.5 pt-0.5">
@@ -252,6 +267,7 @@ export function TableColumnVisibility({
                 className="w-3.5 h-3.5 absolute left-2.5 text-[var(--color-text-muted)] pointer-events-none"
               />
               <input
+                ref={searchInputRef}
                 id={searchInputId}
                 type="text"
                 value={searchQuery}

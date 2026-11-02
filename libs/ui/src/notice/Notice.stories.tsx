@@ -62,13 +62,11 @@ export const WithAction: Story = {
       title="RCON Connection Dropped"
       action={
         <div className="flex items-center gap-2">
-          <Button variant="secondary" className="h-7 px-2.5 text-xs">
+          <Button variant="secondary">
             <RefreshCw className="w-3.5 h-3.5 mr-1.5" />
             Reconnect Socket
           </Button>
-          <Button variant="ghost" className="h-7 px-2 text-xs">
-            Inspect Logs
-          </Button>
+          <Button variant="ghost">Inspect Logs</Button>
         </div>
       }
     >

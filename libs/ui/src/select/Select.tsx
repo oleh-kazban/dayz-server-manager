@@ -2,7 +2,7 @@ import {
   type KeyboardEvent,
   type MouseEvent,
   type ReactNode,
-  type RefObject,
+  type Ref,
   useCallback,
   useEffect,
   useId,
@@ -19,9 +19,9 @@ import { type SelectOption, type SelectProps } from './Select.types';
 
 function getTriggerBorderClasses(hasError: boolean): string {
   if (hasError) {
-    return 'border-[var(--color-status-danger)] focus-visible:border-[var(--color-status-danger)] focus-visible:ring-[var(--color-status-danger)]';
+    return 'border-[var(--color-status-danger)] focus-within:border-[var(--color-status-danger)] focus-within:ring-1 focus-within:ring-[var(--color-status-danger)]';
   }
-  return 'border-[var(--color-border)] focus-visible:border-[var(--color-primary)] focus-visible:ring-[var(--color-primary)]';
+  return 'border-[var(--color-border)] focus-within:border-[var(--color-primary)] focus-within:ring-1 focus-within:ring-[var(--color-primary)]';
 }
 
 function getOptionItemClasses(
@@ -60,6 +60,300 @@ function renderTriggerContent<T>(
     );
   }
   return <span className="truncate text-[var(--color-text-muted)] select-none">{placeholder}</span>;
+}
+
+function findNextEnabled<T>(options: SelectOption<T>[], startIndex: number, step: 1 | -1): number {
+  if (options.length === 0) return -1;
+  let count = 0;
+  let curr = startIndex;
+  while (count < options.length) {
+    curr = (curr + step + options.length) % options.length;
+    if (!options[curr].disabled) {
+      return curr;
+    }
+    count++;
+  }
+  return -1;
+}
+
+function findFirstEnabled<T>(options: SelectOption<T>[]): number {
+  for (let i = 0; i < options.length; i++) {
+    if (!options[i].disabled) return i;
+  }
+  return -1;
+}
+
+function findLastEnabled<T>(options: SelectOption<T>[]): number {
+  for (let i = options.length - 1; i >= 0; i--) {
+    if (!options[i].disabled) return i;
+  }
+  return -1;
+}
+
+function getNavigatedIndex<T>(
+  key: string,
+  options: SelectOption<T>[],
+  currentIndex: number,
+): number | null {
+  switch (key) {
+    case 'ArrowDown':
+      return findNextEnabled(options, currentIndex, 1);
+    case 'ArrowUp':
+      return findNextEnabled(options, currentIndex, -1);
+    case 'Home':
+      return findFirstEnabled(options);
+    case 'End':
+      return findLastEnabled(options);
+    default:
+      return null;
+  }
+}
+
+function assignRef<T>(ref: Ref<T> | undefined, element: T | null) {
+  if (typeof ref === 'function') {
+    ref(element);
+  } else if (ref && 'current' in ref) {
+    (ref as { current: T | null }).current = element;
+  }
+}
+
+interface SelectKeyDownParams<T> {
+  event: KeyboardEvent<HTMLButtonElement>;
+  disabled: boolean;
+  isOpen: boolean;
+  options: SelectOption<T>[];
+  highlightedIndex: number;
+  setHighlightedIndex: (value: number | ((prev: number) => number)) => void;
+  selectOption: (option: SelectOption<T>) => void;
+  open: () => void;
+  close: () => void;
+  focusButton: () => void;
+}
+
+function handleSelectKeyDown<T>({
+  event,
+  disabled,
+  isOpen,
+  options,
+  highlightedIndex,
+  setHighlightedIndex,
+  selectOption,
+  open,
+  close,
+  focusButton,
+}: SelectKeyDownParams<T>) {
+  if (disabled) return;
+
+  if (!isOpen) {
+    const isNavigationKey =
+      event.key === 'ArrowDown' ||
+      event.key === 'ArrowUp' ||
+      event.key === 'Enter' ||
+      event.key === ' ';
+
+    if (isNavigationKey) {
+      event.preventDefault();
+      open();
+    }
+    return;
+  }
+
+  const navIndex = getNavigatedIndex(event.key, options, highlightedIndex);
+  if (navIndex !== null) {
+    event.preventDefault();
+    setHighlightedIndex(navIndex);
+    return;
+  }
+
+  if (event.key === 'Enter' || event.key === ' ') {
+    event.preventDefault();
+    const option = options[highlightedIndex];
+    if (option && !option.disabled) {
+      selectOption(option);
+    }
+    return;
+  }
+
+  if (event.key === 'Escape') {
+    event.preventDefault();
+    close();
+    focusButton();
+    return;
+  }
+
+  if (event.key === 'Tab') {
+    close();
+  }
+}
+
+interface OptionListItemProps<T> {
+  id: string;
+  option: SelectOption<T>;
+  isSelected: boolean;
+  isHighlighted: boolean;
+  onHighlight: () => void;
+  onSelect: () => void;
+  renderOption?: (
+    option: SelectOption<T>,
+    isSelected: boolean,
+    isHighlighted: boolean,
+  ) => ReactNode;
+}
+
+function OptionListItem<T>({
+  id,
+  option,
+  isSelected,
+  isHighlighted,
+  onHighlight,
+  onSelect,
+  renderOption,
+}: OptionListItemProps<T>) {
+  const itemClass = getOptionItemClasses(isSelected, isHighlighted, Boolean(option.disabled));
+
+  return (
+    <li
+      id={id}
+      role="option"
+      aria-selected={isSelected}
+      aria-disabled={option.disabled}
+      onMouseEnter={() => {
+        if (!option.disabled) {
+          onHighlight();
+        }
+      }}
+      onClick={() => {
+        if (!option.disabled) {
+          onSelect();
+        }
+      }}
+      className={`flex items-center justify-between px-3 py-2 text-xs font-sans rounded-lg cursor-pointer transition-colors ${itemClass}`}
+    >
+      {renderOption ? (
+        renderOption(option, isSelected, isHighlighted)
+      ) : (
+        <div className="flex items-center gap-2 min-w-0 flex-1">
+          {option.icon && <span className="shrink-0 text-current">{option.icon}</span>}
+          <div className="min-w-0 flex-1">
+            <span className="truncate block">{option.label}</span>
+            {option.description && (
+              <span className="text-[11px] text-[var(--color-text-muted)] block truncate mt-0.5">
+                {option.description}
+              </span>
+            )}
+          </div>
+        </div>
+      )}
+
+      <div className="flex items-center gap-2 shrink-0 ml-2">
+        {option.badge !== undefined && (
+          <span className="text-[11px] font-mono px-1.5 py-0.5 rounded-full bg-[var(--color-surface-subtle)] text-[var(--color-text-muted)] border border-[var(--color-border)]/50">
+            {option.badge}
+          </span>
+        )}
+        {isSelected && <Check aria-hidden="true" className="w-4 h-4 text-[var(--color-primary)]" />}
+      </div>
+    </li>
+  );
+}
+
+interface SelectPopupProps<T> {
+  isOpen: boolean;
+  popupRef: Ref<HTMLDivElement>;
+  popupPosition: {
+    top: number;
+    left: number;
+    width?: number;
+    maxWidth?: number;
+    maxHeight?: number;
+  } | null;
+  popupClassName: string;
+  options: SelectOption<T>[];
+  emptyText: string;
+  listboxId: string;
+  optionsListRef: Ref<HTMLUListElement>;
+  label?: string;
+  ariaLabel?: string;
+  activeValue: T | null;
+  highlightedIndex: number;
+  onHighlight: (index: number) => void;
+  onSelect: (option: SelectOption<T>) => void;
+  renderOption?: (
+    option: SelectOption<T>,
+    isSelected: boolean,
+    isHighlighted: boolean,
+  ) => ReactNode;
+}
+
+function SelectPopup<T>({
+  isOpen,
+  popupRef,
+  popupPosition,
+  popupClassName,
+  options,
+  emptyText,
+  listboxId,
+  optionsListRef,
+  label,
+  ariaLabel,
+  activeValue,
+  highlightedIndex,
+  onHighlight,
+  onSelect,
+  renderOption,
+}: SelectPopupProps<T>) {
+  if (!isOpen) return null;
+
+  const popupWidth = popupPosition ? `${popupPosition.width}px` : 'auto';
+  const popupMaxWidth = popupPosition ? `${popupPosition.maxWidth}px` : 'none';
+  const popupMaxHeight = popupPosition ? `${popupPosition.maxHeight}px` : undefined;
+  const popupTop = popupPosition ? `${popupPosition.top}px` : '0px';
+  const popupLeft = popupPosition ? `${popupPosition.left}px` : '0px';
+
+  return createPortal(
+    <div
+      ref={popupRef}
+      style={{
+        position: 'fixed',
+        top: popupTop,
+        left: popupLeft,
+        width: popupWidth,
+        maxWidth: popupMaxWidth,
+        maxHeight: popupMaxHeight,
+        visibility: popupPosition ? 'visible' : 'hidden',
+      }}
+      className={`z-50 bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl shadow-lg p-1 overflow-y-auto ${popupClassName}`.trim()}
+    >
+      {options.length === 0 ? (
+        <div className="px-3 py-4 text-xs text-center text-[var(--color-text-muted)] select-none">
+          {emptyText}
+        </div>
+      ) : (
+        <ul
+          ref={optionsListRef}
+          id={listboxId}
+          role="listbox"
+          aria-label={label ?? ariaLabel ?? 'Options'}
+          tabIndex={-1}
+          className="space-y-0.5 outline-none"
+        >
+          {options.map((option, index) => (
+            <OptionListItem
+              key={String(option.value)}
+              id={`${listboxId}-opt-${index}`}
+              option={option}
+              isSelected={option.value === activeValue}
+              isHighlighted={index === highlightedIndex}
+              onHighlight={() => onHighlight(index)}
+              onSelect={() => onSelect(option)}
+              renderOption={renderOption}
+            />
+          ))}
+        </ul>
+      )}
+    </div>,
+    document.body,
+  );
 }
 
 export function Select<T = string>({
@@ -119,11 +413,7 @@ export function Select<T = string>({
   const handleButtonRef = useCallback(
     (element: HTMLButtonElement | null) => {
       buttonRef.current = element;
-      if (typeof ref === 'function') {
-        ref(element);
-      } else if (ref) {
-        (ref as RefObject<HTMLButtonElement | null>).current = element;
-      }
+      assignRef(ref, element);
     },
     [ref],
   );
@@ -163,96 +453,27 @@ export function Select<T = string>({
     selectOption(null);
   };
 
-  // Helper navigation logic skipping disabled options
-  const findNextEnabled = useCallback(
-    (startIndex: number, step: 1 | -1): number => {
-      if (options.length === 0) return -1;
-      let count = 0;
-      let curr = startIndex;
-      while (count < options.length) {
-        curr = (curr + step + options.length) % options.length;
-        if (!options[curr].disabled) {
-          return curr;
-        }
-        count++;
-      }
-      return -1;
-    },
-    [options],
-  );
-
-  const findFirstEnabled = useCallback((): number => {
-    for (let i = 0; i < options.length; i++) {
-      if (!options[i].disabled) return i;
-    }
-    return -1;
-  }, [options]);
-
-  const findLastEnabled = useCallback((): number => {
-    for (let i = options.length - 1; i >= 0; i--) {
-      if (!options[i].disabled) return i;
-    }
-    return -1;
-  }, [options]);
-
   // Open with highlighted selection or first enabled
   const handleOpen = useCallback(() => {
     if (disabled) return;
     const selectedIdx = options.findIndex(opt => opt.value === activeValue && !opt.disabled);
-    setHighlightedIndex(selectedIdx >= 0 ? selectedIdx : findFirstEnabled());
+    setHighlightedIndex(selectedIdx >= 0 ? selectedIdx : findFirstEnabled(options));
     open();
-  }, [disabled, options, activeValue, findFirstEnabled, open]);
-
-  const handleOpenKeyDown = (event: KeyboardEvent<HTMLButtonElement>) => {
-    if (event.key === 'ArrowDown') {
-      event.preventDefault();
-      setHighlightedIndex(prev => findNextEnabled(prev, 1));
-    } else if (event.key === 'ArrowUp') {
-      event.preventDefault();
-      setHighlightedIndex(prev => findNextEnabled(prev, -1));
-    } else if (event.key === 'Home') {
-      event.preventDefault();
-      setHighlightedIndex(findFirstEnabled());
-    } else if (event.key === 'End') {
-      event.preventDefault();
-      setHighlightedIndex(findLastEnabled());
-    } else if (event.key === 'Enter' || event.key === ' ') {
-      event.preventDefault();
-      if (highlightedIndex >= 0 && highlightedIndex < options.length) {
-        const option = options[highlightedIndex];
-        if (!option.disabled) {
-          selectOption(option);
-        }
-      }
-    } else if (event.key === 'Escape') {
-      event.preventDefault();
-      close();
-      buttonRef.current?.focus();
-    } else if (event.key === 'Tab') {
-      close();
-    }
-  };
-
-  const handleClosedKeyDown = (event: KeyboardEvent<HTMLButtonElement>) => {
-    const isNavigationKey =
-      event.key === 'ArrowDown' ||
-      event.key === 'ArrowUp' ||
-      event.key === 'Enter' ||
-      event.key === ' ';
-
-    if (isNavigationKey) {
-      event.preventDefault();
-      handleOpen();
-    }
-  };
+  }, [disabled, options, activeValue, open]);
 
   const handleKeyDown = (event: KeyboardEvent<HTMLButtonElement>) => {
-    if (disabled) return;
-    if (isOpen) {
-      handleOpenKeyDown(event);
-    } else {
-      handleClosedKeyDown(event);
-    }
+    handleSelectKeyDown({
+      event,
+      disabled,
+      isOpen,
+      options,
+      highlightedIndex,
+      setHighlightedIndex,
+      selectOption,
+      open: handleOpen,
+      close,
+      focusButton: () => buttonRef.current?.focus(),
+    });
   };
 
   const handleContainerClick = (e: MouseEvent<HTMLDivElement>) => {
@@ -272,21 +493,16 @@ export function Select<T = string>({
   }, [isOpen, highlightedIndex]);
 
   const resolvedContainerClass = containerClassName || customClassName || '';
+  const containerWidthClass = /\bw-\S+/.test(resolvedContainerClass) ? '' : 'w-full';
   const borderClasses = getTriggerBorderClasses(Boolean(error));
 
   const describedBy =
     [error ? errorId : null, helperText ? helperId : null].filter(Boolean).join(' ') || undefined;
 
-  const popupWidth = popupPosition ? `${popupPosition.width}px` : 'auto';
-  const popupMaxWidth = popupPosition ? `${popupPosition.maxWidth}px` : 'none';
-  const popupMaxHeight = popupPosition ? `${popupPosition.maxHeight}px` : undefined;
-  const popupTop = popupPosition ? `${popupPosition.top}px` : '0px';
-  const popupLeft = popupPosition ? `${popupPosition.left}px` : '0px';
-
   return (
     <div
       ref={containerRef}
-      className={`space-y-1.5 text-left w-full ${resolvedContainerClass}`.trim()}
+      className={`space-y-1.5 text-left ${containerWidthClass} ${resolvedContainerClass}`.trim()}
     >
       {label && (
         <label
@@ -325,6 +541,9 @@ export function Select<T = string>({
           aria-haspopup="listbox"
           aria-expanded={isOpen}
           aria-controls={listboxId}
+          aria-activedescendant={
+            isOpen && highlightedIndex >= 0 ? `${listboxId}-opt-${highlightedIndex}` : undefined
+          }
           aria-label={ariaLabel}
           aria-invalid={Boolean(error)}
           aria-describedby={describedBy}
@@ -364,101 +583,23 @@ export function Select<T = string>({
         )}
       </div>
 
-      {isOpen &&
-        createPortal(
-          <div
-            ref={popupRef}
-            style={{
-              position: 'fixed',
-              top: popupTop,
-              left: popupLeft,
-              width: popupWidth,
-              maxWidth: popupMaxWidth,
-              maxHeight: popupMaxHeight,
-              visibility: popupPosition ? 'visible' : 'hidden',
-            }}
-            className={`z-50 bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl shadow-lg p-1 overflow-y-auto ${popupClassName}`.trim()}
-          >
-            {options.length === 0 ? (
-              <div className="px-3 py-4 text-xs text-center text-[var(--color-text-muted)] select-none">
-                {emptyText}
-              </div>
-            ) : (
-              <ul
-                ref={optionsListRef}
-                id={listboxId}
-                role="listbox"
-                aria-label={label ?? ariaLabel ?? 'Options'}
-                tabIndex={-1}
-                className="space-y-0.5 outline-none"
-              >
-                {options.map((option, index) => {
-                  const isSelected = option.value === activeValue;
-                  const isHighlighted = index === highlightedIndex;
-                  const itemClass = getOptionItemClasses(
-                    isSelected,
-                    isHighlighted,
-                    Boolean(option.disabled),
-                  );
-
-                  return (
-                    <li
-                      key={String(option.value)}
-                      id={`${listboxId}-opt-${index}`}
-                      role="option"
-                      aria-selected={isSelected}
-                      aria-disabled={option.disabled}
-                      onMouseEnter={() => {
-                        if (!option.disabled) {
-                          setHighlightedIndex(index);
-                        }
-                      }}
-                      onClick={() => {
-                        if (!option.disabled) {
-                          selectOption(option);
-                        }
-                      }}
-                      className={`flex items-center justify-between px-3 py-2 text-xs font-sans rounded-lg cursor-pointer transition-colors ${itemClass}`}
-                    >
-                      {renderOption ? (
-                        renderOption(option, isSelected, isHighlighted)
-                      ) : (
-                        <div className="flex items-center gap-2 min-w-0 flex-1">
-                          {option.icon && (
-                            <span className="shrink-0 text-current">{option.icon}</span>
-                          )}
-                          <div className="min-w-0 flex-1">
-                            <span className="truncate block">{option.label}</span>
-                            {option.description && (
-                              <span className="text-[11px] text-[var(--color-text-muted)] block truncate mt-0.5">
-                                {option.description}
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                      )}
-
-                      <div className="flex items-center gap-2 shrink-0 ml-2">
-                        {option.badge !== undefined && (
-                          <span className="text-[11px] font-mono px-1.5 py-0.5 rounded-full bg-[var(--color-surface-subtle)] text-[var(--color-text-muted)] border border-[var(--color-border)]/50">
-                            {option.badge}
-                          </span>
-                        )}
-                        {isSelected && (
-                          <Check
-                            aria-hidden="true"
-                            className="w-4 h-4 text-[var(--color-primary)]"
-                          />
-                        )}
-                      </div>
-                    </li>
-                  );
-                })}
-              </ul>
-            )}
-          </div>,
-          document.body,
-        )}
+      <SelectPopup
+        isOpen={isOpen}
+        popupRef={popupRef}
+        popupPosition={popupPosition}
+        popupClassName={popupClassName}
+        options={options}
+        emptyText={emptyText}
+        listboxId={listboxId}
+        optionsListRef={optionsListRef}
+        label={label}
+        ariaLabel={ariaLabel}
+        activeValue={activeValue}
+        highlightedIndex={highlightedIndex}
+        onHighlight={setHighlightedIndex}
+        onSelect={selectOption}
+        renderOption={renderOption}
+      />
 
       {error && (
         <p id={errorId} role="alert" className="text-xs text-[var(--color-status-danger)]">

@@ -6,7 +6,7 @@ export interface CardProps {
   /**
    * React 19 ref forwarded directly to the root element.
    */
-  ref?: Ref<HTMLDivElement>;
+  ref?: Ref<HTMLElement>;
 
   /**
    * Optional semantic container tag.

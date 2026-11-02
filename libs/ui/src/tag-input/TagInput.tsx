@@ -40,6 +40,7 @@ function getSuggestionItemClasses(isHighlighted: boolean, isDisabled: boolean): 
 }
 
 interface SuggestionsPopupProps {
+  id: string;
   isOpen: boolean;
   popupPosition: {
     top: number;
@@ -57,6 +58,7 @@ interface SuggestionsPopupProps {
 }
 
 function SuggestionsPopup({
+  id,
   isOpen,
   popupPosition,
   popupRef,
@@ -79,6 +81,7 @@ function SuggestionsPopup({
   return createPortal(
     <div
       ref={popupRef}
+      id={id}
       role="listbox"
       aria-label="Tag suggestions"
       style={{
@@ -100,6 +103,7 @@ function SuggestionsPopup({
         return (
           <button
             key={opt.value}
+            id={`${id}-option-${idx}`}
             type="button"
             role="option"
             aria-selected={isHighlighted}
@@ -111,7 +115,9 @@ function SuggestionsPopup({
             }}
             onMouseDown={e => {
               e.preventDefault();
-              onSelect(opt);
+              if (!opt.disabled) {
+                onSelect(opt);
+              }
             }}
             className={`w-full flex items-center justify-between px-3 py-2 text-xs font-sans rounded-lg transition-colors text-left cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed ${itemClass}`}
           >
@@ -148,12 +154,23 @@ function checkDelimiterMatch(key: string, delimiters: string[]): boolean {
   return delimiters.includes(key);
 }
 
-function getNextSuggestionIndex(key: string, currentIndex: number, totalCount: number): number {
+function getNextSuggestionIndex(key: string, currentIndex: number, options: TagOption[]): number {
+  const total = options.length;
+  if (total === 0) return -1;
+  let step = 0;
   if (key === 'ArrowDown') {
-    return currentIndex < totalCount - 1 ? currentIndex + 1 : 0;
+    step = 1;
+  } else if (key === 'ArrowUp') {
+    step = -1;
   }
-  if (key === 'ArrowUp') {
-    return currentIndex > 0 ? currentIndex - 1 : totalCount - 1;
+  if (step === 0) return -1;
+
+  let next = currentIndex;
+  for (let i = 0; i < total; i++) {
+    next = (next + step + total) % total;
+    if (!options[next].disabled) {
+      return next;
+    }
   }
   return -1;
 }
@@ -176,11 +193,13 @@ export function TagInput({
   disabled = false,
   readOnly = false,
   containerClassName = '',
+  customClassName = '',
   popupClassName = '',
   className = '',
 }: TagInputProps) {
   const generatedId = useId();
   const inputId = externalId ?? generatedId;
+  const listboxId = `${inputId}-listbox`;
   const inputRef = useRef<HTMLInputElement | null>(null);
 
   const [inputValue, setInputValue] = useState('');
@@ -188,7 +207,8 @@ export function TagInput({
   const [highlightedIndex, setHighlightedIndex] = useState(-1);
   const [localError, setLocalError] = useState<string | null>(null);
 
-  const { open, close, triggerRef, popupRef, popupPosition } = usePopup<HTMLDivElement>('start');
+  const { open, close, containerRef, triggerRef, popupRef, popupPosition, updatePosition } =
+    usePopup<HTMLDivElement>('start');
 
   const normalized = useMemo(() => normalizeSuggestions(suggestions), [suggestions]);
 
@@ -205,10 +225,17 @@ export function TagInput({
   useEffect(() => {
     if (showSuggestions) {
       open();
+      updatePosition();
     } else {
       close();
     }
-  }, [close, open, showSuggestions]);
+  }, [close, open, showSuggestions, updatePosition]);
+
+  useEffect(() => {
+    if (showSuggestions) {
+      updatePosition();
+    }
+  }, [showSuggestions, value, updatePosition]);
 
   const handleInputRef = (element: HTMLInputElement | null) => {
     inputRef.current = element;
@@ -267,7 +294,7 @@ export function TagInput({
 
     if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
       e.preventDefault();
-      setHighlightedIndex(prev => getNextSuggestionIndex(e.key, prev, filteredSuggestions.length));
+      setHighlightedIndex(prev => getNextSuggestionIndex(e.key, prev, filteredSuggestions));
       return true;
     }
 
@@ -279,7 +306,10 @@ export function TagInput({
 
     if (e.key === 'Enter' && highlightedIndex >= 0) {
       e.preventDefault();
-      commitTag(filteredSuggestions[highlightedIndex].value);
+      const option = filteredSuggestions[highlightedIndex];
+      if (option && !option.disabled) {
+        commitTag(option.value);
+      }
       return true;
     }
 
@@ -330,9 +360,10 @@ export function TagInput({
   const disabledClasses = disabled
     ? 'opacity-50 cursor-not-allowed bg-[var(--color-surface-subtle)]'
     : '';
+  const resolvedContainerClass = containerClassName || customClassName || '';
 
   return (
-    <div className={`space-y-1.5 text-left ${containerClassName}`.trim()}>
+    <div ref={containerRef} className={`space-y-1.5 text-left ${resolvedContainerClass}`.trim()}>
       {label && (
         <label
           htmlFor={inputId}
@@ -371,6 +402,15 @@ export function TagInput({
             ref={handleInputRef}
             id={inputId}
             type="text"
+            role="combobox"
+            aria-autocomplete="list"
+            aria-expanded={showSuggestions}
+            aria-controls={showSuggestions ? listboxId : undefined}
+            aria-activedescendant={
+              showSuggestions && highlightedIndex >= 0
+                ? `${listboxId}-option-${highlightedIndex}`
+                : undefined
+            }
             value={inputValue}
             onChange={e => setInputValue(e.target.value)}
             onKeyDown={handleKeyDown}
@@ -387,6 +427,7 @@ export function TagInput({
       </div>
 
       <SuggestionsPopup
+        id={listboxId}
         isOpen={showSuggestions}
         popupPosition={popupPosition}
         popupRef={popupRef}

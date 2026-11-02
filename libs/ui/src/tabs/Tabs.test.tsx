@@ -220,4 +220,20 @@ describe('Tabs', () => {
     expect(ref.current).toBeInstanceOf(HTMLDivElement);
     expect(ref.current?.className).toContain('custom-container');
   });
+
+  it('supports aria-label prop directly on Tabs wrapper', () => {
+    render(<Tabs items={defaultItems} aria-label="Custom tablist" />);
+    expect(screen.getByRole('tablist', { name: 'Custom tablist' })).toBeInTheDocument();
+  });
+
+  it('supports ariaLabel prop directly on TabList compound component', () => {
+    render(
+      <Tabs defaultValue="tab1">
+        <TabList ariaLabel="Custom list label">
+          <TabTrigger value="tab1">Tab 1</TabTrigger>
+        </TabList>
+      </Tabs>,
+    );
+    expect(screen.getByRole('tablist', { name: 'Custom list label' })).toBeInTheDocument();
+  });
 });

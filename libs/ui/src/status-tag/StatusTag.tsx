@@ -150,15 +150,18 @@ export function StatusTag({
   status,
   variant = 'subtle',
   shape = 'rounded',
+  label,
+  children,
+  dot = true,
   ping,
   rightIcon,
   uppercase = false,
   mono = false,
   className = '',
   customClassName = '',
-  children,
+  id,
   role = 'status',
-  ...props
+  'aria-label': ariaLabel,
 }: StatusTagProps) {
   const semanticStatus = STATUS_ALIAS_MAP[status] ?? 'neutral';
   const colorClass = getStatusTagColorClass(variant, semanticStatus);
@@ -166,13 +169,14 @@ export function StatusTag({
   const mergedClass = customClassName || className;
   const isRestarting = status === 'restarting';
   const shouldPing = ping !== undefined ? ping : isRestarting;
-  const renderedContent = children ?? STATUS_DEFAULT_LABELS[status];
+  const renderedContent = children ?? label ?? STATUS_DEFAULT_LABELS[status];
 
   return (
     <span
-      {...props}
       ref={ref}
+      id={id}
       role={role}
+      aria-label={ariaLabel}
       className={`inline-flex items-center w-fit border font-semibold select-none transition-colors h-6 text-xs px-2.5 gap-2 leading-none ${
         SHAPE_CLASSES[shape]
       } ${colorClass} ${
@@ -180,17 +184,19 @@ export function StatusTag({
       } ${mono ? 'font-mono' : ''} ${mergedClass}`.trim()}
     >
       {/* Telemetry Status Dot Indicator */}
-      <span
-        className="relative flex h-1.5 w-1.5 shrink-0 items-center justify-center"
-        aria-hidden="true"
-      >
-        {shouldPing && (
-          <span
-            className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${dotColorClass}`}
-          />
-        )}
-        <span className={`relative inline-flex rounded-full h-1.5 w-1.5 ${dotColorClass}`} />
-      </span>
+      {dot && (
+        <span
+          className="relative flex h-1.5 w-1.5 shrink-0 items-center justify-center"
+          aria-hidden="true"
+        >
+          {shouldPing && (
+            <span
+              className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${dotColorClass}`}
+            />
+          )}
+          <span className={`relative inline-flex rounded-full h-1.5 w-1.5 ${dotColorClass}`} />
+        </span>
+      )}
 
       {/* Content */}
       {renderedContent && <span className="truncate">{renderedContent}</span>}

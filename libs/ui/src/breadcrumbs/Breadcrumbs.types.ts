@@ -1,5 +1,4 @@
 import {
-  type AnchorHTMLAttributes,
   type ButtonHTMLAttributes,
   type HTMLAttributes,
   type MouseEvent,
@@ -83,26 +82,19 @@ export interface BreadcrumbItemProps extends HTMLAttributes<HTMLLIElement> {
   className?: string;
 }
 
-export interface BreadcrumbLinkProps extends Omit<
-  AnchorHTMLAttributes<HTMLAnchorElement>,
-  'onClick'
-> {
+export interface BreadcrumbLinkProps {
   ref?: Ref<HTMLAnchorElement>;
-
-  /** Destination URL */
   href?: string;
-
-  /** Optional leading icon */
   icon?: ReactNode;
-
-  /** Custom click handler */
   onClick?: (_event: MouseEvent<HTMLElement>) => void;
-
-  /** Whether to render as a plain unstyled child slot */
   asChild?: boolean;
-
   children?: ReactNode;
   className?: string;
+  'aria-label'?: string;
+  target?: string;
+  rel?: string;
+  id?: string;
+  title?: string;
 }
 
 export interface BreadcrumbPageProps extends HTMLAttributes<HTMLSpanElement> {

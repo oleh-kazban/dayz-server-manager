@@ -75,13 +75,11 @@ export interface ToggleProps {
   /**
    * Accessible label for screen readers when no visual label is present.
    */
-  ariaLabel?: string;
   'aria-label'?: string;
 
   /**
    * Explicit ID for aria-describedby linkage.
    */
-  ariaDescribedBy?: string;
   'aria-describedby'?: string;
 
   /**

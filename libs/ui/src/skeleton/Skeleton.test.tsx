@@ -76,4 +76,21 @@ describe('Skeleton Component', () => {
 
     expect(ref.current).toBeInstanceOf(HTMLDivElement);
   });
+
+  it('omits role and aria-label and sets aria-hidden="true" when aria-hidden is true or "true"', () => {
+    const { rerender } = render(<Skeleton aria-hidden={true} data-testid="hidden-sk" />);
+
+    let skeleton = screen.getByTestId('hidden-sk');
+    expect(skeleton).toHaveAttribute('aria-hidden', 'true');
+    expect(skeleton).not.toHaveAttribute('role');
+    expect(skeleton).not.toHaveAttribute('aria-label');
+    expect(screen.queryByRole('status')).not.toBeInTheDocument();
+
+    rerender(<Skeleton aria-hidden="true" data-testid="hidden-sk" />);
+    skeleton = screen.getByTestId('hidden-sk');
+    expect(skeleton).toHaveAttribute('aria-hidden', 'true');
+    expect(skeleton).not.toHaveAttribute('role');
+    expect(skeleton).not.toHaveAttribute('aria-label');
+    expect(screen.queryByRole('status')).not.toBeInTheDocument();
+  });
 });

@@ -156,4 +156,13 @@ describe('DatePicker', () => {
 
     expect(ref.current).toBeInstanceOf(HTMLButtonElement);
   });
+
+  it('applies className directly to the trigger button', () => {
+    render(
+      <DatePicker className="custom-trigger-class" placeholder="Select date" onChange={vi.fn()} />,
+    );
+
+    const trigger = screen.getByRole('button', { name: /select date/i });
+    expect(trigger).toHaveClass('custom-trigger-class');
+  });
 });

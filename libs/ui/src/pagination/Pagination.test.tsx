@@ -120,10 +120,13 @@ describe('Pagination Component', () => {
       />,
     );
 
-    const select = screen.getByRole('combobox');
-    expect(select).toHaveValue('25');
+    const combobox = screen.getByRole('combobox');
+    expect(combobox).toHaveTextContent('25');
 
-    await user.selectOptions(select, '50');
+    await user.click(combobox);
+    const option50 = screen.getByRole('option', { name: '50' });
+    await user.click(option50);
+
     expect(handlePageSizeChange).toHaveBeenCalledWith(50);
   });
 
@@ -176,6 +179,19 @@ describe('Pagination Component', () => {
 
     expect(navRef.current).toBeInstanceOf(HTMLElement);
     expect(navRef.current?.tagName.toLowerCase()).toBe('nav');
-    expect(navRef.current).toHaveAttribute('aria-label', 'Pagination');
+    expect(navRef.current).toHaveAttribute('aria-label', 'Pagination Navigation');
+  });
+
+  it('supports custom aria-label on navigation landmark', () => {
+    render(
+      <Pagination
+        page={1}
+        totalPages={5}
+        onPageChange={vi.fn()}
+        aria-label="Server list pagination"
+      />,
+    );
+
+    expect(screen.getByRole('navigation', { name: 'Server list pagination' })).toBeInTheDocument();
   });
 });

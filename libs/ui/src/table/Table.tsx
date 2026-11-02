@@ -39,9 +39,13 @@ function getRowSelectionClass(isSelected: boolean, striped: boolean): string {
   return 'hover:bg-[var(--color-surface-subtle)]/50';
 }
 
-function getAriaSort(sortDirection?: TableSortDirection): 'ascending' | 'descending' | undefined {
+function getAriaSort(
+  sortDirection?: TableSortDirection,
+  isSortable = false,
+): 'ascending' | 'descending' | 'none' | undefined {
   if (sortDirection === 'asc') return 'ascending';
   if (sortDirection === 'desc') return 'descending';
+  if (sortDirection === false || (isSortable && !sortDirection)) return 'none';
   return undefined;
 }
 
@@ -83,7 +87,7 @@ export function Table({
   const containerVariantClass =
     variant === 'embedded'
       ? 'border-y border-[var(--color-border)] bg-transparent'
-      : 'rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-xs';
+      : 'rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-[var(--shadow-card)]';
 
   return (
     <TableContext.Provider value={contextValue}>
@@ -91,7 +95,12 @@ export function Table({
         ref={containerRef}
         className={`w-full overflow-hidden ${containerVariantClass} ${containerClassName}`.trim()}
       >
-        <div className="w-full overflow-x-auto">
+        <div
+          tabIndex={0}
+          role="region"
+          aria-label={props['aria-label'] ?? 'Scrollable table'}
+          className="w-full overflow-x-auto focus:outline-none focus-visible:ring-1 focus-visible:ring-[var(--color-primary)]"
+        >
           <table
             ref={ref}
             className={`w-full caption-bottom text-xs font-sans border-collapse text-left ${className}`.trim()}
@@ -121,7 +130,7 @@ export function TableBody({ ref, className = '', children, ...props }: TableBody
   return (
     <tbody
       ref={ref}
-      className={`divide-y divide-[var(--color-border)]/50 ${className}`.trim()}
+      className={`divide-y divide-[var(--color-border-subtle)] ${className}`.trim()}
       {...props}
     >
       {children}
@@ -157,7 +166,7 @@ export function TableRow({
     <tr
       ref={ref}
       aria-selected={isSelected || undefined}
-      className={`transition-colors border-b border-[var(--color-border)]/50 last:border-b-0 ${selectionClass} ${cursorClass} ${className}`.trim()}
+      className={`transition-colors border-b border-[var(--color-border-subtle)] last:border-b-0 ${selectionClass} ${cursorClass} ${className}`.trim()}
       {...props}
     >
       {children}
@@ -180,7 +189,7 @@ export function TableHead({
   const justifyClass = getFlexJustifyClass(align);
   const isSortable = Boolean(onSort || sortDirection !== undefined);
   const sortIcon = renderSortIcon(sortDirection);
-  const ariaSort = getAriaSort(sortDirection);
+  const ariaSort = getAriaSort(sortDirection, isSortable);
 
   const handleKeyDown = (e: KeyboardEvent<HTMLTableCellElement>) => {
     props.onKeyDown?.(e);
@@ -269,7 +278,7 @@ export function TableEmpty({
       >
         <div className="flex flex-col items-center justify-center max-w-sm mx-auto text-center space-y-2">
           {icon && (
-            <div className="p-2.5 rounded-full bg-[var(--color-surface-subtle)] text-[var(--color-text-muted)] border border-[var(--color-border)]/50">
+            <div className="p-2.5 rounded-full bg-[var(--color-surface-subtle)] text-[var(--color-text-muted)] border border-[var(--color-border-subtle)]">
               {icon}
             </div>
           )}

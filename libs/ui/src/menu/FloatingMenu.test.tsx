@@ -165,4 +165,23 @@ describe('FloatingMenu', () => {
 
     expect(ref.current).toBeInstanceOf(HTMLButtonElement);
   });
+
+  it('applies containerClassName to the outer wrapper and shadow-[var(--shadow-dropdown)] to menu', async () => {
+    const user = userEvent.setup();
+    const { container } = render(
+      <FloatingMenu
+        options={options}
+        value="production"
+        onChange={vi.fn()}
+        ariaLabel="Env Menu"
+        containerClassName="custom-outer-wrapper"
+      />,
+    );
+
+    expect(container.firstChild).toHaveClass('custom-outer-wrapper');
+
+    await user.click(screen.getByRole('button', { name: /env menu/i }));
+    const menu = screen.getByRole('menu', { name: /env menu/i });
+    expect(menu).toHaveClass('shadow-[var(--shadow-dropdown)]');
+  });
 });

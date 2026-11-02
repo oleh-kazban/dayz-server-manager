@@ -56,6 +56,21 @@ describe('TableColumnVisibility', () => {
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
 
+  it('renders dialog panel with shadow-[var(--shadow-dropdown)], tabIndex -1, and focuses search input on open', async () => {
+    const user = userEvent.setup();
+    render(<TableColumnVisibility columns={mockColumns} onColumnVisibilityChange={vi.fn()} />);
+
+    await user.click(screen.getByRole('button', { name: /columns/i }));
+
+    const dialog = screen.getByRole('dialog', { name: 'Toggle column visibility' });
+    expect(dialog).toBeInTheDocument();
+    expect(dialog).toHaveClass('shadow-[var(--shadow-dropdown)]');
+    expect(dialog).toHaveAttribute('tabindex', '-1');
+
+    const searchInput = screen.getByPlaceholderText('Find a column...');
+    expect(searchInput).toHaveFocus();
+  });
+
   it('disables checkbox and displays lock icon for non-hideable columns', async () => {
     const user = userEvent.setup();
     render(<TableColumnVisibility columns={mockColumns} onColumnVisibilityChange={vi.fn()} />);

@@ -15,6 +15,25 @@ describe('Notice', () => {
     expect(screen.getByText('This is the notice body content.')).toBeInTheDocument();
   });
 
+  it('links aria-labelledby to the heading id when title is present', () => {
+    render(<Notice title="Important Update">Notice content</Notice>);
+
+    const notice = screen.getByRole('status');
+    const heading = screen.getByRole('heading', { level: 5 });
+
+    expect(heading).toHaveTextContent('Important Update');
+    expect(heading.id).toBeTruthy();
+    expect(notice).toHaveAttribute('aria-labelledby', heading.id);
+  });
+
+  it('omits aria-labelledby when title is absent', () => {
+    render(<Notice>Notice content without title</Notice>);
+
+    const notice = screen.getByRole('status');
+    expect(notice).not.toHaveAttribute('aria-labelledby');
+    expect(screen.queryByRole('heading')).not.toBeInTheDocument();
+  });
+
   it('assigns role="status" and polite live region for info and success variants', () => {
     const { rerender } = render(<Notice variant="info">Info message</Notice>);
     let notice = screen.getByRole('status');

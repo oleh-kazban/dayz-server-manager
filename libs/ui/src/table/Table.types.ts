@@ -1,4 +1,5 @@
 import {
+  type CSSProperties,
   type HTMLAttributes,
   type ReactNode,
   type Ref,
@@ -117,7 +118,8 @@ export interface TableCaptionProps extends HTMLAttributes<HTMLTableCaptionElemen
   children?: ReactNode;
 }
 
-export interface TableEmptyProps extends Omit<TdHTMLAttributes<HTMLTableCellElement>, 'title'> {
+export interface TableEmptyProps {
+  /** React 19 native ref forwarded to the <td> element */
   ref?: Ref<HTMLTableCellElement>;
 
   /** Number of table columns to span across */
@@ -135,7 +137,26 @@ export interface TableEmptyProps extends Omit<TdHTMLAttributes<HTMLTableCellElem
   /** Optional action slot (e.g. "Clear filters" or "Add item") */
   action?: ReactNode;
 
+  /** Custom CSS class names */
   className?: string;
+
+  /** Optional container ID */
+  id?: string;
+
+  /** Optional inline styles */
+  style?: CSSProperties;
+
+  /** Custom child elements */
+  children?: ReactNode;
+
+  /** Accessible label */
+  'aria-label'?: string;
+
+  /** Accessible labelling element ID */
+  'aria-labelledby'?: string;
+
+  /** Test automation identifier */
+  'data-testid'?: string;
 }
 
 export interface TableBulkActionsProps extends HTMLAttributes<HTMLDivElement> {

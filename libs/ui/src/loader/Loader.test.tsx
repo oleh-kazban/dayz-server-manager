@@ -15,11 +15,27 @@ describe('Loader', () => {
     expect(screen.getByText('Loading...')).toHaveClass('sr-only');
   });
 
-  it('renders visible label when showLabel is true', () => {
+  it('renders visible label with aria-hidden="true" when showLabel is true', () => {
     render(<Loader label="Syncing mods..." showLabel />);
 
     const labels = screen.getAllByText('Syncing mods...');
     expect(labels).toHaveLength(2); // One sr-only, one visible
+
+    const srOnlyLabel = labels.find(el => el.classList.contains('sr-only'));
+    const visibleLabel = labels.find(el => !el.classList.contains('sr-only'));
+
+    expect(srOnlyLabel).toBeInTheDocument();
+    expect(srOnlyLabel).not.toHaveAttribute('aria-hidden');
+
+    expect(visibleLabel).toBeInTheDocument();
+    expect(visibleLabel).toHaveAttribute('aria-hidden', 'true');
+  });
+
+  it('marks spinner SVG with aria-hidden="true"', () => {
+    const { container } = render(<Loader variant="spinner" />);
+    const svg = container.querySelector('svg');
+    expect(svg).toBeInTheDocument();
+    expect(svg).toHaveAttribute('aria-hidden', 'true');
   });
 
   it('renders dots and pulse animation variants across sizes', () => {

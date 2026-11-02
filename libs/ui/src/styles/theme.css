@@ -1,7 +1,6 @@
 @import './fonts.css';
 @import './themes.css';
 @import './keyframes.css';
-@import '../card/Card.css';
 @import 'tailwindcss';
 
 @theme {

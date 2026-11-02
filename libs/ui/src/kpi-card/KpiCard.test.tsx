@@ -150,4 +150,49 @@ describe('KpiCard Component', () => {
     expect(cardRef.current).toBeInstanceOf(HTMLDivElement);
     expect(valueRef.current).toBeInstanceOf(HTMLDivElement);
   });
+
+  it('marks sparkline SVG with aria-hidden="true" for data arrays and custom SVG children', () => {
+    const { rerender } = render(
+      <KpiCard label="Network In" value="45 MB/s" sparkline={[10, 20, 30]} />,
+    );
+
+    const arraySparkline = screen.getByTestId('kpi-sparkline');
+    expect(arraySparkline).toHaveAttribute('aria-hidden', 'true');
+
+    rerender(
+      <KpiCard
+        label="Network Out"
+        value="12 MB/s"
+        sparkline={
+          <KpiCard.Sparkline>
+            <path d="M 0 0 L 10 10" />
+          </KpiCard.Sparkline>
+        }
+      />,
+    );
+
+    const customSparkline = screen.getByTestId('kpi-sparkline');
+    expect(customSparkline).toHaveAttribute('aria-hidden', 'true');
+  });
+
+  it('uses CSS custom property variables for sparkline strokes across trends', () => {
+    const { rerender } = render(
+      <KpiCard label="FPS" value={60} trend="positive" sparkline={[50, 55, 60]} />,
+    );
+
+    let path = screen.getByTestId('kpi-sparkline').querySelector('path');
+    expect(path).toHaveAttribute('stroke', 'var(--color-status-success)');
+
+    rerender(<KpiCard label="FPS" value={20} trend="negative" sparkline={[50, 35, 20]} />);
+    path = screen.getByTestId('kpi-sparkline').querySelector('path');
+    expect(path).toHaveAttribute('stroke', 'var(--color-status-danger)');
+
+    rerender(<KpiCard label="FPS" value={40} trend="warning" sparkline={[50, 45, 40]} />);
+    path = screen.getByTestId('kpi-sparkline').querySelector('path');
+    expect(path).toHaveAttribute('stroke', 'var(--color-status-warning)');
+
+    rerender(<KpiCard label="FPS" value={50} trend="neutral" sparkline={[50, 50, 50]} />);
+    path = screen.getByTestId('kpi-sparkline').querySelector('path');
+    expect(path).toHaveAttribute('stroke', 'var(--color-chart-teal)');
+  });
 });

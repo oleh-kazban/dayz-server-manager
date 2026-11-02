@@ -220,4 +220,16 @@ describe('NotificationMenu', () => {
     rerender(<NotificationMenu notifications={sampleNotifications} disabled />);
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
+
+  it('applies shadow-[var(--shadow-dropdown)] to dialog panel and focuses dialog on open', () => {
+    render(<NotificationMenu notifications={sampleNotifications} />);
+
+    const trigger = screen.getByRole('button', { name: /Notifications/i });
+    fireEvent.click(trigger);
+
+    const dialog = screen.getByRole('dialog', { name: 'Notifications' });
+    expect(dialog).toBeInTheDocument();
+    expect(dialog).toHaveClass('shadow-[var(--shadow-dropdown)]');
+    expect(dialog).toHaveFocus();
+  });
 });

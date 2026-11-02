@@ -29,6 +29,21 @@ describe('StatusTag', () => {
     expect(badge).toHaveTextContent('Running (32/60)');
   });
 
+  it('renders text via label prop when children is not provided', () => {
+    render(<StatusTag status="info" label="Deploying" />);
+
+    const badge = screen.getByRole('status');
+    expect(badge).toHaveTextContent('Deploying');
+  });
+
+  it('suppresses telemetry indicator dot when dot={false}', () => {
+    const { container, rerender } = render(<StatusTag status="online" dot={true} />);
+    expect(container.querySelector('[aria-hidden="true"]')).toBeInTheDocument();
+
+    rerender(<StatusTag status="online" dot={false} />);
+    expect(container.querySelector('[aria-hidden="true"]')).toBeNull();
+  });
+
   it('automatically applies pulsating radar ping for restarting and supports explicit ping override', () => {
     const { container, rerender } = render(<StatusTag status="restarting" />);
     expect(container.querySelector('.animate-ping')).toBeInTheDocument();
