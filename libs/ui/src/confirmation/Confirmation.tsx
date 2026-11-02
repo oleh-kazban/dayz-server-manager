@@ -53,6 +53,7 @@ export function Confirmation({
 
   const isConfirmDisabled = remainingTime > 0 || isLoading;
   const dialogRef = useRef<HTMLDialogElement>(null);
+  const isUnmountingRef = useRef(false);
   const titleId = useId();
   const descriptionId = useId();
 
@@ -75,7 +76,7 @@ export function Confirmation({
   }, [timerValue]);
 
   const handleClose = (event: SyntheticEvent<HTMLDialogElement>) => {
-    if (isLoading) return;
+    if (isLoading || isUnmountingRef.current) return;
     if (event.currentTarget.returnValue === 'confirm') {
       onConfirm();
     } else {
@@ -91,11 +92,13 @@ export function Confirmation({
   };
 
   useEffect(() => {
+    isUnmountingRef.current = false;
     const dialog = dialogRef.current;
     if (dialog && !dialog.open) {
       dialog.showModal();
     }
     return () => {
+      isUnmountingRef.current = true;
       if (dialog && dialog.open) {
         dialog.close();
       }

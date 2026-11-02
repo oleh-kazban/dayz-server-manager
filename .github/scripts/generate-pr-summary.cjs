@@ -85,10 +85,10 @@ module.exports = async function generatePrSummary({ github, context }) {
         '(Grouped by package)',
         '',
         '### 🛡️ Safety, Contracts & Boundary Compliance',
-        '(Report module boundaries, process safety, file integrity, UI kit geometry)',
+        '(Analyze touched packages: module boundaries, process safety, file integrity, UI kit geometry; note that compliance is subject to CI verification)',
         '',
         '### 🧪 Testing & Verification',
-        '(Report tests added, 80%/100% coverage compliance)',
+        '(Report test files added/modified in the diff; note coverage and quality gates as pending CI pipeline execution)',
         '',
         '### ⚠️ Breaking Changes & Migrations',
         '(List breaking changes or "None")',
@@ -131,10 +131,10 @@ module.exports = async function generatePrSummary({ github, context }) {
         '(Grouped by package)',
         '',
         '### 🛡️ Safety, Contracts & Boundary Compliance',
-        '(Report module boundaries, process safety, file integrity, UI kit geometry)',
+        '(Analyze touched packages: module boundaries, process safety, file integrity, UI kit geometry; note that compliance is subject to CI verification)',
         '',
         '### 🧪 Testing & Verification',
-        '(Report tests added, 80%/100% coverage compliance)',
+        '(Report test files added/modified in the diff; note coverage and quality gates as pending CI pipeline execution)',
         '',
         '### ⚠️ Breaking Changes & Migrations',
         '(List breaking changes or "None")',
@@ -183,15 +183,15 @@ ${commitMessages}
 ### 🧱 Key Changes by Package
 ${packageBreakdown}
 ### 🛡️ Safety, Contracts & Boundary Compliance
-- **Module Boundaries:** Passed. Strict layer isolation maintained across monorepo boundaries.
-- **Process & Shutdown Safety:** ${touchedProcessSafety ? '⚠️ Modified platform/process supervisors. Verified argument array safety.' : 'Passed. No external process management modified.'}
-- **File Integrity & Contracts:** ${touchedContracts ? '⚠️ API contracts updated. Runtime Zod validation schemas synchronized.' : 'Passed. File writing and contracts remain compliant.'}
-- **UI Kit Geometry:** Canonical 36px standard (\`h-9\`) and Outlive design system tokens maintained.
+- **Module Boundaries:** Not verified by this workflow (enforced by Nx boundary rules in CI).
+- **Process & Shutdown Safety:** ${touchedProcessSafety ? '⚠️ Modified platform/process supervisors. Requires argument array verification in review.' : 'No external process management touched.'}
+- **File Integrity & Contracts:** ${touchedContracts ? '⚠️ API contracts modified. Requires Zod schema synchronization verification.' : 'Contracts untouched.'}
+- **UI Kit Geometry:** ${packages.has('libs/ui') ? 'Requires manual/visual review against canonical 36px standard and design tokens.' : 'UI kit unaffected.'}
 
 ### 🧪 Testing & Verification
-- **Automated Tests:** ${testFilesCount > 0 ? `${testFilesCount} test file(s) included in this diff.` : 'Verification suite executed.'}
-- **Two-Level Coverage:** Meets required thresholds (80% global / 100% affected code per \`TEST_AUDIT_SPEC.md\`).
-- **Quality Gates:** Local typecheck and linting completed with 0 errors and 0 warnings.
+- **Automated Tests:** ${testFilesCount > 0 ? `${testFilesCount} test file(s) included in this diff.` : 'None included in this diff.'}
+- **Two-Level Coverage:** Not verified by this workflow (pending CI Vitest coverage run).
+- **Quality Gates:** Not verified by this workflow (pending CI typecheck, lint, and SonarQube Cloud scan).
 
 ### ⚠️ Breaking Changes & Migrations
 - None.`;

@@ -1,3 +1,5 @@
+import { StrictMode } from 'react';
+
 import { act, fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -157,39 +159,27 @@ describe('Confirmation', () => {
     expect(handleCancel).toHaveBeenCalledTimes(1);
   });
 
-  it('safely handles React StrictMode / repeated mount and unmount without throwing DOMException', () => {
+  it('safely handles React StrictMode / repeated mount and unmount without triggering onCancel', () => {
     vi.useRealTimers();
     const handleCancel = vi.fn();
     const handleConfirm = vi.fn();
 
-    expect(() => {
-      const { unmount } = render(
+    const { unmount } = render(
+      <StrictMode>
         <Confirmation
-          title="StrictMode Test 1"
-          description="Ensuring clean lifecycle"
+          title="StrictMode Lifecycle Test"
+          description="Ensuring clean lifecycle under StrictMode"
           onCancel={handleCancel}
           onConfirm={handleConfirm}
-        />,
-      );
-      unmount();
+        />
+      </StrictMode>,
+    );
 
-      const secondRender = render(
-        <Confirmation
-          title="StrictMode Test 2"
-          description="Ensuring clean lifecycle"
-          onCancel={handleCancel}
-          onConfirm={handleConfirm}
-        />,
-      );
-      secondRender.rerender(
-        <Confirmation
-          title="StrictMode Test 2 Updated"
-          description="Ensuring clean lifecycle"
-          onCancel={handleCancel}
-          onConfirm={handleConfirm}
-        />,
-      );
-      secondRender.unmount();
-    }).not.toThrow();
+    expect(screen.getByRole('alertdialog')).toBeInTheDocument();
+    expect(handleCancel).not.toHaveBeenCalled();
+    expect(handleConfirm).not.toHaveBeenCalled();
+
+    unmount();
+    expect(handleCancel).not.toHaveBeenCalled();
   });
 });
