@@ -96,7 +96,6 @@ export function Table({
         className={`w-full overflow-hidden ${containerVariantClass} ${containerClassName}`.trim()}
       >
         <div
-          tabIndex={0}
           role="region"
           aria-label={props['aria-label'] ?? 'Scrollable table'}
           className="w-full overflow-x-auto focus:outline-none focus-visible:ring-1 focus-visible:ring-[var(--color-primary)]"

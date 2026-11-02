@@ -270,7 +270,7 @@ describe('Table', () => {
     expect(nonSortableCol).not.toHaveAttribute('aria-sort');
   });
 
-  it('configures scrollable table region with role, tabIndex, and default or custom accessible name', () => {
+  it('configures scrollable table region with role and default or custom accessible name', () => {
     const { rerender } = render(
       <Table>
         <TableBody>
@@ -283,7 +283,7 @@ describe('Table', () => {
 
     let region = screen.getByRole('region', { name: 'Scrollable table' });
     expect(region).toBeInTheDocument();
-    expect(region).toHaveAttribute('tabIndex', '0');
+    expect(region).not.toHaveAttribute('tabindex');
 
     rerender(
       <Table aria-label="Server activity table">

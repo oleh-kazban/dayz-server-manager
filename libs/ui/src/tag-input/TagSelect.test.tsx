@@ -46,6 +46,7 @@ describe('TagSelect', () => {
 
     // Listbox should be visible
     expect(screen.getByRole('listbox')).toBeInTheDocument();
+    expect(screen.getByRole('listbox')).toHaveAttribute('tabindex', '-1');
 
     // Click 'Clothing' to select
     const clothingOption = screen.getByRole('option', { name: /clothing/i });

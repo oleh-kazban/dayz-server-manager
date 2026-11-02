@@ -330,6 +330,7 @@ export function TagSelect({
             ref={popupRef}
             id={listboxId}
             role="listbox"
+            tabIndex={-1}
             aria-multiselectable="true"
             aria-label={label ?? 'Options'}
             onKeyDown={handlePopupKeyDown}

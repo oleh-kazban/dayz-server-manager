@@ -1,6 +1,5 @@
 import {
   cloneElement,
-  type KeyboardEvent,
   type ReactElement,
   useCallback,
   useEffect,
@@ -125,12 +124,21 @@ export function Tooltip({
     };
   }, [clearTimer, clearCloseTimer]);
 
-  const handleKeyDown = (e: KeyboardEvent<HTMLSpanElement>) => {
-    if (e.key === 'Escape' && isVisible) {
-      e.stopPropagation();
-      hideTooltip();
-    }
-  };
+  useEffect(() => {
+    if (!isVisible) return;
+
+    const handleDocumentKeyDown = (e: globalThis.KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.stopPropagation();
+        hideTooltip();
+      }
+    };
+
+    document.addEventListener('keydown', handleDocumentKeyDown, true);
+    return () => {
+      document.removeEventListener('keydown', handleDocumentKeyDown, true);
+    };
+  }, [isVisible, hideTooltip]);
 
   const child = children as ReactElement<{
     'aria-describedby'?: string;
@@ -153,7 +161,6 @@ export function Tooltip({
         onMouseLeave={scheduleHide}
         onFocusCapture={() => showTooltip(true)}
         onBlurCapture={hideTooltip}
-        onKeyDown={handleKeyDown}
       >
         {cloneElement(child, {
           'aria-describedby': computedDescribedBy,

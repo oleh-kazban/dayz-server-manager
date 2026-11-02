@@ -1,7 +1,6 @@
 import {
   type FocusEvent,
   type KeyboardEvent,
-  type MouseEvent,
   type Ref,
   useCallback,
   useEffect,
@@ -335,11 +334,6 @@ export function TagInput({
     }
   };
 
-  const handleContainerClick = (e: MouseEvent<HTMLDivElement>) => {
-    if ((e.target as HTMLElement).closest('button')) return;
-    inputRef.current?.focus();
-  };
-
   const handleFocus = () => {
     setIsFocused(true);
     setLocalError(null);
@@ -379,7 +373,6 @@ export function TagInput({
 
       <div
         ref={triggerRef}
-        onClick={handleContainerClick}
         className={`flex flex-wrap items-center min-h-9 px-2.5 py-1 gap-1.5 rounded-lg border bg-[var(--color-surface)] shadow-xs transition-colors cursor-text ${borderClasses} ${disabledClasses}`}
       >
         {leftIcon && <span className="text-[var(--color-text-muted)] shrink-0">{leftIcon}</span>}

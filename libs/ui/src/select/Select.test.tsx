@@ -207,12 +207,11 @@ describe('Select', () => {
     expect(screen.getByRole('listbox')).toBeInTheDocument();
   });
 
-  it('clicking container outside button focuses combobox and toggles open state', () => {
+  it('clicking combobox focuses and toggles open state', () => {
     render(<Select label="Container Select" options={TEST_OPTIONS} />);
 
     const combobox = screen.getByRole('combobox');
-    const containerDiv = combobox.parentElement!;
-    fireEvent.click(containerDiv);
+    fireEvent.click(combobox);
 
     expect(screen.getByRole('listbox')).toBeInTheDocument();
   });
@@ -336,5 +335,12 @@ describe('Select', () => {
 
     rerender(<Select label="Width Test" options={TEST_OPTIONS} />);
     expect(container.firstElementChild).toHaveClass('w-full');
+  });
+
+  it('renders ChevronDown icon with pointer-events-none class', () => {
+    const { container } = render(<Select label="Test Select" options={TEST_OPTIONS} />);
+    const chevronSvg = container.querySelector('button[role="combobox"] svg');
+    expect(chevronSvg).toBeInTheDocument();
+    expect(chevronSvg).toHaveClass('pointer-events-none');
   });
 });

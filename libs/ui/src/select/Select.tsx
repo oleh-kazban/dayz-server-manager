@@ -476,14 +476,6 @@ export function Select<T = string>({
     });
   };
 
-  const handleContainerClick = (e: MouseEvent<HTMLDivElement>) => {
-    if ((e.target as HTMLElement).closest('button')) {
-      return;
-    }
-    buttonRef.current?.focus();
-    toggle();
-  };
-
   // Scroll active option into view inside dropdown
   useEffect(() => {
     if (isOpen && highlightedIndex >= 0 && optionsListRef.current) {
@@ -528,7 +520,6 @@ export function Select<T = string>({
 
       <div
         ref={triggerRef}
-        onClick={handleContainerClick}
         className={`w-full flex items-center justify-between rounded-lg border bg-[var(--color-surface)] shadow-xs transition-colors h-9 px-3.5 gap-2 text-xs font-sans text-left ${borderClasses} ${
           disabled ? 'opacity-50 cursor-not-allowed bg-[var(--color-surface-subtle)]' : ''
         } ${className}`.trim()}
@@ -565,7 +556,7 @@ export function Select<T = string>({
 
           <ChevronDown
             aria-hidden="true"
-            className={`w-4 h-4 text-[var(--color-text-muted)] transition-transform duration-200 select-none shrink-0 ${
+            className={`w-4 h-4 text-[var(--color-text-muted)] transition-transform duration-200 select-none shrink-0 pointer-events-none ${
               isOpen ? 'rotate-180' : ''
             }`}
           />

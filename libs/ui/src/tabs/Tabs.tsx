@@ -224,6 +224,7 @@ export function TabList({
     <div
       ref={ref}
       role="tablist"
+      tabIndex={-1}
       aria-orientation="horizontal"
       aria-label={effectiveAriaLabel}
       onKeyDown={handleKeyDown}

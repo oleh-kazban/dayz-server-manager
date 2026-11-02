@@ -18,6 +18,7 @@ describe('Tabs', () => {
 
     const tablist = screen.getByRole('tablist', { name: 'Test tablist' });
     expect(tablist).toBeInTheDocument();
+    expect(tablist).toHaveAttribute('tabindex', '-1');
 
     const tabs = screen.getAllByRole('tab');
     expect(tabs).toHaveLength(3);
