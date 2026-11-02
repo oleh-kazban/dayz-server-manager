@@ -11,11 +11,22 @@ export type DarkThemeId = z.infer<typeof darkThemeIdSchema>;
 
 export type ThemeId = LightThemeId | DarkThemeId;
 
-export const themeSettingsSchema = z.object({
-  mode: themeModeSchema,
-  preferredLight: lightThemeIdSchema,
-  preferredDark: darkThemeIdSchema,
-});
+export const themeSettingsSchema = z.preprocess(
+  (raw: unknown) => {
+    if (!raw || typeof raw !== 'object') return raw;
+    const obj = raw as Record<string, unknown>;
+    return {
+      mode: obj.mode ?? 'light',
+      preferredLight: obj.preferredLight ?? obj.prefferedLight ?? 'light',
+      preferredDark: obj.preferredDark ?? obj.prefferedDark ?? 'darcula',
+    };
+  },
+  z.object({
+    mode: themeModeSchema.default('light'),
+    preferredLight: lightThemeIdSchema.default('light'),
+    preferredDark: darkThemeIdSchema.default('darcula'),
+  }),
+);
 export type ThemeSettings = z.infer<typeof themeSettingsSchema>;
 
 export interface ThemeContextValue {

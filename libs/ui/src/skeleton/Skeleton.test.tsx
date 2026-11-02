@@ -62,6 +62,14 @@ describe('Skeleton Component', () => {
     expect(lines[2]).toHaveStyle({ width: '75%' });
   });
 
+  it('applies width and custom style to multiline container', () => {
+    render(<Skeleton variant="text" lines={2} width={300} style={{ opacity: 0.8 }} />);
+
+    const container = screen.getByRole('status', { name: /loading/i });
+    expect(container.style.width).toBe('300px');
+    expect(container.style.opacity).toBe('0.8');
+  });
+
   it('forwards ref to the root element', () => {
     const ref = createRef<HTMLDivElement>();
     render(<Skeleton ref={ref} />);

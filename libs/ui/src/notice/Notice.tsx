@@ -1,4 +1,4 @@
-import { isValidElement, type ReactNode } from 'react';
+import { type ComponentType, isValidElement, type ReactNode } from 'react';
 
 import { AlertTriangle, CheckCircle2, CircleAlert, Info, type LucideIcon, X } from 'lucide-react';
 
@@ -56,12 +56,18 @@ function resolveIcon(icon: NoticeProps['icon'], theme: VariantTheme): ReactNode 
   if (isValidElement(icon)) {
     return icon;
   }
-  if (typeof icon === 'function') {
-    const CustomIcon = icon as LucideIcon;
-    return <CustomIcon aria-hidden="true" className="w-4 h-4 shrink-0" />;
+  if (
+    typeof icon === 'function' ||
+    (typeof icon === 'object' && icon !== null && ('render' in icon || '$$typeof' in icon))
+  ) {
+    const CustomIcon = icon as ComponentType<{
+      className?: string;
+      'aria-hidden'?: boolean | 'true' | 'false';
+    }>;
+    return <CustomIcon aria-hidden={true} className="w-4 h-4 shrink-0" />;
   }
   const DefaultIcon = theme.defaultIcon;
-  return <DefaultIcon aria-hidden="true" className="w-4 h-4 shrink-0" />;
+  return <DefaultIcon aria-hidden={true} className="w-4 h-4 shrink-0" />;
 }
 
 export function Notice({
@@ -109,7 +115,7 @@ export function Notice({
           type="button"
           onClick={onClose}
           aria-label={closeLabel}
-          className="shrink-0 -mr-1 -mt-1 p-1 rounded-lg text-[var(--color-text-muted)] hover:text-[var(--color-text-main)] hover:bg-[var(--color-surface)]/60 transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--color-primary)]"
+          className="shrink-0 -mr-2 -mt-2 h-9 w-9 inline-flex items-center justify-center rounded-lg text-[var(--color-text-muted)] hover:text-[var(--color-text-main)] hover:bg-[var(--color-surface)]/60 transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--color-primary)] cursor-pointer"
         >
           <X className="w-4 h-4" />
         </button>

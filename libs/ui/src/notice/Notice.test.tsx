@@ -48,9 +48,15 @@ describe('Notice', () => {
     expect(screen.getByRole('region')).toBeInTheDocument();
   });
 
-  it('renders custom icon when provided', () => {
-    render(<Notice icon={Terminal}>Terminal notice</Notice>);
-    expect(screen.getByRole('status')).toBeInTheDocument();
+  it('renders custom icon when provided as component or element', () => {
+    const { container, rerender } = render(<Notice icon={Terminal}>Terminal notice</Notice>);
+    const svg = container.querySelector('svg');
+    expect(svg).toBeInTheDocument();
+
+    rerender(
+      <Notice icon={<span data-testid="custom-elem-icon">ICON</span>}>Element notice</Notice>,
+    );
+    expect(screen.getByTestId('custom-elem-icon')).toBeInTheDocument();
   });
 
   it('hides icon when icon={false}', () => {

@@ -91,6 +91,16 @@ describe('ProgressBar', () => {
     expect(progressbar).toHaveClass('h-3');
   });
 
+  it('safely handles min >= 100 without producing NaN or zero division', () => {
+    render(<ProgressBar value={100} min={100} showValue />);
+
+    const progressbar = screen.getByRole('progressbar');
+    expect(progressbar).toHaveAttribute('aria-valuemin', '100');
+    expect(progressbar).toHaveAttribute('aria-valuemax', '101');
+    expect(progressbar).toHaveAttribute('aria-valuenow', '100');
+    expect(screen.getByText('0%')).toBeInTheDocument();
+  });
+
   it('applies variant color classes to the active bar indicator', () => {
     const { rerender } = render(<ProgressBar variant="warning" value={50} />);
     let fill = screen.getByRole('progressbar').firstElementChild;

@@ -29,6 +29,7 @@ export function Tooltip({
   const triggerRef = useRef<HTMLSpanElement | null>(null);
   const tooltipRef = useRef<HTMLDivElement | null>(null);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const closeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const clearTimer = useCallback(() => {
     if (timeoutRef.current) {
@@ -37,8 +38,16 @@ export function Tooltip({
     }
   }, []);
 
+  const clearCloseTimer = useCallback(() => {
+    if (closeTimeoutRef.current) {
+      clearTimeout(closeTimeoutRef.current);
+      closeTimeoutRef.current = null;
+    }
+  }, []);
+
   const showTooltip = useCallback(
     (immediate = false) => {
+      clearCloseTimer();
       clearTimer();
       if (disabled || !content) return;
 
@@ -50,14 +59,33 @@ export function Tooltip({
         }, delay);
       }
     },
-    [clearTimer, content, delay, disabled],
+    [clearCloseTimer, clearTimer, content, delay, disabled],
   );
 
   const hideTooltip = useCallback(() => {
     clearTimer();
+    clearCloseTimer();
     setIsOpen(false);
     setCoords(null);
-  }, [clearTimer]);
+  }, [clearCloseTimer, clearTimer]);
+
+  const scheduleHide = useCallback(() => {
+    clearTimer();
+    clearCloseTimer();
+    closeTimeoutRef.current = setTimeout(() => {
+      setIsOpen(false);
+      setCoords(null);
+    }, 100);
+  }, [clearCloseTimer, clearTimer]);
+
+  const isVisible = isOpen && !disabled;
+
+  useEffect(() => {
+    if (disabled) {
+      clearTimer();
+      clearCloseTimer();
+    }
+  }, [disabled, clearTimer, clearCloseTimer]);
 
   const updatePosition = useCallback(() => {
     if (!triggerRef.current || !tooltipRef.current) return;
@@ -69,13 +97,13 @@ export function Tooltip({
   }, [placement]);
 
   useLayoutEffect(() => {
-    if (isOpen) {
+    if (isVisible) {
       updatePosition();
     }
-  }, [isOpen, updatePosition]);
+  }, [isVisible, updatePosition]);
 
   useEffect(() => {
-    if (!isOpen) return;
+    if (!isVisible) return;
 
     const handleScrollOrResize = () => {
       updatePosition();
@@ -88,13 +116,14 @@ export function Tooltip({
       window.removeEventListener('scroll', handleScrollOrResize, true);
       window.removeEventListener('resize', handleScrollOrResize);
     };
-  }, [isOpen, updatePosition]);
+  }, [isVisible, updatePosition]);
 
   useEffect(() => {
     return () => {
       clearTimer();
+      clearCloseTimer();
     };
-  }, [clearTimer]);
+  }, [clearTimer, clearCloseTimer]);
 
   const handleKeyDown = (e: KeyboardEvent<HTMLSpanElement>) => {
     if (e.key === 'Escape') {
@@ -106,7 +135,12 @@ export function Tooltip({
     'aria-describedby'?: string;
   }>;
 
-  const shouldRenderTooltip = isOpen && Boolean(content) && typeof document !== 'undefined';
+  const existingDescribedBy = child.props['aria-describedby'];
+  const computedDescribedBy = isVisible
+    ? [existingDescribedBy, tooltipId].filter(Boolean).join(' ')
+    : existingDescribedBy;
+
+  const shouldRenderTooltip = isVisible && Boolean(content) && typeof document !== 'undefined';
 
   return (
     <>
@@ -115,13 +149,13 @@ export function Tooltip({
         data-testid="tooltip-trigger-wrapper"
         className="inline-flex"
         onMouseEnter={() => showTooltip(false)}
-        onMouseLeave={hideTooltip}
+        onMouseLeave={scheduleHide}
         onFocusCapture={() => showTooltip(true)}
         onBlurCapture={hideTooltip}
         onKeyDown={handleKeyDown}
       >
         {cloneElement(child, {
-          'aria-describedby': isOpen ? tooltipId : child.props['aria-describedby'],
+          'aria-describedby': computedDescribedBy,
         })}
       </span>
 
@@ -133,13 +167,15 @@ export function Tooltip({
             role="tooltip"
             data-placement={coords?.placement ?? placement}
             data-testid="tooltip-portal"
+            onMouseEnter={clearCloseTimer}
+            onMouseLeave={scheduleHide}
             style={{
               position: 'fixed',
               top: coords ? `${coords.top}px` : '-9999px',
               left: coords ? `${coords.left}px` : '-9999px',
               opacity: coords ? 1 : 0,
             }}
-            className={`z-50 px-2.5 py-1 text-xs font-medium text-[var(--color-text-main)] bg-[var(--color-surface-elevated)] border border-[var(--color-border)] rounded-md shadow-md pointer-events-none select-none transition-opacity duration-150 ${className}`.trim()}
+            className={`z-50 px-2.5 py-1 text-xs font-medium text-[var(--color-text-main)] bg-[var(--color-surface-elevated)] border border-[var(--color-border)] rounded-md shadow-md select-none transition-opacity duration-150 ${className}`.trim()}
           >
             {content}
           </div>,

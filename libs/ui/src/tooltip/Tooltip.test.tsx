@@ -124,7 +124,10 @@ describe('Tooltip Component', () => {
     expect(tooltip).toHaveTextContent('Tooltip microcopy');
     expect(button).toHaveAttribute('aria-describedby', tooltip.id);
 
-    fireEvent.mouseLeave(button);
+    act(() => {
+      fireEvent.mouseLeave(button);
+      vi.advanceTimersByTime(100);
+    });
     expect(screen.queryByRole('tooltip')).not.toBeInTheDocument();
     expect(button).not.toHaveAttribute('aria-describedby');
   });
@@ -171,6 +174,75 @@ describe('Tooltip Component', () => {
     const button = screen.getByRole('button', { name: /trigger/i });
 
     fireEvent.focus(button);
+    expect(screen.queryByRole('tooltip')).not.toBeInTheDocument();
+  });
+
+  it('preserves and appends to existing aria-describedby', () => {
+    render(
+      <Tooltip content="Helper info">
+        <button type="button" aria-describedby="existing-error">
+          Trigger
+        </button>
+      </Tooltip>,
+    );
+
+    const button = screen.getByRole('button', { name: /trigger/i });
+    expect(button).toHaveAttribute('aria-describedby', 'existing-error');
+
+    fireEvent.focus(button);
+    const describedBy = button.getAttribute('aria-describedby');
+    expect(describedBy).toContain('existing-error');
+    expect(describedBy).toMatch(/^existing-error\s+\S+$/);
+  });
+
+  it('suppresses open tooltip when disabled prop changes dynamically', () => {
+    const { rerender } = render(
+      <Tooltip content="Dynamic disabled" disabled={false}>
+        <button type="button">Trigger</button>
+      </Tooltip>,
+    );
+
+    const button = screen.getByRole('button', { name: /trigger/i });
+    fireEvent.focus(button);
+    expect(screen.getByRole('tooltip')).toBeInTheDocument();
+
+    rerender(
+      <Tooltip content="Dynamic disabled" disabled={true}>
+        <button type="button">Trigger</button>
+      </Tooltip>,
+    );
+    expect(screen.queryByRole('tooltip')).not.toBeInTheDocument();
+  });
+
+  it('keeps tooltip open when pointer moves from trigger to tooltip', () => {
+    render(
+      <Tooltip content="Hoverable content" delay={0}>
+        <button type="button">Trigger</button>
+      </Tooltip>,
+    );
+
+    const wrapper = screen.getByTestId('tooltip-trigger-wrapper');
+    act(() => {
+      fireEvent.mouseEnter(wrapper);
+    });
+    expect(screen.getByRole('tooltip')).toBeInTheDocument();
+
+    // Mouse leaves trigger but enters tooltip
+    act(() => {
+      fireEvent.mouseLeave(wrapper);
+    });
+    const portal = screen.getByTestId('tooltip-portal');
+    act(() => {
+      fireEvent.mouseEnter(portal);
+      vi.advanceTimersByTime(150);
+    });
+    expect(screen.getByRole('tooltip')).toBeInTheDocument();
+
+    // Mouse leaves tooltip
+    act(() => {
+      fireEvent.mouseLeave(portal);
+      vi.advanceTimersByTime(150);
+    });
     expect(screen.queryByRole('tooltip')).not.toBeInTheDocument();
   });
 

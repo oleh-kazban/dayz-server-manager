@@ -133,4 +133,27 @@ describe('ThemeProvider & useTheme', () => {
 
     expect(screen.getByTestId('mode')).toHaveTextContent('dark');
   });
+
+  it('safely migrates legacy prefferedDark / prefferedLight keys and partial storage', () => {
+    window.localStorage.setItem(
+      THEME_STORAGE_KEY,
+      JSON.stringify({
+        mode: 'dark',
+        prefferedDark: 'tokyo',
+      }),
+    );
+
+    function LegacyConsumer() {
+      const { mode, activeThemeId } = useTheme();
+      return <div data-testid="legacy-theme-values">{`${mode}:${activeThemeId}`}</div>;
+    }
+
+    render(
+      <ThemeProvider>
+        <LegacyConsumer />
+      </ThemeProvider>,
+    );
+
+    expect(screen.getByTestId('legacy-theme-values')).toHaveTextContent('dark:tokyo');
+  });
 });

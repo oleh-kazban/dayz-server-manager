@@ -33,7 +33,7 @@ export function TableBulkActions({
         <button
           type="button"
           onClick={onClearSelection}
-          className="text-xs font-medium text-[var(--color-primary)] hover:underline whitespace-nowrap shrink-0 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--color-primary)] rounded px-1"
+          className="inline-flex items-center h-9 px-2 text-xs font-medium text-[var(--color-primary)] hover:underline whitespace-nowrap shrink-0 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--color-primary)] rounded-lg cursor-pointer"
         >
           {clearLabel}
         </button>

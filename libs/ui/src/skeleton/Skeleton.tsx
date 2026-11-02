@@ -33,12 +33,18 @@ export function Skeleton({
   };
 
   if (isMultiLine) {
+    const containerStyle: CSSProperties = {
+      ...style,
+      ...(formattedWidth ? { width: formattedWidth } : {}),
+    };
+
     return (
       <div
         ref={ref}
         role="status"
         aria-label="Loading..."
         className={`flex flex-col gap-2 ${className}`.trim()}
+        style={containerStyle}
         {...props}
       >
         {Array.from({ length: lines }).map((_, index) => {

@@ -19,7 +19,7 @@ export function SignInHero() {
       />
 
       {/* Top Workspace Badge */}
-      <div className="relative z-10 flex items-center gap-2 text-[var(--color-text-secondary)]">
+      <div className="relative z-10 flex items-center gap-2 text-white/70">
         <Server className="w-4 h-4 shrink-0" />
         <span className="text-[10px] font-medium tracking-widest uppercase">
           YOUR SERVER. YOUR WORLD.
@@ -30,7 +30,7 @@ export function SignInHero() {
       <div className="relative z-10 space-y-6 mt-8 sm:mt-12 lg:mt-0">
         <div className="space-y-3">
           <FlavorText variant="hero" />
-          <p className="text-xs sm:text-[13px] text-[var(--color-text-secondary)] leading-[1.7] max-w-sm">
+          <p className="text-xs sm:text-[13px] text-white/80 leading-[1.7] max-w-sm">
             Keep your community connected. Manage your servers, players, and everything in between.
           </p>
         </div>
@@ -43,7 +43,7 @@ export function SignInHero() {
             <span className="text-[11px] font-medium text-white block leading-tight">
               A secure home for your community
             </span>
-            <span className="text-[10px] text-[var(--color-text-muted)] block leading-tight">
+            <span className="text-[10px] text-white/60 block leading-tight">
               Access managed by your workspace administrator
             </span>
           </div>

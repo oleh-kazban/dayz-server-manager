@@ -19,7 +19,13 @@ describe('getPaginationItems', () => {
 
   it('handles near-start pagination with right ellipsis', () => {
     const items = getPaginationItems(2, 10, 1);
-    expect(items).toEqual([1, 2, 3, 'ellipsis-right', 10]);
+    expect(items).toEqual([1, 2, 3, 4, 5, 'ellipsis-right', 10]);
+  });
+
+  it('preserves active page and siblings when near boundaries or siblingCount is 0', () => {
+    expect(getPaginationItems(2, 10, 0)).toEqual([1, 2, 3, 'ellipsis-right', 10]);
+    expect(getPaginationItems(3, 10, 1)).toEqual([1, 2, 3, 4, 5, 'ellipsis-right', 10]);
+    expect(getPaginationItems(8, 10, 1)).toEqual([1, 'ellipsis-left', 6, 7, 8, 9, 10]);
   });
 
   it('handles middle pagination with both left and right ellipses', () => {
@@ -29,7 +35,7 @@ describe('getPaginationItems', () => {
 
   it('handles near-end pagination with left ellipsis', () => {
     const items = getPaginationItems(9, 10, 1);
-    expect(items).toEqual([1, 'ellipsis-left', 8, 9, 10]);
+    expect(items).toEqual([1, 'ellipsis-left', 6, 7, 8, 9, 10]);
   });
 });
 

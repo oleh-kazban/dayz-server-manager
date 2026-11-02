@@ -44,7 +44,7 @@ export function ProgressBar({
   const labelId = `${generatedId}-label`;
 
   const safeMin = Number.isFinite(min) ? min : 0;
-  const safeMax = Number.isFinite(max) && max > safeMin ? max : 100;
+  const safeMax = Number.isFinite(max) && max > safeMin ? max : Math.max(safeMin + 1, 100);
   const safeVal = Number.isFinite(value) ? Math.min(safeMax, Math.max(safeMin, value)) : safeMin;
 
   const percentage = indeterminate

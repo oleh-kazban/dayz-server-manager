@@ -20,7 +20,7 @@ export function getPaginationItems(
   const shouldShowLeftDots = leftSiblingIndex > 2;
   const shouldShowRightDots = rightSiblingIndex < totalPages - 1;
 
-  const boundaryCount = 1 + 2 * siblingCount;
+  const boundaryCount = 3 + 2 * siblingCount;
 
   if (!shouldShowLeftDots && shouldShowRightDots) {
     const leftRange = Array.from({ length: boundaryCount }, (_, i) => i + 1);
