@@ -152,7 +152,7 @@ export function KpiCard({
   return (
     <div
       ref={ref}
-      className={`ui-card p-4 flex flex-col justify-between min-h-[114px] rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-[var(--shadow-card)] transition-all ${className}`.trim()}
+      className={`p-4 flex flex-col justify-between min-h-[114px] rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-[var(--shadow-card)] transition-all ${className}`.trim()}
       {...props}
     >
       {isLoading ? (

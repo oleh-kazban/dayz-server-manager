@@ -15,6 +15,7 @@ export interface FloatingMenuProps<T extends string> {
   value: T;
   onChange: (value: T) => void;
   ariaLabel: string;
+  placeholder?: string;
   alignment?: Alignment;
   disabled?: boolean;
   customClassName?: string;

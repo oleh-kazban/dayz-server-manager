@@ -156,7 +156,7 @@ export function Tag({
           } p-0.5 text-inherit transition-opacity focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-current ${
             disabled
               ? 'cursor-not-allowed opacity-40'
-              : 'opacity-60 hover:opacity-100 hover:bg-black/10 dark:hover:bg-white/10 cursor-pointer'
+              : 'opacity-60 hover:opacity-100 hover:bg-current/10 cursor-pointer'
           }`}
         >
           <X className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />

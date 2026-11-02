@@ -48,6 +48,9 @@ export interface TagInputProps {
   /** Maximum number of tags allowed */
   maxTags?: number;
 
+  /** Whether to commit pending input text as a tag when input blurs (default: false) */
+  addOnBlur?: boolean;
+
   /** Leading icon or visual element */
   leftIcon?: ReactNode;
 

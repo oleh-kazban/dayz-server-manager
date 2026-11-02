@@ -32,6 +32,7 @@ export function FloatingMenu<T extends string>({
   options,
   value,
   ariaLabel,
+  placeholder = 'Select option...',
   onChange,
   alignment = 'end',
   disabled = false,
@@ -95,9 +96,9 @@ export function FloatingMenu<T extends string>({
     triggerRef.current?.focus();
   };
 
-  if (!currentSelectedOption) {
-    return null;
-  }
+  const displayLabel = currentSelectedOption?.label ?? placeholder;
+  const displayIcon = currentSelectedOption?.icon;
+  const isPlaceholder = !currentSelectedOption;
 
   return (
     <div ref={containerRef} className="relative inline-block">
@@ -111,13 +112,15 @@ export function FloatingMenu<T extends string>({
         disabled={disabled}
         onClick={toggle}
         className={`inline-flex h-9 items-center justify-between gap-2.5 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] px-3.5 text-xs font-sans font-medium text-[var(--color-text-main)] shadow-xs transition-colors hover:bg-[var(--color-surface-subtle)] focus-visible:outline-none focus-visible:border-[var(--color-primary)] focus-visible:ring-1 focus-visible:ring-[var(--color-primary)] disabled:cursor-not-allowed disabled:opacity-50 ${customClassName} ${
-          currentSelectedOption.className ?? ''
+          currentSelectedOption?.className ?? ''
         }`.trim()}
       >
-        {currentSelectedOption.icon && (
-          <span className="shrink-0">{currentSelectedOption.icon}</span>
-        )}
-        <span className="truncate">{currentSelectedOption.label}</span>
+        {displayIcon && <span className="shrink-0">{displayIcon}</span>}
+        <span
+          className={`truncate ${isPlaceholder ? 'text-[var(--color-text-muted)] select-none' : ''}`.trim()}
+        >
+          {displayLabel}
+        </span>
         <ChevronDown className="h-3.5 w-3.5 text-[var(--color-text-muted)] transition-transform duration-200" />
       </button>
 

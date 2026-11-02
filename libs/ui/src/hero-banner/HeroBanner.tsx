@@ -80,7 +80,7 @@ export function HeroBannerDescription({
   return (
     <p
       ref={ref}
-      className={`text-xs sm:text-[13px] text-slate-300 leading-relaxed ${className}`.trim()}
+      className={`text-xs sm:text-[13px] text-white/80 leading-relaxed ${className}`.trim()}
       {...props}
     >
       {children}
@@ -121,7 +121,7 @@ export function HeroBannerMeta({ ref, className = '', children, ...props }: Hero
   return (
     <div
       ref={ref}
-      className={`flex items-center gap-4 sm:gap-6 flex-wrap text-xs text-slate-200 ${className}`.trim()}
+      className={`flex items-center gap-4 sm:gap-6 flex-wrap text-xs text-white/90 ${className}`.trim()}
       {...props}
     >
       {children}

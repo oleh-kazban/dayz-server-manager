@@ -17,7 +17,7 @@ const VARIANT_CLASSES: Record<ProgressBarVariant, string> = {
   success: 'bg-[var(--color-status-success)]',
   warning: 'bg-[var(--color-status-warning)]',
   danger: 'bg-[var(--color-status-danger)]',
-  info: 'bg-[var(--color-primary)]',
+  info: 'bg-[var(--color-status-info)]',
 };
 
 export function ProgressBar({

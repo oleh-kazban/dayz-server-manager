@@ -1,4 +1,4 @@
-import { createContext, type MutableRefObject, useContext } from 'react';
+import { createContext, type RefObject, useContext } from 'react';
 
 import type { TabsVariant } from './Tabs.types';
 
@@ -8,8 +8,8 @@ export interface TabsContextValue {
   variant: TabsVariant;
   fullWidth: boolean;
   baseId: string;
-  tabRefs: MutableRefObject<Map<string, HTMLButtonElement | null>>;
-  orderedTabValues: MutableRefObject<string[]>;
+  tabRefs: RefObject<Map<string, HTMLButtonElement | null>>;
+  orderedTabValues: RefObject<string[]>;
 }
 
 export const TabsContext = createContext<TabsContextValue | null>(null);

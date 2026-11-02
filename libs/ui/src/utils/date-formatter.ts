@@ -52,11 +52,16 @@ export function formatDateOnly(
  * @returns Human-readable string representation (e.g. "Just now", "5m ago", "2h ago").
  */
 export function formatTimestamp(timestamp: string | Date): string {
-  if (typeof timestamp === 'string') {
-    return timestamp;
-  }
   try {
-    const diffMs = Date.now() - timestamp.getTime();
+    const date = typeof timestamp === 'string' ? new Date(timestamp) : timestamp;
+    if (Number.isNaN(date.getTime())) {
+      return String(timestamp);
+    }
+
+    const diffMs = Date.now() - date.getTime();
+    if (diffMs < 0) {
+      return 'Just now';
+    }
     const diffSec = Math.floor(diffMs / 1000);
     if (diffSec < 60) return 'Just now';
     const diffMin = Math.floor(diffSec / 60);
@@ -65,7 +70,7 @@ export function formatTimestamp(timestamp: string | Date): string {
     if (diffHours < 24) return `${diffHours}h ago`;
     const diffDays = Math.floor(diffHours / 24);
     if (diffDays < 7) return `${diffDays}d ago`;
-    return timestamp.toLocaleDateString();
+    return date.toLocaleDateString();
   } catch {
     return String(timestamp);
   }

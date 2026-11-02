@@ -38,6 +38,17 @@ describe('date-formatter utilities', () => {
       expect(formatTimestamp('Yesterday at 4:00 PM')).toBe('Yesterday at 4:00 PM');
     });
 
+    it('formats ISO date strings as relative time', () => {
+      const now = new Date('2026-10-27T12:00:00Z');
+      vi.setSystemTime(now);
+
+      expect(formatTimestamp('2026-10-27T11:55:00Z')).toBe('5m ago');
+      expect(formatTimestamp('2026-10-27T10:00:00Z')).toBe('2h ago');
+      expect(formatTimestamp('2026-10-27T12:00:10Z')).toBe('Just now');
+
+      vi.useRealTimers();
+    });
+
     it('formats dates less than 60 seconds ago as "Just now"', () => {
       const now = new Date('2026-10-27T12:00:00Z');
       vi.setSystemTime(now);

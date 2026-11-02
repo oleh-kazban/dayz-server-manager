@@ -1,4 +1,4 @@
-import type { ReactElement, ReactNode, Ref } from 'react';
+import type { ReactElement, ReactNode } from 'react';
 
 export type TooltipPlacement = 'top' | 'bottom' | 'left' | 'right';
 
@@ -37,9 +37,4 @@ export interface TooltipProps {
    * Optional custom classes for the floating tooltip popup.
    */
   className?: string;
-
-  /**
-   * Ref forwarded to the floating tooltip element when rendered.
-   */
-  ref?: Ref<HTMLDivElement>;
 }

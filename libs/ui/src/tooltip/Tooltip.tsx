@@ -15,7 +15,6 @@ import type { TooltipProps } from './Tooltip.types';
 import { calculateTooltipPosition, type TooltipCoordinates } from './tooltip.utils';
 
 export function Tooltip({
-  ref,
   content,
   placement = 'top',
   delay = 250,
@@ -103,15 +102,6 @@ export function Tooltip({
     }
   };
 
-  const setTooltipRefs = (el: HTMLDivElement | null) => {
-    tooltipRef.current = el;
-    if (typeof ref === 'function') {
-      ref(el);
-    } else if (ref && 'current' in ref) {
-      (ref as { current: HTMLDivElement | null }).current = el;
-    }
-  };
-
   const child = children as ReactElement<{
     'aria-describedby'?: string;
   }>;
@@ -138,7 +128,7 @@ export function Tooltip({
       {shouldRenderTooltip &&
         createPortal(
           <div
-            ref={setTooltipRefs}
+            ref={tooltipRef}
             id={tooltipId}
             role="tooltip"
             data-placement={coords?.placement ?? placement}

@@ -167,9 +167,20 @@ describe('TagInput', () => {
     expect(refCallback).toHaveBeenCalledWith(expect.any(HTMLInputElement));
   });
 
-  it('commits tag on blur if input contains text', () => {
+  it('does not commit tag on blur by default when addOnBlur is false', () => {
     const onChange = vi.fn();
     render(<TagInput value={[]} onChange={onChange} />);
+
+    const input = screen.getByRole('textbox');
+    fireEvent.change(input, { target: { value: 'blurred_tag' } });
+    fireEvent.blur(input);
+
+    expect(onChange).not.toHaveBeenCalled();
+  });
+
+  it('commits tag on blur when addOnBlur is true', () => {
+    const onChange = vi.fn();
+    render(<TagInput value={[]} onChange={onChange} addOnBlur />);
 
     const input = screen.getByRole('textbox');
     fireEvent.change(input, { target: { value: 'blurred_tag' } });

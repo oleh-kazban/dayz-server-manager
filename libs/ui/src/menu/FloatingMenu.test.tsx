@@ -136,6 +136,21 @@ describe('FloatingMenu', () => {
     expect(screen.queryByRole('menu')).not.toBeInTheDocument();
   });
 
+  it('renders placeholder trigger when value does not match options', () => {
+    render(
+      <FloatingMenu
+        options={options}
+        value={'unknown' as ServerEnv}
+        placeholder="Choose environment..."
+        onChange={vi.fn()}
+        ariaLabel="Env Menu"
+      />,
+    );
+
+    const trigger = screen.getByRole('button', { name: /env menu/i });
+    expect(trigger).toHaveTextContent('Choose environment...');
+  });
+
   it('forwards React 19 ref to trigger button', () => {
     const ref = createRef<HTMLButtonElement>();
     render(

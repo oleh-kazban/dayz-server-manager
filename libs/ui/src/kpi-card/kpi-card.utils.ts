@@ -20,9 +20,9 @@ export function getDefaultSparklineStroke(trend?: KpiTrend, customColor?: string
     case 'positive':
       return 'var(--color-status-success, #27a88c)';
     case 'negative':
-      return 'var(--color-status-danger, #ef4444)';
+      return 'var(--color-status-danger, #e05252)';
     case 'warning':
-      return 'var(--color-status-warning, #f59e0b)';
+      return 'var(--color-status-warning, #bb8a3e)';
     case 'neutral':
     default:
       return 'var(--color-chart-teal, #27a88c)';

@@ -174,12 +174,11 @@ describe('Tooltip Component', () => {
     expect(screen.queryByRole('tooltip')).not.toBeInTheDocument();
   });
 
-  it('forwards refs to trigger and tooltip element', () => {
+  it('preserves child element ref when wrapped in Tooltip', () => {
     const triggerRef = createRef<HTMLButtonElement>();
-    const tooltipRef = createRef<HTMLDivElement>();
 
     render(
-      <Tooltip content="Ref tooltip" ref={tooltipRef}>
+      <Tooltip content="Ref tooltip">
         <button ref={triggerRef} type="button">
           Trigger
         </button>
@@ -187,10 +186,5 @@ describe('Tooltip Component', () => {
     );
 
     expect(triggerRef.current).toBeInstanceOf(HTMLButtonElement);
-
-    const button = screen.getByRole('button', { name: /trigger/i });
-    fireEvent.focus(button);
-
-    expect(tooltipRef.current).toBeInstanceOf(HTMLDivElement);
   });
 });

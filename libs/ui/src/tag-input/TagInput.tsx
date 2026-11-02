@@ -171,6 +171,7 @@ export function TagInput({
   validateTag,
   transformTag = (s: string) => s.trim(),
   maxTags,
+  addOnBlur = false,
   leftIcon,
   disabled = false,
   readOnly = false,
@@ -319,7 +320,7 @@ export function TagInput({
     if (relatedTarget?.closest('[role="listbox"]')) return;
 
     setIsFocused(false);
-    if (inputValue.trim()) {
+    if (addOnBlur && inputValue.trim()) {
       commitTag(inputValue);
     }
   };
