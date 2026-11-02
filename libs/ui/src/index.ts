@@ -36,8 +36,12 @@ export type { CheckboxProps } from './checkbox';
 export { Checkbox } from './checkbox';
 
 // Confirmation
-export type { ConfirmationProps, ConfirmationVariant } from './confirmation';
-export { Confirmation } from './confirmation';
+export type {
+  ConfirmationProps,
+  ConfirmationVariant,
+  KeywordConfirmationProps,
+} from './confirmation';
+export { Confirmation, KeywordConfirmation } from './confirmation';
 
 // Date Picker
 export type { DatePickerProps } from './date-picker';
