@@ -32,6 +32,26 @@ function TestPopupConsumer() {
   );
 }
 
+function CompositeTriggerPopupConsumer() {
+  const { isOpen, open, containerRef, triggerRef, popupRef } = usePopup<HTMLDivElement>('start');
+
+  return (
+    <div ref={containerRef} data-testid="container">
+      <div ref={triggerRef} data-testid="composite-trigger">
+        <button type="button" data-testid="preceding-button">
+          Preceding Button
+        </button>
+        <input type="text" data-testid="trigger-input" onFocus={open} />
+      </div>
+      {isOpen && (
+        <div ref={popupRef} data-testid="popup">
+          Popup Content
+        </div>
+      )}
+    </div>
+  );
+}
+
 describe('usePopup', () => {
   it('manages open, close, and toggle state transitions', () => {
     const { result } = renderHook(() => usePopup());
@@ -83,5 +103,21 @@ describe('usePopup', () => {
     // Click outside
     fireEvent.pointerDown(screen.getByRole('button', { name: /outside element/i }));
     expect(screen.queryByTestId('popup')).not.toBeInTheDocument();
+  });
+
+  it('prioritizes restoring focus to input rather than preceding button in composite trigger on Escape', async () => {
+    const user = userEvent.setup();
+    render(<CompositeTriggerPopupConsumer />);
+
+    const input = screen.getByTestId('trigger-input');
+    const button = screen.getByTestId('preceding-button');
+
+    await user.click(input);
+    expect(screen.getByTestId('popup')).toBeInTheDocument();
+
+    await user.keyboard('{Escape}');
+    expect(screen.queryByTestId('popup')).not.toBeInTheDocument();
+    expect(input).toHaveFocus();
+    expect(button).not.toHaveFocus();
   });
 });

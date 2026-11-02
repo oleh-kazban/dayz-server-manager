@@ -1,7 +1,16 @@
 {
   "inherits": [
     {
-      "path": "D:/Projects/sdlc-skills-repo/PRESETS/react-vite-spa.json"
+      "path": "./presets/react-vite-spa.json"
     }
+  ],
+  "entries": [
+    { "path": "./skills/code-review.md" },
+    { "path": "./skills/feature-implementation.md" },
+    { "path": "./skills/tests-implementation.md" },
+    { "path": "./skills/webapp-testing.md" },
+    { "path": "./skills/code-convention.md" },
+    { "path": "./skills/react-styleguide.md" },
+    { "path": "./skills/typescript-styleguide.md" }
   ]
 }

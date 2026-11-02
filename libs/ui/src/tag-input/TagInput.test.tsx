@@ -1,6 +1,7 @@
 import { createRef } from 'react';
 
 import { fireEvent, render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
 import { TagInput } from './TagInput';
@@ -204,5 +205,30 @@ describe('TagInput', () => {
 
     fireEvent.mouseDown(suggestionOption);
     expect(onChange).toHaveBeenCalledWith(['chernarus']);
+  });
+
+  it('retains input focus and does NOT invoke onChange via addOnBlur on Escape with existing tags and draft text', async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    render(
+      <TagInput
+        value={['military', 'weapons']}
+        suggestions={['police', 'hunting']}
+        addOnBlur
+        onChange={onChange}
+      />,
+    );
+
+    const input = screen.getByRole('textbox');
+    await user.type(input, 'pol');
+
+    expect(screen.getByRole('listbox')).toBeInTheDocument();
+    expect(screen.getByRole('option', { name: 'police' })).toBeInTheDocument();
+
+    await user.keyboard('{Escape}');
+
+    expect(input).toHaveFocus();
+    expect(onChange).not.toHaveBeenCalled();
+    expect(input).toHaveValue('pol');
   });
 });

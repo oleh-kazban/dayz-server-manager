@@ -118,7 +118,14 @@ export function usePopup<TTrigger extends HTMLElement = HTMLButtonElement>(
           if (typeof target.focus === 'function' && target.tabIndex >= 0) {
             target.focus();
           } else {
-            target.querySelector<HTMLElement>('button, input, [tabindex="0"]')?.focus();
+            const focusable =
+              target.querySelector<HTMLElement>(
+                'input:not([type="hidden"]):not([disabled]), textarea:not([disabled]), select:not([disabled])',
+              ) ??
+              target.querySelector<HTMLElement>(
+                'button:not([disabled]), [tabindex="0"]:not([disabled])',
+              );
+            focusable?.focus();
           }
         }
       }
