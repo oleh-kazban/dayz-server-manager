@@ -102,7 +102,6 @@ Built from the ground up as a modern, high-throughput monorepo:
 
 - **Frontend:** React 19, Vite, TanStack Router (100% type-safe search parameters), TanStack Query v5, and Tailwind CSS v4.
 - **Backend:** Node.js, Fastify modular REST engine, Server-Sent Events (SSE) for sub-second telemetry streaming, and SQLite via Drizzle ORM.
-- **Development Workflow:** Integrated Mock Service Worker (MSW v2) layer, allowing full frontend UI and telemetry simulation without needing a live DayZ server installed.
 - **Monorepo Architecture:** Integrated Nx workspace with `pnpm` and strict module boundary enforcement (`@nx/enforce-module-boundaries`).
 
 ---
@@ -133,7 +132,7 @@ Built from the ground up as a modern, high-throughput monorepo:
    ```bash
    pnpm dev
    ```
-   Open [http://localhost:4200](http://localhost:4200) in your browser. The frontend starts in **mock-first mode** using MSW and an internal SSE telemetry simulator, so you can explore the dashboard and control features immediately.
+   Open [http://localhost:4200](http://localhost:4200) in your browser.
 
 ---
 
@@ -162,7 +161,6 @@ dayz-server-manager/
 │   │   │   ├── api/             # Typed API client
 │   │   │   ├── components/      # UI components & layouts
 │   │   │   ├── hooks/           # Server state & telemetry hooks
-│   │   │   ├── mocks/           # MSW v2 handlers & mock SSE stream
 │   │   │   ├── styles/          # Tailwind CSS v4 tokens
 │   │   │   └── types/           # Domain schemas & types (Zod)
 │   │   ├── index.html
@@ -186,7 +184,6 @@ dayz-server-manager/
 
 - [x] Monorepo architecture & quality tooling (Nx, pnpm, ESLint v10, Prettier, Husky)
 - [x] Client application skeleton with React 19, Vite, and Tailwind CSS v4
-- [x] MSW v2 mock layer and real-time SSE telemetry simulator
 - [x] Workspace access, authentication flows, and role-based identity (RBAC)
 - [ ] Dashboard shell with real-time process telemetry and quick actions
 - [ ] High-performance virtualized `types.xml` workbench with Web Worker diff engine

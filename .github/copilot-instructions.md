@@ -9,14 +9,14 @@ These instructions apply repository-wide for GitHub Copilot in the web interface
 **DayZ Server Manager (DSM)** is a self-hosted operations console and control plane for administering DayZ Dedicated Servers on Windows x64 and Linux x64.
 
 - **Monorepo:** Nx monorepo with `pnpm` workspaces. Strict compilation boundaries enforced via `@nx/enforce-module-boundaries`.
-- **Frontend (`apps/web`):** React 19, Vite, TanStack Router (Zod search parameters), TanStack Query v5, Tailwind CSS, MSW v2 for mock-first development.
+- **Frontend (`apps/web`):** React 19, Vite, TanStack Router (Zod search parameters), TanStack Query v5, and Tailwind CSS.
 - **UI Kit (`libs/ui`):** Reusable `@dsm/ui` component kit, Outlive light pastel design system, canonical 36px control standard (`h-9`), Storybook CSF3.
 - **Backend (`apps/server`):** Node.js + Fastify modular monolith hosting a versioned REST API (`/api/v1`) and real-time Server-Sent Events (SSE) dispatcher (`/api/v1/realtime/sse`).
 - **Contracts (`libs/api-contracts`):** Pure TypeScript + Zod schemas (Single source of truth for all DTOs and runtime validation).
 - **Client Data Access (`libs/api-client`):** Typed HTTP client wrapping `fetch` with Zod validation.
 - **Persistence (`libs/database`):** SQLite (`manager.sqlite`) in WAL mode via Drizzle ORM. Game files strictly remain on disk.
 - **Platform Adapters (`libs/platform`):** `ProcessManager` (Win32 Job Objects on Windows, POSIX process groups on Linux).
-- **Testing:** Vitest, React Testing Library, `@testing-library/user-event`, MSW v2, Playwright, `@vitest/coverage-v8`.
+- **Testing:** Vitest, React Testing Library, `@testing-library/user-event`, Playwright, `@vitest/coverage-v8`.
 
 Detailed architecture specifications are located under `specs/` and detailed AI agent guidelines are under `.agents/skills/`.
 
@@ -83,8 +83,8 @@ When assisting with code generation, reviews, or refactoring in this repository:
 ### 3.1. Non-Negotiable Architecture Guardrails
 
 - **Boundary Isolation:** Never import backend-only packages (`better-sqlite3`, `fastify`, `node:child_process`, `node:fs`) into `apps/web`, `libs/ui`, or `libs/api-client`.
-- **Contract-First:** Every API endpoint change must begin with a Zod schema in `libs/api-contracts` before updating `libs/api-client`, MSW handlers, and Fastify routes.
-- **Zero Production MSW Leakage:** MSW service workers and mock handlers must be gated behind `import.meta.env.DEV` and omitted from production builds.
+- **Contract-First:** Every API endpoint change must begin with a Zod schema in `libs/api-contracts` before updating `libs/api-client` and Fastify routes.
+- **Zero Production Test Mock Leakage:** Test fixtures and mocks must never leak into production builds (`apps/web/dist`).
 
 ### 3.2. Frontend & React 19 Standards (`libs/ui`, `apps/web`)
 
@@ -106,8 +106,8 @@ When assisting with code generation, reviews, or refactoring in this repository:
 
 ### 3.4. Testing Standards (`TESTING_SPEC.md`, `TEST_AUDIT_SPEC.md`)
 
-- **Mandatory Stack:** Vitest, React Testing Library, `@testing-library/user-event`, MSW v2, `@vitest/coverage-v8`.
-- **No Mock Fetch Hacks:** Network mocking must use MSW (`server.use(...)`). Never monkey-patch `window.fetch`.
+- **Mandatory Stack:** Vitest, React Testing Library, `@testing-library/user-event`, `@vitest/coverage-v8`.
+- **Interface & Boundary Mocking:** Mock at the client facade or TanStack Query layer for unit/integration tests; use Playwright `page.route()` for browser E2E tests.
 - **User-Centric Queries:** Prefer `getByRole`, `getByLabelText`, and `getByText` over test IDs or CSS selectors.
 - **Deterministic Timers:** Use `vi.useFakeTimers()` and `vi.advanceTimersByTimeAsync()` for debounced interactions and animations.
 - **Strict Coverage Policy:** $\ge 80\%$ global coverage across all metrics; strict $100\%$ coverage on all affected production code and core utilities (`*.utils.ts`).
