@@ -1,6 +1,7 @@
 import type { FastifyInstance } from 'fastify';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
+import { healthResponseSchema } from '@dsm/api-contracts';
 import { type DatabaseInstance, initDatabase } from '@dsm/database';
 
 import { buildApp } from '../app/app';
@@ -73,6 +74,7 @@ describe('Health Routes (/api/v1/health)', () => {
 
     expect(response.statusCode).toBe(503);
     const body = response.json();
+    expect(healthResponseSchema.safeParse(body).success).toBe(true);
     expect(body.status).toBe('error');
     expect(body.uptime).toBeDefined();
     expect(body.timestamp).toBeDefined();

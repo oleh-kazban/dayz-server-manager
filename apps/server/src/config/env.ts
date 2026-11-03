@@ -10,6 +10,7 @@ export const envSchema = z
       .enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent'])
       .default('info'),
     SESSION_SECRET: z.string().min(16).default('super-secret-dev-session-key-32-chars-long'),
+    DSM_ADMIN_PASSWORD: z.string().min(8).optional(),
     DATABASE_PATH: z.string().optional(),
   })
   .refine(

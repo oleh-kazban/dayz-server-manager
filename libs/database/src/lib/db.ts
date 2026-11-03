@@ -51,6 +51,7 @@ export function initDatabase(options: DatabaseOptions = {}): DatabaseInstance {
 
   if (existingCount.count === 0) {
     if (process.env.NODE_ENV === 'production' && !process.env.DSM_ADMIN_PASSWORD) {
+      sqlite.close();
       throw new Error(
         'DSM_ADMIN_PASSWORD environment variable is required to bootstrap the database in production',
       );

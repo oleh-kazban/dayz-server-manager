@@ -49,18 +49,21 @@ export function runMigrations(sqlite: Database.Database): void {
     );
   `);
 
-  const appliedRows = sqlite.prepare('SELECT id FROM _dsm_migrations').all() as { id: string }[];
-  const appliedIds = new Set(appliedRows.map(r => r.id));
+  // Wrap migration discovery and execution in an IMMEDIATE transaction
+  // to acquire SQLite write lock upfront and serialize concurrent process startup.
+  const executeMigrations = sqlite.transaction(() => {
+    const appliedRows = sqlite.prepare('SELECT id FROM _dsm_migrations').all() as { id: string }[];
+    const appliedIds = new Set(appliedRows.map(r => r.id));
 
-  for (const migration of migrations) {
-    if (!appliedIds.has(migration.id)) {
-      const runTransaction = sqlite.transaction(() => {
+    for (const migration of migrations) {
+      if (!appliedIds.has(migration.id)) {
         migration.up(sqlite);
         sqlite
           .prepare('INSERT INTO _dsm_migrations (id, name, applied_at) VALUES (?, ?, ?)')
           .run(migration.id, migration.name, Date.now());
-      });
-      runTransaction();
+      }
     }
-  }
+  });
+
+  executeMigrations.immediate();
 }
