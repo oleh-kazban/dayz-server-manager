@@ -3,11 +3,11 @@ import { z } from 'zod';
 export const signInSchema = z.object({
   usernameOrEmail: z
     .string()
-    .min(1, 'Username or email is required')
-    .refine(val => !val.includes('@') || z.string().email().safeParse(val).success, {
-      message: 'Please enter a valid email address',
+    .min(1, { error: 'Username or email is required' })
+    .refine(val => !val.includes('@') || z.email().safeParse(val).success, {
+      error: 'Please enter a valid email address',
     }),
-  password: z.string().min(1, 'Password is required'),
+  password: z.string().min(1, { error: 'Password is required' }),
   rememberMe: z.boolean(),
 });
 
