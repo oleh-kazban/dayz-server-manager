@@ -4,12 +4,10 @@ packages:
 
 allowBuilds:
   esbuild: true
-  msw: true
   nx: true
 
 onlyBuiltDependencies:
   - esbuild
-  - msw
   - nx
 
 overrides:

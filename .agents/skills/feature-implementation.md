@@ -15,7 +15,7 @@ DSM is an enterprise-grade, self-hosted web console and control plane for managi
 
 ```
 apps/
-  web/                     # React 19 SPA (Vite, TanStack Router/Query, MSW, Tailwind CSS)
+  web/                     # React 19 SPA (Vite, TanStack Router/Query, Tailwind CSS)
   server/                  # Fastify Backend Daemon (REST /api/v1, SSE, static SPA server)
 libs/
   api-contracts/           # Pure TypeScript + Zod schemas (Single source of truth)
@@ -38,10 +38,9 @@ Never jump directly into implementing UI components or server controllers. Follo
 
 ```mermaid
 flowchart LR
-    Step1["1. Zod Contract\n(libs/api-contracts)"] --> Step2["2. MSW Mocks\n(apps/web/src/mocks)"]
-    Step2 --> Step3["3. API Client\n(libs/api-client)"]
-    Step3 --> Step4["4. Fastify Server\n(apps/server)"]
-    Step4 --> Step5["5. UI & Workbench\n(apps/web & libs/ui)"]
+    Step1["1. Zod Contract\n(libs/api-contracts)"] --> Step2["2. API Client & Fixtures\n(libs/api-client)"]
+    Step2 --> Step3["3. Fastify Server\n(apps/server)"]
+    Step3 --> Step4["4. UI & Workbench\n(apps/web & libs/ui)"]
 ```
 
 ### Step 1: Define Contracts in `libs/api-contracts`
@@ -71,36 +70,22 @@ export const serverActionResponseSchema = z.object({
 export type ServerActionResponseDto = z.infer<typeof serverActionResponseSchema>;
 ```
 
-### Step 2: Implement MSW Mock Handlers in `apps/web/src/mocks`
+### Step 2: Define Deterministic Fixtures & Mock Data
 
-Before backend code is written, enable complete frontend development and Storybook isolation via MSW v2:
+Before backend code is written, enable complete frontend development, Storybook isolation, and unit testing via typed fixtures:
 
 1. Define deterministic mock fixtures matching the Zod schema.
-2. Create route handlers using `http.get`, `http.post`, etc. in `apps/web/src/mocks/handlers/[feature].handlers.ts`.
-3. Register the handlers in `apps/web/src/mocks/handlers/index.ts`.
+2. Export fixtures from test utilities (e.g., `libs/api-contracts/src/fixtures` or feature test directories).
 
 ```typescript
-// apps/web/src/mocks/handlers/server.handlers.ts
-import { http, HttpResponse } from 'msw';
-import { stopServerRequestSchema } from '@server-manager/api-contracts';
+// libs/api-contracts/src/fixtures/server.fixture.ts
+import { ServerActionResponseDto } from '../lib/server.schema';
 
-export const serverHandlers = [
-  http.post('/api/v1/server/stop', async ({ request }) => {
-    const body = await request.json();
-    const parsed = stopServerRequestSchema.safeParse(body);
-    if (!parsed.success) {
-      return HttpResponse.json(
-        { error: 'Invalid payload', details: parsed.error.issues },
-        { status: 400 },
-      );
-    }
-    return HttpResponse.json({
-      success: true,
-      taskId: '550e8400-e29b-41d4-a716-446655440000',
-      message: `Server shutdown sequence initiated (${parsed.data.delaySec}s countdown).`,
-    });
-  }),
-];
+export const mockStopServerResponse: ServerActionResponseDto = {
+  success: true,
+  taskId: '550e8400-e29b-41d4-a716-446655440000',
+  message: 'Server shutdown sequence initiated (30s countdown).',
+};
 ```
 
 ### Step 3: Implement Typed Data Access in `libs/api-client`

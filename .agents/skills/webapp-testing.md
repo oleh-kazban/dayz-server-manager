@@ -19,13 +19,13 @@ While unit and component tests verify isolated logic in jsdom, web application t
 
 Every web application test must utilize this established stack:
 
-| Purpose                           | Tool                                        | Guidance                                                                 |
-| --------------------------------- | ------------------------------------------- | ------------------------------------------------------------------------ |
-| **E2E Browser Automation**        | **Playwright**                              | Multi-browser execution (Chromium, Firefox, WebKit).                     |
-| **Accessibility Auditing (@avt)** | **`@axe-core/playwright`**                  | Automated WCAG 2.1 AA violation scanning.                                |
-| **Visual Regression (@vrt)**      | **Playwright `toHaveScreenshot()`**         | Pixel-perfect regression detection with masked dynamic regions.          |
-| **Component Interaction Tests**   | **Storybook Test Runner**                   | Story-driven user interaction tests via `@storybook/addon-interactions`. |
-| **Browser Mocking Layer**         | **MSW in Browser (`mockServiceWorker.js`)** | Deterministic, offline-capable E2E runs without live DayZ servers.       |
+| Purpose                           | Tool                                    | Guidance                                                                 |
+| --------------------------------- | --------------------------------------- | ------------------------------------------------------------------------ |
+| **E2E Browser Automation**        | **Playwright**                          | Multi-browser execution (Chromium, Firefox, WebKit).                     |
+| **Accessibility Auditing (@avt)** | **`@axe-core/playwright`**              | Automated WCAG 2.1 AA violation scanning.                                |
+| **Visual Regression (@vrt)**      | **Playwright `toHaveScreenshot()`**     | Pixel-perfect regression detection with masked dynamic regions.          |
+| **Component Interaction Tests**   | **Storybook Test Runner**               | Story-driven user interaction tests via `@storybook/addon-interactions`. |
+| **Browser Mocking Layer**         | **Playwright Routing (`page.route()`)** | Deterministic, offline-capable E2E runs without live DayZ servers.       |
 
 ---
 
@@ -186,6 +186,6 @@ test.describe('Visual Regression Testing (@vrt)', () => {
 To ensure CI reliability and prevent test flakiness:
 
 1. **Never Use Arbitrary Sleep Timers:** Strictly prohibit `page.waitForTimeout(3000)`. Use event-driven auto-waiting: `await expect(locator).toBeVisible()`, `page.waitForResponse()`, or `page.waitForURL()`.
-2. **Deterministic MSW Fixtures:** Seed browser tests with static MSW handlers to prevent dependency on live network connectivity or external Steam servers.
+2. **Deterministic Network Interception:** Intercept browser network requests via `page.route()` to prevent dependency on live network connectivity or external Steam servers.
 3. **Isolated Browser State:** Each test suite must start with a clean storage state or utilize pre-authenticated `storageState.json` fixtures.
 4. **Resilient Locators:** Prefer user-facing locators (`page.getByRole()`, `page.getByLabel()`) over brittle CSS class selectors (`page.locator('.h-9.bg-red-500')`).

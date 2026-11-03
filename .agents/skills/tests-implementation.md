@@ -1,6 +1,6 @@
 ---
 name: tests-implementation
-description: Comprehensive test implementation rules for DayZ Server Manager (DSM). Covers Vitest, React Testing Library, User Event, MSW v2, code coverage policy (80% global / 100% affected), and test audit workflow.
+description: Comprehensive test implementation rules for DayZ Server Manager (DSM). Covers Vitest, React Testing Library, User Event, code coverage policy (80% global / 100% affected), and test audit workflow.
 applyTo: '**/*.{ts,tsx,js,jsx,json,css,md}'
 ---
 
@@ -24,14 +24,13 @@ Every test in this repository must use the approved testing stack:
 | **Test Runner & Assertions**      | **Vitest**                        | Native ESM, fast in-memory execution, compatible with Vite. |
 | **Component Rendering & Queries** | **React Testing Library (RTL)**   | Render components, query accessible DOM elements.           |
 | **User Interaction Simulation**   | **`@testing-library/user-event`** | Realistic keyboard, click, pointer, and focus interactions. |
-| **Network Mocking**               | **Mock Service Worker (MSW v2)**  | Network boundary interception (`http.get`, `http.post`).    |
+| **Data & Boundary Mocking**       | **Client Facade & Query Mocks**   | Typed client mocking or TanStack Query state injection.     |
 | **DOM Environment**               | **`jsdom`**                       | Browser DOM simulation for Vitest.                          |
 | **Code Coverage Engine**          | **`@vitest/coverage-v8`**         | High-performance V8 coverage instrumentation and reporting. |
 
 ### Stack Prohibitions:
 
 - ❌ **Do NOT use Jest, Enzyme, or `react-test-renderer`**.
-- ❌ **Do NOT monkey-patch `window.fetch` or Axios** (`global.fetch = vi.fn()`). Network interactions must be intercepted exclusively via MSW.
 - ❌ **Do NOT introduce Vitest Browser Mode** unless explicitly specified in an architecture decision record.
 
 ---
@@ -137,19 +136,16 @@ it('should display tooltip after hover delay', async () => {
 });
 ```
 
-### 4.5. Network Mocking with MSW v2
+### 4.5. Interface & Client Mocking
 
-Override network responses per-test using `server.use()`:
+Mock API endpoints at the typed client or hook boundary per test:
 
 ```typescript
-import { server } from '../mocks/server';
-import { http, HttpResponse } from 'msw';
+import { apiClient } from '@dsm/api-client';
 
 it('should render error alert when server status fails', async () => {
-  server.use(
-    http.get('/api/v1/server/status', () => {
-      return HttpResponse.json({ error: 'RCON connection lost' }, { status: 503 });
-    })
+  vi.spyOn(apiClient, 'getServerStatus').mockRejectedValueOnce(
+    new Error('RCON connection lost')
   );
 
   render(<ServerStatusWidget />);
@@ -223,7 +219,7 @@ When assigned to audit or remediate an existing test suite:
 
 ```mermaid
 flowchart TD
-    Step1["Step 1: Discover (Tree, Configs, MSW)"] --> Step2["Step 2: Establish Baseline (Pass/Fail, Coverage)"]
+    Step1["Step 1: Discover (Tree, Configs, Fixtures)"] --> Step2["Step 2: Establish Baseline (Pass/Fail, Coverage)"]
     Step2 --> Step3["Step 3: Audit Gaps (Missing branches, over-mocking)"]
     Step3 --> Step4["Step 4: Remediate (Write meaningful behavior tests)"]
     Step4 --> Step5["Step 5: Verify Coverage (80% global / 100% affected)"]

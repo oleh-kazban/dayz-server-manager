@@ -44,10 +44,9 @@ Any pull request or code change that violates any of the following guardrails **
   3. Atomically rename/replace the temporary file over the target (`rename(tmpPath, targetPath)`).
 - **Separation of Game and Manager State:** DayZ game files and XML configurations **MUST remain on disk**. Never store game world state, `.pbo` files, or XML dumps inside SQLite. SQLite is reserved strictly for manager metadata, task history, and audit logs.
 
-### 2.5. Mock Service Worker (MSW) Isolation
+### 2.5. Test Fixtures & Mock Isolation
 
-- **Development Tree-Shaking:** MSW service workers, mock handlers, and fixtures must be gated behind `import.meta.env.DEV`.
-- **Zero Production Leakage:** Production bundles (`apps/web/dist`) must never include MSW libraries or fixtures. Verify that production builds compile cleanly with MSW omitted.
+- **Zero Production Leakage:** Production bundles (`apps/web/dist`) must never include test mock handlers, development fixtures, or testing libraries. Verify that production builds compile cleanly with test mocks omitted.
 
 ---
 
@@ -85,7 +84,7 @@ Any pull request or code change that violates any of the following guardrails **
 
 - **Zod Schema Precedence:** Any new endpoint or payload modification must first update the Zod schemas in `libs/api-contracts`.
 - **Type Derivation:** TypeScript DTO types must be inferred from Zod: `export type ServerStatusDto = z.infer<typeof serverStatusSchema>;`. Never declare duplicate manual TypeScript interfaces alongside Zod schemas.
-- **Client & Mock Alignment:** Verify that `libs/api-client` and MSW handlers in `apps/web/src/mocks/handlers/` are synchronized with the updated schema before backend wiring.
+- **Client & Contract Alignment:** Verify that `libs/api-client` and corresponding consumer unit/integration test fixtures are synchronized with the updated schema before backend wiring.
 
 ### 4.2. Fastify Routing & Real-Time SSE
 
@@ -114,7 +113,7 @@ Any pull request or code change that violates any of the following guardrails **
 
 ### 5.2. Testing Quality & Anti-Patterns
 
-- **No Mock Fetch Hacks:** Network mocking must use MSW (`server.use(...)`). Reject any PR containing `global.fetch = vi.fn()`.
+- **Interface & Boundary Mocking:** Network interactions must be mocked cleanly at the client facade or TanStack Query boundary in unit/integration tests, or intercepted via Playwright `page.route()` in E2E tests.
 - **Behavior-Driven Assertions:** Reject tests asserting internal state, hook counts, or implementation CSS classes. Assert user-visible DOM changes (`screen.getByRole`, `screen.getByText`).
 - **Deterministic Timers:** Tests with debounce delays, animations, or intervals must use `vi.useFakeTimers()` and `vi.advanceTimersByTimeAsync()`. Arbitrary `sleep(500)` calls are prohibited.
 
@@ -147,7 +146,7 @@ Brief assessment of the PR's architectural impact, scope, and adherence to DSM s
 
 ### 🧪 Test Coverage & Quality Assessment
 
-- Evaluation of Vitest / MSW tests against the 80%/100% coverage rule.
+- Evaluation of Vitest tests against the 80%/100% coverage rule.
 
 ### 💡 Proposed Code Snippet
 
