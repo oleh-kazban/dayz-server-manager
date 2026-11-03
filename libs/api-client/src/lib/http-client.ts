@@ -1,8 +1,11 @@
 import { type ZodType } from 'zod';
 
+export type RefreshTokenHandler = () => Promise<string | null>;
+
 export interface HttpClientConfig {
   baseUrl?: string;
   defaultHeaders?: Record<string, string>;
+  onRefreshToken?: RefreshTokenHandler;
 }
 
 export class ApiError extends Error {
@@ -13,6 +16,14 @@ export class ApiError extends Error {
   ) {
     super(message);
     this.name = 'ApiError';
+  }
+
+  get apiMessage(): string | undefined {
+    if (this.data && typeof this.data === 'object' && 'message' in this.data) {
+      const msg = (this.data as { message: unknown }).message;
+      return typeof msg === 'string' ? msg : undefined;
+    }
+    return undefined;
   }
 }
 
@@ -30,6 +41,8 @@ export class HttpClient {
   private readonly baseUrl: string;
   private readonly defaultHeaders: Record<string, string>;
   private token: string | null = null;
+  private onRefreshToken: RefreshTokenHandler | null = null;
+  private refreshPromise: Promise<string | null> | null = null;
 
   constructor(config: HttpClientConfig = {}) {
     this.baseUrl = config.baseUrl ?? '';
@@ -37,6 +50,11 @@ export class HttpClient {
       'Content-Type': 'application/json',
       ...config.defaultHeaders,
     };
+    this.onRefreshToken = config.onRefreshToken ?? null;
+  }
+
+  setOnRefreshToken(handler: RefreshTokenHandler | null): void {
+    this.onRefreshToken = handler;
   }
 
   setToken(token: string | null): void {
@@ -47,7 +65,12 @@ export class HttpClient {
     return this.token;
   }
 
-  async request<T>(endpoint: string, schema: ZodType<T>, init: RequestInit = {}): Promise<T> {
+  async request<T>(
+    endpoint: string,
+    schema: ZodType<T>,
+    init: RequestInit = {},
+    isRetry = false,
+  ): Promise<T> {
     const url = `${this.baseUrl}${endpoint}`;
     const headers: Record<string, string> = {
       ...this.defaultHeaders,
@@ -61,6 +84,26 @@ export class HttpClient {
     });
 
     if (!response.ok) {
+      if (
+        response.status === 401 &&
+        !isRetry &&
+        this.onRefreshToken &&
+        !endpoint.includes('/auth/login') &&
+        !endpoint.includes('/auth/refresh')
+      ) {
+        if (!this.refreshPromise) {
+          this.refreshPromise = this.onRefreshToken().finally(() => {
+            this.refreshPromise = null;
+          });
+        }
+
+        const newAccessToken = await this.refreshPromise;
+        if (newAccessToken) {
+          this.setToken(newAccessToken);
+          return this.request(endpoint, schema, init, true);
+        }
+      }
+
       const rawText = await response.text();
       let errorData: unknown;
       try {

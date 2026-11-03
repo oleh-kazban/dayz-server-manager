@@ -2,7 +2,7 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { apiClient } from '@dsm/api-client';
+import { apiClient, ApiError } from '@dsm/api-client';
 
 import { AuthProvider } from '../AuthProvider';
 
@@ -136,6 +136,38 @@ describe('SignInForm', () => {
 
     await waitFor(() => {
       expect(screen.getByRole('alert')).toHaveTextContent('Invalid username or password');
+    });
+
+    expect(mockNavigate).not.toHaveBeenCalled();
+  });
+
+  it('displays API error message from ApiError response data payload', async () => {
+    const user = userEvent.setup();
+
+    vi.spyOn(apiClient.auth, 'login').mockRejectedValue(
+      new ApiError('HTTP request failed with status 401', 401, {
+        statusCode: 401,
+        error: 'Unauthorized',
+        message: 'Custom backend rejection message',
+      }),
+    );
+
+    render(
+      <AuthProvider>
+        <SignInForm />
+      </AuthProvider>,
+    );
+
+    const usernameInput = screen.getByLabelText(/Username or email/i);
+    const passwordInput = screen.getByPlaceholderText('Enter your password');
+    const submitBtn = screen.getByRole('button', { name: /Sign in/i });
+
+    await user.type(usernameInput, 'adminuser');
+    await user.type(passwordInput, 'WrongPassword123');
+    await user.click(submitBtn);
+
+    await waitFor(() => {
+      expect(screen.getByRole('alert')).toHaveTextContent('Custom backend rejection message');
     });
 
     expect(mockNavigate).not.toHaveBeenCalled();

@@ -132,4 +132,106 @@ describe('HttpClient', () => {
     expect(health.status).toBe('ok');
     expect(health.uptime).toBe(123.45);
   });
+
+  it('extracts apiMessage from ApiError data object', () => {
+    const err = new ApiError('HTTP error', 400, { message: 'Bad parameters' });
+    expect(err.apiMessage).toBe('Bad parameters');
+
+    const errNoMsg = new ApiError('HTTP error', 500, 'Raw string');
+    expect(errNoMsg.apiMessage).toBeUndefined();
+  });
+
+  it('automatically refreshes token on 401 and retries the request', async () => {
+    const mockPayload = { id: 'retry-success', value: 99 };
+    const refreshHandler = vi.fn().mockResolvedValue('new-token-123');
+
+    const fetchSpy = vi
+      .spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ message: 'Token expired' }), {
+          status: 401,
+          headers: { 'Content-Type': 'application/json' },
+        }),
+      )
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify(mockPayload), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        }),
+      );
+
+    const client = new HttpClient({
+      onRefreshToken: refreshHandler,
+    });
+    client.setToken('old-expired-token');
+
+    const result = await client.get('/protected-resource', dummySchema);
+
+    expect(result).toEqual(mockPayload);
+    expect(refreshHandler).toHaveBeenCalledTimes(1);
+    expect(client.getToken()).toBe('new-token-123');
+    expect(fetchSpy).toHaveBeenCalledTimes(2);
+  });
+
+  it('deduplicates concurrent 401 refresh calls into a single refresh execution', async () => {
+    const mockPayload = { id: 'retry-success', value: 99 };
+    let resolveRefresh: (token: string) => void;
+    const refreshPromise = new Promise<string>(resolve => {
+      resolveRefresh = resolve;
+    });
+    const refreshHandler = vi.fn().mockImplementation(() => refreshPromise);
+
+    vi.spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ message: 'Token expired' }), {
+          status: 401,
+          headers: { 'Content-Type': 'application/json' },
+        }),
+      )
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ message: 'Token expired' }), {
+          status: 401,
+          headers: { 'Content-Type': 'application/json' },
+        }),
+      )
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify(mockPayload), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        }),
+      )
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify(mockPayload), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        }),
+      );
+
+    const client = new HttpClient({ onRefreshToken: refreshHandler });
+    client.setToken('old-expired-token');
+
+    const request1 = client.get('/protected-1', dummySchema);
+    const request2 = client.get('/protected-2', dummySchema);
+
+    resolveRefresh!('shared-new-token');
+
+    const [res1, res2] = await Promise.all([request1, request2]);
+    expect(res1).toEqual(mockPayload);
+    expect(res2).toEqual(mockPayload);
+    expect(refreshHandler).toHaveBeenCalledTimes(1);
+  });
+
+  it('throws 401 error if refresh handler returns null or throws', async () => {
+    const refreshHandler = vi.fn().mockResolvedValue(null);
+
+    vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(
+      new Response(JSON.stringify({ message: 'Session expired' }), {
+        status: 401,
+        headers: { 'Content-Type': 'application/json' },
+      }),
+    );
+
+    const client = new HttpClient({ onRefreshToken: refreshHandler });
+    await expect(client.get('/protected', dummySchema)).rejects.toThrow(ApiError);
+  });
 });

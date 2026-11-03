@@ -22,10 +22,8 @@ export const authStorage = {
   },
 
   getRefreshToken(): string | null {
-    return (
-      sessionStorageDriver.get<string | null>(AUTH_REFRESH_TOKEN_KEY, null) ??
-      localStorageDriver.get<string | null>(AUTH_REFRESH_TOKEN_KEY, null)
-    );
+    // Refresh tokens are strictly read from sessionStorage
+    return sessionStorageDriver.get<string | null>(AUTH_REFRESH_TOKEN_KEY, null);
   },
 
   set(
@@ -44,8 +42,21 @@ export const authStorage = {
       secondary.remove(AUTH_TOKEN_KEY);
     }
     if (tokens?.refreshToken) {
-      primary.set(AUTH_REFRESH_TOKEN_KEY, tokens.refreshToken);
-      secondary.remove(AUTH_REFRESH_TOKEN_KEY);
+      // Refresh tokens must NEVER be stored in localStorage (XSS mitigation per PR review)
+      sessionStorageDriver.set(AUTH_REFRESH_TOKEN_KEY, tokens.refreshToken);
+      localStorageDriver.remove(AUTH_REFRESH_TOKEN_KEY);
+    }
+  },
+
+  setTokens(tokens: { accessToken?: string; refreshToken?: string }): void {
+    if (tokens.accessToken) {
+      const isPersistent = localStorageDriver.get(AUTH_STORAGE_KEY, null) !== null;
+      const targetDriver = isPersistent ? localStorageDriver : sessionStorageDriver;
+      targetDriver.set(AUTH_TOKEN_KEY, tokens.accessToken);
+    }
+    if (tokens.refreshToken) {
+      sessionStorageDriver.set(AUTH_REFRESH_TOKEN_KEY, tokens.refreshToken);
+      localStorageDriver.remove(AUTH_REFRESH_TOKEN_KEY);
     }
   },
 
