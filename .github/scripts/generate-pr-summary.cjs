@@ -78,19 +78,19 @@ module.exports = async function generatePrSummary({ github, context }) {
         fileList,
         '',
         'Generate a PR summary following strictly this markdown template:',
-        '### 🎯 Architectural Intent & Overview',
+        '### Architectural Intent & Overview',
         '(1-2 concise paragraphs explaining the rationale and specs)',
         '',
-        '### 🧱 Key Changes by Package',
+        '### Key Changes by Package',
         '(Grouped by package)',
         '',
-        '### 🛡️ Safety, Contracts & Boundary Compliance',
+        '### Safety, Contracts & Boundary Compliance',
         '(Analyze touched packages: module boundaries, process safety, file integrity, UI kit geometry; note that compliance is subject to CI verification)',
         '',
-        '### 🧪 Testing & Verification',
+        '### Testing & Verification',
         '(Report test files added/modified in the diff; note coverage and quality gates as pending CI pipeline execution)',
         '',
-        '### ⚠️ Breaking Changes & Migrations',
+        '### Breaking Changes & Migrations',
         '(List breaking changes or "None")',
       ].join('\n');
 
@@ -124,19 +124,19 @@ module.exports = async function generatePrSummary({ github, context }) {
         fileList,
         '',
         'Generate a PR summary following strictly this markdown template:',
-        '### 🎯 Architectural Intent & Overview',
+        '### Architectural Intent & Overview',
         '(1-2 concise paragraphs explaining the rationale and specs)',
         '',
-        '### 🧱 Key Changes by Package',
+        '### Key Changes by Package',
         '(Grouped by package)',
         '',
-        '### 🛡️ Safety, Contracts & Boundary Compliance',
+        '### Safety, Contracts & Boundary Compliance',
         '(Analyze touched packages: module boundaries, process safety, file integrity, UI kit geometry; note that compliance is subject to CI verification)',
         '',
-        '### 🧪 Testing & Verification',
+        '### Testing & Verification',
         '(Report test files added/modified in the diff; note coverage and quality gates as pending CI pipeline execution)',
         '',
-        '### ⚠️ Breaking Changes & Migrations',
+        '### Breaking Changes & Migrations',
         '(List breaking changes or "None")',
       ].join('\n');
 
@@ -174,26 +174,26 @@ module.exports = async function generatePrSummary({ github, context }) {
       packageBreakdown += `- **\`${pkg}\`** (${pkgFiles.length} file${pkgFiles.length > 1 ? 's' : ''}): ${sampleFiles}${extra}\n`;
     }
 
-    generatedSummary = `### 🎯 Architectural Intent & Overview
+    generatedSummary = `### Architectural Intent & Overview
 ${prTitle}
 
 **Commit Summary:**
 ${commitMessages}
 
-### 🧱 Key Changes by Package
+### Key Changes by Package
 ${packageBreakdown}
-### 🛡️ Safety, Contracts & Boundary Compliance
+### Safety, Contracts & Boundary Compliance
 - **Module Boundaries:** Not verified by this workflow (enforced by Nx boundary rules in CI).
 - **Process & Shutdown Safety:** ${touchedProcessSafety ? '⚠️ Modified platform/process supervisors. Requires argument array verification in review.' : 'No external process management touched.'}
 - **File Integrity & Contracts:** ${touchedContracts ? '⚠️ API contracts modified. Requires Zod schema synchronization verification.' : 'Contracts untouched.'}
 - **UI Kit Geometry:** ${packages.has('libs/ui') ? 'Requires manual/visual review against canonical 36px standard and design tokens.' : 'UI kit unaffected.'}
 
-### 🧪 Testing & Verification
+### Testing & Verification
 - **Automated Tests:** ${testFilesCount > 0 ? `${testFilesCount} test file(s) included in this diff.` : 'None included in this diff.'}
 - **Two-Level Coverage:** Not verified by this workflow (pending CI Vitest coverage run).
 - **Quality Gates:** Not verified by this workflow (pending CI typecheck, lint, and SonarQube Cloud scan).
 
-### ⚠️ Breaking Changes & Migrations
+### Breaking Changes & Migrations
 - None.`;
   }
 
