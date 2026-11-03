@@ -16,6 +16,8 @@ export default defineConfig({
   },
   resolve: {
     alias: {
+      '@dsm/api-contracts': path.resolve(workspaceRoot, 'libs/api-contracts/src'),
+      '@dsm/api-client': path.resolve(workspaceRoot, 'libs/api-client/src'),
       '@dsm/ui': path.resolve(workspaceRoot, 'libs/ui/src'),
       '@dsm/web': path.resolve(__dirname, 'src'),
     },
@@ -23,5 +25,11 @@ export default defineConfig({
   server: {
     port: 4200,
     host: 'localhost',
+    proxy: {
+      '/api': {
+        target: process.env.VITE_API_URL || 'http://localhost:5000',
+        changeOrigin: true,
+      },
+    },
   },
 });

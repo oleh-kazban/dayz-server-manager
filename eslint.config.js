@@ -48,11 +48,24 @@ export default tseslint.config(
           depConstraints: [
             {
               sourceTag: 'scope:client',
-              onlyDependOnLibsWithTags: ['scope:shared'],
+              onlyDependOnLibsWithTags: ['scope:client', 'scope:contracts', 'scope:shared'],
+            },
+            {
+              sourceTag: 'scope:server',
+              onlyDependOnLibsWithTags: [
+                'scope:server',
+                'scope:contracts',
+                'scope:shared',
+                'scope:platform',
+              ],
+            },
+            {
+              sourceTag: 'scope:contracts',
+              onlyDependOnLibsWithTags: ['scope:contracts'],
             },
             {
               sourceTag: 'scope:shared',
-              onlyDependOnLibsWithTags: ['scope:shared'],
+              onlyDependOnLibsWithTags: ['scope:shared', 'scope:contracts'],
             },
           ],
         },
@@ -74,21 +87,9 @@ export default tseslint.config(
       },
     },
     plugins: {
-      react: reactPlugin,
-      'react-hooks': reactHooks,
-      'react-refresh': reactRefresh,
       'simple-import-sort': simpleImportSort,
     },
-    settings: {
-      react: { version: 'detect' },
-    },
     rules: {
-      ...react.configs.recommended.rules,
-      ...react.configs['jsx-runtime'].rules,
-      ...reactHooks.configs.flat.recommended.rules,
-      'react/prop-types': 'off',
-      'react/react-in-jsx-scope': 'off',
-      'react-refresh/only-export-components': ['warn', { allowConstantExport: true }],
       '@typescript-eslint/no-unused-vars': [
         'error',
         {
@@ -134,6 +135,25 @@ export default tseslint.config(
       'no-nested-ternary': 'error',
       'no-self-compare': 'error',
       'use-isnan': 'error',
+    },
+  },
+  {
+    files: ['apps/web/**/*.{js,ts,tsx}', 'libs/ui/**/*.{js,ts,tsx}'],
+    plugins: {
+      react: reactPlugin,
+      'react-hooks': reactHooks,
+      'react-refresh': reactRefresh,
+    },
+    settings: {
+      react: { version: 'detect' },
+    },
+    rules: {
+      ...react.configs.recommended.rules,
+      ...react.configs['jsx-runtime'].rules,
+      ...reactHooks.configs.flat.recommended.rules,
+      'react/prop-types': 'off',
+      'react/react-in-jsx-scope': 'off',
+      'react-refresh/only-export-components': ['warn', { allowConstantExport: true }],
     },
   },
   eslintConfigPrettier,
