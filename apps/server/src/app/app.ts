@@ -1,5 +1,6 @@
 import cors from '@fastify/cors';
 import jwt from '@fastify/jwt';
+import rateLimit from '@fastify/rate-limit';
 import sensible from '@fastify/sensible';
 import Fastify, {
   type FastifyInstance,
@@ -34,6 +35,10 @@ export function buildApp(options: BuildAppOptions): FastifyInstance {
   app.register(cors, {
     origin: options.config.CORS_ORIGIN.split(',').map(o => o.trim()),
     credentials: true,
+  });
+
+  app.register(rateLimit, {
+    global: false,
   });
 
   app.register(sensible);

@@ -250,4 +250,48 @@ describe('Auth Routes (/api/v1/auth)', () => {
       expect(meRes.json().message).toContain('User not found');
     });
   });
+
+  describe('Rate Limiting', () => {
+    let rateLimitedApp: FastifyInstance;
+    let rateLimitedDb: DatabaseInstance;
+
+    beforeAll(async () => {
+      rateLimitedDb = initDatabase({ dbPath: ':memory:' });
+      const config = loadEnv({
+        SESSION_SECRET: 'test-session-secret-at-least-32-chars-long!',
+        LOG_LEVEL: 'silent',
+      });
+      rateLimitedApp = buildApp({
+        config,
+        db: rateLimitedDb,
+      });
+      await rateLimitedApp.ready();
+    });
+
+    afterAll(async () => {
+      await rateLimitedApp.close();
+      rateLimitedDb.close();
+    });
+
+    it('returns 429 Too Many Requests when rate limit threshold is exceeded', async () => {
+      // Exhaust the 10 request limit on /login
+      for (let i = 0; i < 10; i++) {
+        await rateLimitedApp.inject({
+          method: 'POST',
+          url: '/api/v1/auth/login',
+          payload: { usernameOrEmail: 'admin', password: 'wrong-password' },
+        });
+      }
+
+      // The 11th request should be rate-limited
+      const response = await rateLimitedApp.inject({
+        method: 'POST',
+        url: '/api/v1/auth/login',
+        payload: { usernameOrEmail: 'admin', password: 'admin' },
+      });
+
+      expect(response.statusCode).toBe(429);
+      expect(response.json().message).toContain('Rate limit exceeded');
+    });
+  });
 });
