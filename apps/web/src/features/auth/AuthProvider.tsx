@@ -1,4 +1,6 @@
-import { type ReactNode, useMemo, useState } from 'react';
+import { type ReactNode, useEffect, useMemo, useState } from 'react';
+
+import { apiClient } from '@dsm/api-client';
 
 import { AuthContext } from './auth.context';
 import { authStorage } from './auth.storage';
@@ -7,20 +9,38 @@ import type { AuthContextValue, AuthUser, SignInCredentials } from './auth.types
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(authStorage.get);
 
-  const login = (credentials: SignInCredentials) => {
-    const user: AuthUser = {
-      id: crypto.randomUUID(),
-      username: credentials.usernameOrEmail,
-      email: credentials.usernameOrEmail,
-      role: 'admin',
-      roles: ['admin'],
+  useEffect(() => {
+    const existingToken = authStorage.getToken();
+    if (existingToken) {
+      apiClient.client.setToken(existingToken);
+    }
+  }, []);
+
+  const login = async (credentials: SignInCredentials) => {
+    const response = await apiClient.auth.login({
+      usernameOrEmail: credentials.usernameOrEmail,
+      password: credentials.password,
+      rememberMe: credentials.rememberMe,
+    });
+
+    const authenticatedUser: AuthUser = {
+      id: response.user.id,
+      username: response.user.username,
+      email: response.user.email ?? '',
+      role: response.user.role,
+      roles: [response.user.role],
     };
 
-    authStorage.set(user, credentials.rememberMe);
-    setUser(user);
+    apiClient.client.setToken(response.accessToken);
+    authStorage.set(authenticatedUser, credentials.rememberMe, {
+      accessToken: response.accessToken,
+      refreshToken: response.refreshToken,
+    });
+    setUser(authenticatedUser);
   };
 
   const logout = () => {
+    apiClient.client.setToken(null);
     authStorage.clear();
     setUser(null);
   };

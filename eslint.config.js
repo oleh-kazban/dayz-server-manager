@@ -57,7 +57,12 @@ export default tseslint.config(
                 'scope:contracts',
                 'scope:shared',
                 'scope:platform',
+                'scope:database',
               ],
+            },
+            {
+              sourceTag: 'scope:database',
+              onlyDependOnLibsWithTags: ['scope:database', 'scope:contracts', 'scope:shared'],
             },
             {
               sourceTag: 'scope:contracts',

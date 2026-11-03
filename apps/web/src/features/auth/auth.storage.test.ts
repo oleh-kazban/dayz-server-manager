@@ -16,27 +16,35 @@ describe('authStorage', () => {
   it('returns null when no session is present', () => {
     authStorage.clear();
     expect(authStorage.get()).toBeNull();
+    expect(authStorage.getToken()).toBeNull();
+    expect(authStorage.getRefreshToken()).toBeNull();
   });
 
   it('stores user in sessionStorage when rememberMe is false', () => {
-    authStorage.set(mockUser, false);
+    authStorage.set(mockUser, false, { accessToken: 'token-abc', refreshToken: 'ref-xyz' });
     expect(authStorage.get()).toEqual(mockUser);
+    expect(authStorage.getToken()).toBe('token-abc');
+    expect(authStorage.getRefreshToken()).toBe('ref-xyz');
     expect(window.sessionStorage.getItem(AUTH_STORAGE_KEY)).not.toBeNull();
     expect(window.localStorage.getItem(AUTH_STORAGE_KEY)).toBeNull();
   });
 
   it('stores user in localStorage when rememberMe is true', () => {
-    authStorage.set(mockUser, true);
+    authStorage.set(mockUser, true, { accessToken: 'token-abc', refreshToken: 'ref-xyz' });
     expect(authStorage.get()).toEqual(mockUser);
+    expect(authStorage.getToken()).toBe('token-abc');
+    expect(authStorage.getRefreshToken()).toBe('ref-xyz');
     expect(window.localStorage.getItem(AUTH_STORAGE_KEY)).not.toBeNull();
     expect(window.sessionStorage.getItem(AUTH_STORAGE_KEY)).toBeNull();
   });
 
-  it('clears user from both storages', () => {
-    authStorage.set(mockUser, true);
+  it('clears user and tokens from both storages', () => {
+    authStorage.set(mockUser, true, { accessToken: 'token-abc', refreshToken: 'ref-xyz' });
     authStorage.clear();
 
     expect(authStorage.get()).toBeNull();
+    expect(authStorage.getToken()).toBeNull();
+    expect(authStorage.getRefreshToken()).toBeNull();
     expect(window.localStorage.getItem(AUTH_STORAGE_KEY)).toBeNull();
     expect(window.sessionStorage.getItem(AUTH_STORAGE_KEY)).toBeNull();
   });

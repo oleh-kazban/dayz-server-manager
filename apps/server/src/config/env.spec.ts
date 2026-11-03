@@ -7,7 +7,7 @@ describe('loadEnv', () => {
     expect(config.PORT).toBe(5000);
     expect(config.HOST).toBe('0.0.0.0');
     expect(config.NODE_ENV).toBe('development');
-    expect(config.CORS_ORIGIN).toBe('http://localhost:4200');
+    expect(config.CORS_ORIGIN).toBe('http://localhost:4200,http://127.0.0.1:4200');
     expect(config.LOG_LEVEL).toBe('info');
   });
 

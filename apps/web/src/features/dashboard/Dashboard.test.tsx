@@ -1,22 +1,39 @@
 import { render, screen } from '@testing-library/react';
-import { describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+
+import { AuthContext } from '../auth/auth.context';
 
 import { Dashboard } from './Dashboard';
 
 describe('Dashboard Component', () => {
-  it('renders all sections and metrics of server overview', () => {
-    render(<Dashboard />);
+  beforeEach(() => {
+    vi.restoreAllMocks();
+  });
 
-    expect(screen.getByRole('heading', { name: /server overview/i })).toBeInTheDocument();
-    expect(screen.getByText('Chernarus Survival')).toBeInTheDocument();
-    expect(screen.getByText('Players online')).toBeInTheDocument();
-    expect(screen.getByText('Average latency')).toBeInTheDocument();
-    expect(screen.getByText('Server FPS')).toBeInTheDocument();
-    expect(screen.getAllByText('Unique players').length).toBeGreaterThan(0);
-    expect(screen.getByText('Player activity')).toBeInTheDocument();
-    expect(screen.getByText('Players by region')).toBeInTheDocument();
-    expect(screen.getByText('Server performance')).toBeInTheDocument();
-    expect(screen.getByText('Recent events')).toBeInTheDocument();
-    expect(screen.getByText('Server logs')).toBeInTheDocument();
+  it('renders authenticated user information and server connectivity', async () => {
+    const mockAuthContext = {
+      user: {
+        id: 'usr-456',
+        username: 'admin',
+        email: 'admin@dayz.local',
+        role: 'admin' as const,
+        roles: ['admin' as const],
+      },
+      isAuthenticated: true,
+      login: vi.fn(),
+      logout: vi.fn(),
+    };
+
+    render(
+      <AuthContext.Provider value={mockAuthContext}>
+        <Dashboard />
+      </AuthContext.Provider>,
+    );
+
+    expect(screen.getByRole('heading', { name: /dashboard/i })).toBeInTheDocument();
+    expect(screen.getAllByText('admin').length).toBeGreaterThan(0);
+    expect(screen.getByText('Authentication Status')).toBeInTheDocument();
+    expect(screen.getByText('Backend Connectivity')).toBeInTheDocument();
+    expect(screen.getByText('usr-456')).toBeInTheDocument();
   });
 });

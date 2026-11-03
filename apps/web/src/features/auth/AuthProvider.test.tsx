@@ -1,5 +1,7 @@
 import { act, render, renderHook, screen } from '@testing-library/react';
-import { describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+
+import { apiClient } from '@dsm/api-client';
 
 import { useAuth } from './auth.context';
 import { authStorage } from './auth.storage';
@@ -7,6 +9,10 @@ import type { AuthUser } from './auth.types';
 import { AuthProvider } from './AuthProvider';
 
 describe('AuthProvider & useAuth', () => {
+  beforeEach(() => {
+    vi.restoreAllMocks();
+  });
+
   it('throws an error if useAuth is invoked outside of an AuthProvider', () => {
     expect(() => {
       renderHook(() => useAuth());
@@ -36,7 +42,7 @@ describe('AuthProvider & useAuth', () => {
     expect(screen.getByTestId('user')).toHaveTextContent('none');
   });
 
-  it('restores existing user from authStorage on mount', () => {
+  it('restores existing user and token from authStorage on mount', () => {
     const existingUser: AuthUser = {
       id: 'stored-1',
       username: 'storedAdmin',
@@ -44,7 +50,7 @@ describe('AuthProvider & useAuth', () => {
       role: 'admin',
       roles: ['admin'],
     };
-    authStorage.set(existingUser, false);
+    authStorage.set(existingUser, false, { accessToken: 'existing-jwt' });
 
     function Consumer() {
       const { isAuthenticated, user } = useAuth();
@@ -64,10 +70,23 @@ describe('AuthProvider & useAuth', () => {
 
     expect(screen.getByTestId('status')).toHaveTextContent('logged-in');
     expect(screen.getByTestId('user')).toHaveTextContent('storedAdmin');
+    expect(apiClient.client.getToken()).toBe('existing-jwt');
   });
 
-  it('handles login and logout lifecycle', () => {
+  it('handles login and logout lifecycle', async () => {
     authStorage.clear();
+
+    vi.spyOn(apiClient.auth, 'login').mockResolvedValue({
+      accessToken: 'test-access-token',
+      refreshToken: 'test-refresh-token',
+      expiresIn: 900,
+      user: {
+        id: 'usr-new-id',
+        username: 'newCommander',
+        email: 'commander@dayz.local',
+        role: 'admin',
+      },
+    });
 
     function Consumer() {
       const { isAuthenticated, user, login, logout } = useAuth();
@@ -78,7 +97,7 @@ describe('AuthProvider & useAuth', () => {
           <button
             type="button"
             onClick={() =>
-              login({
+              void login({
                 usernameOrEmail: 'newCommander',
                 password: 'SecretPassword123!',
                 rememberMe: true,
@@ -103,13 +122,15 @@ describe('AuthProvider & useAuth', () => {
     expect(screen.getByTestId('status')).toHaveTextContent('logged-out');
 
     // Perform Login
-    act(() => {
+    await act(async () => {
       screen.getByRole('button', { name: 'Log In' }).click();
     });
 
     expect(screen.getByTestId('status')).toHaveTextContent('logged-in');
     expect(screen.getByTestId('user')).toHaveTextContent('newCommander');
     expect(authStorage.get()?.username).toBe('newCommander');
+    expect(authStorage.getToken()).toBe('test-access-token');
+    expect(apiClient.client.getToken()).toBe('test-access-token');
 
     // Perform Logout
     act(() => {
@@ -119,5 +140,7 @@ describe('AuthProvider & useAuth', () => {
     expect(screen.getByTestId('status')).toHaveTextContent('logged-out');
     expect(screen.getByTestId('user')).toHaveTextContent('none');
     expect(authStorage.get()).toBeNull();
+    expect(authStorage.getToken()).toBeNull();
+    expect(apiClient.client.getToken()).toBeNull();
   });
 });
