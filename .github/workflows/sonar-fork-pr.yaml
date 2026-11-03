@@ -74,7 +74,7 @@ jobs:
           set -euo pipefail
           node .github/scripts/normalize-lcov.cjs _sonar-pr-inputs/coverage
           mkdir -p _sonar-pr-analysis
-          cp sonar-project.properties tsconfig.base.json _sonar-pr-analysis/
+          cp sonar-project.properties tsconfig.base.json tsconfig.json _sonar-pr-analysis/
           mv _sonar-pr-inputs/apps _sonar-pr-inputs/libs _sonar-pr-analysis/
           cp -r _sonar-pr-inputs/coverage _sonar-pr-analysis/coverage
 
