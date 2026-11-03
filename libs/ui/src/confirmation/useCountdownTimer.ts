@@ -6,15 +6,12 @@ export interface UseCountdownTimerReturn {
 }
 
 export function useCountdownTimer(timerValue: number = 0): UseCountdownTimerReturn {
-  const [prevTimerValue, setPrevTimerValue] = useState(timerValue);
   const [remainingTime, setRemainingTime] = useState(timerValue);
 
-  if (timerValue !== prevTimerValue) {
-    setPrevTimerValue(timerValue);
-    setRemainingTime(timerValue);
-  }
-
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setRemainingTime(timerValue);
+
     if (timerValue <= 0) {
       return;
     }

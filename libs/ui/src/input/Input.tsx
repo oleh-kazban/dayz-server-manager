@@ -1,4 +1,4 @@
-import { useId } from 'react';
+import { type MouseEvent, useId, useRef } from 'react';
 
 import type { InputProps } from './Input.types';
 
@@ -23,12 +23,23 @@ export function Input({
   const computedDescribedBy =
     [externalDescribedBy, error ? `${inputId}-error` : null].filter(Boolean).join(' ') || undefined;
 
+  const internalInputRef = useRef<HTMLInputElement | null>(null);
+
   const handleInputRef = (element: HTMLInputElement | null) => {
+    internalInputRef.current = element;
     if (typeof ref === 'function') {
       ref(element);
     } else if (ref && 'current' in ref) {
       (ref as { current: HTMLInputElement | null }).current = element;
     }
+  };
+
+  const handleContainerClick = (e: MouseEvent<HTMLDivElement>) => {
+    if (disabled) return;
+    if ((e.target as HTMLElement).closest('button, a, [role="button"]')) {
+      return;
+    }
+    internalInputRef.current?.focus();
   };
 
   const resolvedContainerClass = containerClassName || customClassName || '';
@@ -49,6 +60,7 @@ export function Input({
       )}
 
       <div
+        onClick={handleContainerClick}
         className={`flex items-center rounded-lg border bg-[var(--color-surface)] shadow-xs transition-colors cursor-text h-9 px-3.5 gap-2.5 ${
           disabled ? 'opacity-50 cursor-not-allowed bg-[var(--color-surface-subtle)]' : ''
         } ${

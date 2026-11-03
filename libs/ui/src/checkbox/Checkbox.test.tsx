@@ -111,9 +111,16 @@ describe('Checkbox', () => {
     expect(disabledCheckbox).toBeDisabled();
   });
 
-  it('does not have autofocus attribute on rendered input', () => {
-    render(<Checkbox label="Autofocus Test" />);
-    const checkbox = screen.getByRole('checkbox', { name: /autofocus test/i });
-    expect(checkbox).not.toHaveAttribute('autofocus');
+  it('omits autofocus by default and focuses the element when autoFocus is true', () => {
+    const { unmount } = render(<Checkbox label="Default Autofocus" />);
+    const defaultCheckbox = screen.getByRole('checkbox', { name: /default autofocus/i });
+    expect(defaultCheckbox).not.toHaveFocus();
+    expect(defaultCheckbox).not.toHaveAttribute('autofocus');
+
+    unmount();
+
+    render(<Checkbox autoFocus label="Active Autofocus" />);
+    const autofocusCheckbox = screen.getByRole('checkbox', { name: /active autofocus/i });
+    expect(autofocusCheckbox).toHaveFocus();
   });
 });

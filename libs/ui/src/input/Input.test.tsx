@@ -160,4 +160,49 @@ describe('Input', () => {
     rerender(<Input ref={callbackRef} placeholder="Callback ref" />);
     expect(callbackRef).toHaveBeenCalledWith(expect.any(HTMLInputElement));
   });
+
+  it('delegates focus to input when clicking container wrapper', async () => {
+    const user = userEvent.setup();
+    const { container } = render(<Input placeholder="Click container" />);
+    const input = screen.getByPlaceholderText('Click container');
+    const inputWrapper = container.querySelector('.cursor-text')!;
+    expect(inputWrapper).toBeInTheDocument();
+
+    expect(input).not.toHaveFocus();
+    await user.click(inputWrapper);
+    expect(input).toHaveFocus();
+  });
+
+  it('fires rightAction click without delegating focus if action clicked', async () => {
+    const user = userEvent.setup();
+    const handleActionClick = vi.fn();
+    render(
+      <Input
+        placeholder="With action"
+        rightAction={
+          <button type="button" onClick={handleActionClick}>
+            Action
+          </button>
+        }
+      />,
+    );
+
+    const actionButton = screen.getByRole('button', { name: /action/i });
+    const input = screen.getByPlaceholderText('With action');
+
+    await user.click(actionButton);
+    expect(handleActionClick).toHaveBeenCalledTimes(1);
+    expect(input).not.toHaveFocus();
+  });
+
+  it('does not delegate focus when clicking container of disabled input', async () => {
+    const user = userEvent.setup();
+    const { container } = render(<Input disabled placeholder="Disabled" />);
+    const input = screen.getByPlaceholderText('Disabled');
+    const inputWrapper = container.querySelector('.cursor-not-allowed')!;
+    expect(inputWrapper).toBeInTheDocument();
+
+    await user.click(inputWrapper);
+    expect(input).not.toHaveFocus();
+  });
 });

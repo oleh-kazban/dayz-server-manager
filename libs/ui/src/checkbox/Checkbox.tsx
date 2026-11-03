@@ -17,6 +17,7 @@ export function Checkbox({
   onFocus,
   disabled = false,
   required = false,
+  autoFocus,
   tabIndex,
   label,
   description,
@@ -77,6 +78,7 @@ export function Checkbox({
           onFocus={onFocus}
           disabled={disabled}
           required={required}
+          autoFocus={autoFocus}
           tabIndex={tabIndex}
           aria-checked={indeterminate ? 'mixed' : undefined}
           aria-invalid={Boolean(error)}
