@@ -45,11 +45,59 @@ describe('SignInForm', () => {
     fireEvent.click(submitBtn);
 
     await waitFor(() => {
-      expect(screen.getByText(/Username or email is required/i)).toBeInTheDocument();
-      expect(screen.getByText(/Password is required/i)).toBeInTheDocument();
+      expect(screen.getByText('Username or email is required')).toBeInTheDocument();
+      expect(screen.getByText('Password is required')).toBeInTheDocument();
     });
 
     expect(mockNavigate).not.toHaveBeenCalled();
+  });
+
+  it('validates invalid email format when an email address with @ is malformed', async () => {
+    const user = userEvent.setup();
+
+    render(
+      <AuthProvider>
+        <SignInForm />
+      </AuthProvider>,
+    );
+
+    const usernameInput = screen.getByLabelText(/Username or email/i);
+    const passwordInput = screen.getByPlaceholderText('Enter your password');
+    const submitBtn = screen.getByRole('button', { name: /Sign in/i });
+
+    await user.type(usernameInput, 'invalid-email@');
+    await user.type(passwordInput, 'ValidPassword123');
+    await user.click(submitBtn);
+
+    await waitFor(() => {
+      expect(screen.getByText('Please enter a valid email address')).toBeInTheDocument();
+    });
+
+    expect(mockNavigate).not.toHaveBeenCalled();
+  });
+
+  it('allows non-email usernames without validation error', async () => {
+    const user = userEvent.setup();
+
+    render(
+      <AuthProvider>
+        <SignInForm />
+      </AuthProvider>,
+    );
+
+    const usernameInput = screen.getByLabelText(/Username or email/i);
+    const passwordInput = screen.getByPlaceholderText('Enter your password');
+    const submitBtn = screen.getByRole('button', { name: /Sign in/i });
+
+    await user.type(usernameInput, 'adminuser');
+    await user.type(passwordInput, 'ValidPassword123');
+    await user.click(submitBtn);
+
+    await waitFor(() => {
+      expect(screen.queryByText(/Username or email is required/i)).not.toBeInTheDocument();
+      expect(screen.queryByText(/Please enter a valid email address/i)).not.toBeInTheDocument();
+      expect(mockNavigate).toHaveBeenCalledWith({ to: '/dashboard' });
+    });
   });
 
   it('submits valid credentials, logs user in, and navigates to /dashboard', async () => {
