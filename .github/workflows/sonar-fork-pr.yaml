@@ -57,9 +57,8 @@ jobs:
           [[ "$PR_BASE_BRANCH" =~ ^[A-Za-z0-9._/-]+$ ]]
           [[ -d _sonar-pr-inputs/apps && ! -L _sonar-pr-inputs/apps ]]
           [[ -d _sonar-pr-inputs/libs && ! -L _sonar-pr-inputs/libs ]]
-          [[ -s _sonar-pr-inputs/coverage/libs/ui/lcov.info ]]
-          [[ ! -L _sonar-pr-inputs/coverage/libs/ui/lcov.info ]]
-          if find _sonar-pr-inputs/apps _sonar-pr-inputs/libs -type l -print -quit | grep -q .; then
+          [[ -d _sonar-pr-inputs/coverage && ! -L _sonar-pr-inputs/coverage ]]
+          if find _sonar-pr-inputs/apps _sonar-pr-inputs/libs _sonar-pr-inputs/coverage -type l -print -quit | grep -q .; then
             echo "The downloaded source artifact contains symbolic links." >&2
             exit 1
           fi
@@ -73,12 +72,11 @@ jobs:
       - name: Prepare downloaded PR source for analysis
         run: |
           set -euo pipefail
-          sed -i 's#\\#/#g; s#^SF:src/#SF:libs/ui/src/#' _sonar-pr-inputs/coverage/libs/ui/lcov.info
+          node .github/scripts/normalize-lcov.cjs _sonar-pr-inputs/coverage
           mkdir -p _sonar-pr-analysis
           cp sonar-project.properties tsconfig.base.json _sonar-pr-analysis/
           mv _sonar-pr-inputs/apps _sonar-pr-inputs/libs _sonar-pr-analysis/
-          mkdir -p _sonar-pr-analysis/coverage/libs/ui
-          cp _sonar-pr-inputs/coverage/libs/ui/lcov.info _sonar-pr-analysis/coverage/libs/ui/lcov.info
+          cp -r _sonar-pr-inputs/coverage _sonar-pr-analysis/coverage
 
       - name: SonarQube Cloud Scan
         uses: SonarSource/sonarqube-scan-action@4d1dc0c91ee400dcf8a6dddf2f705ac36542e304 # v8.4.0

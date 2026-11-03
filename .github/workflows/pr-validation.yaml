@@ -52,7 +52,7 @@ jobs:
 
       - name: Generate fork PR coverage
         if: env.IS_FORK_PR == 'true'
-        run: pnpm nx run ui:test:coverage
+        run: pnpm test:coverage
 
       - name: Upload fork PR inputs for Sonar
         if: env.IS_FORK_PR == 'true'
@@ -62,6 +62,6 @@ jobs:
           path: |
             apps/
             libs/
-            coverage/libs/ui/lcov.info
+            coverage/
           if-no-files-found: error
           retention-days: 1
