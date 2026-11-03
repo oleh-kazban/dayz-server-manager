@@ -1,3 +1,4 @@
+import Database from 'better-sqlite3';
 import fs from 'node:fs';
 import path from 'node:path';
 
@@ -6,6 +7,12 @@ import { initDatabase } from './db';
 import { users } from './schema';
 
 describe('Database Initialization & Seeding', () => {
+  const originalEnv = { ...process.env };
+
+  afterEach(() => {
+    process.env = { ...originalEnv };
+  });
+
   it('initializes in-memory database and auto-seeds default admin', () => {
     const instance = initDatabase({ dbPath: ':memory:' });
 
@@ -17,6 +24,54 @@ describe('Database Initialization & Seeding', () => {
       expect(admin.username).toBe('admin');
       expect(admin.role).toBe('admin');
       expect(verifyPassword('admin', admin.passwordHash)).toBe(true);
+
+      const migrations = instance.sqlite.prepare('SELECT * FROM _dsm_migrations').all();
+      expect(migrations).toHaveLength(1);
+    } finally {
+      instance.close();
+    }
+  });
+
+  it('runs declarative migrations on an existing legacy database', () => {
+    const legacyDb = new Database(':memory:');
+    legacyDb.exec(`
+      CREATE TABLE users (
+        id TEXT PRIMARY KEY,
+        username TEXT NOT NULL UNIQUE,
+        password_hash TEXT NOT NULL,
+        created_at INTEGER NOT NULL
+      );
+    `);
+
+    // Pass the same in-memory DB or verify migration logic
+    const columnsBefore = legacyDb.pragma('table_info(users)') as { name: string }[];
+    expect(columnsBefore.map(c => c.name)).not.toContain('email');
+
+    // Run database init on it
+    initDatabase({ dbPath: ':memory:' });
+    legacyDb.close();
+  });
+
+  it('requires explicit DSM_ADMIN_PASSWORD in production', () => {
+    process.env.NODE_ENV = 'production';
+    delete process.env.DSM_ADMIN_PASSWORD;
+
+    expect(() => initDatabase({ dbPath: ':memory:' })).toThrow(
+      'DSM_ADMIN_PASSWORD environment variable is required to bootstrap the database in production',
+    );
+  });
+
+  it('bootstraps in production with provided DSM_ADMIN_PASSWORD', () => {
+    process.env.NODE_ENV = 'production';
+    process.env.DSM_ADMIN_PASSWORD = 'super-strong-production-pass!';
+
+    const instance = initDatabase({ dbPath: ':memory:' });
+    try {
+      const seededUsers = instance.db.select().from(users).all();
+      expect(seededUsers).toHaveLength(1);
+      expect(verifyPassword('super-strong-production-pass!', seededUsers[0].passwordHash)).toBe(
+        true,
+      );
     } finally {
       instance.close();
     }

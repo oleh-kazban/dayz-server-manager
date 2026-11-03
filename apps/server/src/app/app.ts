@@ -49,9 +49,12 @@ export function buildApp(options: BuildAppOptions): FastifyInstance {
 
   app.decorate('authenticate', async (request: FastifyRequest, reply: FastifyReply) => {
     try {
-      await request.jwtVerify();
+      const payload = await request.jwtVerify<{ sub: string; role?: string; type?: string }>();
+      if (!payload || payload.type !== 'access') {
+        return reply.unauthorized('Invalid token type for authorization');
+      }
     } catch {
-      reply.unauthorized('Invalid or missing authentication token');
+      return reply.unauthorized('Invalid or missing authentication token');
     }
   });
 

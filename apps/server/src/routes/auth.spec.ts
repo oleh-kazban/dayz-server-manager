@@ -232,6 +232,26 @@ describe('Auth Routes (/api/v1/auth)', () => {
       expect(meRes.statusCode).toBe(401);
     });
 
+    it('returns 401 when a refresh token is used as Bearer token', async () => {
+      const loginRes = await app.inject({
+        method: 'POST',
+        url: '/api/v1/auth/login',
+        payload: { usernameOrEmail: 'admin', password: 'admin' },
+      });
+      const { refreshToken } = loginRes.json();
+
+      const meRes = await app.inject({
+        method: 'GET',
+        url: '/api/v1/auth/me',
+        headers: {
+          authorization: `Bearer ${refreshToken}`,
+        },
+      });
+
+      expect(meRes.statusCode).toBe(401);
+      expect(meRes.json().message).toContain('Invalid token type for authorization');
+    });
+
     it('returns 401 when user in access token is not found in database', async () => {
       const ghostAccessToken = app.jwt.sign(
         { sub: '00000000-0000-0000-0000-000000000000', type: 'access' },

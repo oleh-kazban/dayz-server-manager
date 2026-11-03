@@ -5,6 +5,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 import { hashPassword } from './crypto';
+import { runMigrations } from './migrations';
 import * as schema from './schema';
 
 export interface DatabaseOptions {
@@ -30,25 +31,16 @@ export function initDatabase(options: DatabaseOptions = {}): DatabaseInstance {
     }
   }
 
-  const sqlite = new Database(dbPath);
+  const sqlite = new Database(dbPath, { timeout: 5000 });
 
   // High-performance and data-integrity pragmas per PERSISTENCE_SPEC.md
   sqlite.pragma('journal_mode = WAL');
   sqlite.pragma('synchronous = NORMAL');
   sqlite.pragma('foreign_keys = ON');
+  sqlite.pragma('busy_timeout = 5000');
 
-  // Automatically create tables if not existing
-  sqlite.exec(`
-    CREATE TABLE IF NOT EXISTS users (
-      id TEXT PRIMARY KEY,
-      username TEXT NOT NULL UNIQUE,
-      password_hash TEXT NOT NULL,
-      email TEXT,
-      role TEXT NOT NULL DEFAULT 'viewer',
-      created_at INTEGER NOT NULL,
-      last_login_at INTEGER
-    );
-  `);
+  // Run declarative migrations
+  runMigrations(sqlite);
 
   const db = drizzle(sqlite, { schema });
 
@@ -58,6 +50,12 @@ export function initDatabase(options: DatabaseOptions = {}): DatabaseInstance {
   };
 
   if (existingCount.count === 0) {
+    if (process.env.NODE_ENV === 'production' && !process.env.DSM_ADMIN_PASSWORD) {
+      throw new Error(
+        'DSM_ADMIN_PASSWORD environment variable is required to bootstrap the database in production',
+      );
+    }
+
     const defaultAdminId = crypto.randomUUID();
     const defaultAdminPass = process.env.DSM_ADMIN_PASSWORD || 'admin';
 

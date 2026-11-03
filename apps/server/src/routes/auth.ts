@@ -20,6 +20,38 @@ export const registerAuthRoutes: FastifyPluginAsync = async fastify => {
           timeWindow: '1 minute',
         },
       },
+      schema: {
+        body: {
+          type: 'object',
+          required: ['usernameOrEmail', 'password'],
+          properties: {
+            usernameOrEmail: { type: 'string' },
+            password: { type: 'string' },
+            rememberMe: { type: 'boolean' },
+          },
+        },
+        response: {
+          200: {
+            type: 'object',
+            required: ['accessToken', 'refreshToken', 'expiresIn', 'user'],
+            properties: {
+              accessToken: { type: 'string' },
+              refreshToken: { type: 'string' },
+              expiresIn: { type: 'number' },
+              user: {
+                type: 'object',
+                required: ['id', 'username', 'role'],
+                properties: {
+                  id: { type: 'string' },
+                  username: { type: 'string' },
+                  email: { type: 'string' },
+                  role: { type: 'string', enum: ['admin', 'moderator', 'viewer'] },
+                },
+              },
+            },
+          },
+        },
+      },
     },
     async (request, reply) => {
       const parseResult = signInRequestSchema.safeParse(request.body);
@@ -88,6 +120,25 @@ export const registerAuthRoutes: FastifyPluginAsync = async fastify => {
           timeWindow: '1 minute',
         },
       },
+      schema: {
+        body: {
+          type: 'object',
+          required: ['refreshToken'],
+          properties: {
+            refreshToken: { type: 'string' },
+          },
+        },
+        response: {
+          200: {
+            type: 'object',
+            required: ['accessToken', 'expiresIn'],
+            properties: {
+              accessToken: { type: 'string' },
+              expiresIn: { type: 'number' },
+            },
+          },
+        },
+      },
     },
     async (request, reply) => {
       const parseResult = refreshRequestSchema.safeParse(request.body);
@@ -133,6 +184,20 @@ export const registerAuthRoutes: FastifyPluginAsync = async fastify => {
     '/me',
     {
       onRequest: [fastify.authenticate],
+      schema: {
+        response: {
+          200: {
+            type: 'object',
+            required: ['id', 'username', 'role'],
+            properties: {
+              id: { type: 'string' },
+              username: { type: 'string' },
+              email: { type: 'string' },
+              role: { type: 'string', enum: ['admin', 'moderator', 'viewer'] },
+            },
+          },
+        },
+      },
     },
     async (request, reply) => {
       const user = fastify.db.db.select().from(users).where(eq(users.id, request.user.sub)).get();
