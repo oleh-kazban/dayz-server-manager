@@ -73,7 +73,7 @@ export function Sidebar() {
             <span className="truncate">Overview</span>
           </a>
           <a
-            href="/server-management"
+            href="#servers"
             className="flex items-center justify-between px-3 py-2.5 rounded-lg text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-hover)] hover:text-[var(--color-text-main)] text-xs transition-colors"
           >
             <div className="flex items-center gap-3 min-w-0">
