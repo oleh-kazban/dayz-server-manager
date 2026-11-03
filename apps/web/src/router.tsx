@@ -7,6 +7,7 @@ import {
   redirect,
   type RouterHistory,
 } from '@tanstack/react-router';
+import { z } from 'zod';
 
 import { AppShell, PlaceholderView } from '@dsm/web/components';
 
@@ -17,6 +18,14 @@ export interface RouterContext {
   auth: AuthContextValue;
   features: FeatureFlagsContextValue;
 }
+
+export interface SignInSearch {
+  redirect?: string;
+}
+
+const signInSearchSchema = z.object({
+  redirect: z.string().optional(),
+});
 
 // 1. Root route with context contract
 const rootRoute = createRootRouteWithContext<RouterContext>()({
@@ -36,6 +45,8 @@ const indexRoute = createRoute({
 const signInRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/sign-in',
+  validateSearch: (search: Record<string, unknown>): SignInSearch =>
+    signInSearchSchema.parse(search),
   beforeLoad: ({ context }) => {
     if (context.auth.isAuthenticated) {
       throw redirect({ to: '/dashboard' });
@@ -48,9 +59,14 @@ const signInRoute = createRoute({
 const authedRoute = createRoute({
   id: 'authed',
   getParentRoute: () => rootRoute,
-  beforeLoad: ({ context }) => {
+  beforeLoad: ({ context, location }) => {
     if (!context.auth.isAuthenticated) {
-      throw redirect({ to: '/sign-in' });
+      throw redirect({
+        to: '/sign-in',
+        search: {
+          redirect: location.href,
+        },
+      });
     }
   },
   component: () => (

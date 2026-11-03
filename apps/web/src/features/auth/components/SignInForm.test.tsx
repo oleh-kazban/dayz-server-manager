@@ -10,17 +10,20 @@ import { SignInForm } from './SignInForm';
 
 const mockNavigate = vi.fn();
 const mockInvalidate = vi.fn();
+let mockSearchParams: { redirect?: string } = {};
 
 vi.mock('@tanstack/react-router', () => ({
   useNavigate: () => mockNavigate,
   useRouter: () => ({
     invalidate: mockInvalidate,
   }),
+  useSearch: () => mockSearchParams,
 }));
 
 describe('SignInForm', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockSearchParams = {};
   });
 
   it('renders form inputs, remember me checkbox, and submit button', () => {
@@ -112,6 +115,42 @@ describe('SignInForm', () => {
     await waitFor(() => {
       expect(mockInvalidate).toHaveBeenCalled();
       expect(mockNavigate).toHaveBeenCalledWith({ to: '/dashboard' });
+    });
+  });
+
+  it('navigates to preserved redirect query parameter destination upon successful sign in', async () => {
+    const user = userEvent.setup();
+    mockSearchParams = { redirect: '/system' };
+
+    vi.spyOn(apiClient.auth, 'login').mockResolvedValue({
+      accessToken: 'jwt-access-123',
+      refreshToken: 'jwt-refresh-456',
+      expiresIn: 900,
+      user: {
+        id: 'usr-123',
+        username: 'adminuser',
+        email: 'admin@dayz.local',
+        role: 'admin',
+      },
+    });
+
+    render(
+      <AuthProvider>
+        <SignInForm />
+      </AuthProvider>,
+    );
+
+    const usernameInput = screen.getByLabelText(/Username or email/i);
+    const passwordInput = screen.getByPlaceholderText('Enter your password');
+    const submitBtn = screen.getByRole('button', { name: /Sign in/i });
+
+    await user.type(usernameInput, 'adminuser');
+    await user.type(passwordInput, 'ValidPassword123');
+    await user.click(submitBtn);
+
+    await waitFor(() => {
+      expect(mockInvalidate).toHaveBeenCalled();
+      expect(mockNavigate).toHaveBeenCalledWith({ to: '/system' });
     });
   });
 

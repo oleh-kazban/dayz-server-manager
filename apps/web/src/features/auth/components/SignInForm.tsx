@@ -1,7 +1,7 @@
 import { useForm } from 'react-hook-form';
 
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useNavigate, useRouter } from '@tanstack/react-router';
+import { useNavigate, useRouter, useSearch } from '@tanstack/react-router';
 import { ArrowRight, UserRound } from 'lucide-react';
 
 import { ApiError } from '@dsm/api-client';
@@ -14,6 +14,7 @@ export function SignInForm() {
   const { login } = useAuth();
   const router = useRouter();
   const navigate = useNavigate();
+  const search = useSearch({ strict: false }) as { redirect?: string };
 
   const {
     register,
@@ -33,7 +34,13 @@ export function SignInForm() {
     try {
       await login(values);
       await router.invalidate();
-      await navigate({ to: '/dashboard' });
+      const targetUrl =
+        typeof search?.redirect === 'string' &&
+        search.redirect.startsWith('/') &&
+        !search.redirect.startsWith('//')
+          ? search.redirect
+          : '/dashboard';
+      await navigate({ to: targetUrl });
     } catch (err) {
       let message = 'Invalid credentials. Please try again.';
       if (err instanceof ApiError && err.apiMessage) {

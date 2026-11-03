@@ -48,7 +48,7 @@ function renderRoute(initialPath: string, auth = mockAdminAuth, flags = DEFAULT_
   const history = createMemoryHistory({ initialEntries: [initialPath] });
   const router = createAppRouter(history);
 
-  return render(
+  const rendered = render(
     <ThemeProvider>
       <AuthProvider>
         <RouterProvider
@@ -64,6 +64,8 @@ function renderRoute(initialPath: string, auth = mockAdminAuth, flags = DEFAULT_
       </AuthProvider>
     </ThemeProvider>,
   );
+
+  return { ...rendered, history, router };
 }
 
 describe('Router Topology & Navigation', () => {
@@ -71,11 +73,13 @@ describe('Router Topology & Navigation', () => {
     authStorage.clear();
   });
 
-  it('redirects unauthenticated users to /sign-in', async () => {
-    renderRoute('/dashboard', mockGuestAuth);
+  it('redirects unauthenticated users to /sign-in preserving target in search', async () => {
+    const { history } = renderRoute('/players', mockGuestAuth);
 
     await waitFor(() => {
       expect(screen.getByRole('heading', { name: /welcome back/i })).toBeInTheDocument();
+      expect(history.location.pathname).toBe('/sign-in');
+      expect(history.location.search).toContain('redirect');
     });
   });
 
