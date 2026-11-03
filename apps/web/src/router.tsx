@@ -5,6 +5,7 @@ import {
   lazyRouteComponent,
   Outlet,
   redirect,
+  type RouterHistory,
 } from '@tanstack/react-router';
 
 import { AppShell, PlaceholderView } from '@dsm/web/components';
@@ -379,13 +380,18 @@ const routeTree = rootRoute.addChildren([
   ]),
 ]);
 
-export const router = createRouter({
-  routeTree,
-  context: {
-    auth: undefined!,
-    features: undefined!,
-  },
-});
+export function createAppRouter(history?: RouterHistory) {
+  return createRouter({
+    routeTree,
+    history,
+    context: {
+      auth: undefined!,
+      features: undefined!,
+    },
+  });
+}
+
+export const router = createAppRouter();
 
 // 7. Register router for complete type-safety across <Link /> and navigate()
 declare module '@tanstack/react-router' {
