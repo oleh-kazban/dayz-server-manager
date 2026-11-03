@@ -17,6 +17,7 @@ export function SignInForm() {
   const {
     register,
     handleSubmit,
+    setError,
     formState: { errors, isSubmitting },
   } = useForm<SignInFormValues>({
     resolver: zodResolver(signInSchema),
@@ -28,9 +29,14 @@ export function SignInForm() {
   });
 
   const onSubmit = async (values: SignInFormValues) => {
-    await login(values);
-    await router.invalidate();
-    await navigate({ to: '/dashboard' });
+    try {
+      await login(values);
+      await router.invalidate();
+      await navigate({ to: '/dashboard' });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Invalid credentials. Please try again.';
+      setError('root', { message });
+    }
   };
 
   return (
@@ -51,6 +57,15 @@ export function SignInForm() {
 
         {/* Form Controls */}
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4" noValidate>
+          {errors.root?.message && (
+            <div
+              role="alert"
+              className="p-3 text-xs rounded-lg border border-[var(--color-danger-border,#fca5a5)] bg-[var(--color-danger-light,#fef2f2)] text-[var(--color-danger,#b91c1c)]"
+            >
+              {errors.root.message}
+            </div>
+          )}
+
           <Input
             label="Username or email"
             id="username"

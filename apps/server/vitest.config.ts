@@ -10,6 +10,7 @@ export default defineConfig({
   resolve: {
     alias: {
       '@dsm/api-contracts': path.resolve(workspaceRoot, 'libs/api-contracts/src/index.ts'),
+      '@dsm/database': path.resolve(workspaceRoot, 'libs/database/src/index.ts'),
       '@dsm/server': path.resolve(__dirname, 'src'),
     },
   },
@@ -23,7 +24,7 @@ export default defineConfig({
       reporter: ['text', 'html', 'lcov'],
       reportsDirectory: path.resolve(workspaceRoot, 'coverage/apps/server'),
       include: ['src/**/*.ts'],
-      exclude: ['src/main.ts', 'src/**/index.ts', 'src/**/*.{test,spec}.ts'],
+      exclude: ['src/main.ts', 'src/**/index.ts', 'src/**/*.{test,spec}.ts', 'src/types/**'],
       thresholds: {
         statements: 80,
         branches: 80,

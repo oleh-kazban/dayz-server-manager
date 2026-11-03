@@ -29,6 +29,7 @@ export class ValidationError extends Error {
 export class HttpClient {
   private readonly baseUrl: string;
   private readonly defaultHeaders: Record<string, string>;
+  private token: string | null = null;
 
   constructor(config: HttpClientConfig = {}) {
     this.baseUrl = config.baseUrl ?? '';
@@ -38,11 +39,20 @@ export class HttpClient {
     };
   }
 
+  setToken(token: string | null): void {
+    this.token = token;
+  }
+
+  getToken(): string | null {
+    return this.token;
+  }
+
   async request<T>(endpoint: string, schema: ZodType<T>, init: RequestInit = {}): Promise<T> {
     const url = `${this.baseUrl}${endpoint}`;
-    const headers = {
+    const headers: Record<string, string> = {
       ...this.defaultHeaders,
-      ...init.headers,
+      ...(this.token ? { Authorization: `Bearer ${this.token}` } : {}),
+      ...(init.headers as Record<string, string>),
     };
 
     const response = await fetch(url, {

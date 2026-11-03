@@ -9,6 +9,7 @@ describe('Fastify App', () => {
     PORT: '5000',
     LOG_LEVEL: 'silent',
     CORS_ORIGIN: 'http://localhost:4200',
+    DATABASE_PATH: ':memory:',
   });
 
   it('GET /api/v1/health returns 200 and valid schema', async () => {
@@ -30,6 +31,7 @@ describe('Fastify App', () => {
     expect(new Date(json.timestamp).toString()).not.toBe('Invalid Date');
 
     await app.close();
+    app.db.close();
   });
 
   it('sets CORS headers according to config', async () => {
@@ -46,5 +48,6 @@ describe('Fastify App', () => {
     expect(response.headers['access-control-allow-origin']).toBe('http://localhost:4200');
 
     await app.close();
+    app.db.close();
   });
 });

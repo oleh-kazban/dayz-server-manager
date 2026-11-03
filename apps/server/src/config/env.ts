@@ -6,6 +6,8 @@ export const envSchema = z.object({
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
   CORS_ORIGIN: z.string().default('http://localhost:4200'),
   LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent']).default('info'),
+  SESSION_SECRET: z.string().min(16).default('super-secret-dev-session-key-32-chars-long'),
+  DATABASE_PATH: z.string().optional(),
 });
 
 export type EnvConfig = z.infer<typeof envSchema>;

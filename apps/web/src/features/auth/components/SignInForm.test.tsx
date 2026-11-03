@@ -2,6 +2,8 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { apiClient } from '@dsm/api-client';
+
 import { AuthProvider } from '../AuthProvider';
 
 import { SignInForm } from './SignInForm';
@@ -76,32 +78,20 @@ describe('SignInForm', () => {
     expect(mockNavigate).not.toHaveBeenCalled();
   });
 
-  it('allows non-email usernames without validation error', async () => {
-    const user = userEvent.setup();
-
-    render(
-      <AuthProvider>
-        <SignInForm />
-      </AuthProvider>,
-    );
-
-    const usernameInput = screen.getByLabelText(/Username or email/i);
-    const passwordInput = screen.getByPlaceholderText('Enter your password');
-    const submitBtn = screen.getByRole('button', { name: /Sign in/i });
-
-    await user.type(usernameInput, 'adminuser');
-    await user.type(passwordInput, 'ValidPassword123');
-    await user.click(submitBtn);
-
-    await waitFor(() => {
-      expect(screen.queryByText(/Username or email is required/i)).not.toBeInTheDocument();
-      expect(screen.queryByText(/Please enter a valid email address/i)).not.toBeInTheDocument();
-      expect(mockNavigate).toHaveBeenCalledWith({ to: '/dashboard' });
-    });
-  });
-
   it('submits valid credentials, logs user in, and navigates to /dashboard', async () => {
     const user = userEvent.setup();
+
+    vi.spyOn(apiClient.auth, 'login').mockResolvedValue({
+      accessToken: 'jwt-access-123',
+      refreshToken: 'jwt-refresh-456',
+      expiresIn: 900,
+      user: {
+        id: 'usr-123',
+        username: 'adminuser',
+        email: 'admin@dayz.local',
+        role: 'admin',
+      },
+    });
 
     render(
       <AuthProvider>
@@ -114,7 +104,7 @@ describe('SignInForm', () => {
     const rememberMeCheckbox = screen.getByLabelText(/Remember me on this device/i);
     const submitBtn = screen.getByRole('button', { name: /Sign in/i });
 
-    await user.type(usernameInput, 'admin@dayz.local');
+    await user.type(usernameInput, 'adminuser');
     await user.type(passwordInput, 'ValidPassword123');
     await user.click(rememberMeCheckbox);
     await user.click(submitBtn);
@@ -123,5 +113,31 @@ describe('SignInForm', () => {
       expect(mockInvalidate).toHaveBeenCalled();
       expect(mockNavigate).toHaveBeenCalledWith({ to: '/dashboard' });
     });
+  });
+
+  it('displays root error message when login fails with invalid credentials', async () => {
+    const user = userEvent.setup();
+
+    vi.spyOn(apiClient.auth, 'login').mockRejectedValue(new Error('Invalid username or password'));
+
+    render(
+      <AuthProvider>
+        <SignInForm />
+      </AuthProvider>,
+    );
+
+    const usernameInput = screen.getByLabelText(/Username or email/i);
+    const passwordInput = screen.getByPlaceholderText('Enter your password');
+    const submitBtn = screen.getByRole('button', { name: /Sign in/i });
+
+    await user.type(usernameInput, 'adminuser');
+    await user.type(passwordInput, 'WrongPassword123');
+    await user.click(submitBtn);
+
+    await waitFor(() => {
+      expect(screen.getByRole('alert')).toHaveTextContent('Invalid username or password');
+    });
+
+    expect(mockNavigate).not.toHaveBeenCalled();
   });
 });
