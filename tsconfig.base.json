@@ -16,6 +16,10 @@
     "baseUrl": ".",
     "strict": true,
     "paths": {
+      "@dsm/api-contracts": ["libs/api-contracts/src/index.ts"],
+      "@dsm/api-contracts/*": ["libs/api-contracts/src/*"],
+      "@dsm/api-client": ["libs/api-client/src/index.ts"],
+      "@dsm/api-client/*": ["libs/api-client/src/*"],
       "@dsm/ui": ["libs/ui/src/index.ts"],
       "@dsm/ui/*": ["libs/ui/src/*"],
       "@dsm/web/*": ["apps/web/src/*"]

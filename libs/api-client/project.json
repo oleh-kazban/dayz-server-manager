@@ -1,0 +1,33 @@
+{
+  "name": "api-client",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "libs/api-client/src",
+  "projectType": "library",
+  "tags": ["scope:client", "type:client"],
+  "targets": {
+    "lint": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "eslint libs/api-client --max-warnings 0 --no-warn-ignored"
+      }
+    },
+    "typecheck": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "tsc -p libs/api-client/tsconfig.lib.json --noEmit"
+      }
+    },
+    "test": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "vitest run --config libs/api-client/vitest.config.ts"
+      }
+    },
+    "test:coverage": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "vitest run --coverage --config libs/api-client/vitest.config.ts"
+      }
+    }
+  }
+}
