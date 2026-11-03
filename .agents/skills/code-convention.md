@@ -63,6 +63,19 @@ Consistent naming communicates intent immediately and eliminates cognitive frict
 - **Props Interfaces:** Always name component props as `[ComponentName]Props` (`TagProps`, `KpiCardProps`).
 - **Never Prefix with `I` or `T`:** Use `ProcessManager`, not `IProcessManager`. Use `ServerStatus`, not `TServerStatus`.
 
+### 2.4. Git Branch Naming Conventions
+
+All working branches created from trunk (`main` / `master`) must strictly adhere to repository rulesets (`Copilot branch review`):
+
+| Branch Prefix    | Scope                                                                  | Examples                                                 |
+| :--------------- | :--------------------------------------------------------------------- | :------------------------------------------------------- |
+| `feature/<name>` | New features, enhancements, chores, dependency bumps, and CI workflows | `feature/ui`, `feature/bump-sonarqube-scan-action-8.4.0` |
+| `bugfix/<name>`  | Bug fixes, regression remediations, and emergency patches              | `bugfix/checkbox-autofocus`, `bugfix/tooltip-escape`     |
+
+- **Strict Prefix Requirement:** Branches must begin strictly with `feature/` or `bugfix/` so GitHub Rulesets and automated Copilot reviews trigger reliably.
+- **Disallowed Prefixes:** Do not use `ci/`, `chore/`, `feat/`, `fix/`, `test/`, or bare names.
+- **Format:** Lowercase alphanumeric separated by hyphens (kebab-case).
+
 ---
 
 ## 3. Code Organization & Architecture
