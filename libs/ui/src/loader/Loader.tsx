@@ -1,45 +1,10 @@
-import { type CSSProperties, type Ref } from 'react';
+import { type CSSProperties } from 'react';
 
 import { Loader2 } from 'lucide-react';
 
-export type LoaderSize = 'sm' | 'md' | 'lg';
-export type LoaderVariant = 'spinner' | 'dots' | 'pulse';
+import type { LoaderProps, LoaderSize, LoaderVariant } from './Loader.types';
 
-export interface LoaderProps {
-  /**
-   * Accessible description announced by screen readers.
-   * @default 'Loading...'
-   */
-  label?: string;
-
-  /**
-   * Renders visual text label below the indicator.
-   * @default false
-   */
-  showLabel?: boolean;
-
-  /**
-   * Dimensional scale.
-   * @default 'md'
-   */
-  size?: LoaderSize;
-
-  /**
-   * Visual indicator style.
-   * @default 'spinner'
-   */
-  variant?: LoaderVariant;
-
-  /**
-   * Root container styling escape hatch.
-   */
-  customClassName?: string;
-
-  /**
-   * React 19 native ref forwarded directly to the root element.
-   */
-  ref?: Ref<HTMLDivElement>;
-}
+export type { LoaderProps, LoaderSize, LoaderVariant };
 
 const SIZE_MAP: Record<
   LoaderSize,
@@ -93,7 +58,9 @@ export function Loader({
     >
       <span className="sr-only">{label}</span>
 
-      {variant === 'spinner' && <Loader2 className={`animate-spin ${sizeConfig.icon}`} />}
+      {variant === 'spinner' && (
+        <Loader2 aria-hidden="true" className={`animate-spin ${sizeConfig.icon}`} />
+      )}
 
       {variant === 'dots' && (
         <div
@@ -128,7 +95,10 @@ export function Loader({
       )}
 
       {showLabel && (
-        <span className={`font-medium font-sans text-[var(--color-text-muted)] ${sizeConfig.text}`}>
+        <span
+          aria-hidden="true"
+          className={`font-medium font-sans text-[var(--color-text-muted)] ${sizeConfig.text}`}
+        >
           {label}
         </span>
       )}

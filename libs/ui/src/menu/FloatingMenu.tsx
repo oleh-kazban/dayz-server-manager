@@ -1,35 +1,13 @@
-import {
-  type KeyboardEvent as ReactKeyboardEvent,
-  type ReactNode,
-  type Ref,
-  useEffect,
-  useId,
-  useRef,
-} from 'react';
+import { type KeyboardEvent as ReactKeyboardEvent, useEffect, useId, useRef } from 'react';
 import { createPortal } from 'react-dom';
 
 import { Check, ChevronDown } from 'lucide-react';
 
-import { type Alignment, usePopup } from '../hooks';
+import { usePopup } from '../hooks';
 
-export interface FloatingMenuOption<T> {
-  value: T;
-  label: string;
-  icon?: ReactNode;
-  className?: string;
-  indicatorClassName?: string;
-}
+import type { FloatingMenuOption, FloatingMenuProps } from './FloatingMenu.types';
 
-export interface FloatingMenuProps<T extends string> {
-  options: FloatingMenuOption<T>[];
-  value: T;
-  onChange: (value: T) => void;
-  ariaLabel: string;
-  alignment?: Alignment;
-  disabled?: boolean;
-  customClassName?: string;
-  ref?: Ref<HTMLButtonElement>;
-}
+export type { FloatingMenuOption, FloatingMenuProps };
 
 function OptionIndicator({
   isSelected,
@@ -54,10 +32,12 @@ export function FloatingMenu<T extends string>({
   options,
   value,
   ariaLabel,
+  placeholder = 'Select option...',
   onChange,
   alignment = 'end',
   disabled = false,
   customClassName = '',
+  containerClassName = '',
 }: FloatingMenuProps<T>) {
   const menuId = useId();
   const optionRefs = useRef<(HTMLButtonElement | null)[]>([]);
@@ -117,12 +97,12 @@ export function FloatingMenu<T extends string>({
     triggerRef.current?.focus();
   };
 
-  if (!currentSelectedOption) {
-    return null;
-  }
+  const displayLabel = currentSelectedOption?.label ?? placeholder;
+  const displayIcon = currentSelectedOption?.icon;
+  const isPlaceholder = !currentSelectedOption;
 
   return (
-    <div ref={containerRef} className="relative inline-block">
+    <div ref={containerRef} className={`relative inline-block ${containerClassName}`.trim()}>
       <button
         ref={handleTriggerRef}
         type="button"
@@ -133,13 +113,15 @@ export function FloatingMenu<T extends string>({
         disabled={disabled}
         onClick={toggle}
         className={`inline-flex h-9 items-center justify-between gap-2.5 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] px-3.5 text-xs font-sans font-medium text-[var(--color-text-main)] shadow-xs transition-colors hover:bg-[var(--color-surface-subtle)] focus-visible:outline-none focus-visible:border-[var(--color-primary)] focus-visible:ring-1 focus-visible:ring-[var(--color-primary)] disabled:cursor-not-allowed disabled:opacity-50 ${customClassName} ${
-          currentSelectedOption.className ?? ''
+          currentSelectedOption?.className ?? ''
         }`.trim()}
       >
-        {currentSelectedOption.icon && (
-          <span className="shrink-0">{currentSelectedOption.icon}</span>
-        )}
-        <span className="truncate">{currentSelectedOption.label}</span>
+        {displayIcon && <span className="shrink-0">{displayIcon}</span>}
+        <span
+          className={`truncate ${isPlaceholder ? 'text-[var(--color-text-muted)] select-none' : ''}`.trim()}
+        >
+          {displayLabel}
+        </span>
         <ChevronDown className="h-3.5 w-3.5 text-[var(--color-text-muted)] transition-transform duration-200" />
       </button>
 
@@ -150,7 +132,7 @@ export function FloatingMenu<T extends string>({
             id={menuId}
             role="menu"
             aria-label={ariaLabel}
-            className="fixed z-50 min-w-36 overflow-y-auto rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-1 font-sans text-xs text-[var(--color-text-main)] shadow-[var(--shadow-card)]"
+            className="fixed z-50 min-w-36 overflow-y-auto rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-1 font-sans text-xs text-[var(--color-text-main)] shadow-[var(--shadow-dropdown)]"
             style={{
               top: popupPosition?.top ?? 0,
               left: popupPosition?.left ?? 0,

@@ -1,6 +1,6 @@
 import { Bell, ChevronRight, HelpCircle, Menu, Search } from 'lucide-react';
 
-import { ThemeToggleButton } from '@dsm/features';
+import { ThemeToggleButton } from '@dsm/web/features';
 
 /* Workspace Top Header Bar */
 export function Header() {

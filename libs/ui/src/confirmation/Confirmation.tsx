@@ -1,94 +1,15 @@
-import {
-  type MouseEvent,
-  type ReactNode,
-  type SyntheticEvent,
-  useEffect,
-  useId,
-  useRef,
-  useState,
-} from 'react';
+import { useId } from 'react';
 
-import { AlertCircle, AlertTriangle, Info, X } from 'lucide-react';
+import { X } from 'lucide-react';
 
 import { Button } from '../button';
 
-export type ConfirmationVariant = 'primary' | 'warning' | 'danger';
+import type { ConfirmationProps, ConfirmationVariant } from './Confirmation.types';
+import { useCountdownTimer } from './useCountdownTimer';
+import { useDialogLifecycle } from './useDialogLifecycle';
+import { VariantIcon } from './VariantIcon';
 
-export interface ConfirmationProps {
-  /**
-   * Main dialog headline.
-   */
-  title: string;
-
-  /**
-   * Explanatory text or content for the confirmation.
-   */
-  description?: ReactNode;
-
-  /**
-   * Cancel button label.
-   * @default 'Cancel'
-   */
-  cancelLabel?: string;
-
-  /**
-   * Confirm button label.
-   * @default 'Confirm'
-   */
-  confirmLabel?: string;
-
-  /**
-   * Semantic visual treatment.
-   * @default 'primary'
-   */
-  variant?: ConfirmationVariant;
-
-  /**
-   * Lockout countdown in seconds before confirmation button is enabled.
-   * @default 0
-   */
-  timerValue?: number;
-
-  /**
-   * Displays loading spinner and locks dialog during asynchronous operations.
-   * @default false
-   */
-  isLoading?: boolean;
-
-  /**
-   * Callback fired when dialog is dismissed or canceled.
-   */
-  onCancel: () => void;
-
-  /**
-   * Callback fired when confirmed.
-   */
-  onConfirm: () => void;
-}
-
-function VariantIcon({ variant }: { variant: ConfirmationVariant }) {
-  switch (variant) {
-    case 'danger':
-      return (
-        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[var(--color-status-danger-light)] text-[var(--color-status-danger)]">
-          <AlertTriangle className="h-5 w-5" />
-        </div>
-      );
-    case 'warning':
-      return (
-        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[var(--color-status-warning-light)] text-[var(--color-status-warning)]">
-          <AlertCircle className="h-5 w-5" />
-        </div>
-      );
-    case 'primary':
-    default:
-      return (
-        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[var(--color-primary-light)] text-[var(--color-primary)]">
-          <Info className="h-5 w-5" />
-        </div>
-      );
-  }
-}
+export type { ConfirmationProps, ConfirmationVariant };
 
 export function Confirmation({
   title,
@@ -101,56 +22,13 @@ export function Confirmation({
   onCancel,
   onConfirm,
 }: ConfirmationProps) {
-  const [prevTimerValue, setPrevTimerValue] = useState(timerValue);
-  const [remainingTime, setRemainingTime] = useState(timerValue);
-
-  if (timerValue !== prevTimerValue) {
-    setPrevTimerValue(timerValue);
-    setRemainingTime(timerValue);
-  }
+  const { remainingTime } = useCountdownTimer(timerValue);
+  const { dialogRef, closeDialog, handleClose, handleDialogClick, handleCancelEvent } =
+    useDialogLifecycle({ isLoading, onCancel, onConfirm });
 
   const isConfirmDisabled = remainingTime > 0 || isLoading;
-  const dialogRef = useRef<HTMLDialogElement>(null);
   const titleId = useId();
   const descriptionId = useId();
-
-  useEffect(() => {
-    if (timerValue <= 0) {
-      return;
-    }
-
-    const interval = setInterval(() => {
-      setRemainingTime(prev => {
-        if (prev <= 1) {
-          clearInterval(interval);
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
-
-    return () => clearInterval(interval);
-  }, [timerValue]);
-
-  const handleClose = (event: SyntheticEvent<HTMLDialogElement>) => {
-    if (isLoading) return;
-    if (event.currentTarget.returnValue === 'confirm') {
-      onConfirm();
-    } else {
-      onCancel();
-    }
-  };
-
-  const handleDialogClick = (event: MouseEvent<HTMLDialogElement>) => {
-    if (isLoading) return;
-    if (event.target === event.currentTarget) {
-      dialogRef.current?.close('cancel');
-    }
-  };
-
-  useEffect(() => {
-    dialogRef.current?.showModal();
-  }, []);
 
   return (
     <dialog
@@ -158,11 +36,7 @@ export function Confirmation({
       role="alertdialog"
       aria-labelledby={titleId}
       aria-describedby={description ? descriptionId : undefined}
-      onCancel={event => {
-        if (isLoading) {
-          event.preventDefault();
-        }
-      }}
+      onCancel={handleCancelEvent}
       onClose={handleClose}
       onClick={handleDialogClick}
       className="m-auto w-full max-w-md rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-0 text-[var(--color-text-main)] shadow-[var(--shadow-card)] backdrop:bg-black/50 backdrop:backdrop-blur-xs"
@@ -194,7 +68,7 @@ export function Confirmation({
             leftIcon={X}
             aria-label="Close dialog"
             disabled={isLoading}
-            onClick={() => dialogRef.current?.close('cancel')}
+            onClick={() => closeDialog('cancel')}
           />
         </div>
 
@@ -203,7 +77,7 @@ export function Confirmation({
             variant="secondary"
             autoFocus
             disabled={isLoading}
-            onClick={() => dialogRef.current?.close('cancel')}
+            onClick={() => closeDialog('cancel')}
           >
             {cancelLabel}
           </Button>
@@ -212,7 +86,7 @@ export function Confirmation({
             destructive={variant === 'danger' || variant === 'warning'}
             isLoading={isLoading}
             disabled={isConfirmDisabled}
-            onClick={() => dialogRef.current?.close('confirm')}
+            onClick={() => closeDialog('confirm')}
           >
             {remainingTime > 0 ? `${confirmLabel} (${remainingTime}s)` : confirmLabel}
           </Button>

@@ -34,6 +34,35 @@ describe('Input', () => {
     expect(errorMessage).toHaveAttribute('id', 'port-field-error');
   });
 
+  it('merges external aria-describedby with error message id', () => {
+    render(
+      <Input
+        id="port-input"
+        label="Server Port"
+        aria-describedby="port-hint"
+        error="Port must be between 1024 and 65535"
+      />,
+    );
+
+    const input = screen.getByLabelText('Server Port');
+    expect(input).toHaveAttribute('aria-describedby', 'port-hint port-input-error');
+  });
+
+  it('renders error message with role="alert"', () => {
+    render(<Input label="Server Port" error="Invalid port" />);
+
+    const alertMessage = screen.getByRole('alert');
+    expect(alertMessage).toBeInTheDocument();
+    expect(alertMessage).toHaveTextContent('Invalid port');
+  });
+
+  it('preserves external aria-describedby when no error is present', () => {
+    render(<Input label="Server Port" aria-describedby="port-hint" />);
+
+    const input = screen.getByLabelText('Server Port');
+    expect(input).toHaveAttribute('aria-describedby', 'port-hint');
+  });
+
   it('renders leading icon and right action slot', () => {
     render(
       <Input
@@ -47,35 +76,56 @@ describe('Input', () => {
     expect(screen.getByRole('button', { name: /clear/i })).toBeInTheDocument();
   });
 
-  it('delegates container click to focus input unless target is an action button', async () => {
+  it('focuses input directly when clicked', async () => {
     const user = userEvent.setup();
-    const actionClick = vi.fn();
+    render(<Input label="Player Tag" placeholder="Enter tag" />);
 
-    const { container } = render(
+    const input = screen.getByPlaceholderText('Enter tag');
+    expect(input).not.toHaveFocus();
+
+    await user.click(input);
+    expect(input).toHaveFocus();
+  });
+
+  it('focuses input when label is clicked', async () => {
+    const user = userEvent.setup();
+    render(<Input label="Player Tag" placeholder="Enter tag" />);
+
+    const label = screen.getByText('Player Tag');
+    const input = screen.getByPlaceholderText('Enter tag');
+
+    expect(input).not.toHaveFocus();
+    await user.click(label);
+    expect(input).toHaveFocus();
+  });
+
+  it('fires click handler when rightAction button is clicked', async () => {
+    const user = userEvent.setup();
+    const handleActionClick = vi.fn();
+
+    render(
       <Input
         label="Player Tag"
         placeholder="Enter tag"
         rightAction={
-          <button type="button" onClick={actionClick}>
+          <button type="button" onClick={handleActionClick}>
             Action
           </button>
         }
       />,
     );
 
-    const input = screen.getByPlaceholderText('Enter tag');
-    const containerDiv = container.querySelector('div.flex.items-center') as HTMLElement;
     const actionButton = screen.getByRole('button', { name: /action/i });
-
-    expect(input).not.toHaveFocus();
-
-    // Click container surface
-    await user.click(containerDiv);
-    expect(input).toHaveFocus();
-
-    // Click inside action button does not re-delegate container focus
     await user.click(actionButton);
-    expect(actionClick).toHaveBeenCalledTimes(1);
+    expect(handleActionClick).toHaveBeenCalledTimes(1);
+  });
+
+  it('applies pointer-events-none and aria-hidden to LeftIcon', () => {
+    const { container } = render(<Input leftIcon={Search} placeholder="Search" />);
+    const svg = container.querySelector('svg');
+    expect(svg).toBeInTheDocument();
+    expect(svg).toHaveClass('pointer-events-none');
+    expect(svg).toHaveAttribute('aria-hidden', 'true');
   });
 
   it('supports disabled state and prevents user input', async () => {
@@ -109,5 +159,50 @@ describe('Input', () => {
 
     rerender(<Input ref={callbackRef} placeholder="Callback ref" />);
     expect(callbackRef).toHaveBeenCalledWith(expect.any(HTMLInputElement));
+  });
+
+  it('delegates focus to input when clicking container wrapper', async () => {
+    const user = userEvent.setup();
+    const { container } = render(<Input placeholder="Click container" />);
+    const input = screen.getByPlaceholderText('Click container');
+    const inputWrapper = container.querySelector('.cursor-text')!;
+    expect(inputWrapper).toBeInTheDocument();
+
+    expect(input).not.toHaveFocus();
+    await user.click(inputWrapper);
+    expect(input).toHaveFocus();
+  });
+
+  it('fires rightAction click without delegating focus if action clicked', async () => {
+    const user = userEvent.setup();
+    const handleActionClick = vi.fn();
+    render(
+      <Input
+        placeholder="With action"
+        rightAction={
+          <button type="button" onClick={handleActionClick}>
+            Action
+          </button>
+        }
+      />,
+    );
+
+    const actionButton = screen.getByRole('button', { name: /action/i });
+    const input = screen.getByPlaceholderText('With action');
+
+    await user.click(actionButton);
+    expect(handleActionClick).toHaveBeenCalledTimes(1);
+    expect(input).not.toHaveFocus();
+  });
+
+  it('does not delegate focus when clicking container of disabled input', async () => {
+    const user = userEvent.setup();
+    const { container } = render(<Input disabled placeholder="Disabled" />);
+    const input = screen.getByPlaceholderText('Disabled');
+    const inputWrapper = container.querySelector('.cursor-not-allowed')!;
+    expect(inputWrapper).toBeInTheDocument();
+
+    await user.click(inputWrapper);
+    expect(input).not.toHaveFocus();
   });
 });

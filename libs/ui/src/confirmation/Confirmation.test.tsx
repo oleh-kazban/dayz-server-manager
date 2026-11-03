@@ -1,3 +1,5 @@
+import { StrictMode } from 'react';
+
 import { act, fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -155,5 +157,29 @@ describe('Confirmation', () => {
     // Simulate click on dialog itself (backdrop target)
     fireEvent.click(dialog);
     expect(handleCancel).toHaveBeenCalledTimes(1);
+  });
+
+  it('safely handles React StrictMode / repeated mount and unmount without triggering onCancel', () => {
+    vi.useRealTimers();
+    const handleCancel = vi.fn();
+    const handleConfirm = vi.fn();
+
+    const { unmount } = render(
+      <StrictMode>
+        <Confirmation
+          title="StrictMode Lifecycle Test"
+          description="Ensuring clean lifecycle under StrictMode"
+          onCancel={handleCancel}
+          onConfirm={handleConfirm}
+        />
+      </StrictMode>,
+    );
+
+    expect(screen.getByRole('alertdialog')).toBeInTheDocument();
+    expect(handleCancel).not.toHaveBeenCalled();
+    expect(handleConfirm).not.toHaveBeenCalled();
+
+    unmount();
+    expect(handleCancel).not.toHaveBeenCalled();
   });
 });

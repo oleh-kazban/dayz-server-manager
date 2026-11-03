@@ -29,6 +29,7 @@ export default tseslint.config(
       'coverage/**',
       'apps/web/public/mockServiceWorker.js',
       '...sandbox/**',
+      '.github/**',
     ],
   },
   js.configs.recommended,
@@ -47,8 +48,12 @@ export default tseslint.config(
           allow: [],
           depConstraints: [
             {
-              sourceTag: '*',
-              onlyDependOnLibsWithTags: ['*'],
+              sourceTag: 'scope:client',
+              onlyDependOnLibsWithTags: ['scope:shared'],
+            },
+            {
+              sourceTag: 'scope:shared',
+              onlyDependOnLibsWithTags: ['scope:shared'],
             },
           ],
         },

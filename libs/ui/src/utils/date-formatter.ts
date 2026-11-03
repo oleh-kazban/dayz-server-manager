@@ -44,3 +44,34 @@ export function formatDateOnly(
 
   return new Intl.DateTimeFormat(locale, options ?? defaultOptions).format(date);
 }
+
+/**
+ * Formats a Date or date string into human-friendly relative time.
+ *
+ * @param timestamp - ISO string or Date instance.
+ * @returns Human-readable string representation (e.g. "Just now", "5m ago", "2h ago").
+ */
+export function formatTimestamp(timestamp: string | Date): string {
+  try {
+    const date = typeof timestamp === 'string' ? new Date(timestamp) : timestamp;
+    if (Number.isNaN(date.getTime())) {
+      return String(timestamp);
+    }
+
+    const diffMs = Date.now() - date.getTime();
+    if (diffMs < 0) {
+      return 'Just now';
+    }
+    const diffSec = Math.floor(diffMs / 1000);
+    if (diffSec < 60) return 'Just now';
+    const diffMin = Math.floor(diffSec / 60);
+    if (diffMin < 60) return `${diffMin}m ago`;
+    const diffHours = Math.floor(diffMin / 60);
+    if (diffHours < 24) return `${diffHours}h ago`;
+    const diffDays = Math.floor(diffHours / 24);
+    if (diffDays < 7) return `${diffDays}d ago`;
+    return date.toLocaleDateString();
+  } catch {
+    return String(timestamp);
+  }
+}

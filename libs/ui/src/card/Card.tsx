@@ -1,60 +1,8 @@
-import type { ReactNode, Ref } from 'react';
+import type { Ref } from 'react';
 
-export type CardHeadingLevel = 'h2' | 'h3' | 'h4' | 'h5';
+import type { CardHeadingLevel, CardProps } from './Card.types';
 
-export interface CardProps {
-  /**
-   * React 19 ref forwarded directly to the root element.
-   */
-  ref?: Ref<HTMLDivElement>;
-
-  /**
-   * Optional semantic container tag.
-   * @default 'div'
-   */
-  as?: 'div' | 'section' | 'article';
-
-  /**
-   * Card title string or custom node.
-   */
-  title?: ReactNode;
-
-  /**
-   * Optional card subtitle string or node.
-   */
-  subtitle?: ReactNode;
-
-  /**
-   * Semantic heading level for the title element.
-   * @default 'h3'
-   */
-  titleLevel?: CardHeadingLevel;
-
-  /**
-   * Header action bar slot.
-   */
-  actions?: ReactNode;
-
-  /**
-   * Projected card body content.
-   */
-  children?: ReactNode;
-
-  /**
-   * Bottom bordered footer slot.
-   */
-  footer?: ReactNode;
-
-  /**
-   * Standard container ID.
-   */
-  id?: string;
-
-  /**
-   * Root container class overrides.
-   */
-  className?: string;
-}
+export type { CardHeadingLevel, CardProps };
 
 export function Card({
   ref,
@@ -72,7 +20,7 @@ export function Card({
 
   return (
     <Component
-      ref={ref}
+      ref={ref as Ref<HTMLDivElement>}
       id={id}
       className={`rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-5 shadow-[var(--shadow-card)] transition-all duration-200 ${className}`}
     >

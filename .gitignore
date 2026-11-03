@@ -47,12 +47,10 @@ manager-data/
 # ==============================================================================
 # Environment & Secrets
 # ==============================================================================
-# Keep committed .env as the baseline template, ignore local developer overrides
-.env.local
-.env.*.local
-.env.development.local
-.env.test.local
-.env.production.local
+# Ignore local environment files and developer overrides; keep .env.example tracked
+.env
+.env.*
+!.env.example
 
 # ==============================================================================
 # General Logs & Crash Dumps

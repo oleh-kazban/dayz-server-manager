@@ -1,66 +1,15 @@
-import { type CSSProperties, type FormEvent, type Ref, useEffect, useId, useState } from 'react';
+import { type CSSProperties, type FormEvent, useEffect, useId, useState } from 'react';
 import { type ClassNames, DayPicker } from 'react-day-picker';
 import { createPortal } from 'react-dom';
 
 import { Calendar, ChevronLeft, ChevronRight, X } from 'lucide-react';
 
-import { type Alignment, usePopup } from '../hooks';
+import { usePopup } from '../hooks';
 import { formatDateOnly, parseDateOnly, toDateOnlyString } from '../utils';
 
+import type { DatePickerProps } from './DatePicker.types';
+
 import 'react-day-picker/style.css';
-
-export interface DatePickerProps {
-  /** Form field identifier */
-  id?: string;
-
-  /** Name for form serialization */
-  name?: string;
-
-  /** Selected date in ISO format ('YYYY-MM-DD') */
-  value?: string;
-
-  /** Minimum selectable date ('YYYY-MM-DD') */
-  minDate?: string;
-
-  /** Maximum selectable date ('YYYY-MM-DD') */
-  maxDate?: string;
-
-  /** Trigger placeholder label */
-  placeholder?: string;
-
-  /** Label displayed above the date picker trigger */
-  label?: string;
-
-  /** Validation error message; renders field in danger state and links aria-describedby */
-  error?: string;
-
-  /** Screen reader accessible label */
-  ariaLabel?: string;
-
-  /** Popup alignment relative to trigger */
-  alignment?: Alignment;
-
-  /** Disables trigger and suppresses popup */
-  disabled?: boolean;
-
-  /** Enables native required-value validation within a form */
-  required?: boolean;
-
-  /** Root container styling escape hatch */
-  customClassName?: string;
-
-  /** Standard container styling escape hatch */
-  containerClassName?: string;
-
-  /** Change callback with ISO date string or undefined when cleared */
-  onChange: (value: string | undefined) => void;
-
-  /** Blur event handler */
-  onBlur?: () => void;
-
-  /** React 19 native ref targeting the trigger button */
-  ref?: Ref<HTMLButtonElement>;
-}
 
 const RDP_CLASS_NAMES: Partial<ClassNames> = {
   root: 'p-3 font-sans text-xs',
@@ -116,6 +65,7 @@ export function DatePicker({
   placeholder = 'Select date',
   label,
   error,
+  className = '',
   customClassName = '',
   containerClassName = '',
   ariaLabel = 'Select date',
@@ -216,7 +166,6 @@ export function DatePicker({
         <button
           ref={handleTriggerRef}
           id={inputId}
-          name={name}
           type="button"
           aria-haspopup="dialog"
           aria-expanded={isPopupOpen}
@@ -233,7 +182,7 @@ export function DatePicker({
             displayedError
               ? 'border-[var(--color-status-danger)] focus-visible:border-[var(--color-status-danger)] focus-visible:ring-1 focus-visible:ring-[var(--color-status-danger)]'
               : 'border-[var(--color-border)] focus-visible:border-[var(--color-primary)] focus-visible:ring-1 focus-visible:ring-[var(--color-primary)]'
-          }`}
+          } ${className}`.trim()}
         >
           <span className="flex items-center gap-2 truncate">
             <Calendar className="h-4 w-4 shrink-0 text-[var(--color-text-muted)]" />
@@ -259,7 +208,7 @@ export function DatePicker({
       {displayedError && (
         <p
           id={`${inputId}-error`}
-          className="text-[11px] font-sans text-[var(--color-text-main)] leading-tight"
+          className="text-[11px] font-sans text-[var(--color-status-danger)] leading-tight"
         >
           {displayedError}
         </p>

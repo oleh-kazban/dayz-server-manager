@@ -4,7 +4,8 @@ import type { Meta, StoryObj } from '@storybook/react-vite';
 
 import { Button } from '../button';
 
-import { Confirmation, type ConfirmationProps } from './Confirmation';
+import { Confirmation } from './Confirmation';
+import type { ConfirmationProps } from './Confirmation.types';
 
 const meta: Meta<typeof Confirmation> = {
   title: 'Feedback/Confirmation',

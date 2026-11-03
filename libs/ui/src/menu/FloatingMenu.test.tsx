@@ -4,7 +4,8 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
-import { FloatingMenu, type FloatingMenuOption } from './FloatingMenu';
+import { FloatingMenu } from './FloatingMenu';
+import type { FloatingMenuOption } from './FloatingMenu.types';
 
 type ServerEnv = 'production' | 'staging' | 'test';
 
@@ -135,6 +136,21 @@ describe('FloatingMenu', () => {
     expect(screen.queryByRole('menu')).not.toBeInTheDocument();
   });
 
+  it('renders placeholder trigger when value does not match options', () => {
+    render(
+      <FloatingMenu
+        options={options}
+        value={'unknown' as ServerEnv}
+        placeholder="Choose environment..."
+        onChange={vi.fn()}
+        ariaLabel="Env Menu"
+      />,
+    );
+
+    const trigger = screen.getByRole('button', { name: /env menu/i });
+    expect(trigger).toHaveTextContent('Choose environment...');
+  });
+
   it('forwards React 19 ref to trigger button', () => {
     const ref = createRef<HTMLButtonElement>();
     render(
@@ -148,5 +164,24 @@ describe('FloatingMenu', () => {
     );
 
     expect(ref.current).toBeInstanceOf(HTMLButtonElement);
+  });
+
+  it('applies containerClassName to the outer wrapper and shadow-[var(--shadow-dropdown)] to menu', async () => {
+    const user = userEvent.setup();
+    const { container } = render(
+      <FloatingMenu
+        options={options}
+        value="production"
+        onChange={vi.fn()}
+        ariaLabel="Env Menu"
+        containerClassName="custom-outer-wrapper"
+      />,
+    );
+
+    expect(container.firstChild).toHaveClass('custom-outer-wrapper');
+
+    await user.click(screen.getByRole('button', { name: /env menu/i }));
+    const menu = screen.getByRole('menu', { name: /env menu/i });
+    expect(menu).toHaveClass('shadow-[var(--shadow-dropdown)]');
   });
 });

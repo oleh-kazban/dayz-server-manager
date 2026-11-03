@@ -5,12 +5,32 @@ import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
 import { CustomToast } from './CustomToast';
+import { showToast } from './toast.utils';
+import { Toaster } from './Toaster';
 
-vi.mock('react-hot-toast', () => ({
-  toast: {
-    dismiss: vi.fn(),
-  },
-}));
+vi.mock('react-hot-toast', async importOriginal => {
+  const actual = await importOriginal<typeof import('react-hot-toast')>();
+  return {
+    ...actual,
+    toast: {
+      ...actual.toast,
+      custom: vi.fn((renderFn, _options) => {
+        renderFn?.({
+          id: 'mock-toast-id',
+          visible: true,
+          dismissed: false,
+          type: 'custom',
+          message: '',
+          pauseDuration: 0,
+          ariaProps: { role: 'status', 'aria-live': 'polite' },
+          createdAt: Date.now(),
+        });
+        return 'mock-toast-id';
+      }),
+      dismiss: vi.fn(),
+    },
+  };
+});
 
 describe('CustomToast', () => {
   const dummyToast: Toast = {
@@ -74,5 +94,48 @@ describe('CustomToast', () => {
     await user.click(dismissButton);
 
     expect(toast.dismiss).toHaveBeenCalledWith('test-toast-1');
+  });
+
+  describe('showToast utilities', () => {
+    it('dispatches success toast with custom duration and parameters', () => {
+      const id = showToast.success('Server Online', 'Started on port 2302', 6000);
+      expect(id).toBe('mock-toast-id');
+      expect(toast.custom).toHaveBeenCalledWith(expect.any(Function), { duration: 6000 });
+    });
+
+    it('dispatches error toast with default duration', () => {
+      const id = showToast.error('Server Stopped', 'Process terminated unexpectedly');
+      expect(id).toBe('mock-toast-id');
+      expect(toast.custom).toHaveBeenCalledWith(expect.any(Function), { duration: 4000 });
+    });
+
+    it('dispatches warning toast', () => {
+      const id = showToast.warning('High Memory Warning', 'Usage above 90%');
+      expect(id).toBe('mock-toast-id');
+      expect(toast.custom).toHaveBeenCalledWith(expect.any(Function), { duration: 4000 });
+    });
+
+    it('dispatches info toast', () => {
+      const id = showToast.info('Mod Update Available');
+      expect(id).toBe('mock-toast-id');
+      expect(toast.custom).toHaveBeenCalledWith(expect.any(Function), { duration: 4000 });
+    });
+
+    it('delegates dismiss to toast.dismiss with and without id', () => {
+      showToast.dismiss('toast-to-dismiss');
+      expect(toast.dismiss).toHaveBeenCalledWith('toast-to-dismiss');
+
+      showToast.dismiss();
+      expect(toast.dismiss).toHaveBeenCalledWith(undefined);
+    });
+  });
+
+  describe('Toaster component', () => {
+    it('mounts cleanly without error', () => {
+      const { container } = render(
+        <Toaster position="top-right" containerClassName="custom-toaster-root" />,
+      );
+      expect(container).toBeInTheDocument();
+    });
   });
 });

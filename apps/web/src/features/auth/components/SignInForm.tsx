@@ -7,7 +7,7 @@ import { ArrowRight, UserRound } from 'lucide-react';
 import { Button, Checkbox, Input, PasswordInput } from '@dsm/ui';
 
 import { useAuth } from '../auth.context';
-import { SignInFormValues, signInSchema } from '../signIn.schema';
+import { type SignInFormValues, signInSchema } from '../signIn.schema';
 
 export function SignInForm() {
   const { login } = useAuth();

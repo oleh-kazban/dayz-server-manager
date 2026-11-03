@@ -1,1 +1,2 @@
-export * from './Autosuggest';
+export { Autosuggest } from './Autosuggest';
+export type { AutosuggestProps } from './Autosuggest.types';

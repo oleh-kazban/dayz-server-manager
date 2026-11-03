@@ -6,6 +6,7 @@ import { Check, Tag as TagIcon } from 'lucide-react';
 import { describe, expect, it, vi } from 'vitest';
 
 import { Tag } from './Tag';
+import { getTagDotColor } from './tag.utils';
 
 describe('Tag', () => {
   it('renders content with default subtle variant and default color', () => {
@@ -91,11 +92,24 @@ describe('Tag', () => {
       </Tag>,
     );
 
-    const removeButton = screen.getByRole('button', { name: /remove tag/i });
+    const removeButton = screen.getByRole('button', { name: /remove locked mod/i });
     expect(removeButton).toBeDisabled();
 
     await user.click(removeButton);
     expect(handleRemove).not.toHaveBeenCalled();
+  });
+
+  it('falls back to "Remove tag" aria-label when children is not a string', () => {
+    const handleRemove = vi.fn();
+
+    render(
+      <Tag onRemove={handleRemove}>
+        <span>Complex Mod</span>
+      </Tag>,
+    );
+
+    const removeButton = screen.getByRole('button', { name: 'Remove tag' });
+    expect(removeButton).toBeInTheDocument();
   });
 
   it('forwards React 19 ref to root span badge', () => {
@@ -103,5 +117,24 @@ describe('Tag', () => {
     render(<Tag ref={ref}>Ref Badge</Tag>);
 
     expect(ref.current).toBeInstanceOf(HTMLSpanElement);
+  });
+
+  it('maps tag colors to semantic dot color tokens correctly via getTagDotColor', () => {
+    expect(getTagDotColor('danger')).toBe('var(--color-status-danger)');
+    expect(getTagDotColor('rose')).toBe('var(--color-status-danger)');
+    expect(getTagDotColor('warning')).toBe('var(--color-status-warning)');
+    expect(getTagDotColor('amber')).toBe('var(--color-status-warning)');
+    expect(getTagDotColor('success')).toBe('var(--color-status-success)');
+    expect(getTagDotColor('teal')).toBe('var(--color-status-success)');
+    expect(getTagDotColor('emerald')).toBe('var(--color-status-success)');
+    expect(getTagDotColor('info')).toBe('var(--color-status-info)');
+    expect(getTagDotColor('cyan')).toBe('var(--color-status-info)');
+    expect(getTagDotColor('sky')).toBe('var(--color-status-info)');
+    expect(getTagDotColor('primary')).toBe('var(--color-primary)');
+    expect(getTagDotColor('blue')).toBe('var(--color-primary)');
+    expect(getTagDotColor('purple')).toBe('var(--color-primary)');
+    expect(getTagDotColor('default')).toBe('var(--color-text-muted)');
+    expect(getTagDotColor('gray')).toBe('var(--color-text-muted)');
+    expect(getTagDotColor(undefined)).toBe('var(--color-text-muted)');
   });
 });

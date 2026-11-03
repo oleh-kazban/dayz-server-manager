@@ -28,6 +28,7 @@ export default defineConfig({
       exclude: [
         'src/**/*.stories.{ts,tsx}',
         'src/**/index.ts',
+        'src/**/*.types.ts',
         'src/styles/**',
         'src/**/*.{test,spec}.{ts,tsx}',
         'src/**/*.d.ts',

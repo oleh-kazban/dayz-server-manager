@@ -5,7 +5,8 @@ import userEvent from '@testing-library/user-event';
 import { Settings } from 'lucide-react';
 import { describe, expect, it, vi } from 'vitest';
 
-import { DotsFloatingMenu, type DotsFloatingMenuOption } from './DotsFloatingMenu';
+import { DotsFloatingMenu } from './DotsFloatingMenu';
+import type { DotsFloatingMenuOption } from './FloatingMenu.types';
 
 describe('DotsFloatingMenu', () => {
   it('renders trigger button and opens menu with options', async () => {
@@ -107,5 +108,22 @@ describe('DotsFloatingMenu', () => {
 
     expect(screen.getByTestId('settings-icon')).toBeInTheDocument();
     expect(ref.current).toBeInstanceOf(HTMLButtonElement);
+  });
+
+  it('applies containerClassName to the outer wrapper and shadow-[var(--shadow-dropdown)] to menu', async () => {
+    const user = userEvent.setup();
+    const { container } = render(
+      <DotsFloatingMenu
+        options={[{ label: 'Action', onSelect: vi.fn() }]}
+        ariaLabel="Actions"
+        containerClassName="custom-dots-wrapper"
+      />,
+    );
+
+    expect(container.firstChild).toHaveClass('custom-dots-wrapper');
+
+    await user.click(screen.getByRole('button', { name: /actions/i }));
+    const menu = screen.getByRole('menu', { name: /actions/i });
+    expect(menu).toHaveClass('shadow-[var(--shadow-dropdown)]');
   });
 });

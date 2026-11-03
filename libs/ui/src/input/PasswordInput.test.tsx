@@ -1,6 +1,8 @@
+import { createRef } from 'react';
+
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import { PasswordInput } from './PasswordInput';
 
@@ -43,5 +45,16 @@ describe('PasswordInput', () => {
 
     const toggleButton = screen.getByRole('button', { name: /show password/i });
     expect(toggleButton).toBeDisabled();
+  });
+
+  it('forwards ref via callback and object ref directly to the native input element', () => {
+    const objectRef = createRef<HTMLInputElement>();
+    const callbackRef = vi.fn();
+
+    const { rerender } = render(<PasswordInput ref={objectRef} placeholder="Object ref" />);
+    expect(objectRef.current).toBeInstanceOf(HTMLInputElement);
+
+    rerender(<PasswordInput ref={callbackRef} placeholder="Callback ref" />);
+    expect(callbackRef).toHaveBeenCalledWith(expect.any(HTMLInputElement));
   });
 });

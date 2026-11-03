@@ -90,7 +90,7 @@ export function CustomToast({
         type="button"
         aria-label="Dismiss notification"
         onClick={() => toast.dismiss(t.id)}
-        className="shrink-0 rounded-lg p-1 text-[var(--color-text-muted)] transition-colors hover:bg-black/5 dark:hover:bg-white/10 hover:text-[var(--color-text-main)] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--color-primary)] cursor-pointer"
+        className="shrink-0 rounded-lg p-1 text-[var(--color-text-muted)] transition-colors hover:bg-[var(--color-surface-hover)] hover:text-[var(--color-text-main)] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--color-primary)] cursor-pointer"
       >
         <X className="h-3.5 w-3.5" />
       </button>

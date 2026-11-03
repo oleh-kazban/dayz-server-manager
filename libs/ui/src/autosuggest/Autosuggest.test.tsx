@@ -1,6 +1,6 @@
 import { createRef } from 'react';
 
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
@@ -314,5 +314,87 @@ describe('Autosuggest', () => {
     );
 
     expect(ref.current).toBeInstanceOf(HTMLInputElement);
+  });
+
+  it('applies className to the input and containerClassName/customClassName to the outer wrapper', () => {
+    const { container, rerender } = render(
+      <Autosuggest
+        label="Class Test"
+        value=""
+        onChange={vi.fn()}
+        items={[]}
+        onSelect={vi.fn()}
+        getOptionKey={item => (item as ModItem).id}
+        getOptionLabel={item => (item as ModItem).name}
+        className="custom-input-class"
+        containerClassName="custom-container-class"
+      />,
+    );
+
+    const input = screen.getByRole('combobox');
+    expect(input).toHaveClass('custom-input-class');
+    expect(container.firstChild).toHaveClass('custom-container-class');
+
+    rerender(
+      <Autosuggest
+        label="Class Test"
+        value=""
+        onChange={vi.fn()}
+        items={[]}
+        onSelect={vi.fn()}
+        getOptionKey={item => (item as ModItem).id}
+        getOptionLabel={item => (item as ModItem).name}
+        customClassName="fallback-container-class"
+      />,
+    );
+    expect(container.firstChild).toHaveClass('fallback-container-class');
+  });
+
+  it('renders option items as button elements with role="option" and type="button"', async () => {
+    const user = userEvent.setup();
+    render(
+      <Autosuggest
+        label="Search"
+        value="Expansion"
+        onChange={vi.fn()}
+        items={mockMods}
+        onSelect={vi.fn()}
+        getOptionKey={item => item.id}
+        getOptionLabel={item => item.name}
+      />,
+    );
+
+    await user.click(screen.getByRole('combobox'));
+    const options = screen.getAllByRole('option');
+    expect(options.length).toBeGreaterThan(0);
+    options.forEach(opt => {
+      expect(opt.tagName.toLowerCase()).toBe('button');
+      expect(opt).toHaveAttribute('type', 'button');
+      expect(opt).toHaveAttribute('role', 'option');
+    });
+  });
+
+  it('selects option on mousedown and closes popup', () => {
+    const handleSelect = vi.fn();
+    render(
+      <Autosuggest
+        label="Search"
+        value="Expansion"
+        onChange={vi.fn()}
+        items={mockMods}
+        onSelect={handleSelect}
+        getOptionKey={item => item.id}
+        getOptionLabel={item => item.name}
+      />,
+    );
+
+    const input = screen.getByRole('combobox');
+    fireEvent.click(input);
+
+    const option = screen.getByRole('option', { name: /expansion core/i });
+    fireEvent.mouseDown(option);
+
+    expect(handleSelect).toHaveBeenCalledWith(mockMods[2]);
+    expect(screen.queryByRole('listbox')).not.toBeInTheDocument();
   });
 });

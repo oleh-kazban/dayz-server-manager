@@ -1,84 +1,16 @@
-import { type ElementType, isValidElement, type MouseEvent, type ReactNode, type Ref } from 'react';
+import { type ElementType, isValidElement, type MouseEvent } from 'react';
 
-import { type LucideIcon, X } from 'lucide-react';
+import { X } from 'lucide-react';
 
-export type TagVariant = 'subtle' | 'solid' | 'outline' | 'neutral';
-
-export type TagColor =
-  | 'default'
-  | 'primary'
-  | 'success'
-  | 'warning'
-  | 'danger'
-  | 'info'
-  | 'sky'
-  | 'emerald'
-  | 'amber'
-  | 'rose'
-  | 'purple'
-  | 'teal'
-  | 'cyan'
-  | 'blue'
-  | 'gray';
-
-export type TagShape = 'rounded' | 'pill';
-
-export type TagIcon = LucideIcon | ElementType | ReactNode;
-
-export interface TagProps {
-  /**
-   * React 19 ref forwarded directly to the native <span> badge element.
-   */
-  ref?: Ref<HTMLSpanElement>;
-
-  /**
-   * Visual stylistic variant of the tag badge.
-   * @default 'subtle'
-   */
-  variant?: TagVariant;
-
-  /**
-   * Color variant mapping to DSM semantic tokens or tactical taxonomy.
-   * @default 'default'
-   */
-  color?: TagColor;
-
-  /**
-   * Border radius shape (rounded: 6px, pill: full rounded).
-   * @default 'rounded'
-   */
-  shape?: TagShape;
-
-  /** Leading icon or Lucide component */
-  leftIcon?: TagIcon;
-
-  /** Trailing icon or Lucide component */
-  rightIcon?: TagIcon;
-
-  /** Callback fired when dismiss button is clicked */
-  onRemove?: (event: MouseEvent<HTMLButtonElement>) => void;
-
-  /** Accessible label for the remove button */
-  removeAriaLabel?: string;
-
-  /** Transforms text to uppercase with tracking-wider */
-  uppercase?: boolean;
-
-  /** Renders content with monospace font */
-  mono?: boolean;
-
-  /** Disables interactions and reduces opacity */
-  disabled?: boolean;
-
-  /** Single external class escape hatch */
-  customClassName?: string;
-
-  children?: ReactNode;
-  className?: string;
-  id?: string;
-  title?: string;
-  'aria-label'?: string;
-}
+import {
+  type SemanticTagColor,
+  type TagColor,
+  type TagIcon,
+  type TagProps,
+  type TagShape,
+  type TagVariant,
+} from './Tag.types';
+import { SEMANTIC_COLOR_MAP } from './tag.utils';
 
 /* --------------------------------------------------------------------------
    STYLE CONFIGURATIONS (DSM Token Mappings)
@@ -92,26 +24,6 @@ const SHAPE_CLASSES: Record<TagShape, string> = {
 const REMOVE_BUTTON_SHAPE_CLASSES: Record<TagShape, string> = {
   rounded: 'rounded-sm',
   pill: 'rounded-full',
-};
-
-type SemanticTagColor = 'default' | 'primary' | 'success' | 'warning' | 'danger' | 'info';
-
-const SEMANTIC_COLOR_MAP: Record<TagColor, SemanticTagColor> = {
-  default: 'default',
-  primary: 'primary',
-  success: 'success',
-  warning: 'warning',
-  danger: 'danger',
-  info: 'info',
-  sky: 'info',
-  emerald: 'success',
-  amber: 'warning',
-  rose: 'danger',
-  purple: 'primary',
-  teal: 'success',
-  cyan: 'info',
-  blue: 'primary',
-  gray: 'default',
 };
 
 /* Color mapping for SUBTLE variant (Tinted background, matching subtle border, colored text) */
@@ -192,7 +104,7 @@ export function Tag({
   leftIcon,
   rightIcon,
   onRemove,
-  removeAriaLabel,
+  removeAriaLabel: removeAriaLabelProp,
   uppercase = false,
   mono = false,
   disabled = false,
@@ -209,6 +121,8 @@ export function Tag({
     }
   };
 
+  const computedRemoveAriaLabel =
+    removeAriaLabelProp || (typeof children === 'string' ? `Remove ${children}` : 'Remove tag');
   const mergedClass = customClassName || className;
 
   return (
@@ -238,13 +152,13 @@ export function Tag({
           type="button"
           disabled={disabled}
           onClick={handleRemove}
-          aria-label={removeAriaLabel || 'Remove tag'}
+          aria-label={computedRemoveAriaLabel}
           className={`${REMOVE_BUTTON_SHAPE_CLASSES[shape]} ${
             shape === 'pill' ? '-mr-1' : '-mr-[7px]'
           } p-0.5 text-inherit transition-opacity focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-current ${
             disabled
               ? 'cursor-not-allowed opacity-40'
-              : 'opacity-60 hover:opacity-100 hover:bg-black/10 dark:hover:bg-white/10 cursor-pointer'
+              : 'opacity-60 hover:opacity-100 hover:bg-current/10 cursor-pointer'
           }`}
         >
           <X className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />

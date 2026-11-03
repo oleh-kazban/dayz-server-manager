@@ -1,37 +1,8 @@
-import {
-  type ComponentType,
-  type InputHTMLAttributes,
-  type MouseEvent,
-  type ReactNode,
-  type Ref,
-  useId,
-  useRef,
-} from 'react';
+import { type MouseEvent, useId, useRef } from 'react';
 
-import { type LucideIcon } from 'lucide-react';
+import type { InputProps } from './Input.types';
 
-export interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
-  /** Label displayed above the input field */
-  label?: string;
-
-  /** Validation error message; switches field to error treatment and links aria-describedby */
-  error?: string;
-
-  /** Leading icon component */
-  leftIcon?: LucideIcon | ComponentType<{ className?: string }>;
-
-  /** Trailing slot for action buttons or indicators */
-  rightAction?: ReactNode;
-
-  /** Root container styling escape hatch */
-  customClassName?: string;
-
-  /** Standard container styling escape hatch */
-  containerClassName?: string;
-
-  /** React 19 native DOM ref */
-  ref?: Ref<HTMLInputElement>;
-}
+export type { InputProps };
 
 export function Input({
   ref,
@@ -44,12 +15,15 @@ export function Input({
   className = '',
   customClassName = '',
   containerClassName = '',
+  'aria-describedby': externalDescribedBy,
   ...props
 }: InputProps) {
   const generatedId = useId();
   const inputId = externalId ?? generatedId;
+  const computedDescribedBy =
+    [externalDescribedBy, error ? `${inputId}-error` : null].filter(Boolean).join(' ') || undefined;
 
-  const internalInputRef = useRef<HTMLInputElement>(null);
+  const internalInputRef = useRef<HTMLInputElement | null>(null);
 
   const handleInputRef = (element: HTMLInputElement | null) => {
     internalInputRef.current = element;
@@ -61,7 +35,8 @@ export function Input({
   };
 
   const handleContainerClick = (e: MouseEvent<HTMLDivElement>) => {
-    if ((e.target as HTMLElement).closest('button, a')) {
+    if (disabled) return;
+    if ((e.target as HTMLElement).closest('button, a, [role="button"]')) {
       return;
     }
     internalInputRef.current?.focus();
@@ -97,7 +72,7 @@ export function Input({
         {LeftIcon && (
           <LeftIcon
             aria-hidden="true"
-            className={`w-4 h-4 text-[var(--color-text-muted)] shrink-0 select-none ${
+            className={`w-4 h-4 text-[var(--color-text-muted)] shrink-0 select-none pointer-events-none ${
               disabled ? 'opacity-50' : ''
             }`}
           />
@@ -110,7 +85,7 @@ export function Input({
           disabled={disabled}
           aria-disabled={disabled}
           aria-invalid={Boolean(error)}
-          aria-describedby={error ? `${inputId}-error` : undefined}
+          aria-describedby={computedDescribedBy}
           className={`w-full h-full min-w-0 self-stretch bg-transparent border-0 p-0 font-sans text-xs text-[var(--color-text-main)] placeholder:text-[var(--color-text-muted)] outline-none focus:outline-none focus:ring-0 disabled:cursor-not-allowed ${className}`.trim()}
         />
 
@@ -120,6 +95,7 @@ export function Input({
       {error && (
         <p
           id={`${inputId}-error`}
+          role="alert"
           className="text-[11px] font-sans text-[var(--color-status-danger)] leading-tight"
         >
           {error}

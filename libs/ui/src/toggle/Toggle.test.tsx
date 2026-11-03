@@ -27,7 +27,7 @@ describe('Toggle', () => {
     const handleChange = vi.fn();
 
     const { rerender } = render(
-      <Toggle defaultChecked onChange={handleChange} ariaLabel="Maintenance Mode" />,
+      <Toggle defaultChecked onChange={handleChange} aria-label="Maintenance Mode" />,
     );
     const toggle = screen.getByRole('switch', { name: /maintenance mode/i });
 
@@ -36,7 +36,7 @@ describe('Toggle', () => {
     expect(toggle).not.toBeChecked();
     expect(handleChange).toHaveBeenCalledTimes(1);
 
-    rerender(<Toggle checked={true} onChange={handleChange} ariaLabel="Maintenance Mode" />);
+    rerender(<Toggle checked={true} onChange={handleChange} aria-label="Maintenance Mode" />);
     expect(toggle).toBeChecked();
   });
 
@@ -50,13 +50,13 @@ describe('Toggle', () => {
 
   it('supports color variants: success and danger', () => {
     const { rerender, container } = render(
-      <Toggle checked color="success" ariaLabel="Success Toggle" />,
+      <Toggle checked color="success" aria-label="Success Toggle" />,
     );
     expect(
       container.querySelector('.bg-\\[var\\(--color-status-success\\)\\]'),
     ).toBeInTheDocument();
 
-    rerender(<Toggle checked color="danger" ariaLabel="Danger Toggle" />);
+    rerender(<Toggle checked color="danger" aria-label="Danger Toggle" />);
     expect(container.querySelector('.bg-\\[var\\(--color-status-danger\\)\\]')).toBeInTheDocument();
   });
 
@@ -64,7 +64,7 @@ describe('Toggle', () => {
     const user = userEvent.setup();
     const handleChange = vi.fn();
 
-    render(<Toggle disabled onChange={handleChange} ariaLabel="Disabled Switch" />);
+    render(<Toggle disabled onChange={handleChange} aria-label="Disabled Switch" />);
 
     const toggle = screen.getByRole('switch', { name: /disabled switch/i });
     expect(toggle).toBeDisabled();
@@ -75,9 +75,53 @@ describe('Toggle', () => {
 
   it('forwards React 19 ref directly to native input switch', () => {
     const ref = createRef<HTMLInputElement>();
-    render(<Toggle ref={ref} ariaLabel="Ref Toggle" />);
+    render(<Toggle ref={ref} aria-label="Ref Toggle" />);
 
     expect(ref.current).toBeInstanceOf(HTMLInputElement);
     expect(ref.current?.type).toBe('checkbox');
+  });
+
+  it('merges external aria-describedby with internal description id or preserves single source', () => {
+    const { rerender } = render(
+      <Toggle
+        id="backup-toggle"
+        label="Backups"
+        description="Automatic daily backups"
+        aria-describedby="external-hint"
+      />,
+    );
+
+    const toggle = screen.getByRole('switch', { name: /backups/i });
+    expect(toggle).toHaveAttribute('aria-describedby', 'external-hint backup-toggle-desc');
+
+    rerender(<Toggle id="backup-toggle" label="Backups" aria-describedby="external-hint" />);
+    expect(toggle).toHaveAttribute('aria-describedby', 'external-hint');
+
+    rerender(<Toggle id="backup-toggle" label="Backups" description="Automatic daily backups" />);
+    expect(toggle).toHaveAttribute('aria-describedby', 'backup-toggle-desc');
+
+    rerender(<Toggle id="backup-toggle" label="Backups" />);
+    expect(toggle).not.toHaveAttribute('aria-describedby');
+  });
+
+  it('toggles switch state and invokes onChange when pressing Space key', async () => {
+    const user = userEvent.setup();
+    const handleChange = vi.fn();
+
+    render(<Toggle onChange={handleChange} aria-label="Keyboard Toggle" />);
+    const toggle = screen.getByRole('switch', { name: /keyboard toggle/i });
+
+    expect(toggle).not.toBeChecked();
+
+    toggle.focus();
+    expect(toggle).toHaveFocus();
+
+    await user.keyboard(' ');
+    expect(toggle).toBeChecked();
+    expect(handleChange).toHaveBeenCalledTimes(1);
+
+    await user.keyboard(' ');
+    expect(toggle).not.toBeChecked();
+    expect(handleChange).toHaveBeenCalledTimes(2);
   });
 });

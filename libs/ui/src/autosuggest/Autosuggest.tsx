@@ -2,8 +2,6 @@ import {
   type ChangeEvent,
   type FocusEvent,
   type KeyboardEvent,
-  type ReactNode,
-  type Ref,
   type RefObject,
   useCallback,
   useEffect,
@@ -17,53 +15,9 @@ import { Loader2, Search, X } from 'lucide-react';
 
 import { usePopup } from '../hooks';
 
-export interface AutosuggestProps<T> {
-  /** React 19 ref forwarded directly to the underlying <input> */
-  ref?: Ref<HTMLInputElement>;
+import type { AutosuggestProps } from './Autosuggest.types';
 
-  /** Form field identity */
-  id?: string;
-  name?: string;
-  label?: string;
-  error?: string;
-  required?: boolean;
-  disabled?: boolean;
-
-  /** Controlled value & change handler */
-  value: string;
-  onChange: (_value: string) => void;
-
-  /** Suggestions dataset */
-  items: T[];
-
-  /** Selection callback */
-  onSelect: (_item: T) => void;
-
-  /** Resolution accessors */
-  getOptionLabel: (_item: T) => string;
-  getOptionKey: (_item: T) => string | number;
-  renderOption?: (_item: T, _isHighlighted: boolean) => ReactNode;
-
-  /** Operational states */
-  isLoading?: boolean;
-
-  /** Configuration & strings */
-  placeholder?: string;
-  minChars?: number;
-  emptyText?: string;
-
-  /** Accessibility */
-  'aria-label'?: string;
-
-  /** Root container className */
-  className?: string;
-
-  /** Standard container styling escape hatch */
-  containerClassName?: string;
-
-  /** Legacy alias for containerClassName */
-  customClassName?: string;
-}
+export type { AutosuggestProps };
 
 export function Autosuggest<T>({
   ref,
@@ -95,7 +49,7 @@ export function Autosuggest<T>({
 
   const [highlightedIndex, setHighlightedIndex] = useState(-1);
   const [isSelectionCommitted, setIsSelectionCommitted] = useState(false);
-  const optionRefs = useRef<(HTMLDivElement | null)[]>([]);
+  const optionRefs = useRef<(HTMLButtonElement | null)[]>([]);
 
   const { isOpen, open, close, popupPosition, containerRef, triggerRef, popupRef, updatePosition } =
     usePopup<HTMLInputElement>('start');
@@ -272,18 +226,23 @@ export function Autosuggest<T>({
       const label = getOptionLabel(item);
 
       return (
-        <div
+        <button
           key={key}
           id={`${listboxId}-option-${index}`}
           ref={element => {
             optionRefs.current[index] = element;
           }}
+          type="button"
           role="option"
           tabIndex={-1}
           aria-selected={isHighlighted}
           onMouseEnter={() => setHighlightedIndex(index)}
+          onMouseDown={e => {
+            e.preventDefault();
+            handleSelect(item);
+          }}
           onClick={() => handleSelect(item)}
-          className={`flex cursor-pointer items-center justify-between gap-2 rounded-lg px-3 py-2 text-xs transition-colors ${
+          className={`flex w-full text-left font-sans border-0 outline-none bg-transparent cursor-pointer items-center justify-between gap-2 rounded-lg px-3 py-2 text-xs transition-colors ${
             isHighlighted
               ? 'bg-[var(--color-primary)]/10 text-[var(--color-primary)]'
               : 'text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-subtle)] hover:text-[var(--color-text-main)]'
@@ -294,12 +253,12 @@ export function Autosuggest<T>({
           ) : (
             <span className="truncate">{label}</span>
           )}
-        </div>
+        </button>
       );
     });
   };
 
-  const resolvedContainerClass = containerClassName || customClassName || className;
+  const resolvedContainerClass = containerClassName || customClassName || '';
 
   return (
     <div ref={containerRef} className={`space-y-1.5 text-left ${resolvedContainerClass}`.trim()}>
@@ -354,7 +313,7 @@ export function Autosuggest<T>({
             error
               ? 'border-[var(--color-status-danger)] focus:border-[var(--color-status-danger)] focus:ring-1 focus:ring-[var(--color-status-danger)]'
               : 'border-[var(--color-border)] focus:border-[var(--color-primary)] focus:ring-1 focus:ring-[var(--color-primary)]'
-          }`}
+          } ${className}`.trim()}
         />
 
         {!disabled && value.length > 0 && (
@@ -388,10 +347,6 @@ export function Autosuggest<T>({
         createPortal(
           <div
             ref={popupRef}
-            onMouseDown={event => {
-              // Prevent input blur before option onClick executes
-              event.preventDefault();
-            }}
             className="fixed z-50 overflow-y-auto rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-1 text-[var(--color-text-main)] shadow-[var(--shadow-card)]"
             style={{
               top: popupPosition?.top ?? 0,

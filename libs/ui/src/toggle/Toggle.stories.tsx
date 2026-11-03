@@ -5,7 +5,8 @@ import { Pause, Play } from 'lucide-react';
 
 import { Button } from '../button';
 
-import { Toggle, type ToggleProps } from './Toggle';
+import { Toggle } from './Toggle';
+import type { ToggleProps } from './Toggle.types';
 
 const meta: Meta<typeof Toggle> = {
   title: 'Components/Toggle',
@@ -51,7 +52,7 @@ type Story = StoryObj<typeof Toggle>;
    ==================================================================== */
 
 export const AutoScroll: Story = {
-  name: 'Auto-scroll (Screenshot Recreation)',
+  name: 'Auto-scroll',
   args: {
     label: 'Auto-scroll',
     defaultChecked: true,
@@ -230,7 +231,7 @@ export const StandaloneSwitch: Story = {
   name: 'Standalone (Icon-only / aria-label)',
   render: args => (
     <div className="flex items-center gap-4 p-4">
-      <Toggle ariaLabel="Toggle night acceleration" defaultChecked disabled={args.disabled} />
+      <Toggle aria-label="Toggle night acceleration" defaultChecked disabled={args.disabled} />
       <span className="text-xs text-[var(--color-text-muted)]">
         Standalone toggle without visual label (accessible via aria-label)
       </span>

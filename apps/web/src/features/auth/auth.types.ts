@@ -1,12 +1,16 @@
-export type UserRole = 'admin' | 'moderator' | 'viewer';
+import { z } from 'zod';
 
-export interface AuthUser {
-  id: string;
-  username: string;
-  email: string;
-  role: UserRole;
-  roles?: UserRole[];
-}
+export const userRoleSchema = z.enum(['admin', 'moderator', 'viewer']);
+export type UserRole = z.infer<typeof userRoleSchema>;
+
+export const authUserSchema = z.object({
+  id: z.string(),
+  username: z.string(),
+  email: z.string(),
+  role: userRoleSchema,
+  roles: z.array(userRoleSchema).optional(),
+});
+export type AuthUser = z.infer<typeof authUserSchema>;
 
 export interface SignInCredentials {
   usernameOrEmail: string;

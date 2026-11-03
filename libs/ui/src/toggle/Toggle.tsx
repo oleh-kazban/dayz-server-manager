@@ -1,106 +1,6 @@
-import {
-  type ChangeEvent,
-  type FocusEvent,
-  type ReactNode,
-  type Ref,
-  useId,
-  useState,
-} from 'react';
+import { type ChangeEvent, useId, useState } from 'react';
 
-export type ToggleColor = 'primary' | 'success' | 'danger';
-
-export interface ToggleProps {
-  /**
-   * React 19 ref forwarded directly to the native <input> switch element.
-   */
-  ref?: Ref<HTMLInputElement>;
-
-  /**
-   * Controlled checked state.
-   */
-  checked?: boolean;
-
-  /**
-   * Uncontrolled initial checked state.
-   */
-  defaultChecked?: boolean;
-
-  /**
-   * Disables switch interactions and dims opacity.
-   * @default false
-   */
-  disabled?: boolean;
-
-  /**
-   * Form control name.
-   */
-  name?: string;
-
-  /**
-   * Value attribute for form submissions.
-   */
-  value?: string;
-
-  /**
-   * Explicit element id (auto-generated if omitted).
-   */
-  id?: string;
-
-  /**
-   * Primary label text or element.
-   */
-  label?: ReactNode;
-
-  /**
-   * Supplementary explanatory description linked via aria-describedby.
-   */
-  description?: ReactNode;
-
-  /**
-   * Placement of the label relative to the switch track.
-   * @default 'left'
-   */
-  labelPosition?: 'left' | 'right';
-
-  /**
-   * Active color variant for the checked track.
-   * @default 'primary'
-   */
-  color?: ToggleColor;
-
-  /**
-   * Change event callback.
-   */
-  onChange?: (event: ChangeEvent<HTMLInputElement>) => void;
-
-  /**
-   * Focus event callbacks.
-   */
-  onBlur?: (event: FocusEvent<HTMLInputElement>) => void;
-  onFocus?: (event: FocusEvent<HTMLInputElement>) => void;
-
-  /**
-   * Accessible label for screen readers when no visual label is present.
-   */
-  ariaLabel?: string;
-  'aria-label'?: string;
-
-  /**
-   * Explicit ID for aria-describedby linkage.
-   */
-  ariaDescribedBy?: string;
-  'aria-describedby'?: string;
-
-  /**
-   * Single external class escape hatch for container positioning.
-   */
-  customClassName?: string;
-
-  /**
-   * Standard container styling escape hatch.
-   */
-  containerClassName?: string;
-}
+import type { ToggleColor, ToggleProps } from './Toggle.types';
 
 /* --------------------------------------------------------------------------
    STYLE CONFIGURATIONS (DSM Token Mappings)
@@ -150,9 +50,7 @@ export function Toggle({
   onChange,
   onBlur,
   onFocus,
-  ariaLabel,
-  'aria-label': ariaLabelAttr,
-  ariaDescribedBy,
+  'aria-label': ariaLabel,
   'aria-describedby': ariaDescribedByAttr,
   customClassName = '',
   containerClassName = '',
@@ -165,8 +63,9 @@ export function Toggle({
   const [internalChecked, setInternalChecked] = useState(Boolean(defaultChecked));
   const isChecked = isControlled ? externalChecked : internalChecked;
 
-  const effectiveAriaLabel = ariaLabel ?? ariaLabelAttr;
-  const effectiveAriaDescribedBy = ariaDescribedBy ?? ariaDescribedByAttr ?? descriptionId;
+  const computedDescribedBy =
+    [ariaDescribedByAttr, description ? descriptionId : null].filter(Boolean).join(' ') ||
+    undefined;
 
   const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
     if (disabled) return;
@@ -219,8 +118,8 @@ export function Toggle({
         type="checkbox"
         role="switch"
         aria-checked={isChecked}
-        aria-label={effectiveAriaLabel}
-        aria-describedby={effectiveAriaDescribedBy}
+        aria-label={ariaLabel}
+        aria-describedby={computedDescribedBy}
         checked={isChecked}
         disabled={disabled}
         onChange={handleChange}

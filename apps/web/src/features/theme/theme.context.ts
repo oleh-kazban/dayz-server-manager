@@ -1,6 +1,6 @@
 import { createContext, useContext } from 'react';
 
-import { ThemeContextValue } from './theme.types';
+import type { ThemeContextValue } from './theme.types';
 
 export const THEME_STORAGE_KEY = 'dsm-theme-settings';
 

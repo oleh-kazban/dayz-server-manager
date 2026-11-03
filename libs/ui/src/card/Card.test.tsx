@@ -56,4 +56,26 @@ describe('Card', () => {
 
     expect(ref.current).toBeInstanceOf(HTMLDivElement);
   });
+
+  it('forwards ref to HTMLElement with polymorphic tags like as="section" and as="article"', () => {
+    const sectionRef = createRef<HTMLElement>();
+    const { rerender } = render(
+      <Card as="section" ref={sectionRef}>
+        Section Content
+      </Card>,
+    );
+
+    expect(sectionRef.current).toBeInstanceOf(HTMLElement);
+    expect(sectionRef.current?.tagName.toLowerCase()).toBe('section');
+
+    const articleRef = createRef<HTMLElement>();
+    rerender(
+      <Card as="article" ref={articleRef}>
+        Article Content
+      </Card>,
+    );
+
+    expect(articleRef.current).toBeInstanceOf(HTMLElement);
+    expect(articleRef.current?.tagName.toLowerCase()).toBe('article');
+  });
 });
