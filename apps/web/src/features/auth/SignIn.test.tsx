@@ -9,6 +9,7 @@ vi.mock('@tanstack/react-router', () => ({
   useRouter: () => ({
     invalidate: vi.fn(),
   }),
+  useSearch: () => ({}),
 }));
 
 describe('SignIn Component', () => {

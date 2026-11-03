@@ -1,5 +1,6 @@
 import cors from '@fastify/cors';
 import jwt from '@fastify/jwt';
+import rateLimit from '@fastify/rate-limit';
 import sensible from '@fastify/sensible';
 import Fastify, {
   type FastifyInstance,
@@ -36,6 +37,10 @@ export function buildApp(options: BuildAppOptions): FastifyInstance {
     credentials: true,
   });
 
+  app.register(rateLimit, {
+    global: false,
+  });
+
   app.register(sensible);
 
   app.register(jwt, {
@@ -44,9 +49,12 @@ export function buildApp(options: BuildAppOptions): FastifyInstance {
 
   app.decorate('authenticate', async (request: FastifyRequest, reply: FastifyReply) => {
     try {
-      await request.jwtVerify();
+      const payload = await request.jwtVerify<{ sub: string; role?: string; type?: string }>();
+      if (!payload || payload.type !== 'access') {
+        return reply.unauthorized('Invalid token type for authorization');
+      }
     } catch {
-      reply.unauthorized('Invalid or missing authentication token');
+      return reply.unauthorized('Invalid or missing authentication token');
     }
   });
 

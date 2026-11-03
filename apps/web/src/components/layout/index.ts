@@ -3,5 +3,6 @@ export * from './Footer';
 export * from './Header';
 export * from './Logo';
 export * from './PageContainer';
+export * from './PlaceholderView';
 export * from './Sidebar';
 export * from './UserProfile';

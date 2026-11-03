@@ -1,9 +1,10 @@
 import { useForm } from 'react-hook-form';
 
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useNavigate, useRouter } from '@tanstack/react-router';
+import { useNavigate, useRouter, useSearch } from '@tanstack/react-router';
 import { ArrowRight, UserRound } from 'lucide-react';
 
+import { ApiError } from '@dsm/api-client';
 import { Button, Checkbox, Input, PasswordInput } from '@dsm/ui';
 
 import { useAuth } from '../auth.context';
@@ -13,6 +14,7 @@ export function SignInForm() {
   const { login } = useAuth();
   const router = useRouter();
   const navigate = useNavigate();
+  const search = useSearch({ strict: false }) as { redirect?: string };
 
   const {
     register,
@@ -32,9 +34,20 @@ export function SignInForm() {
     try {
       await login(values);
       await router.invalidate();
-      await navigate({ to: '/dashboard' });
+      const targetUrl =
+        typeof search?.redirect === 'string' &&
+        search.redirect.startsWith('/') &&
+        !search.redirect.startsWith('//')
+          ? search.redirect
+          : '/dashboard';
+      await navigate({ to: targetUrl });
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Invalid credentials. Please try again.';
+      let message = 'Invalid credentials. Please try again.';
+      if (err instanceof ApiError && err.apiMessage) {
+        message = err.apiMessage;
+      } else if (err instanceof Error) {
+        message = err.message;
+      }
       setError('root', { message });
     }
   };
@@ -60,7 +73,7 @@ export function SignInForm() {
           {errors.root?.message && (
             <div
               role="alert"
-              className="p-3 text-xs rounded-lg border border-[var(--color-danger-border,#fca5a5)] bg-[var(--color-danger-light,#fef2f2)] text-[var(--color-danger,#b91c1c)]"
+              className="p-3 text-xs rounded-lg border border-[var(--color-danger)]/30 bg-[var(--color-danger-soft)] text-[var(--color-danger)] font-medium"
             >
               {errors.root.message}
             </div>

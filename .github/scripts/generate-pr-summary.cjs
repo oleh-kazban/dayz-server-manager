@@ -184,8 +184,8 @@ ${commitMessages}
 ${packageBreakdown}
 ### Safety, Contracts & Boundary Compliance
 - **Module Boundaries:** Not verified by this workflow (enforced by Nx boundary rules in CI).
-- **Process & Shutdown Safety:** ${touchedProcessSafety ? '⚠️ Modified platform/process supervisors. Requires argument array verification in review.' : 'No external process management touched.'}
-- **File Integrity & Contracts:** ${touchedContracts ? '⚠️ API contracts modified. Requires Zod schema synchronization verification.' : 'Contracts untouched.'}
+- **Process & Shutdown Safety:** ${touchedProcessSafety ? 'Modified platform/process supervisors. Requires argument array verification in review.' : 'No external process management touched.'}
+- **File Integrity & Contracts:** ${touchedContracts ? 'API contracts modified. Requires Zod schema synchronization verification.' : 'Contracts untouched.'}
 - **UI Kit Geometry:** ${packages.has('libs/ui') ? 'Requires manual/visual review against canonical 36px standard and design tokens.' : 'UI kit unaffected.'}
 
 ### Testing & Verification

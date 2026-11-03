@@ -232,6 +232,26 @@ describe('Auth Routes (/api/v1/auth)', () => {
       expect(meRes.statusCode).toBe(401);
     });
 
+    it('returns 401 when a refresh token is used as Bearer token', async () => {
+      const loginRes = await app.inject({
+        method: 'POST',
+        url: '/api/v1/auth/login',
+        payload: { usernameOrEmail: 'admin', password: 'admin' },
+      });
+      const { refreshToken } = loginRes.json();
+
+      const meRes = await app.inject({
+        method: 'GET',
+        url: '/api/v1/auth/me',
+        headers: {
+          authorization: `Bearer ${refreshToken}`,
+        },
+      });
+
+      expect(meRes.statusCode).toBe(401);
+      expect(meRes.json().message).toContain('Invalid token type for authorization');
+    });
+
     it('returns 401 when user in access token is not found in database', async () => {
       const ghostAccessToken = app.jwt.sign(
         { sub: '00000000-0000-0000-0000-000000000000', type: 'access' },
@@ -248,6 +268,50 @@ describe('Auth Routes (/api/v1/auth)', () => {
 
       expect(meRes.statusCode).toBe(401);
       expect(meRes.json().message).toContain('User not found');
+    });
+  });
+
+  describe('Rate Limiting', () => {
+    let rateLimitedApp: FastifyInstance;
+    let rateLimitedDb: DatabaseInstance;
+
+    beforeAll(async () => {
+      rateLimitedDb = initDatabase({ dbPath: ':memory:' });
+      const config = loadEnv({
+        SESSION_SECRET: 'test-session-secret-at-least-32-chars-long!',
+        LOG_LEVEL: 'silent',
+      });
+      rateLimitedApp = buildApp({
+        config,
+        db: rateLimitedDb,
+      });
+      await rateLimitedApp.ready();
+    });
+
+    afterAll(async () => {
+      await rateLimitedApp.close();
+      rateLimitedDb.close();
+    });
+
+    it('returns 429 Too Many Requests when rate limit threshold is exceeded', async () => {
+      // Exhaust the 10 request limit on /login
+      for (let i = 0; i < 10; i++) {
+        await rateLimitedApp.inject({
+          method: 'POST',
+          url: '/api/v1/auth/login',
+          payload: { usernameOrEmail: 'admin', password: 'wrong-password' },
+        });
+      }
+
+      // The 11th request should be rate-limited
+      const response = await rateLimitedApp.inject({
+        method: 'POST',
+        url: '/api/v1/auth/login',
+        payload: { usernameOrEmail: 'admin', password: 'admin' },
+      });
+
+      expect(response.statusCode).toBe(429);
+      expect(response.json().message).toContain('Rate limit exceeded');
     });
   });
 });

@@ -9,12 +9,11 @@ import type { AuthContextValue, AuthUser, SignInCredentials } from './auth.types
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(authStorage.get);
 
-  useEffect(() => {
-    const existingToken = authStorage.getToken();
-    if (existingToken) {
-      apiClient.client.setToken(existingToken);
-    }
-  }, []);
+  const logout = () => {
+    apiClient.client.setToken(null);
+    authStorage.clear();
+    setUser(null);
+  };
 
   const login = async (credentials: SignInCredentials) => {
     const response = await apiClient.auth.login({
@@ -39,11 +38,34 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(authenticatedUser);
   };
 
-  const logout = () => {
-    apiClient.client.setToken(null);
-    authStorage.clear();
-    setUser(null);
-  };
+  useEffect(() => {
+    const existingToken = authStorage.getToken();
+    if (existingToken) {
+      apiClient.client.setToken(existingToken);
+    }
+
+    apiClient.client.setOnRefreshToken(async () => {
+      const refreshToken = authStorage.getRefreshToken();
+      if (!refreshToken) {
+        logout();
+        return null;
+      }
+
+      try {
+        const response = await apiClient.auth.refresh({ refreshToken });
+        apiClient.client.setToken(response.accessToken);
+        authStorage.setTokens({ accessToken: response.accessToken });
+        return response.accessToken;
+      } catch {
+        logout();
+        return null;
+      }
+    });
+
+    return () => {
+      apiClient.client.setOnRefreshToken(null);
+    };
+  }, []);
 
   const value = useMemo<AuthContextValue>(
     () => ({

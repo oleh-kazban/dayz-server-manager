@@ -46,6 +46,28 @@ export const authStorage = {
     if (tokens?.refreshToken) {
       primary.set(AUTH_REFRESH_TOKEN_KEY, tokens.refreshToken);
       secondary.remove(AUTH_REFRESH_TOKEN_KEY);
+    } else {
+      secondary.remove(AUTH_REFRESH_TOKEN_KEY);
+    }
+
+    // Active migration & cleanup: when session is ephemeral, purge any legacy refresh token from localStorage
+    if (!rememberMe) {
+      localStorageDriver.remove(AUTH_REFRESH_TOKEN_KEY);
+    }
+  },
+
+  setTokens(tokens: { accessToken?: string; refreshToken?: string }): void {
+    const isPersistent = localStorageDriver.get(AUTH_STORAGE_KEY, null) !== null;
+    const primary = isPersistent ? localStorageDriver : sessionStorageDriver;
+    const secondary = isPersistent ? sessionStorageDriver : localStorageDriver;
+
+    if (tokens.accessToken) {
+      primary.set(AUTH_TOKEN_KEY, tokens.accessToken);
+      secondary.remove(AUTH_TOKEN_KEY);
+    }
+    if (tokens.refreshToken) {
+      primary.set(AUTH_REFRESH_TOKEN_KEY, tokens.refreshToken);
+      secondary.remove(AUTH_REFRESH_TOKEN_KEY);
     }
   },
 

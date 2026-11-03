@@ -143,4 +143,93 @@ describe('AuthProvider & useAuth', () => {
     expect(authStorage.getToken()).toBeNull();
     expect(apiClient.client.getToken()).toBeNull();
   });
+
+  describe('token refresh callback lifecycle', () => {
+    const mockUser: AuthUser = {
+      id: 'usr-refresh',
+      username: 'refreshUser',
+      email: 'refresh@dayz.local',
+      role: 'admin',
+      roles: ['admin'],
+    };
+
+    it('logs out and returns null when refresh token is missing', async () => {
+      let registeredHandler: (() => Promise<string | null>) | null = null;
+      vi.spyOn(apiClient.client, 'setOnRefreshToken').mockImplementation(fn => {
+        registeredHandler = fn;
+      });
+
+      authStorage.clear();
+
+      render(
+        <AuthProvider>
+          <div>Mounted</div>
+        </AuthProvider>,
+      );
+
+      expect(registeredHandler).not.toBeNull();
+      const token = await act(async () => registeredHandler!());
+
+      expect(token).toBeNull();
+      expect(authStorage.get()).toBeNull();
+      expect(apiClient.client.getToken()).toBeNull();
+    });
+
+    it('refreshes token successfully and updates client and storage', async () => {
+      let registeredHandler: (() => Promise<string | null>) | null = null;
+      vi.spyOn(apiClient.client, 'setOnRefreshToken').mockImplementation(fn => {
+        registeredHandler = fn;
+      });
+
+      authStorage.set(mockUser, true, {
+        accessToken: 'old-access-jwt',
+        refreshToken: 'valid-refresh-jwt',
+      });
+
+      vi.spyOn(apiClient.auth, 'refresh').mockResolvedValueOnce({
+        accessToken: 'new-refreshed-jwt',
+        expiresIn: 900,
+      });
+
+      render(
+        <AuthProvider>
+          <div>Mounted</div>
+        </AuthProvider>,
+      );
+
+      const token = await act(async () => registeredHandler!());
+
+      expect(token).toBe('new-refreshed-jwt');
+      expect(authStorage.getToken()).toBe('new-refreshed-jwt');
+      expect(apiClient.client.getToken()).toBe('new-refreshed-jwt');
+    });
+
+    it('logs out when refresh API call fails', async () => {
+      let registeredHandler: (() => Promise<string | null>) | null = null;
+      vi.spyOn(apiClient.client, 'setOnRefreshToken').mockImplementation(fn => {
+        registeredHandler = fn;
+      });
+
+      authStorage.set(mockUser, true, {
+        accessToken: 'old-access-jwt',
+        refreshToken: 'expired-refresh-jwt',
+      });
+
+      vi.spyOn(apiClient.auth, 'refresh').mockRejectedValueOnce(
+        new Error('Invalid or expired refresh token'),
+      );
+
+      render(
+        <AuthProvider>
+          <div>Mounted</div>
+        </AuthProvider>,
+      );
+
+      const token = await act(async () => registeredHandler!());
+
+      expect(token).toBeNull();
+      expect(authStorage.get()).toBeNull();
+      expect(apiClient.client.getToken()).toBeNull();
+    });
+  });
 });

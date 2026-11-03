@@ -1,3 +1,5 @@
+import type { ReactNode } from 'react';
+
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -11,6 +13,11 @@ const mockNavigate = vi.fn();
 const mockInvalidate = vi.fn();
 
 vi.mock('@tanstack/react-router', () => ({
+  Link: ({ children, to, ...props }: { children: ReactNode; to: string }) => (
+    <a href={to} {...props}>
+      {children}
+    </a>
+  ),
   useNavigate: () => mockNavigate,
   useRouter: () => ({
     invalidate: mockInvalidate,
@@ -41,6 +48,8 @@ describe('UserProfile', () => {
     expect(screen.getByText('AK')).toBeInTheDocument();
     expect(screen.getByText('Alex Kovac')).toBeInTheDocument();
     expect(screen.getByText('Administrator')).toBeInTheDocument();
+    expect(screen.getByTitle('View profile & preferences')).toHaveAttribute('href', '/profile');
+    expect(screen.getByTitle('View profile & preferences')).toHaveAttribute('href', '/profile');
   });
 
   it('triggers logout, router invalidation, and navigation to /sign-in on logout button click', async () => {
@@ -68,7 +77,7 @@ describe('UserProfile', () => {
       </AuthProvider>,
     );
 
-    expect(screen.getByText('A')).toBeInTheDocument();
-    expect(screen.getAllByText('Administrator').length).toBeGreaterThan(0);
+    expect(screen.getByText('AD')).toBeInTheDocument();
+    expect(screen.getAllByText('Administrator')).toHaveLength(2);
   });
 });
