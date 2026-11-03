@@ -4,6 +4,7 @@ import path from 'node:path';
 
 import { verifyPassword } from './crypto';
 import { initDatabase } from './db';
+import { runMigrations } from './migrations';
 import { users } from './schema';
 
 describe('Database Initialization & Seeding', () => {
@@ -43,12 +44,24 @@ describe('Database Initialization & Seeding', () => {
       );
     `);
 
-    // Pass the same in-memory DB or verify migration logic
     const columnsBefore = legacyDb.pragma('table_info(users)') as { name: string }[];
-    expect(columnsBefore.map(c => c.name)).not.toContain('email');
+    const namesBefore = columnsBefore.map(c => c.name);
+    expect(namesBefore).not.toContain('email');
+    expect(namesBefore).not.toContain('last_login_at');
+    expect(namesBefore).not.toContain('role');
 
-    // Run database init on it
-    initDatabase({ dbPath: ':memory:' });
+    // Run declarative migrations on legacy database
+    runMigrations(legacyDb);
+
+    const columnsAfter = legacyDb.pragma('table_info(users)') as { name: string }[];
+    const namesAfter = columnsAfter.map(c => c.name);
+    expect(namesAfter).toContain('email');
+    expect(namesAfter).toContain('last_login_at');
+    expect(namesAfter).toContain('role');
+
+    // Running migrations again is an idempotent no-op
+    runMigrations(legacyDb);
+
     legacyDb.close();
   });
 
