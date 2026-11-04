@@ -158,6 +158,19 @@ export class HttpClient {
     });
   }
 
+  patch<T>(
+    endpoint: string,
+    schema: ZodType<T>,
+    body?: unknown,
+    init?: Omit<RequestInit, 'method' | 'body'>,
+  ): Promise<T> {
+    return this.request(endpoint, schema, {
+      ...init,
+      method: 'PATCH',
+      body: body !== undefined ? JSON.stringify(body) : undefined,
+    });
+  }
+
   delete<T>(endpoint: string, schema: ZodType<T>, init?: Omit<RequestInit, 'method'>): Promise<T> {
     return this.request(endpoint, schema, { ...init, method: 'DELETE' });
   }
