@@ -10,9 +10,13 @@ import { AuthContext } from '../auth/auth.context';
 
 import { Dashboard } from './Dashboard';
 
-vi.mock('@dsm/web/core', () => ({
-  useActiveServer: vi.fn(),
-}));
+vi.mock('@dsm/web/core', async importOriginal => {
+  const actual = await importOriginal<typeof import('@dsm/web/core')>();
+  return {
+    ...actual,
+    useActiveServer: vi.fn(),
+  };
+});
 
 vi.mock('../server-settings', () => ({
   CreateServerModal: ({ isOpen }: { isOpen: boolean }) =>

@@ -29,6 +29,17 @@ export function CreateServerModal({ isOpen, onClose }: CreateServerModalProps) {
   const [launchParameters, setLaunchParameters] = useState('-cpuCount=4 -doLogs -adminLog -netLog');
   const [isDefault, setIsDefault] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+
+  const clearFieldError = (field: string) => {
+    if (fieldErrors[field]) {
+      setFieldErrors(prev => {
+        const next = { ...prev };
+        delete next[field];
+        return next;
+      });
+    }
+  };
 
   const createMutation = useMutation({
     mutationFn: (dto: CreateServerDto) => apiClient.servers.create(dto),
@@ -39,7 +50,14 @@ export function CreateServerModal({ isOpen, onClose }: CreateServerModalProps) {
       onClose();
     },
     onError: (err: Error) => {
-      setErrorMessage(err.message || 'Failed to create server instance.');
+      const msg = err.message || 'Failed to create server instance.';
+      if (msg.includes('already exists') || msg.toLowerCase().includes('name')) {
+        setFieldErrors(prev => ({ ...prev, name: msg }));
+      } else if (msg.toLowerCase().includes('port')) {
+        setFieldErrors(prev => ({ ...prev, gamePort: msg }));
+      } else {
+        setErrorMessage(msg);
+      }
     },
   });
 
@@ -49,18 +67,42 @@ export function CreateServerModal({ isOpen, onClose }: CreateServerModalProps) {
     e.preventDefault();
     setErrorMessage(null);
 
+    const errors: Record<string, string> = {};
+
     if (!name.trim()) {
-      setErrorMessage('Server name is required.');
-      return;
+      errors.name = 'Server name is required.';
     }
-    if (!installPath.trim() || !profilePath.trim() || !missionPath.trim()) {
-      setErrorMessage('All file storage paths are required.');
-      return;
+    if (!installPath.trim()) {
+      errors.installPath = 'Installation path is required.';
+    }
+    if (!profilePath.trim()) {
+      errors.profilePath = 'Profile path is required.';
+    }
+    if (!missionPath.trim()) {
+      errors.missionPath = 'Mission path is required.';
+    }
+    if (!gamePort || gamePort < 1024 || gamePort > 65535) {
+      errors.gamePort = 'Port must be between 1024 and 65535.';
+    }
+    if (!queryPort || queryPort < 1024 || queryPort > 65535) {
+      errors.queryPort = 'Port must be between 1024 and 65535.';
+    }
+    if (!rconPort || rconPort < 1024 || rconPort > 65535) {
+      errors.rconPort = 'Port must be between 1024 and 65535.';
     }
     if (gamePort === queryPort || gamePort === rconPort || queryPort === rconPort) {
-      setErrorMessage('Game port, query port, and RCON port must all be distinct.');
+      errors.gamePort = 'Game port, query port, and RCON port must all be distinct.';
+    }
+    if (rconPassword && rconPassword.length < 6) {
+      errors.rconPassword = 'RCON password must be at least 6 characters.';
+    }
+
+    if (Object.keys(errors).length > 0) {
+      setFieldErrors(errors);
       return;
     }
+
+    setFieldErrors({});
 
     createMutation.mutate({
       name: name.trim(),
@@ -119,20 +161,27 @@ export function CreateServerModal({ isOpen, onClose }: CreateServerModalProps) {
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="mt-5 space-y-4">
+        <form noValidate onSubmit={handleSubmit} className="mt-5 space-y-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Input
               label="Server Name"
               placeholder="e.g. DayZ Namalsk Hardcore"
               value={name}
-              onChange={e => setName(e.target.value)}
-              required
+              error={fieldErrors.name}
+              onChange={e => {
+                setName(e.target.value);
+                clearFieldError('name');
+              }}
             />
             <Input
               label="Description"
               placeholder="Optional summary or notes"
               value={description}
-              onChange={e => setDescription(e.target.value)}
+              error={fieldErrors.description}
+              onChange={e => {
+                setDescription(e.target.value);
+                clearFieldError('description');
+              }}
             />
           </div>
 
@@ -141,22 +190,31 @@ export function CreateServerModal({ isOpen, onClose }: CreateServerModalProps) {
               label="Game Port"
               type="number"
               value={gamePort}
-              onChange={e => setGamePort(Number(e.target.value))}
-              required
+              error={fieldErrors.gamePort}
+              onChange={e => {
+                setGamePort(Number(e.target.value));
+                clearFieldError('gamePort');
+              }}
             />
             <Input
               label="Query Port (A2S)"
               type="number"
               value={queryPort}
-              onChange={e => setQueryPort(Number(e.target.value))}
-              required
+              error={fieldErrors.queryPort}
+              onChange={e => {
+                setQueryPort(Number(e.target.value));
+                clearFieldError('queryPort');
+              }}
             />
             <Input
               label="RCON Port"
               type="number"
               value={rconPort}
-              onChange={e => setRconPort(Number(e.target.value))}
-              required
+              error={fieldErrors.rconPort}
+              onChange={e => {
+                setRconPort(Number(e.target.value));
+                clearFieldError('rconPort');
+              }}
             />
           </div>
 
@@ -164,7 +222,11 @@ export function CreateServerModal({ isOpen, onClose }: CreateServerModalProps) {
             label="RCON Password"
             placeholder="Min 6 characters"
             value={rconPassword}
-            onChange={e => setRconPassword(e.target.value)}
+            error={fieldErrors.rconPassword}
+            onChange={e => {
+              setRconPassword(e.target.value);
+              clearFieldError('rconPassword');
+            }}
           />
 
           <div className="space-y-3 pt-2 border-t border-[var(--color-border)]">
@@ -175,23 +237,32 @@ export function CreateServerModal({ isOpen, onClose }: CreateServerModalProps) {
               label="Installation Path"
               placeholder="e.g. C:\DayZServer"
               value={installPath}
-              onChange={e => setInstallPath(e.target.value)}
-              required
+              error={fieldErrors.installPath}
+              onChange={e => {
+                setInstallPath(e.target.value);
+                clearFieldError('installPath');
+              }}
             />
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <Input
                 label="Profile Path"
                 placeholder="e.g. C:\DayZServer\profiles"
                 value={profilePath}
-                onChange={e => setProfilePath(e.target.value)}
-                required
+                error={fieldErrors.profilePath}
+                onChange={e => {
+                  setProfilePath(e.target.value);
+                  clearFieldError('profilePath');
+                }}
               />
               <Input
                 label="Mission Path"
                 placeholder="e.g. mpmissions\dayzOffline.chernarusplus"
                 value={missionPath}
-                onChange={e => setMissionPath(e.target.value)}
-                required
+                error={fieldErrors.missionPath}
+                onChange={e => {
+                  setMissionPath(e.target.value);
+                  clearFieldError('missionPath');
+                }}
               />
             </div>
           </div>

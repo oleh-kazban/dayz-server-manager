@@ -43,6 +43,61 @@ function mapServerStatusToTag(status: ServerStatus): { status: StatusTagStatus; 
   }
 }
 
+interface ServerSettingsValidationInput {
+  name: string;
+  rconPassword: string;
+  isServerLocked: boolean;
+  installPath: string;
+  profilePath: string;
+  missionPath: string;
+  gamePort: number;
+  queryPort: number;
+  rconPort: number;
+}
+
+function validateServerSettingsForm(input: ServerSettingsValidationInput): Record<string, string> {
+  const errors: Record<string, string> = {};
+
+  if (!input.name.trim()) {
+    errors.name = 'Server name is required.';
+  }
+  if (input.rconPassword && input.rconPassword.length < 6) {
+    errors.rconPassword = 'RCON password must be at least 6 characters.';
+  }
+
+  if (input.isServerLocked) {
+    return errors;
+  }
+
+  if (!input.installPath.trim()) {
+    errors.installPath = 'Installation path is required.';
+  }
+  if (!input.profilePath.trim()) {
+    errors.profilePath = 'Profile path is required.';
+  }
+  if (!input.missionPath.trim()) {
+    errors.missionPath = 'Mission path is required.';
+  }
+  if (!input.gamePort || input.gamePort < 1024 || input.gamePort > 65535) {
+    errors.gamePort = 'Port must be between 1024 and 65535.';
+  }
+  if (!input.queryPort || input.queryPort < 1024 || input.queryPort > 65535) {
+    errors.queryPort = 'Port must be between 1024 and 65535.';
+  }
+  if (!input.rconPort || input.rconPort < 1024 || input.rconPort > 65535) {
+    errors.rconPort = 'Port must be between 1024 and 65535.';
+  }
+  if (
+    input.gamePort === input.queryPort ||
+    input.gamePort === input.rconPort ||
+    input.queryPort === input.rconPort
+  ) {
+    errors.gamePort = 'Game port, query port, and RCON port must all be distinct.';
+  }
+
+  return errors;
+}
+
 interface ServerSettingsFormProps {
   detail: ServerDetailDto;
   onSave: (payload: UpdateServerDto) => void;
@@ -69,11 +124,41 @@ function ServerSettingsForm({
   const [missionPath, setMissionPath] = useState(detail.missionPath);
   const [launchParameters, setLaunchParameters] = useState(detail.launchParameters ?? '');
   const [isDefault, setIsDefault] = useState(detail.isDefault);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+
+  const clearFieldError = (field: string) => {
+    if (fieldErrors[field]) {
+      setFieldErrors(prev => {
+        const next = { ...prev };
+        delete next[field];
+        return next;
+      });
+    }
+  };
 
   const isServerLocked = detail.status !== 'stopped';
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+
+    const errors = validateServerSettingsForm({
+      name,
+      rconPassword,
+      isServerLocked,
+      installPath,
+      profilePath,
+      missionPath,
+      gamePort,
+      queryPort,
+      rconPort,
+    });
+
+    if (Object.keys(errors).length > 0) {
+      setFieldErrors(errors);
+      return;
+    }
+
+    setFieldErrors({});
 
     const payload: UpdateServerDto = {
       name: name.trim(),
@@ -101,7 +186,7 @@ function ServerSettingsForm({
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
+    <form noValidate onSubmit={handleSubmit} className="space-y-6">
       {saveSuccess && (
         <Notice variant="success" title="Settings Saved">
           Server configuration updated successfully.
@@ -132,14 +217,21 @@ function ServerSettingsForm({
             <Input
               label="Server Name"
               value={name}
-              onChange={e => setName(e.target.value)}
-              required
+              error={fieldErrors.name}
+              onChange={e => {
+                setName(e.target.value);
+                clearFieldError('name');
+              }}
             />
             <Input
               label="Description"
               placeholder="Instance notes or purpose"
               value={description}
-              onChange={e => setDescription(e.target.value)}
+              error={fieldErrors.description}
+              onChange={e => {
+                setDescription(e.target.value);
+                clearFieldError('description');
+              }}
             />
           </div>
 
@@ -166,24 +258,33 @@ function ServerSettingsForm({
               type="number"
               value={gamePort}
               disabled={isServerLocked}
-              onChange={e => setGamePort(Number(e.target.value))}
-              required
+              error={fieldErrors.gamePort}
+              onChange={e => {
+                setGamePort(Number(e.target.value));
+                clearFieldError('gamePort');
+              }}
             />
             <Input
               label="Steam Query Port (A2S)"
               type="number"
               value={queryPort}
               disabled={isServerLocked}
-              onChange={e => setQueryPort(Number(e.target.value))}
-              required
+              error={fieldErrors.queryPort}
+              onChange={e => {
+                setQueryPort(Number(e.target.value));
+                clearFieldError('queryPort');
+              }}
             />
             <Input
               label="BattlEye RCON Port"
               type="number"
               value={rconPort}
               disabled={isServerLocked}
-              onChange={e => setRconPort(Number(e.target.value))}
-              required
+              error={fieldErrors.rconPort}
+              onChange={e => {
+                setRconPort(Number(e.target.value));
+                clearFieldError('rconPort');
+              }}
             />
           </div>
           {isServerLocked && (
@@ -204,7 +305,11 @@ function ServerSettingsForm({
             label="New RCON Password"
             placeholder="Leave blank to keep existing password"
             value={rconPassword}
-            onChange={e => setRconPassword(e.target.value)}
+            error={fieldErrors.rconPassword}
+            onChange={e => {
+              setRconPassword(e.target.value);
+              clearFieldError('rconPassword');
+            }}
           />
           <p className="text-xs text-[var(--color-text-muted)]">
             BattlEye RCON requires passwords with a minimum of 6 characters. Passwords are saved in
@@ -224,23 +329,32 @@ function ServerSettingsForm({
             label="Installation Path"
             value={installPath}
             disabled={isServerLocked}
-            onChange={e => setInstallPath(e.target.value)}
-            required
+            error={fieldErrors.installPath}
+            onChange={e => {
+              setInstallPath(e.target.value);
+              clearFieldError('installPath');
+            }}
           />
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Input
               label="Profile Path"
               value={profilePath}
               disabled={isServerLocked}
-              onChange={e => setProfilePath(e.target.value)}
-              required
+              error={fieldErrors.profilePath}
+              onChange={e => {
+                setProfilePath(e.target.value);
+                clearFieldError('profilePath');
+              }}
             />
             <Input
               label="Mission Path"
               value={missionPath}
               disabled={isServerLocked}
-              onChange={e => setMissionPath(e.target.value)}
-              required
+              error={fieldErrors.missionPath}
+              onChange={e => {
+                setMissionPath(e.target.value);
+                clearFieldError('missionPath');
+              }}
             />
           </div>
         </div>

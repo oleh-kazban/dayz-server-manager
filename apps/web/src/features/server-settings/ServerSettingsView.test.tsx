@@ -353,4 +353,49 @@ describe('ServerSettingsView', () => {
       );
     });
   });
+
+  it('displays inline field validation errors in CreateServerModal when submitting empty fields', async () => {
+    renderView();
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /Add new server/i })).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: /Add new server/i }));
+
+    const dialog = screen.getByRole('dialog', { name: /Create DayZ Server/i });
+    expect(dialog).toBeInTheDocument();
+
+    const submitButton = within(dialog).getByRole('button', { name: 'Create Server' });
+    fireEvent.click(submitButton);
+
+    expect(screen.getByText('Server name is required.')).toBeInTheDocument();
+    expect(apiClient.servers.create).not.toHaveBeenCalled();
+
+    // Type into the input to verify reactive error clearance
+    const nameInput = screen.getByPlaceholderText('e.g. DayZ Namalsk Hardcore');
+    fireEvent.change(nameInput, { target: { value: 'Valid Server Name' } });
+
+    expect(screen.queryByText('Server name is required.')).not.toBeInTheDocument();
+  });
+
+  it('displays inline field validation errors in ServerSettingsForm when name is empty', async () => {
+    renderView();
+
+    await waitFor(() => {
+      expect(screen.getByDisplayValue(mockServerDetail.name)).toBeInTheDocument();
+    });
+
+    const nameInput = screen.getByDisplayValue(mockServerDetail.name);
+    fireEvent.change(nameInput, { target: { value: '   ' } });
+
+    const saveButton = screen.getByRole('button', { name: /Save changes/i });
+    fireEvent.click(saveButton);
+
+    expect(screen.getByText('Server name is required.')).toBeInTheDocument();
+    expect(apiClient.servers.update).not.toHaveBeenCalled();
+
+    fireEvent.change(nameInput, { target: { value: 'New Name' } });
+    expect(screen.queryByText('Server name is required.')).not.toBeInTheDocument();
+  });
 });

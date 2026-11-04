@@ -1,15 +1,20 @@
 import tailwindcss from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
+import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { defineConfig } from 'vite';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const workspaceRoot = path.resolve(__dirname, '../..');
+const pkg = JSON.parse(fs.readFileSync(path.resolve(workspaceRoot, 'package.json'), 'utf-8'));
 
 export default defineConfig({
   root: __dirname,
   plugins: [react(), tailwindcss()],
+  define: {
+    __APP_VERSION__: JSON.stringify(`v${pkg.version}`),
+  },
   build: {
     outDir: path.resolve(workspaceRoot, 'dist/apps/web'),
     emptyOutDir: true,

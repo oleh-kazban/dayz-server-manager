@@ -1,14 +1,19 @@
 import react from '@vitejs/plugin-react';
+import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { defineConfig } from 'vitest/config';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const workspaceRoot = path.resolve(__dirname, '../..');
+const pkg = JSON.parse(fs.readFileSync(path.resolve(workspaceRoot, 'package.json'), 'utf-8'));
 
 export default defineConfig({
   root: __dirname,
   plugins: [react()],
+  define: {
+    __APP_VERSION__: JSON.stringify(`v${pkg.version}`),
+  },
   resolve: {
     alias: {
       '@dsm/api-contracts': path.resolve(workspaceRoot, 'libs/api-contracts/src'),

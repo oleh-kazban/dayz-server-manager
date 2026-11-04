@@ -7,7 +7,7 @@ describe('Footer', () => {
   it('renders default application version and flavor text branding with logo', () => {
     const { container } = render(<Footer />);
 
-    expect(screen.getByText('v1.4.0')).toBeInTheDocument();
+    expect(screen.getByText('v0.1.0')).toBeInTheDocument();
     const logoSvg = container.querySelector('svg');
     expect(logoSvg).toBeInTheDocument();
     expect(logoSvg).toHaveAttribute('aria-hidden', 'true');
