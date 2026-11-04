@@ -27,13 +27,32 @@ describe('HttpClient', () => {
     const result = await client.get('/test', dummySchema);
 
     expect(result).toEqual(mockPayload);
-    expect(globalThis.fetch).toHaveBeenCalledWith(
-      'http://localhost:5000/test',
-      expect.objectContaining({
-        method: 'GET',
-        headers: expect.objectContaining({ 'Content-Type': 'application/json' }),
-      }),
+    const fetchCall = vi.mocked(globalThis.fetch).mock.calls[0];
+    expect(fetchCall[0]).toBe('http://localhost:5000/test');
+    expect(fetchCall[1]?.method).toBe('GET');
+    expect(fetchCall[1]?.headers).not.toHaveProperty('Content-Type');
+  });
+
+  it('omits Content-Type header on body-less requests and includes it when body exists', async () => {
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockImplementation(() =>
+      Promise.resolve(
+        new Response(JSON.stringify({ id: 'test-del', value: 1 }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        }),
+      ),
     );
+
+    const client = new HttpClient();
+    await client.delete('/test', dummySchema);
+    const deleteCall = fetchSpy.mock.calls[0];
+    expect(deleteCall[1]?.method).toBe('DELETE');
+    expect(deleteCall[1]?.headers).not.toHaveProperty('Content-Type');
+
+    await client.post('/test', dummySchema, { value: 1 });
+    const postCall = fetchSpy.mock.calls[1];
+    expect(postCall[1]?.method).toBe('POST');
+    expect(postCall[1]?.headers).toHaveProperty('Content-Type', 'application/json');
   });
 
   it('throws ApiError when response is not ok', async () => {

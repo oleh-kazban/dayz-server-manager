@@ -460,6 +460,41 @@ describe('Servers Routes (/api/v1/servers)', () => {
         .run();
     });
 
+    it('tolerates Content-Type: application/json with empty body on DELETE', async () => {
+      const response = await app.inject({
+        method: 'DELETE',
+        url: `/api/v1/servers/${secondServerId}`,
+        headers: {
+          authorization: `Bearer ${adminToken}`,
+          'content-type': 'application/json',
+        },
+      });
+
+      expect(response.statusCode).toBe(200);
+      expect(response.json().success).toBe(true);
+
+      // Re-seed secondServerId for subsequent deletion test
+      dbInstance.db
+        .insert(servers)
+        .values({
+          id: secondServerId,
+          name: 'Livonia Hardcore',
+          description: 'Hardcore survival',
+          isDefault: false,
+          status: 'stopped',
+          gamePort: 2402,
+          queryPort: 27017,
+          rconPort: 2311,
+          rconPassword: 'test-rcon-password',
+          installPath: 'C:\\DayZServer2',
+          profilePath: 'profiles',
+          missionPath: 'mpmissions/dayzOffline.enoch',
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        })
+        .run();
+    });
+
     it('promotes next remaining server to default when deleting a default server with siblings', async () => {
       // Mark secondServerId as default
       dbInstance.db

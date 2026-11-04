@@ -33,6 +33,19 @@ export function buildApp(options: BuildAppOptions): FastifyInstance {
   const db = options.db ?? initDatabase({ dbPath: options.config.DATABASE_PATH });
   app.decorate('db', db);
 
+  // Allow empty bodies when Content-Type: application/json is sent on DELETE/GET requests
+  app.addContentTypeParser('application/json', { parseAs: 'string' }, (_req, body, defaultDone) => {
+    if (typeof body === 'string' && body.trim() === '') {
+      return defaultDone(null, undefined);
+    }
+    try {
+      const json = JSON.parse(body as string);
+      return defaultDone(null, json);
+    } catch (err) {
+      return defaultDone(err as Error, undefined);
+    }
+  });
+
   app.register(cors, {
     origin: options.config.CORS_ORIGIN.split(',').map(o => o.trim()),
     credentials: true,
