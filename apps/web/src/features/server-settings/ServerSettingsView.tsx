@@ -22,6 +22,7 @@ import {
   type StatusTagStatus,
   Toggle,
 } from '@dsm/ui';
+import { PageContainer } from '@dsm/web/components';
 import { serverQueries, serverQueryKeys, useActiveServer } from '@dsm/web/core';
 
 import { CreateServerModal } from './CreateServerModal';
@@ -362,128 +363,139 @@ export function ServerSettingsView() {
 
   if (isServersLoading || isDetailLoading) {
     return (
-      <div className="p-6 max-w-5xl mx-auto space-y-6">
-        <div className="h-8 w-64 bg-[var(--color-surface-subtle)] animate-pulse rounded" />
-        <div className="h-48 bg-[var(--color-surface-subtle)] animate-pulse rounded-2xl" />
-        <div className="h-64 bg-[var(--color-surface-subtle)] animate-pulse rounded-2xl" />
-      </div>
+      <PageContainer>
+        <div className="max-w-5xl mx-auto space-y-6">
+          <div className="h-8 w-64 bg-[var(--color-surface-subtle)] animate-pulse rounded" />
+          <div className="h-48 bg-[var(--color-surface-subtle)] animate-pulse rounded-2xl" />
+          <div className="h-64 bg-[var(--color-surface-subtle)] animate-pulse rounded-2xl" />
+        </div>
+      </PageContainer>
     );
   }
 
   if (servers.length === 0) {
     return (
-      <div className="p-6 max-w-5xl mx-auto space-y-4">
-        <Notice variant="info" title="No Servers Registered">
-          There are currently no DayZ servers registered in DayZ Server Manager. Create your first
-          server instance to manage its settings.
-        </Notice>
-        <div className="pt-2">
-          <Button variant="primary" leftIcon={Plus} onClick={() => setIsCreateModalOpen(true)}>
-            Add DayZ Server
-          </Button>
+      <PageContainer>
+        <div className="max-w-5xl mx-auto space-y-4">
+          <Notice variant="info" title="No Servers Registered">
+            There are currently no DayZ servers registered in DayZ Server Manager. Create your first
+            server instance to manage its settings.
+          </Notice>
+          <div className="pt-2">
+            <Button variant="primary" leftIcon={Plus} onClick={() => setIsCreateModalOpen(true)}>
+              Add DayZ Server
+            </Button>
+          </div>
+          <CreateServerModal
+            isOpen={isCreateModalOpen}
+            onClose={() => setIsCreateModalOpen(false)}
+          />
         </div>
-        <CreateServerModal isOpen={isCreateModalOpen} onClose={() => setIsCreateModalOpen(false)} />
-      </div>
+      </PageContainer>
     );
   }
 
   if (detailError || !activeServer || !detail) {
     return (
-      <div className="p-6 max-w-5xl mx-auto">
-        <Notice variant="error" title="Server Not Found">
-          Unable to load configuration for the selected server. It may have been deleted or the ID
-          is invalid.
-        </Notice>
-      </div>
+      <PageContainer>
+        <div className="max-w-5xl mx-auto">
+          <Notice variant="error" title="Server Not Found">
+            Unable to load configuration for the selected server. It may have been deleted or the ID
+            is invalid.
+          </Notice>
+        </div>
+      </PageContainer>
     );
   }
 
   const statusTagInfo = mapServerStatusToTag(detail.status);
 
   return (
-    <div className="p-4 sm:p-6 lg:p-8 max-w-5xl mx-auto space-y-8">
-      {/* View Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-[var(--color-border)]">
-        <div>
-          <div className="flex items-center gap-3">
-            <h1 className="text-2xl font-bold tracking-tight text-[var(--color-text-main)]">
-              Server Settings
-            </h1>
-            <StatusTag status={statusTagInfo.status} label={statusTagInfo.label} />
-          </div>
-          <p className="mt-1 text-sm text-[var(--color-text-secondary)]">
-            Manage ports, execution flags, security credentials, and file paths for{' '}
-            <span className="font-semibold text-[var(--color-text-main)]">{detail.name}</span>.
-          </p>
-        </div>
-
-        <div className="flex items-center gap-3">
-          <Button variant="secondary" leftIcon={Plus} onClick={() => setIsCreateModalOpen(true)}>
-            Add new server
-          </Button>
-        </div>
-      </div>
-
-      {/* Structured Configuration Form */}
-      <ServerSettingsForm
-        key={detail.id}
-        detail={detail}
-        onSave={payload => updateMutation.mutate(payload)}
-        isSaving={updateMutation.isPending}
-        saveSuccess={saveSuccess}
-        saveError={saveError}
-      />
-
-      {/* Danger Zone */}
-      <div className="rounded-2xl border border-[var(--color-error)]/40 bg-[var(--color-error)]/5 p-6 space-y-4">
-        <div className="flex items-center gap-3 text-[var(--color-error)]">
-          <AlertTriangle className="w-5 h-5 shrink-0" />
-          <h2 className="text-base font-semibold">Danger Zone</h2>
-        </div>
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+    <PageContainer>
+      <div className="max-w-5xl mx-auto space-y-8">
+        {/* View Header */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-[var(--color-border)]">
           <div>
-            <h3 className="text-sm font-semibold text-[var(--color-text-main)]">
-              Delete Server Instance
-            </h3>
-            <p className="text-xs text-[var(--color-text-muted)]">
-              Permanently deregistrates this server from DSM console. Game files and missions on
-              disk remain intact.
+            <div className="flex items-center gap-3">
+              <h1 className="text-2xl font-bold tracking-tight text-[var(--color-text-main)]">
+                Server Settings
+              </h1>
+              <StatusTag status={statusTagInfo.status} label={statusTagInfo.label} />
+            </div>
+            <p className="mt-1 text-sm text-[var(--color-text-secondary)]">
+              Manage ports, execution flags, security credentials, and file paths for{' '}
+              <span className="font-semibold text-[var(--color-text-main)]">{detail.name}</span>.
             </p>
-            {isServerLocked && (
-              <p className="mt-1 text-xs text-[var(--color-error)] font-medium">
-                Server must be stopped before deletion.
-              </p>
-            )}
           </div>
-          <Button
-            variant="primary"
-            destructive
-            leftIcon={Trash2}
-            disabled={isDeleteDisabled}
-            onClick={() => setShowDeleteConfirm(true)}
-          >
-            Delete server
-          </Button>
+
+          <div className="flex items-center gap-3">
+            <Button variant="secondary" leftIcon={Plus} onClick={() => setIsCreateModalOpen(true)}>
+              Add new server
+            </Button>
+          </div>
         </div>
-      </div>
 
-      {/* Confirmation Modal */}
-      {showDeleteConfirm && (
-        <KeywordConfirmation
-          keyword={detail.name}
-          title="Delete Server Instance"
-          description={`Are you sure you want to delete "${detail.name}"? This action removes the server from DayZ Server Manager. Game files and missions on disk remain intact.`}
-          variant="danger"
-          confirmLabel="Delete server"
-          cancelLabel="Cancel"
-          isLoading={deleteMutation.isPending}
-          onConfirm={() => deleteMutation.mutate()}
-          onCancel={() => setShowDeleteConfirm(false)}
+        {/* Structured Configuration Form */}
+        <ServerSettingsForm
+          key={detail.id}
+          detail={detail}
+          onSave={payload => updateMutation.mutate(payload)}
+          isSaving={updateMutation.isPending}
+          saveSuccess={saveSuccess}
+          saveError={saveError}
         />
-      )}
 
-      {/* Create Server Modal */}
-      <CreateServerModal isOpen={isCreateModalOpen} onClose={() => setIsCreateModalOpen(false)} />
-    </div>
+        {/* Danger Zone */}
+        <div className="rounded-2xl border border-[var(--color-error)]/40 bg-[var(--color-error)]/5 p-6 space-y-4">
+          <div className="flex items-center gap-3 text-[var(--color-error)]">
+            <AlertTriangle className="w-5 h-5 shrink-0" />
+            <h2 className="text-base font-semibold">Danger Zone</h2>
+          </div>
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+              <h3 className="text-sm font-semibold text-[var(--color-text-main)]">
+                Delete Server Instance
+              </h3>
+              <p className="text-xs text-[var(--color-text-muted)]">
+                Permanently deregistrates this server from DSM console. Game files and missions on
+                disk remain intact.
+              </p>
+              {isServerLocked && (
+                <p className="mt-1 text-xs text-[var(--color-error)] font-medium">
+                  Server must be stopped before deletion.
+                </p>
+              )}
+            </div>
+            <Button
+              variant="primary"
+              destructive
+              leftIcon={Trash2}
+              disabled={isDeleteDisabled}
+              onClick={() => setShowDeleteConfirm(true)}
+            >
+              Delete server
+            </Button>
+          </div>
+        </div>
+
+        {/* Confirmation Modal */}
+        {showDeleteConfirm && (
+          <KeywordConfirmation
+            keyword={detail.name}
+            title="Delete Server Instance"
+            description={`Are you sure you want to delete "${detail.name}"? This action removes the server from DayZ Server Manager. Game files and missions on disk remain intact.`}
+            variant="danger"
+            confirmLabel="Delete server"
+            cancelLabel="Cancel"
+            isLoading={deleteMutation.isPending}
+            onConfirm={() => deleteMutation.mutate()}
+            onCancel={() => setShowDeleteConfirm(false)}
+          />
+        )}
+
+        {/* Create Server Modal */}
+        <CreateServerModal isOpen={isCreateModalOpen} onClose={() => setIsCreateModalOpen(false)} />
+      </div>
+    </PageContainer>
   );
 }

@@ -12,7 +12,10 @@ describe('PageContainer', () => {
     );
 
     expect(screen.getByTestId('page-content')).toBeInTheDocument();
-    expect(screen.getByRole('main')).toHaveClass('flex-1');
+    const main = screen.getByRole('main');
+    expect(main).toHaveClass('flex-1');
+    expect(main).toHaveClass('flex-col');
+    expect(screen.getByText('v1.4.0')).toBeInTheDocument();
   });
 
   it('renders full-bleed container for map views without standard padding', () => {

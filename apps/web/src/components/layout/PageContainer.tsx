@@ -23,9 +23,12 @@ export function PageContainer({
   }
 
   return (
-    <main className={`flex-1 px-4 sm:px-6 lg:px-8 py-6 w-full space-y-5 ${className}`} {...props}>
-      {children}
-      <Footer />
+    <main
+      className={`flex-1 flex flex-col justify-between px-4 sm:px-6 lg:px-8 py-6 w-full ${className}`}
+      {...props}
+    >
+      <div className="flex-1 space-y-6">{children}</div>
+      <Footer className="mt-auto pt-6" />
     </main>
   );
 }
