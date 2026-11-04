@@ -17,11 +17,37 @@ export const serverSummarySchema = z.object({
 });
 export type ServerSummaryDto = z.infer<typeof serverSummarySchema>;
 
+export const safePathSchema = z
+  .string()
+  .min(1)
+  .max(512)
+  .refine(val => !val.includes('\0'), 'Null bytes are forbidden')
+  .refine(val => !val.includes('..'), 'Path traversal (..) is not permitted')
+  .refine(
+    val => !/[<>"|?*]/.test(val) && !Array.from(val).some(c => c.charCodeAt(0) < 32),
+    'Path contains invalid filesystem characters',
+  )
+  .refine(val => {
+    const colonIndex = val.indexOf(':');
+    if (colonIndex === -1) return true;
+    return colonIndex === 1 && /^[a-zA-Z]/.test(val) && val.indexOf(':', 2) === -1;
+  }, 'Colons are only permitted in Windows drive letter prefixes');
+
+export const launchParametersSchema = z
+  .string()
+  .max(1024)
+  .refine(val => !val.includes('\0'), 'Null bytes are forbidden');
+
+export const serverIdParamSchema = z.object({
+  id: z.string().uuid('Invalid server ID format. Must be a valid UUID.'),
+});
+export type ServerIdParamDto = z.infer<typeof serverIdParamSchema>;
+
 export const serverDetailSchema = serverSummarySchema.extend({
-  installPath: z.string().min(1),
-  profilePath: z.string().min(1),
-  missionPath: z.string().min(1),
-  launchParameters: z.string().nullable().optional(),
+  installPath: safePathSchema,
+  profilePath: safePathSchema,
+  missionPath: safePathSchema,
+  launchParameters: launchParametersSchema.nullable().optional(),
 });
 export type ServerDetailDto = z.infer<typeof serverDetailSchema>;
 
@@ -29,14 +55,14 @@ export const createServerSchema = z
   .object({
     name: z.string().min(1, 'Name is required').max(64),
     description: z.string().max(256).optional(),
-    installPath: z.string().min(1, 'Installation path is required'),
-    profilePath: z.string().min(1, 'Profile path is required'),
-    missionPath: z.string().min(1, 'Mission path is required'),
+    installPath: safePathSchema,
+    profilePath: safePathSchema,
+    missionPath: safePathSchema,
     gamePort: z.number().int().min(1024).max(65535).default(2302),
     queryPort: z.number().int().min(1024).max(65535).default(27016),
     rconPort: z.number().int().min(1024).max(65535).default(2310),
     rconPassword: z.string().min(6).optional(),
-    launchParameters: z.string().optional(),
+    launchParameters: launchParametersSchema.optional(),
     isDefault: z.boolean().optional(),
   })
   .refine(
@@ -55,14 +81,14 @@ export const updateServerSchema = z
   .object({
     name: z.string().min(1).max(64).optional(),
     description: z.string().max(256).nullable().optional(),
-    installPath: z.string().min(1).optional(),
-    profilePath: z.string().min(1).optional(),
-    missionPath: z.string().min(1).optional(),
+    installPath: safePathSchema.optional(),
+    profilePath: safePathSchema.optional(),
+    missionPath: safePathSchema.optional(),
     gamePort: z.number().int().min(1024).max(65535).optional(),
     queryPort: z.number().int().min(1024).max(65535).optional(),
     rconPort: z.number().int().min(1024).max(65535).optional(),
     rconPassword: z.string().min(6).nullable().optional(),
-    launchParameters: z.string().nullable().optional(),
+    launchParameters: launchParametersSchema.nullable().optional(),
     isDefault: z.boolean().optional(),
   })
   .refine(

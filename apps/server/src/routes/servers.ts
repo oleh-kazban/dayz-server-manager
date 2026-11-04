@@ -6,6 +6,7 @@ import {
   type CreateServerDto,
   createServerSchema,
   serverDetailSchema,
+  serverIdParamSchema,
   serverSummarySchema,
   type UpdateServerDto,
   updateServerSchema,
@@ -51,6 +52,55 @@ function checkRunningMutationViolation(existing: Server, data: UpdateServerDto):
     (data.profilePath !== undefined && data.profilePath !== existing.profilePath);
 
   return portChanged || pathChanged;
+}
+
+interface ValidPortsResult {
+  valid: true;
+  ports: { gamePort: number; queryPort: number; rconPort: number };
+}
+
+interface InvalidPortsResult {
+  valid: false;
+  status: 400 | 409;
+  message: string;
+}
+
+function validateCandidatePorts(
+  existing: Server,
+  data: UpdateServerDto,
+  allServers: Server[],
+  id: string,
+): ValidPortsResult | InvalidPortsResult {
+  const candidateGamePort = data.gamePort ?? existing.gamePort;
+  const candidateQueryPort = data.queryPort ?? existing.queryPort;
+  const candidateRconPort = data.rconPort ?? existing.rconPort;
+  const candidatePorts = [candidateGamePort, candidateQueryPort, candidateRconPort];
+
+  if (new Set(candidatePorts).size !== 3) {
+    return {
+      valid: false,
+      status: 400,
+      message: 'Effective gamePort, queryPort, and rconPort must all be distinct',
+    };
+  }
+
+  const collisionCheck = checkInterServerPortCollision(allServers, candidatePorts, id);
+  if (collisionCheck.collides) {
+    return {
+      valid: false,
+      status: 409,
+      message: collisionCheck.message ?? 'Port collision detected with another server',
+    };
+  }
+
+  return {
+    valid: true,
+    ports: {
+      gamePort: candidateGamePort,
+      queryPort: candidateQueryPort,
+      rconPort: candidateRconPort,
+    },
+  };
 }
 
 function mapServerDetail(s: Server) {
@@ -108,7 +158,12 @@ export const registerServersRoutes: FastifyPluginAsync = async fastify => {
       onRequest: [fastify.authenticate],
     },
     async (request, reply) => {
-      const { id } = request.params;
+      const paramResult = serverIdParamSchema.safeParse(request.params);
+      if (!paramResult.success) {
+        return reply.badRequest(paramResult.error.issues[0].message);
+      }
+      const { id } = paramResult.data;
+
       const s = fastify.db.db.select().from(servers).where(eq(servers.id, id)).get();
 
       if (!s) {
@@ -203,7 +258,12 @@ export const registerServersRoutes: FastifyPluginAsync = async fastify => {
         return reply.forbidden('Admin role required to update servers');
       }
 
-      const { id } = request.params;
+      const paramResult = serverIdParamSchema.safeParse(request.params);
+      if (!paramResult.success) {
+        return reply.badRequest(paramResult.error.issues[0].message);
+      }
+      const { id } = paramResult.data;
+
       const existing = fastify.db.db.select().from(servers).where(eq(servers.id, id)).get();
 
       if (!existing) {
@@ -236,21 +296,19 @@ export const registerServersRoutes: FastifyPluginAsync = async fastify => {
         }
       }
 
-      const candidateGamePort = data.gamePort ?? existing.gamePort;
-      const candidateQueryPort = data.queryPort ?? existing.queryPort;
-      const candidateRconPort = data.rconPort ?? existing.rconPort;
-      const candidatePorts = [candidateGamePort, candidateQueryPort, candidateRconPort];
-
-      if (new Set(candidatePorts).size !== 3) {
-        return reply.badRequest('Effective gamePort, queryPort, and rconPort must all be distinct');
-      }
-
       const allServers = fastify.db.db.select().from(servers).all();
-      const collisionCheck = checkInterServerPortCollision(allServers, candidatePorts, id);
-
-      if (collisionCheck.collides) {
-        return reply.conflict(collisionCheck.message);
+      const portCheck = validateCandidatePorts(existing, data, allServers, id);
+      if (!portCheck.valid) {
+        return reply
+          .status(portCheck.status)
+          .send({ statusCode: portCheck.status, message: portCheck.message });
       }
+
+      const {
+        gamePort: candidateGamePort,
+        queryPort: candidateQueryPort,
+        rconPort: candidateRconPort,
+      } = portCheck.ports;
 
       if (data.isDefault) {
         fastify.db.db.update(servers).set({ isDefault: false }).run();
@@ -293,7 +351,12 @@ export const registerServersRoutes: FastifyPluginAsync = async fastify => {
         return reply.forbidden('Admin role required to delete servers');
       }
 
-      const { id } = request.params;
+      const paramResult = serverIdParamSchema.safeParse(request.params);
+      if (!paramResult.success) {
+        return reply.badRequest(paramResult.error.issues[0].message);
+      }
+      const { id } = paramResult.data;
+
       const existing = fastify.db.db.select().from(servers).where(eq(servers.id, id)).get();
 
       if (!existing) {

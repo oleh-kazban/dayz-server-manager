@@ -264,7 +264,7 @@ describe('ServerSettingsView', () => {
     });
   });
 
-  it('opens confirmation modal and executes server deletion when confirmed', async () => {
+  it('opens KeywordConfirmation modal and executes server deletion only after keyword matches', async () => {
     renderView();
 
     await waitFor(() => {
@@ -274,10 +274,18 @@ describe('ServerSettingsView', () => {
     const deleteButton = screen.getByRole('button', { name: /Delete server/i });
     fireEvent.click(deleteButton);
 
-    // Confirmation dialog appears
+    // KeywordConfirmation dialog appears
     const dialog = screen.getByRole('alertdialog');
     expect(dialog).toBeInTheDocument();
+
     const confirmButton = within(dialog).getByRole('button', { name: 'Delete server' });
+    expect(confirmButton).toBeDisabled();
+
+    // Type the server name into the keyword confirmation input
+    const keywordInput = within(dialog).getByRole('textbox');
+    fireEvent.change(keywordInput, { target: { value: mockActiveServerSummary.name } });
+
+    expect(confirmButton).not.toBeDisabled();
     fireEvent.click(confirmButton);
 
     await waitFor(() => {

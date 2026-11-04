@@ -9,8 +9,8 @@ import type { ServerDetailDto, ServerStatus, UpdateServerDto } from '@dsm/api-co
 import {
   Button,
   Card,
-  Confirmation,
   Input,
+  KeywordConfirmation,
   Notice,
   PasswordInput,
   StatusTag,
@@ -443,9 +443,10 @@ export function ServerSettingsView() {
 
       {/* Confirmation Modal */}
       {showDeleteConfirm && (
-        <Confirmation
+        <KeywordConfirmation
+          keyword={detail.name}
           title="Delete Server Instance"
-          description={`Are you sure you want to delete "${detail.name}"? This action removes the server from DayZ Server Manager.`}
+          description={`Are you sure you want to delete "${detail.name}"? This action removes the server from DayZ Server Manager. Game files and missions on disk remain intact.`}
           variant="danger"
           confirmLabel="Delete server"
           cancelLabel="Cancel"

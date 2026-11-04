@@ -2,13 +2,58 @@ import { describe, expect, it } from 'vitest';
 
 import {
   createServerSchema,
+  safePathSchema,
   serverDetailSchema,
+  serverIdParamSchema,
   serverSummarySchema,
   updateServerSchema,
 } from '@dsm/api-contracts';
 
 describe('Server Contracts', () => {
   const validUuid = '123e4567-e89b-12d3-a456-426614174000';
+
+  describe('serverIdParamSchema', () => {
+    it('accepts valid UUID v4 string', () => {
+      expect(serverIdParamSchema.safeParse({ id: validUuid }).success).toBe(true);
+    });
+
+    it('rejects malformed or non-UUID string', () => {
+      expect(serverIdParamSchema.safeParse({ id: 'invalid-id' }).success).toBe(false);
+      expect(serverIdParamSchema.safeParse({ id: "'; DROP TABLE servers; --" }).success).toBe(
+        false,
+      );
+    });
+  });
+
+  describe('safePathSchema', () => {
+    it('accepts valid POSIX and Windows absolute and relative paths', () => {
+      expect(safePathSchema.safeParse('/opt/dayz-server').success).toBe(true);
+      expect(safePathSchema.safeParse('C:\\DayZServer\\instance1').success).toBe(true);
+      expect(safePathSchema.safeParse('D:/DayZ/profiles').success).toBe(true);
+      expect(safePathSchema.safeParse('mpmissions/dayzOffline.chernarusplus').success).toBe(true);
+    });
+
+    it.each([
+      {
+        path: '/opt/dayz/../../etc/shadow',
+        expectedError: 'Path traversal (..) is not permitted',
+      },
+      {
+        path: '/opt/dayz\0/injection',
+        expectedError: 'Null bytes are forbidden',
+      },
+      {
+        path: 'C:\\DayZ:Server\\bad',
+        expectedError: 'Colons are only permitted in Windows drive letter prefixes',
+      },
+    ])('rejects invalid path: $path', ({ path, expectedError }) => {
+      const res = safePathSchema.safeParse(path);
+      expect(res.success).toBe(false);
+      if (!res.success) {
+        expect(res.error.issues[0].message).toContain(expectedError);
+      }
+    });
+  });
 
   it('validates a correct server summary', () => {
     const summary = {

@@ -93,6 +93,16 @@ describe('Servers Routes (/api/v1/servers)', () => {
   });
 
   describe('GET /api/v1/servers/:id', () => {
+    it('returns 400 when :id is not a valid UUID', async () => {
+      const response = await app.inject({
+        method: 'GET',
+        url: '/api/v1/servers/invalid-uuid-string-or-injection',
+        headers: { authorization: `Bearer ${viewerToken}` },
+      });
+      expect(response.statusCode).toBe(400);
+      expect(response.json().message).toContain('Must be a valid UUID');
+    });
+
     it('returns 404 for non-existent server', async () => {
       const response = await app.inject({
         method: 'GET',
@@ -149,6 +159,36 @@ describe('Servers Routes (/api/v1/servers)', () => {
         },
       });
       expect(response.statusCode).toBe(400);
+    });
+
+    it('returns 400 when filesystem path contains directory traversal or null bytes', async () => {
+      const responseTraversal = await app.inject({
+        method: 'POST',
+        url: '/api/v1/servers',
+        headers: { authorization: `Bearer ${adminToken}` },
+        payload: {
+          name: 'Traversal Server',
+          installPath: 'C:\\DayZServer\\..\\..\\Windows\\System32',
+          profilePath: 'profiles',
+          missionPath: 'mpmissions/dayzOffline.chernarusplus',
+        },
+      });
+      expect(responseTraversal.statusCode).toBe(400);
+      expect(responseTraversal.json().message).toContain('Path traversal');
+
+      const responseNull = await app.inject({
+        method: 'POST',
+        url: '/api/v1/servers',
+        headers: { authorization: `Bearer ${adminToken}` },
+        payload: {
+          name: 'Null Injection Server',
+          installPath: 'C:\\DayZServer\0malicious',
+          profilePath: 'profiles',
+          missionPath: 'mpmissions/dayzOffline.chernarusplus',
+        },
+      });
+      expect(responseNull.statusCode).toBe(400);
+      expect(responseNull.json().message).toContain('Null bytes are forbidden');
     });
 
     it('returns 409 when server name already exists', async () => {
@@ -241,6 +281,17 @@ describe('Servers Routes (/api/v1/servers)', () => {
         payload: { name: 'Unauthorized Change' },
       });
       expect(response.statusCode).toBe(403);
+    });
+
+    it('returns 400 for malformed non-UUID server id', async () => {
+      const response = await app.inject({
+        method: 'PATCH',
+        url: '/api/v1/servers/malformed-id',
+        headers: { authorization: `Bearer ${adminToken}` },
+        payload: { name: 'Ghost' },
+      });
+      expect(response.statusCode).toBe(400);
+      expect(response.json().message).toContain('Must be a valid UUID');
     });
 
     it('returns 404 for unknown server id', async () => {
@@ -365,6 +416,16 @@ describe('Servers Routes (/api/v1/servers)', () => {
         headers: { authorization: `Bearer ${viewerToken}` },
       });
       expect(response.statusCode).toBe(403);
+    });
+
+    it('returns 400 for malformed non-UUID server id', async () => {
+      const response = await app.inject({
+        method: 'DELETE',
+        url: '/api/v1/servers/malformed-id',
+        headers: { authorization: `Bearer ${adminToken}` },
+      });
+      expect(response.statusCode).toBe(400);
+      expect(response.json().message).toContain('Must be a valid UUID');
     });
 
     it('returns 404 for unknown server', async () => {
