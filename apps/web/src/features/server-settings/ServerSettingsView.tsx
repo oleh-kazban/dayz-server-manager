@@ -22,7 +22,7 @@ import {
   type StatusTagStatus,
   Toggle,
 } from '@dsm/ui';
-import { PageContainer } from '@dsm/web/components';
+import { EmptyServersState, PageContainer } from '@dsm/web/components';
 import { serverQueries, serverQueryKeys, useActiveServer } from '@dsm/web/core';
 
 import { CreateServerModal } from './CreateServerModal';
@@ -490,16 +490,8 @@ export function ServerSettingsView() {
   if (servers.length === 0) {
     return (
       <PageContainer>
-        <div className="max-w-5xl mx-auto space-y-4">
-          <Notice variant="info" title="No Servers Registered">
-            There are currently no DayZ servers registered in DayZ Server Manager. Create your first
-            server instance to manage its settings.
-          </Notice>
-          <div className="pt-2">
-            <Button variant="primary" leftIcon={Plus} onClick={() => setIsCreateModalOpen(true)}>
-              Add DayZ Server
-            </Button>
-          </div>
+        <div className="max-w-5xl mx-auto space-y-6">
+          <EmptyServersState onAddServer={() => setIsCreateModalOpen(true)} />
           <CreateServerModal
             isOpen={isCreateModalOpen}
             onClose={() => setIsCreateModalOpen(false)}

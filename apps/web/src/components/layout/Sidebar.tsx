@@ -44,6 +44,8 @@ export function Sidebar() {
     'bg-[var(--color-primary-light)] text-[var(--color-primary)] font-medium';
   const linkInactiveClasses =
     'text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-hover)] hover:text-[var(--color-text-main)]';
+  const linkBaseClasses =
+    'flex items-center gap-3 px-3 py-2 rounded-lg text-xs transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)] focus-visible:ring-offset-1 focus-visible:ring-offset-[var(--color-sidebar)]';
 
   return (
     <aside
@@ -79,7 +81,7 @@ export function Sidebar() {
               to="/dashboard"
               activeProps={{ className: linkActiveClasses }}
               inactiveProps={{ className: linkInactiveClasses }}
-              className="flex items-center gap-3 px-3 py-2 rounded-lg text-xs transition-colors"
+              className={linkBaseClasses}
             >
               <LayoutDashboard className="w-[17px] h-[17px] shrink-0" />
               <span className="truncate">Dashboard</span>
@@ -88,7 +90,7 @@ export function Sidebar() {
               to="/system"
               activeProps={{ className: linkActiveClasses }}
               inactiveProps={{ className: linkInactiveClasses }}
-              className="flex items-center gap-3 px-3 py-2 rounded-lg text-xs transition-colors"
+              className={linkBaseClasses}
             >
               <Activity className="w-[17px] h-[17px] shrink-0" />
               <span className="truncate">System telemetry</span>
@@ -104,7 +106,7 @@ export function Sidebar() {
               to="/players"
               activeProps={{ className: linkActiveClasses }}
               inactiveProps={{ className: linkInactiveClasses }}
-              className="flex items-center gap-3 px-3 py-2 rounded-lg text-xs transition-colors"
+              className={linkBaseClasses}
             >
               <Users className="w-[17px] h-[17px] shrink-0" />
               <span className="truncate">Players</span>
@@ -114,7 +116,7 @@ export function Sidebar() {
                 to="/mods"
                 activeProps={{ className: linkActiveClasses }}
                 inactiveProps={{ className: linkInactiveClasses }}
-                className="flex items-center gap-3 px-3 py-2 rounded-lg text-xs transition-colors"
+                className={linkBaseClasses}
               >
                 <Box className="w-[17px] h-[17px] shrink-0" />
                 <span className="truncate">Mods</span>
@@ -124,7 +126,7 @@ export function Sidebar() {
               to="/maintenance"
               activeProps={{ className: linkActiveClasses }}
               inactiveProps={{ className: linkInactiveClasses }}
-              className="flex items-center gap-3 px-3 py-2 rounded-lg text-xs transition-colors"
+              className={linkBaseClasses}
             >
               <Wrench className="w-[17px] h-[17px] shrink-0" />
               <span className="truncate">Maintenance</span>
@@ -140,7 +142,7 @@ export function Sidebar() {
               to="/audit"
               activeProps={{ className: linkActiveClasses }}
               inactiveProps={{ className: linkInactiveClasses }}
-              className="flex items-center gap-3 px-3 py-2 rounded-lg text-xs transition-colors"
+              className={linkBaseClasses}
             >
               <ShieldCheck className="w-[17px] h-[17px] shrink-0" />
               <span className="truncate">Audit log</span>
@@ -149,7 +151,7 @@ export function Sidebar() {
               to="/logs/rpt"
               activeProps={{ className: linkActiveClasses }}
               inactiveProps={{ className: linkInactiveClasses }}
-              className="flex items-center gap-3 px-3 py-2 rounded-lg text-xs transition-colors"
+              className={linkBaseClasses}
             >
               <Terminal className="w-[17px] h-[17px] shrink-0" />
               <span className="truncate">Server logs</span>
@@ -166,7 +168,7 @@ export function Sidebar() {
                 to="/world/map"
                 activeProps={{ className: linkActiveClasses }}
                 inactiveProps={{ className: linkInactiveClasses }}
-                className="flex items-center gap-3 px-3 py-2 rounded-lg text-xs transition-colors"
+                className={linkBaseClasses}
               >
                 <MapIcon className="w-[17px] h-[17px] shrink-0" />
                 <span className="truncate">Tactical map</span>
@@ -175,7 +177,7 @@ export function Sidebar() {
                 to="/world/loot"
                 activeProps={{ className: linkActiveClasses }}
                 inactiveProps={{ className: linkInactiveClasses }}
-                className="flex items-center gap-3 px-3 py-2 rounded-lg text-xs transition-colors"
+                className={linkBaseClasses}
               >
                 <Flame className="w-[17px] h-[17px] shrink-0" />
                 <span className="truncate">Loot heatmap</span>
@@ -193,7 +195,7 @@ export function Sidebar() {
                 to="/economy/types"
                 activeProps={{ className: linkActiveClasses }}
                 inactiveProps={{ className: linkInactiveClasses }}
-                className="flex items-center gap-3 px-3 py-2 rounded-lg text-xs transition-colors"
+                className={linkBaseClasses}
               >
                 <FileCode2 className="w-[17px] h-[17px] shrink-0" />
                 <span className="truncate">Types workbench</span>
@@ -203,7 +205,7 @@ export function Sidebar() {
               to="/settings/server"
               activeProps={{ className: linkActiveClasses }}
               inactiveProps={{ className: linkInactiveClasses }}
-              className="flex items-center gap-3 px-3 py-2 rounded-lg text-xs transition-colors"
+              className={linkBaseClasses}
             >
               <Sliders className="w-[17px] h-[17px] shrink-0" />
               <span className="truncate">Server settings</span>
@@ -213,7 +215,7 @@ export function Sidebar() {
                 to="/settings/discord"
                 activeProps={{ className: linkActiveClasses }}
                 inactiveProps={{ className: linkInactiveClasses }}
-                className="flex items-center gap-3 px-3 py-2 rounded-lg text-xs transition-colors"
+                className={linkBaseClasses}
               >
                 <Bell className="w-[17px] h-[17px] shrink-0" />
                 <span className="truncate">Discord webhooks</span>
@@ -223,7 +225,7 @@ export function Sidebar() {
               to="/settings/app"
               activeProps={{ className: linkActiveClasses }}
               inactiveProps={{ className: linkInactiveClasses }}
-              className="flex items-center gap-3 px-3 py-2 rounded-lg text-xs transition-colors"
+              className={linkBaseClasses}
             >
               <Cpu className="w-[17px] h-[17px] shrink-0" />
               <span className="truncate">Appliance settings</span>
@@ -233,7 +235,7 @@ export function Sidebar() {
                 to="/settings/operators"
                 activeProps={{ className: linkActiveClasses }}
                 inactiveProps={{ className: linkInactiveClasses }}
-                className="flex items-center gap-3 px-3 py-2 rounded-lg text-xs transition-colors"
+                className={linkBaseClasses}
               >
                 <UserCheck className="w-[17px] h-[17px] shrink-0" />
                 <span className="truncate">Console operators</span>

@@ -259,7 +259,7 @@ describe('ServerSettingsView', () => {
     renderView();
 
     await waitFor(() => {
-      expect(screen.getByText(/No Servers Registered/i)).toBeInTheDocument();
+      expect(screen.getByText(/No DayZ Servers Registered/i)).toBeInTheDocument();
       expect(screen.getByRole('button', { name: /Add DayZ Server/i })).toBeInTheDocument();
     });
   });
