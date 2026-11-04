@@ -14,6 +14,7 @@ import { type DatabaseInstance, initDatabase } from '@dsm/database';
 import { type EnvConfig } from '../config/env';
 import { registerAuthRoutes } from '../routes/auth';
 import { registerHealthRoutes } from '../routes/health';
+import { registerServersRoutes } from '../routes/servers';
 
 export interface BuildAppOptions {
   config: EnvConfig;
@@ -60,6 +61,7 @@ export function buildApp(options: BuildAppOptions): FastifyInstance {
 
   app.register(registerHealthRoutes);
   app.register(registerAuthRoutes, { prefix: '/api/v1/auth' });
+  app.register(registerServersRoutes, { prefix: '/api/v1/servers' });
 
   return app;
 }
