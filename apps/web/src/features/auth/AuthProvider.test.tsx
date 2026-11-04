@@ -11,6 +11,8 @@ import { AuthProvider } from './AuthProvider';
 describe('AuthProvider & useAuth', () => {
   beforeEach(() => {
     vi.restoreAllMocks();
+    authStorage.clear();
+    apiClient.client.setToken(null);
   });
 
   it('throws an error if useAuth is invoked outside of an AuthProvider', () => {
@@ -71,6 +73,34 @@ describe('AuthProvider & useAuth', () => {
     expect(screen.getByTestId('status')).toHaveTextContent('logged-in');
     expect(screen.getByTestId('user')).toHaveTextContent('storedAdmin');
     expect(apiClient.client.getToken()).toBe('existing-jwt');
+  });
+
+  it('synchronously populates apiClient token before child component initial render', () => {
+    authStorage.set(
+      {
+        id: 'stored-sync',
+        username: 'syncAdmin',
+        email: 'sync@dayz.local',
+        role: 'admin',
+        roles: ['admin'],
+      },
+      false,
+      { accessToken: 'sync-jwt-token' },
+    );
+
+    let tokenDuringChildRender: string | null = null;
+    function SyncConsumer() {
+      tokenDuringChildRender = apiClient.client.getToken();
+      return <div>Sync</div>;
+    }
+
+    render(
+      <AuthProvider>
+        <SyncConsumer />
+      </AuthProvider>,
+    );
+
+    expect(tokenDuringChildRender).toBe('sync-jwt-token');
   });
 
   it('handles login and logout lifecycle', async () => {

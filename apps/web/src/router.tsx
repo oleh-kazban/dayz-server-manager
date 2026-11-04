@@ -1,19 +1,23 @@
-import { Suspense } from 'react';
-
 import {
   createRootRouteWithContext,
   createRoute,
   createRouter,
-  lazyRouteComponent,
-  Outlet,
   redirect,
   type RouterHistory,
 } from '@tanstack/react-router';
 import { z } from 'zod';
 
-import { AppShell, PlaceholderView, RootErrorFallback, RootLoader } from '@dsm/web/components';
+import {
+  AuthedLayout,
+  PlaceholderView,
+  RootErrorFallback,
+  RootLayout,
+  RootLoader,
+} from '@dsm/web/components';
 
-import type { AuthContextValue } from './features/auth';
+import { type AuthContextValue, SignIn } from './features/auth';
+import { Dashboard } from './features/dashboard';
+import { ServerSettingsView } from './features/server-settings';
 import { DEFAULT_MODULE_FLAGS, type FeatureFlagsContextValue, type ModuleFlags } from './core';
 
 export interface RouterContext {
@@ -52,11 +56,7 @@ export const rootSearchSchema = z.object({
 // 1. Root route with context contract
 const rootRoute = createRootRouteWithContext<RouterContext>()({
   validateSearch: (search: Record<string, unknown>): RootSearch => rootSearchSchema.parse(search),
-  component: () => (
-    <Suspense fallback={<RootLoader />}>
-      <Outlet />
-    </Suspense>
-  ),
+  component: RootLayout,
   errorComponent: RootErrorFallback,
   pendingComponent: RootLoader,
 });
@@ -81,7 +81,7 @@ const signInRoute = createRoute({
       throw redirect({ to: '/dashboard' });
     }
   },
-  component: lazyRouteComponent(() => import('./features/auth'), 'SignIn'),
+  component: SignIn,
 });
 
 export interface AuthedSearch {
@@ -108,18 +108,14 @@ const authedRoute = createRoute({
       });
     }
   },
-  component: () => (
-    <AppShell>
-      <Outlet />
-    </AppShell>
-  ),
+  component: AuthedLayout,
 });
 
 // 5. Protected Primary Routes
 const dashboardRoute = createRoute({
   getParentRoute: () => authedRoute,
   path: '/dashboard',
-  component: lazyRouteComponent(() => import('./features/dashboard'), 'Dashboard'),
+  component: Dashboard,
 });
 
 const systemRoute = createRoute({
@@ -330,7 +326,7 @@ const settingsIndexRoute = createRoute({
 const settingsServerRoute = createRoute({
   getParentRoute: () => authedRoute,
   path: '/settings/server',
-  component: lazyRouteComponent(() => import('./features/server-settings'), 'ServerSettingsView'),
+  component: ServerSettingsView,
 });
 
 const settingsAppRoute = createRoute({

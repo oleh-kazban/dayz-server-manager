@@ -6,7 +6,19 @@ import { AuthContext } from './auth.context';
 import { authStorage } from './auth.storage';
 import type { AuthContextValue, AuthUser, SignInCredentials } from './auth.types';
 
+// Synchronous token hydration at module load to prevent unauthenticated initial queries on page reload
+const initialStoredToken = authStorage.getToken();
+if (initialStoredToken) {
+  apiClient.client.setToken(initialStoredToken);
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
+  // Ensure token is synced synchronously prior to mounting child queries
+  const currentToken = authStorage.getToken();
+  if (currentToken && apiClient.client.getToken() !== currentToken) {
+    apiClient.client.setToken(currentToken);
+  }
+
   const [user, setUser] = useState<AuthUser | null>(authStorage.get);
 
   const logout = () => {
