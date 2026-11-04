@@ -12,7 +12,7 @@ export interface FooterProps {
 export function Footer({ className = '', version = APP_VERSION }: FooterProps) {
   return (
     <footer
-      className={`flex flex-col sm:flex-row items-center justify-between text-xs text-[var(--color-text-muted)] pt-3 pb-1 border-t border-[var(--color-border-subtle)] gap-4 ${className}`}
+      className={`flex flex-col sm:flex-row items-center justify-between text-xs text-[var(--color-text-muted)] pt-4 pb-0 border-t border-[var(--color-border-subtle)] gap-4 ${className}`}
     >
       <div className="flex items-center gap-3">
         <Logo
