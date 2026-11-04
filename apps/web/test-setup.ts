@@ -18,6 +18,20 @@ class MockResizeObserver {
 }
 window.ResizeObserver = MockResizeObserver as unknown as typeof ResizeObserver;
 
+// Polyfill HTMLDialogElement modal methods
+if (typeof HTMLDialogElement !== 'undefined') {
+  HTMLDialogElement.prototype.showModal = function (this: HTMLDialogElement) {
+    this.open = true;
+  };
+  HTMLDialogElement.prototype.close = function (this: HTMLDialogElement, returnValue?: string) {
+    this.open = false;
+    if (returnValue !== undefined) {
+      this.returnValue = returnValue;
+    }
+    this.dispatchEvent(new Event('close'));
+  };
+}
+
 // Polyfill scrollIntoView and scrollTo
 window.HTMLElement.prototype.scrollIntoView = vi.fn();
 window.scrollTo = vi.fn();

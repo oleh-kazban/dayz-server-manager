@@ -30,6 +30,7 @@ vi.mock('@tanstack/react-router', () => ({
     </a>
   ),
   useNavigate: () => vi.fn(),
+  useLocation: () => ({ pathname: '/dashboard' }),
   useRouter: () => ({
     invalidate: vi.fn(),
   }),

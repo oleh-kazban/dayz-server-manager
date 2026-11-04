@@ -310,12 +310,7 @@ const settingsIndexRoute = createRoute({
 const settingsServerRoute = createRoute({
   getParentRoute: () => authedRoute,
   path: '/settings/server',
-  component: () => (
-    <PlaceholderView
-      title="DayZ Server Configuration"
-      description="Game server executable paths, port assignments, launch flags, and serverDZ.cfg editor."
-    />
-  ),
+  component: lazyRouteComponent(() => import('./features/server-settings'), 'ServerSettingsView'),
 });
 
 const settingsAppRoute = createRoute({
