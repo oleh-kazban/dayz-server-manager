@@ -1,28 +1,95 @@
+import type { ReactNode } from 'react';
+
 import { render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+
+import type { ServerSummaryDto } from '@dsm/api-contracts';
+import { useActiveServer } from '@dsm/web/core';
 
 import { AuthContext } from '../auth/auth.context';
 
 import { Dashboard } from './Dashboard';
 
+vi.mock('@dsm/web/core', () => ({
+  useActiveServer: vi.fn(),
+}));
+
+vi.mock('../server-settings', () => ({
+  CreateServerModal: ({ isOpen }: { isOpen: boolean }) =>
+    isOpen ? <div data-testid="create-server-modal" /> : null,
+}));
+
+vi.mock('@tanstack/react-router', () => ({
+  Link: ({ children, to, onClick }: { children: ReactNode; to: string; onClick?: () => void }) => (
+    <a href={to} onClick={onClick}>
+      {children}
+    </a>
+  ),
+  useNavigate: () => vi.fn(),
+}));
+
 describe('Dashboard Component', () => {
+  const mockAuthContext = {
+    user: {
+      id: 'usr-456',
+      username: 'admin',
+      email: 'admin@dayz.local',
+      role: 'admin' as const,
+      roles: ['admin' as const],
+    },
+    isAuthenticated: true,
+    login: vi.fn(),
+    logout: vi.fn(),
+  };
+
   beforeEach(() => {
     vi.restoreAllMocks();
   });
 
-  it('renders authenticated user information and server connectivity', async () => {
-    const mockAuthContext = {
-      user: {
-        id: 'usr-456',
-        username: 'admin',
-        email: 'admin@dayz.local',
-        role: 'admin' as const,
-        roles: ['admin' as const],
-      },
-      isAuthenticated: true,
-      login: vi.fn(),
-      logout: vi.fn(),
+  it('renders zero-state onboarding banner when no servers are registered', () => {
+    vi.mocked(useActiveServer).mockReturnValue({
+      servers: [],
+      activeServer: null,
+      activeServerId: null,
+      setActiveServerId: vi.fn(),
+      isLoading: false,
+      error: null,
+    });
+
+    render(
+      <AuthContext.Provider value={mockAuthContext}>
+        <Dashboard />
+      </AuthContext.Provider>,
+    );
+
+    expect(screen.getByRole('heading', { name: /dashboard/i })).toBeInTheDocument();
+    expect(screen.getByTestId('zero-state-banner')).toBeInTheDocument();
+    expect(screen.getByText('No DayZ Servers Registered')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /add dayz server/i })).toBeInTheDocument();
+  });
+
+  it('renders authenticated user information, active server console, and connectivity when servers exist', async () => {
+    const mockServer: ServerSummaryDto = {
+      id: '11111111-1111-1111-1111-111111111111',
+      name: 'DayZ Chernarus',
+      description: null,
+      status: 'running',
+      gamePort: 2302,
+      queryPort: 27016,
+      rconPort: 2310,
+      isDefault: true,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
     };
+
+    vi.mocked(useActiveServer).mockReturnValue({
+      servers: [mockServer],
+      activeServer: mockServer,
+      activeServerId: mockServer.id,
+      setActiveServerId: vi.fn(),
+      isLoading: false,
+      error: null,
+    });
 
     render(
       <AuthContext.Provider value={mockAuthContext}>
@@ -35,5 +102,7 @@ describe('Dashboard Component', () => {
     expect(screen.getByText('Authentication Status')).toBeInTheDocument();
     expect(screen.getByText('Backend Connectivity')).toBeInTheDocument();
     expect(screen.getByText('usr-456')).toBeInTheDocument();
+    expect(screen.getByText(/DayZ Chernarus/)).toBeInTheDocument();
+    expect(screen.queryByTestId('zero-state-banner')).not.toBeInTheDocument();
   });
 });

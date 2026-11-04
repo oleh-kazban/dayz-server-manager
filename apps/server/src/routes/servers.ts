@@ -1,4 +1,4 @@
-import { eq } from 'drizzle-orm';
+import { asc, eq } from 'drizzle-orm';
 import type { FastifyPluginAsync } from 'fastify';
 import crypto from 'node:crypto';
 
@@ -305,19 +305,28 @@ export const registerServersRoutes: FastifyPluginAsync = async fastify => {
         return reply.conflict('Cannot delete server while it is running. Stop the server first.');
       }
 
-      // GUARD-SRV-02: Default Server Invariant Guard
-      const allServers = fastify.db.db.select().from(servers).all();
-      if (allServers.length <= 1) {
-        return reply.unprocessableEntity('Cannot delete the sole remaining server instance.');
-      }
+      const executeDelete = fastify.db.sqlite.transaction(() => {
+        fastify.db.db.delete(servers).where(eq(servers.id, id)).run();
 
-      if (existing.isDefault) {
-        return reply.unprocessableEntity(
-          'Cannot delete the default server instance. Designate a new default server first.',
-        );
-      }
+        if (existing.isDefault) {
+          const remaining = fastify.db.db
+            .select()
+            .from(servers)
+            .orderBy(asc(servers.createdAt))
+            .limit(1)
+            .all();
 
-      fastify.db.db.delete(servers).where(eq(servers.id, id)).run();
+          if (remaining.length > 0) {
+            fastify.db.db
+              .update(servers)
+              .set({ isDefault: true })
+              .where(eq(servers.id, remaining[0].id))
+              .run();
+          }
+        }
+      });
+
+      executeDelete();
 
       return reply.send({ success: true });
     },

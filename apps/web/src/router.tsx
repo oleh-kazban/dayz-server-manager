@@ -1,3 +1,5 @@
+import { Suspense } from 'react';
+
 import {
   createRootRouteWithContext,
   createRoute,
@@ -9,15 +11,27 @@ import {
 } from '@tanstack/react-router';
 import { z } from 'zod';
 
-import { AppShell, PlaceholderView } from '@dsm/web/components';
+import { AppShell, PlaceholderView, RootErrorFallback, RootLoader } from '@dsm/web/components';
 
 import type { AuthContextValue } from './features/auth';
-import type { FeatureFlagsContextValue } from './core';
+import { DEFAULT_MODULE_FLAGS, type FeatureFlagsContextValue, type ModuleFlags } from './core';
 
 export interface RouterContext {
   auth: AuthContextValue;
   features: FeatureFlagsContextValue;
 }
+
+export const defaultAuthContext: AuthContextValue = {
+  user: null,
+  isAuthenticated: false,
+  login: async () => {},
+  logout: () => {},
+};
+
+export const defaultFeaturesContext: FeatureFlagsContextValue = {
+  flags: DEFAULT_MODULE_FLAGS,
+  isEnabled: (flag: string) => Boolean(DEFAULT_MODULE_FLAGS[flag as keyof ModuleFlags]),
+};
 
 export interface SignInSearch {
   redirect?: string;
@@ -38,7 +52,13 @@ export const rootSearchSchema = z.object({
 // 1. Root route with context contract
 const rootRoute = createRootRouteWithContext<RouterContext>()({
   validateSearch: (search: Record<string, unknown>): RootSearch => rootSearchSchema.parse(search),
-  component: () => <Outlet />,
+  component: () => (
+    <Suspense fallback={<RootLoader />}>
+      <Outlet />
+    </Suspense>
+  ),
+  errorComponent: RootErrorFallback,
+  pendingComponent: RootLoader,
 });
 
 // 2. Default Index Route: redirects to /dashboard
@@ -57,7 +77,7 @@ const signInRoute = createRoute({
   validateSearch: (search: Record<string, unknown>): SignInSearch =>
     signInSearchSchema.parse(search),
   beforeLoad: ({ context }) => {
-    if (context.auth.isAuthenticated) {
+    if (context?.auth?.isAuthenticated) {
       throw redirect({ to: '/dashboard' });
     }
   },
@@ -79,7 +99,7 @@ const authedRoute = createRoute({
   validateSearch: (search: Record<string, unknown>): AuthedSearch =>
     authedSearchSchema.parse(search),
   beforeLoad: ({ context, location }) => {
-    if (!context.auth.isAuthenticated) {
+    if (!context?.auth?.isAuthenticated) {
       throw redirect({
         to: '/sign-in',
         search: {
@@ -128,7 +148,7 @@ const modsRoute = createRoute({
   getParentRoute: () => authedRoute,
   path: '/mods',
   beforeLoad: ({ context }) => {
-    if (!context.features.isEnabled('modsManager')) {
+    if (!context?.features?.isEnabled?.('modsManager')) {
       throw redirect({ to: '/dashboard' });
     }
   },
@@ -217,7 +237,7 @@ const worldMapRoute = createRoute({
   getParentRoute: () => authedRoute,
   path: '/world/map',
   beforeLoad: ({ context }) => {
-    if (!context.features.isEnabled('worldMap')) {
+    if (!context?.features?.isEnabled?.('worldMap')) {
       throw redirect({ to: '/dashboard' });
     }
   },
@@ -233,7 +253,7 @@ const worldLootRoute = createRoute({
   getParentRoute: () => authedRoute,
   path: '/world/loot',
   beforeLoad: ({ context }) => {
-    if (!context.features.isEnabled('worldMap')) {
+    if (!context?.features?.isEnabled?.('worldMap')) {
       throw redirect({ to: '/dashboard' });
     }
   },
@@ -258,7 +278,7 @@ const economyTypesRoute = createRoute({
   getParentRoute: () => authedRoute,
   path: '/economy/types',
   beforeLoad: ({ context }) => {
-    if (!context.features.isEnabled('economyWorkbench')) {
+    if (!context?.features?.isEnabled?.('economyWorkbench')) {
       throw redirect({ to: '/dashboard' });
     }
   },
@@ -274,7 +294,7 @@ const economySpawnsRoute = createRoute({
   getParentRoute: () => authedRoute,
   path: '/economy/cfgspawnabletypes',
   beforeLoad: ({ context }) => {
-    if (!context.features.isEnabled('economyWorkbench')) {
+    if (!context?.features?.isEnabled?.('economyWorkbench')) {
       throw redirect({ to: '/dashboard' });
     }
   },
@@ -328,7 +348,7 @@ const settingsDiscordRoute = createRoute({
   getParentRoute: () => authedRoute,
   path: '/settings/discord',
   beforeLoad: ({ context }) => {
-    if (!context.features.isEnabled('discordNotifications')) {
+    if (!context?.features?.isEnabled?.('discordNotifications')) {
       throw redirect({ to: '/dashboard' });
     }
   },
@@ -344,7 +364,7 @@ const settingsOperatorsRoute = createRoute({
   getParentRoute: () => authedRoute,
   path: '/settings/operators',
   beforeLoad: ({ context }) => {
-    if (context.auth.user?.role !== 'admin') {
+    if (context?.auth?.user?.role !== 'admin') {
       throw redirect({ to: '/dashboard' });
     }
   },
@@ -415,9 +435,12 @@ export function createAppRouter(history?: RouterHistory) {
     routeTree,
     history,
     context: {
-      auth: undefined!,
-      features: undefined!,
+      auth: defaultAuthContext,
+      features: defaultFeaturesContext,
     },
+    defaultPreload: 'intent',
+    defaultPendingComponent: RootLoader,
+    defaultErrorComponent: RootErrorFallback,
   });
 }
 

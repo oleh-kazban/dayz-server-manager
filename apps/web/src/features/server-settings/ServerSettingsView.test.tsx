@@ -218,8 +218,25 @@ describe('ServerSettingsView', () => {
     });
   });
 
-  it('disables delete button for default server or sole remaining server (GUARD-SRV-02)', async () => {
-    currentActiveSummary = { ...mockDefaultServerSummary };
+  it('disables delete button when server is active (GUARD-SRV-01)', async () => {
+    currentActiveSummary = { ...mockActiveServerSummary, status: 'running' };
+    currentDetail = {
+      ...mockServerDetail,
+      status: 'running',
+    };
+
+    renderView();
+
+    await waitFor(() => {
+      expect(screen.getByText(/Server must be stopped before deletion/i)).toBeInTheDocument();
+    });
+
+    const deleteButton = screen.getByRole('button', { name: /Delete server/i });
+    expect(deleteButton).toBeDisabled();
+  });
+
+  it('allows deleting a stopped default server and enables delete button', async () => {
+    currentActiveSummary = { ...mockDefaultServerSummary, status: 'stopped' };
     currentDetail = {
       ...mockServerDetail,
       ...mockDefaultServerSummary,
@@ -230,11 +247,21 @@ describe('ServerSettingsView', () => {
     renderView();
 
     await waitFor(() => {
-      expect(screen.getByText(/Cannot delete the default server/i)).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /Delete server/i })).not.toBeDisabled();
     });
+  });
 
-    const deleteButton = screen.getByRole('button', { name: /Delete server/i });
-    expect(deleteButton).toBeDisabled();
+  it('renders empty zero-state notice when zero servers exist in DSM console', async () => {
+    mockServers = [];
+    currentActiveSummary = null;
+    currentDetail = null;
+
+    renderView();
+
+    await waitFor(() => {
+      expect(screen.getByText(/No Servers Registered/i)).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /Add DayZ Server/i })).toBeInTheDocument();
+    });
   });
 
   it('opens confirmation modal and executes server deletion when confirmed', async () => {

@@ -38,14 +38,25 @@ export function useActiveServer(): UseActiveServerResult {
     return servers.find(s => s.isDefault) ?? servers[0];
   }, [servers, searchServerId]);
 
-  // Synchronize URL search params if serverId is missing or invalid once servers are loaded
+  // Synchronize URL search params when servers change or if serverId is invalid/missing
   useEffect(() => {
-    if (!isLoading && activeServer && searchServerId !== activeServer.id) {
+    if (isLoading) return;
+
+    if (activeServer && searchServerId !== activeServer.id) {
       navigate({
         search: ((prev: Record<string, unknown>) => ({
           ...prev,
           serverId: activeServer.id,
         })) as never,
+        replace: true,
+      });
+    } else if (!activeServer && searchServerId) {
+      navigate({
+        search: ((prev: Record<string, unknown>) => {
+          const next = { ...prev };
+          delete next.serverId;
+          return next;
+        }) as never,
         replace: true,
       });
     }

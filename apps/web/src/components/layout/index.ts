@@ -4,6 +4,7 @@ export * from './Header';
 export * from './Logo';
 export * from './PageContainer';
 export * from './PlaceholderView';
+export * from './RootFallback';
 export * from './ServerSelector';
 export * from './Sidebar';
 export * from './UserProfile';

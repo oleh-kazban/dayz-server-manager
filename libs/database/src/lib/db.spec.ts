@@ -14,7 +14,7 @@ describe('Database Initialization & Seeding', () => {
     process.env = { ...originalEnv };
   });
 
-  it('initializes in-memory database and auto-seeds default admin and default server', () => {
+  it('initializes in-memory database and auto-seeds default admin with zero servers (clean slate)', () => {
     const instance = initDatabase({ dbPath: ':memory:' });
 
     try {
@@ -27,16 +27,7 @@ describe('Database Initialization & Seeding', () => {
       expect(verifyPassword('admin', admin.passwordHash)).toBe(true);
 
       const seededServers = instance.db.select().from(servers).all();
-      expect(seededServers).toHaveLength(1);
-
-      const defaultServer = seededServers[0];
-      expect(defaultServer.name).toBe('DayZ (Local)');
-      expect(defaultServer.isDefault).toBe(true);
-      expect(defaultServer.status).toBe('stopped');
-      expect(defaultServer.gamePort).toBe(2302);
-      expect(defaultServer.queryPort).toBe(27016);
-      expect(defaultServer.rconPort).toBe(2310);
-      expect(defaultServer.missionPath).toBe('mpmissions/dayzOffline.chernarusplus');
+      expect(seededServers).toHaveLength(0);
 
       const migrations = instance.sqlite.prepare('SELECT * FROM _dsm_migrations').all();
       expect(migrations).toHaveLength(2);
@@ -45,7 +36,7 @@ describe('Database Initialization & Seeding', () => {
     }
   });
 
-  it('does not duplicate admin or default server if already populated', () => {
+  it('does not duplicate admin if already populated and maintains zero initial servers', () => {
     const tempDir = path.resolve(process.cwd(), 'tmp/test-seed-db');
     const tempDbPath = path.join(tempDir, 'seed.sqlite');
 
@@ -59,7 +50,7 @@ describe('Database Initialization & Seeding', () => {
         expect(seededUsers).toHaveLength(1);
 
         const seededServers = secondInstance.db.select().from(servers).all();
-        expect(seededServers).toHaveLength(1);
+        expect(seededServers).toHaveLength(0);
       } finally {
         secondInstance.close();
       }

@@ -293,7 +293,7 @@ export function ServerSettingsView() {
   } = useQuery(serverQueries.detail(activeServerId ?? ''));
 
   const isServerLocked = detail ? detail.status !== 'stopped' : false;
-  const isDeleteDisabled = !detail || isServerLocked || detail.isDefault || servers.length <= 1;
+  const isDeleteDisabled = !detail || isServerLocked;
 
   // Save Mutation
   const updateMutation = useMutation({
@@ -340,6 +340,23 @@ export function ServerSettingsView() {
         <div className="h-8 w-64 bg-[var(--color-surface-subtle)] animate-pulse rounded" />
         <div className="h-48 bg-[var(--color-surface-subtle)] animate-pulse rounded-2xl" />
         <div className="h-64 bg-[var(--color-surface-subtle)] animate-pulse rounded-2xl" />
+      </div>
+    );
+  }
+
+  if (servers.length === 0) {
+    return (
+      <div className="p-6 max-w-5xl mx-auto space-y-4">
+        <Notice variant="info" title="No Servers Registered">
+          There are currently no DayZ servers registered in DayZ Server Manager. Create your first
+          server instance to manage its settings.
+        </Notice>
+        <div className="pt-2">
+          <Button variant="primary" leftIcon={Plus} onClick={() => setIsCreateModalOpen(true)}>
+            Add DayZ Server
+          </Button>
+        </div>
+        <CreateServerModal isOpen={isCreateModalOpen} onClose={() => setIsCreateModalOpen(false)} />
       </div>
     );
   }
@@ -409,11 +426,6 @@ export function ServerSettingsView() {
             {isServerLocked && (
               <p className="mt-1 text-xs text-[var(--color-error)] font-medium">
                 Server must be stopped before deletion.
-              </p>
-            )}
-            {!isServerLocked && (detail.isDefault || servers.length <= 1) && (
-              <p className="mt-1 text-xs text-[var(--color-error)] font-medium">
-                Cannot delete the default server or the last remaining server instance.
               </p>
             )}
           </div>

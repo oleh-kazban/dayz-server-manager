@@ -38,9 +38,28 @@ describe('Servers Routes (/api/v1/servers)', () => {
       { expiresIn: '15m' },
     );
 
-    // Get the seeded default server
-    const defaultServer = dbInstance.db.select().from(servers).get();
-    defaultServerId = defaultServer!.id;
+    // Seed initial test server for test suite baseline
+    defaultServerId = '11111111-1111-4111-a111-111111111111';
+    const now = new Date();
+    dbInstance.db
+      .insert(servers)
+      .values({
+        id: defaultServerId,
+        name: 'DayZ (Local)',
+        description: 'Primary local DayZ Dedicated Server instance',
+        isDefault: true,
+        status: 'stopped',
+        gamePort: 2302,
+        queryPort: 27016,
+        rconPort: 2310,
+        rconPassword: 'test-rcon-password',
+        installPath: 'C:\\DayZServer',
+        profilePath: 'profiles',
+        missionPath: 'mpmissions/dayzOffline.chernarusplus',
+        createdAt: now,
+        updatedAt: now,
+      })
+      .run();
   });
 
   afterAll(async () => {
@@ -380,37 +399,19 @@ describe('Servers Routes (/api/v1/servers)', () => {
         .run();
     });
 
-    it('enforces GUARD-SRV-02: returns 422 if server is marked default', async () => {
-      // Make secondServerId default
+    it('promotes next remaining server to default when deleting a default server with siblings', async () => {
+      // Mark secondServerId as default
       dbInstance.db
         .update(servers)
         .set({ isDefault: true })
         .where(eq(servers.id, secondServerId))
-        .run();
-
-      const response = await app.inject({
-        method: 'DELETE',
-        url: `/api/v1/servers/${secondServerId}`,
-        headers: { authorization: `Bearer ${adminToken}` },
-      });
-
-      expect(response.statusCode).toBe(422);
-      expect(response.json().message).toContain('Cannot delete the default server');
-
-      // Reassign default to defaultServerId
-      dbInstance.db
-        .update(servers)
-        .set({ isDefault: true })
-        .where(eq(servers.id, defaultServerId))
         .run();
       dbInstance.db
         .update(servers)
         .set({ isDefault: false })
-        .where(eq(servers.id, secondServerId))
+        .where(eq(servers.id, defaultServerId))
         .run();
-    });
 
-    it('deletes server cleanly when preconditions are met', async () => {
       const response = await app.inject({
         method: 'DELETE',
         url: `/api/v1/servers/${secondServerId}`,
@@ -420,24 +421,37 @@ describe('Servers Routes (/api/v1/servers)', () => {
       expect(response.statusCode).toBe(200);
       expect(response.json().success).toBe(true);
 
-      const check = dbInstance.db
+      // Verify secondServerId is deleted
+      const checkDeleted = dbInstance.db
         .select()
         .from(servers)
         .where(eq(servers.id, secondServerId))
         .get();
-      expect(check).toBeUndefined();
+      expect(checkDeleted).toBeUndefined();
+
+      // Verify defaultServerId was automatically promoted to default
+      const checkDefault = dbInstance.db
+        .select()
+        .from(servers)
+        .where(eq(servers.id, defaultServerId))
+        .get();
+      expect(checkDefault).toBeDefined();
+      expect(checkDefault!.isDefault).toBe(true);
     });
 
-    it('enforces GUARD-SRV-02: returns 422 if attempting to delete the sole remaining server', async () => {
-      // Now only defaultServerId remains
+    it('allows deleting the sole remaining server, successfully returning 200 and leaving 0 servers in database', async () => {
+      // Now only defaultServerId remains in database
       const response = await app.inject({
         method: 'DELETE',
         url: `/api/v1/servers/${defaultServerId}`,
         headers: { authorization: `Bearer ${adminToken}` },
       });
 
-      expect(response.statusCode).toBe(422);
-      expect(response.json().message).toContain('sole remaining server instance');
+      expect(response.statusCode).toBe(200);
+      expect(response.json().success).toBe(true);
+
+      const allRemaining = dbInstance.db.select().from(servers).all();
+      expect(allRemaining).toHaveLength(0);
     });
   });
 });

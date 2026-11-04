@@ -72,35 +72,5 @@ export function initDatabase(options: DatabaseOptions = {}): DatabaseInstance {
       .run();
   }
 
-  // Auto-seed initial default server instance if servers table is empty
-  const existingServersCount = sqlite.prepare('SELECT count(*) as count FROM servers').get() as {
-    count: number;
-  };
-
-  if (existingServersCount.count === 0) {
-    const defaultServerId = crypto.randomUUID();
-    const now = new Date();
-
-    db.insert(schema.servers)
-      .values({
-        id: defaultServerId,
-        name: 'DayZ (Local)',
-        description: 'Default local DayZ Dedicated Server instance',
-        status: 'stopped',
-        installPath: path.resolve(process.cwd(), 'server-data/dayz-server'),
-        profilePath: path.resolve(process.cwd(), 'server-data/dayz-server/profiles'),
-        missionPath: 'mpmissions/dayzOffline.chernarusplus',
-        gamePort: 2302,
-        queryPort: 27016,
-        rconPort: 2310,
-        rconPassword: null,
-        launchParameters: '[]',
-        isDefault: true,
-        createdAt: now,
-        updatedAt: now,
-      })
-      .run();
-  }
-
   return { db, sqlite, close: () => sqlite.close() };
 }
