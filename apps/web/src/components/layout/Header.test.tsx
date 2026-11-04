@@ -97,4 +97,23 @@ describe('Header', () => {
 
     expect(screen.getByTestId('breadcrumb-server-skeleton')).toBeInTheDocument();
   });
+
+  it('renders Workspace > Servers without trailing placeholder when no server is selected on dashboard', () => {
+    mockUseActiveServer.mockReturnValue({
+      activeServer: null,
+      isLoading: false,
+    });
+
+    render(
+      <ThemeProvider>
+        <Header />
+      </ThemeProvider>,
+    );
+
+    expect(screen.getByText('Workspace')).toBeInTheDocument();
+    const serversEl = screen.getByText('Servers');
+    expect(serversEl).toBeInTheDocument();
+    expect(serversEl).toHaveAttribute('aria-current', 'page');
+    expect(screen.queryByText('No server selected')).not.toBeInTheDocument();
+  });
 });

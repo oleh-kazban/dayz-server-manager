@@ -5,7 +5,12 @@ import { useNavigate } from '@tanstack/react-router';
 import { AlertTriangle, Plus, Save, Trash2 } from 'lucide-react';
 
 import { apiClient } from '@dsm/api-client';
-import type { ServerDetailDto, ServerStatus, UpdateServerDto } from '@dsm/api-contracts';
+import type {
+  ServerDetailDto,
+  ServerStatus,
+  ServerSummaryDto,
+  UpdateServerDto,
+} from '@dsm/api-contracts';
 import {
   Button,
   Card,
@@ -285,12 +290,52 @@ export function ServerSettingsView() {
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
 
-  // Detail query for active server
+  // Delete Mutation declared ahead of detail query to guard active query state
+  const deleteMutation = useMutation({
+    mutationFn: () => {
+      if (!activeServerId) throw new Error('No active server selected');
+      return apiClient.servers.delete(activeServerId);
+    },
+    onSuccess: () => {
+      setShowDeleteConfirm(false);
+      const deletedId = activeServerId;
+      if (deletedId) {
+        queryClient.removeQueries({ queryKey: serverQueryKeys.detail(deletedId) });
+      }
+      queryClient.setQueryData<ServerSummaryDto[]>(serverQueryKeys.list(), old =>
+        old ? old.filter(s => s.id !== deletedId) : [],
+      );
+      queryClient.invalidateQueries({ queryKey: serverQueryKeys.list() });
+
+      const nextServer = servers.find(s => s.id !== deletedId);
+      if (nextServer) {
+        setActiveServerId(nextServer.id);
+      } else {
+        navigate({
+          to: '/dashboard',
+          search: ((prev: Record<string, unknown>) => {
+            const next = { ...prev };
+            delete next.serverId;
+            return next;
+          }) as never,
+        });
+      }
+    },
+    onError: (err: Error) => {
+      setShowDeleteConfirm(false);
+      setSaveError(err.message || 'Failed to delete server');
+    },
+  });
+
+  // Detail query for active server - disabled while delete is pending or complete
   const {
     data: detail,
     isLoading: isDetailLoading,
     error: detailError,
-  } = useQuery(serverQueries.detail(activeServerId ?? ''));
+  } = useQuery({
+    ...serverQueries.detail(activeServerId ?? ''),
+    enabled: Boolean(activeServerId) && !deleteMutation.isPending && !deleteMutation.isSuccess,
+  });
 
   const isServerLocked = detail ? detail.status !== 'stopped' : false;
   const isDeleteDisabled = !detail || isServerLocked;
@@ -301,36 +346,17 @@ export function ServerSettingsView() {
       if (!activeServerId) throw new Error('No active server selected');
       return apiClient.servers.update(activeServerId, payload);
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: serverQueryKeys.all });
+    onSuccess: updatedServer => {
+      if (activeServerId) {
+        queryClient.setQueryData(serverQueryKeys.detail(activeServerId), updatedServer);
+      }
+      queryClient.invalidateQueries({ queryKey: serverQueryKeys.list() });
       setSaveSuccess(true);
       setSaveError(null);
     },
     onError: (err: Error) => {
       setSaveSuccess(false);
       setSaveError(err.message || 'Failed to update server settings');
-    },
-  });
-
-  // Delete Mutation
-  const deleteMutation = useMutation({
-    mutationFn: () => {
-      if (!activeServerId) throw new Error('No active server selected');
-      return apiClient.servers.delete(activeServerId);
-    },
-    onSuccess: () => {
-      setShowDeleteConfirm(false);
-      queryClient.invalidateQueries({ queryKey: serverQueryKeys.all });
-      const nextServer = servers.find(s => s.id !== activeServerId);
-      if (nextServer) {
-        setActiveServerId(nextServer.id);
-      } else {
-        navigate({ to: '/dashboard' });
-      }
-    },
-    onError: (err: Error) => {
-      setShowDeleteConfirm(false);
-      setSaveError(err.message || 'Failed to delete server');
     },
   });
 

@@ -23,7 +23,7 @@ const ROUTE_LABELS: Record<string, string> = {
   '/profile': 'Operator profile',
 };
 
-function renderServerBreadcrumbTrail(
+function renderBreadcrumbTrail(
   isLoading: boolean,
   isDashboard: boolean,
   activeServer: { id: string; name: string } | null,
@@ -31,17 +31,85 @@ function renderServerBreadcrumbTrail(
 ) {
   if (isLoading) {
     return (
-      <span
-        data-testid="breadcrumb-server-skeleton"
-        className="inline-block w-28 h-3.5 bg-[var(--color-surface-subtle)] animate-pulse rounded"
-      />
+      <>
+        <Link
+          to="/dashboard"
+          className="text-[var(--color-text-secondary)] hover:text-[var(--color-text-main)] cursor-pointer transition-colors"
+        >
+          Servers
+        </Link>
+        <ChevronRight className="w-3 h-3 text-[var(--color-text-secondary)] shrink-0" />
+        <span
+          data-testid="breadcrumb-server-skeleton"
+          className="inline-block w-28 h-3.5 bg-[var(--color-surface-subtle)] animate-pulse rounded"
+        />
+        {!isDashboard && subpageLabel && (
+          <>
+            <ChevronRight className="w-3 h-3 text-[var(--color-text-secondary)] shrink-0" />
+            <span
+              aria-current="page"
+              className="font-semibold text-[var(--color-text-main)] truncate"
+            >
+              {subpageLabel}
+            </span>
+          </>
+        )}
+      </>
     );
   }
 
+  if (activeServer) {
+    if (isDashboard) {
+      return (
+        <>
+          <Link
+            to="/dashboard"
+            search={{ serverId: activeServer.id }}
+            className="text-[var(--color-text-secondary)] hover:text-[var(--color-text-main)] cursor-pointer transition-colors"
+          >
+            Servers
+          </Link>
+          <ChevronRight className="w-3 h-3 text-[var(--color-text-secondary)] shrink-0" />
+          <span
+            aria-current="page"
+            className="font-semibold text-[var(--color-text-main)] truncate"
+          >
+            {activeServer.name}
+          </span>
+        </>
+      );
+    }
+
+    return (
+      <>
+        <Link
+          to="/dashboard"
+          search={{ serverId: activeServer.id }}
+          className="text-[var(--color-text-secondary)] hover:text-[var(--color-text-main)] cursor-pointer transition-colors"
+        >
+          Servers
+        </Link>
+        <ChevronRight className="w-3 h-3 text-[var(--color-text-secondary)] shrink-0" />
+        <Link
+          to="/dashboard"
+          search={{ serverId: activeServer.id }}
+          className="text-[var(--color-text-secondary)] hover:text-[var(--color-text-main)] cursor-pointer truncate transition-colors"
+        >
+          {activeServer.name}
+        </Link>
+        <ChevronRight className="w-3 h-3 text-[var(--color-text-secondary)] shrink-0" />
+        <span aria-current="page" className="font-semibold text-[var(--color-text-main)] truncate">
+          {subpageLabel}
+        </span>
+      </>
+    );
+  }
+
+  // When no server is selected (e.g. zero servers registered)
   if (isDashboard) {
     return (
       <span aria-current="page" className="font-semibold text-[var(--color-text-main)] truncate">
-        {activeServer?.name ?? 'No server selected'}
+        Servers
       </span>
     );
   }
@@ -50,10 +118,9 @@ function renderServerBreadcrumbTrail(
     <>
       <Link
         to="/dashboard"
-        search={activeServer ? { serverId: activeServer.id } : undefined}
-        className="text-[var(--color-text-secondary)] hover:text-[var(--color-text-main)] cursor-pointer truncate transition-colors"
+        className="text-[var(--color-text-secondary)] hover:text-[var(--color-text-main)] cursor-pointer transition-colors"
       >
-        {activeServer?.name ?? 'Servers'}
+        Servers
       </Link>
       <ChevronRight className="w-3 h-3 text-[var(--color-text-secondary)] shrink-0" />
       <span aria-current="page" className="font-semibold text-[var(--color-text-main)] truncate">
@@ -94,16 +161,8 @@ export function Header() {
             Workspace
           </Link>
           <ChevronRight className="w-3 h-3 text-[var(--color-text-secondary)] shrink-0" />
-          <Link
-            to="/dashboard"
-            search={activeServer ? { serverId: activeServer.id } : undefined}
-            className="text-[var(--color-text-secondary)] hover:text-[var(--color-text-main)] cursor-pointer transition-colors"
-          >
-            Servers
-          </Link>
-          <ChevronRight className="w-3 h-3 text-[var(--color-text-secondary)] shrink-0" />
 
-          {renderServerBreadcrumbTrail(isLoading, isDashboard, activeServer, subpageLabel)}
+          {renderBreadcrumbTrail(isLoading, isDashboard, activeServer, subpageLabel)}
         </nav>
       </div>
 

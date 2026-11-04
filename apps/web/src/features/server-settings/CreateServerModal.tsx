@@ -33,7 +33,8 @@ export function CreateServerModal({ isOpen, onClose }: CreateServerModalProps) {
   const createMutation = useMutation({
     mutationFn: (dto: CreateServerDto) => apiClient.servers.create(dto),
     onSuccess: newServer => {
-      queryClient.invalidateQueries({ queryKey: serverQueryKeys.all });
+      queryClient.setQueryData(serverQueryKeys.detail(newServer.id), newServer);
+      queryClient.invalidateQueries({ queryKey: serverQueryKeys.list() });
       setActiveServerId(newServer.id);
       onClose();
     },

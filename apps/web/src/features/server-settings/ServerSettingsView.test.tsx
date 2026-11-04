@@ -294,6 +294,37 @@ describe('ServerSettingsView', () => {
     });
   });
 
+  it('navigates to dashboard and clears serverId search param when last server is deleted', async () => {
+    mockServers = [mockActiveServerSummary];
+    currentActiveSummary = mockActiveServerSummary;
+
+    renderView();
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /Delete server/i })).not.toBeDisabled();
+    });
+
+    const deleteButton = screen.getByRole('button', { name: /Delete server/i });
+    fireEvent.click(deleteButton);
+
+    const dialog = screen.getByRole('alertdialog');
+    const keywordInput = within(dialog).getByRole('textbox');
+    fireEvent.change(keywordInput, { target: { value: mockActiveServerSummary.name } });
+
+    const confirmButton = within(dialog).getByRole('button', { name: 'Delete server' });
+    fireEvent.click(confirmButton);
+
+    await waitFor(() => {
+      expect(apiClient.servers.delete).toHaveBeenCalledWith(mockActiveServerSummary.id);
+      expect(mockNavigate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          to: '/dashboard',
+          search: expect.any(Function),
+        }),
+      );
+    });
+  });
+
   it('opens CreateServerModal and allows creating a new server instance', async () => {
     renderView();
 
