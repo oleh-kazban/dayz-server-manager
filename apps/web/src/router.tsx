@@ -27,8 +27,17 @@ const signInSearchSchema = z.object({
   redirect: z.string().optional(),
 });
 
+export interface RootSearch {
+  serverId?: string;
+}
+
+export const rootSearchSchema = z.object({
+  serverId: z.string().uuid().optional(),
+});
+
 // 1. Root route with context contract
 const rootRoute = createRootRouteWithContext<RouterContext>()({
+  validateSearch: (search: Record<string, unknown>): RootSearch => rootSearchSchema.parse(search),
   component: () => <Outlet />,
 });
 
@@ -55,10 +64,20 @@ const signInRoute = createRoute({
   component: lazyRouteComponent(() => import('./features/auth'), 'SignIn'),
 });
 
+export interface AuthedSearch {
+  serverId?: string;
+}
+
+const authedSearchSchema = z.object({
+  serverId: z.string().uuid().optional(),
+});
+
 // 4. Authenticated Layout Route: hosts persistent AppShell and guards child routes
 const authedRoute = createRoute({
   id: 'authed',
   getParentRoute: () => rootRoute,
+  validateSearch: (search: Record<string, unknown>): AuthedSearch =>
+    authedSearchSchema.parse(search),
   beforeLoad: ({ context, location }) => {
     if (!context.auth.isAuthenticated) {
       throw redirect({

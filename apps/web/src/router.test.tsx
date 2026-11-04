@@ -1,3 +1,4 @@
+import { QueryClientProvider } from '@tanstack/react-query';
 import { createMemoryHistory, RouterProvider } from '@tanstack/react-router';
 import { render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it } from 'vitest';
@@ -6,7 +7,7 @@ import { AuthProvider } from './features/auth';
 import { authStorage } from './features/auth/auth.storage';
 import type { AuthContextValue } from './features/auth/auth.types';
 import { ThemeProvider } from './features/theme';
-import { DEFAULT_MODULE_FLAGS } from './core';
+import { DEFAULT_MODULE_FLAGS, queryClient } from './core';
 import { createAppRouter } from './router';
 
 const mockAdminAuth: AuthContextValue = {
@@ -49,20 +50,22 @@ function renderRoute(initialPath: string, auth = mockAdminAuth, flags = DEFAULT_
   const router = createAppRouter(history);
 
   const rendered = render(
-    <ThemeProvider>
-      <AuthProvider>
-        <RouterProvider
-          router={router}
-          context={{
-            auth,
-            features: {
-              flags,
-              isEnabled: flag => Boolean(flags[flag]),
-            },
-          }}
-        />
-      </AuthProvider>
-    </ThemeProvider>,
+    <QueryClientProvider client={queryClient}>
+      <ThemeProvider>
+        <AuthProvider>
+          <RouterProvider
+            router={router}
+            context={{
+              auth,
+              features: {
+                flags,
+                isEnabled: flag => Boolean(flags[flag]),
+              },
+            }}
+          />
+        </AuthProvider>
+      </ThemeProvider>
+    </QueryClientProvider>,
   );
 
   return { ...rendered, history, router };

@@ -3,14 +3,12 @@ import {
   Activity,
   Bell,
   Box,
-  ChevronsUpDown,
   Cpu,
   FileCode2,
   Flame,
   LayoutDashboard,
   MapIcon,
   RadioTower,
-  Server,
   ShieldCheck,
   Sliders,
   Terminal,
@@ -23,6 +21,7 @@ import { useFeatureFlag } from '@dsm/web/core';
 import { useAuth } from '@dsm/web/features/auth';
 
 import { Logo } from './Logo';
+import { ServerSelector } from './ServerSelector';
 import { UserProfile } from './UserProfile';
 
 /* ====================================================================
@@ -67,21 +66,7 @@ export function Sidebar() {
         </div>
 
         {/* Node Selector */}
-        <div className="flex items-center justify-between p-2.5 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-subtle)] hover:border-[var(--color-primary-border)] transition-colors cursor-pointer">
-          <div className="flex items-center gap-2.5 min-w-0">
-            <Server className="w-[18px] h-[18px] text-[var(--color-primary)] shrink-0" />
-            <div className="flex flex-col min-w-0">
-              <span className="text-xs font-semibold text-[var(--color-text-main)] truncate">
-                dayz (local)
-              </span>
-              <span className="text-[10px] text-[var(--color-success)] truncate flex items-center gap-1">
-                <span className="w-1.5 h-1.5 rounded-full bg-[var(--color-success)]" />
-                Connected
-              </span>
-            </div>
-          </div>
-          <ChevronsUpDown className="w-3 h-3 text-[var(--color-text-secondary)] shrink-0" />
-        </div>
+        <ServerSelector />
 
         {/* Navigation Sections */}
         <div className="space-y-4">

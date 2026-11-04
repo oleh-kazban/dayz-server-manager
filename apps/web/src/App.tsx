@@ -1,6 +1,7 @@
+import { QueryClientProvider } from '@tanstack/react-query';
 import { RouterProvider } from '@tanstack/react-router';
 
-import { FeatureFlagsProvider, useFeatureFlags } from './core';
+import { FeatureFlagsProvider, queryClient, useFeatureFlags } from './core';
 import { AuthProvider, ThemeProvider, useAuth } from './features';
 import { router } from './router';
 
@@ -12,12 +13,14 @@ function InnerApp() {
 
 export function App() {
   return (
-    <ThemeProvider>
-      <AuthProvider>
-        <FeatureFlagsProvider>
-          <InnerApp />
-        </FeatureFlagsProvider>
-      </AuthProvider>
-    </ThemeProvider>
+    <QueryClientProvider client={queryClient}>
+      <ThemeProvider>
+        <AuthProvider>
+          <FeatureFlagsProvider>
+            <InnerApp />
+          </FeatureFlagsProvider>
+        </AuthProvider>
+      </ThemeProvider>
+    </QueryClientProvider>
   );
 }
