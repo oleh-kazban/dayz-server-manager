@@ -1,3 +1,4 @@
-declare const __APP_VERSION__: string | undefined;
+// eslint-disable-next-line @nx/enforce-module-boundaries
+import pkg from '../../../../../package.json';
 
-export const APP_VERSION = typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : 'v0.1.0';
+export const APP_VERSION = `v${pkg.version}`;

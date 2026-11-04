@@ -560,8 +560,8 @@ export function ServerSettingsView() {
         />
 
         {/* Danger Zone */}
-        <div className="rounded-2xl border border-[var(--color-error)]/40 bg-[var(--color-error)]/5 p-6 space-y-4">
-          <div className="flex items-center gap-3 text-[var(--color-error)]">
+        <div className="rounded-2xl border border-dashed border-[var(--color-status-danger-border)] bg-[var(--color-status-danger-light)]/20 p-6 space-y-4">
+          <div className="flex items-center gap-3 text-[var(--color-status-danger)]">
             <AlertTriangle className="w-5 h-5 shrink-0" />
             <h2 className="text-base font-semibold">Danger Zone</h2>
           </div>
@@ -575,7 +575,7 @@ export function ServerSettingsView() {
                 disk remain intact.
               </p>
               {isServerLocked && (
-                <p className="mt-1 text-xs text-[var(--color-error)] font-medium">
+                <p className="mt-1 text-xs text-[var(--color-status-danger)] font-medium">
                   Server must be stopped before deletion.
                 </p>
               )}
