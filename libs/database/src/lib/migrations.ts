@@ -38,6 +38,31 @@ export const migrations: DsmMigration[] = [
       }
     },
   },
+  {
+    id: '0002_create_servers_table',
+    name: 'Create servers table for multi-server management',
+    up: (sqlite: Database.Database) => {
+      sqlite.exec(`
+        CREATE TABLE IF NOT EXISTS servers (
+          id TEXT PRIMARY KEY,
+          name TEXT NOT NULL UNIQUE,
+          description TEXT,
+          status TEXT NOT NULL DEFAULT 'stopped',
+          install_path TEXT NOT NULL,
+          profile_path TEXT NOT NULL,
+          mission_path TEXT NOT NULL,
+          game_port INTEGER NOT NULL DEFAULT 2302,
+          query_port INTEGER NOT NULL DEFAULT 27016,
+          rcon_port INTEGER NOT NULL DEFAULT 2310,
+          rcon_password TEXT,
+          launch_parameters TEXT,
+          is_default INTEGER NOT NULL DEFAULT 0,
+          created_at INTEGER NOT NULL,
+          updated_at INTEGER NOT NULL
+        );
+      `);
+    },
+  },
 ];
 
 export function runMigrations(sqlite: Database.Database): void {
