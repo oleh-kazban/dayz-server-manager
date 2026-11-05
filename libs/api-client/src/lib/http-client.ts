@@ -1,5 +1,14 @@
 import { type ZodType } from 'zod';
 
+import {
+  type ApiErrorCode,
+  apiErrorCodeSchema,
+  type ApiErrorParams,
+  apiErrorParamsSchema,
+  type ApiFieldErrorsMap,
+  apiFieldErrorsMapSchema,
+} from '@dsm/api-contracts';
+
 export type RefreshTokenHandler = () => Promise<string | null>;
 
 export interface HttpClientConfig {
@@ -22,6 +31,32 @@ export class ApiError extends Error {
     if (this.data && typeof this.data === 'object' && 'message' in this.data) {
       const msg = (this.data as { message: unknown }).message;
       return typeof msg === 'string' ? msg : undefined;
+    }
+    return undefined;
+  }
+
+  get errorCode(): ApiErrorCode | undefined {
+    if (this.data && typeof this.data === 'object' && 'errorCode' in this.data) {
+      const parsed = apiErrorCodeSchema.safeParse((this.data as { errorCode: unknown }).errorCode);
+      return parsed.success ? parsed.data : undefined;
+    }
+    return undefined;
+  }
+
+  get params(): ApiErrorParams | undefined {
+    if (this.data && typeof this.data === 'object' && 'params' in this.data) {
+      const parsed = apiErrorParamsSchema.safeParse((this.data as { params: unknown }).params);
+      return parsed.success ? parsed.data : undefined;
+    }
+    return undefined;
+  }
+
+  get fieldErrors(): ApiFieldErrorsMap | undefined {
+    if (this.data && typeof this.data === 'object' && 'fieldErrors' in this.data) {
+      const parsed = apiFieldErrorsMapSchema.safeParse(
+        (this.data as { fieldErrors: unknown }).fieldErrors,
+      );
+      return parsed.success ? parsed.data : undefined;
     }
     return undefined;
   }
@@ -129,8 +164,15 @@ export class HttpClient {
       } catch {
         errorData = rawText;
       }
+      const apiMessage =
+        errorData &&
+        typeof errorData === 'object' &&
+        'message' in errorData &&
+        typeof (errorData as { message: unknown }).message === 'string'
+          ? (errorData as { message: string }).message
+          : undefined;
       throw new ApiError(
-        `HTTP request failed with status ${response.status}`,
+        apiMessage ?? `HTTP request failed with status ${response.status}`,
         response.status,
         errorData,
       );
