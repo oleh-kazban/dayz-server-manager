@@ -398,4 +398,104 @@ describe('ServerSettingsView', () => {
     fireEvent.change(nameInput, { target: { value: 'New Name' } });
     expect(screen.queryByText('Server name is required.')).not.toBeInTheDocument();
   });
+
+  it('updates form fields and saves server configuration successfully', async () => {
+    vi.mocked(apiClient.servers.update).mockResolvedValue({
+      ...mockServerDetail,
+      name: 'Updated Chernarus',
+      description: 'New Description',
+    });
+
+    renderView();
+
+    await waitFor(() => {
+      expect(screen.getByDisplayValue(mockServerDetail.name)).toBeInTheDocument();
+    });
+
+    // Update name
+    fireEvent.change(screen.getByDisplayValue(mockServerDetail.name), {
+      target: { value: 'Updated Chernarus' },
+    });
+
+    // Update description
+    const descInput = screen.getByPlaceholderText('Instance notes or purpose');
+    fireEvent.change(descInput, { target: { value: 'New Description' } });
+
+    // Update Game Port
+    const gamePortInput = screen.getByDisplayValue(String(mockServerDetail.gamePort));
+    fireEvent.change(gamePortInput, { target: { value: '2304' } });
+
+    // Update Query Port
+    const queryPortInput = screen.getByDisplayValue(String(mockServerDetail.queryPort));
+    fireEvent.change(queryPortInput, { target: { value: '27018' } });
+
+    // Update RCON Port
+    const rconPortInput = screen.getByDisplayValue(String(mockServerDetail.rconPort));
+    fireEvent.change(rconPortInput, { target: { value: '2312' } });
+
+    // Update RCON Password
+    const rconPassInput = screen.getByLabelText(/RCON Password/i);
+    fireEvent.change(rconPassInput, { target: { value: 'newpassword123' } });
+
+    // Update Paths
+    const installInput = screen.getByDisplayValue(mockServerDetail.installPath);
+    fireEvent.change(installInput, { target: { value: 'D:\\DayZServer' } });
+
+    const profileInput = screen.getByDisplayValue(mockServerDetail.profilePath);
+    fireEvent.change(profileInput, { target: { value: 'D:\\DayZServer\\profiles' } });
+
+    const missionInput = screen.getByDisplayValue(mockServerDetail.missionPath);
+    fireEvent.change(missionInput, { target: { value: 'mpmissions\\dayzOffline.livonia' } });
+
+    // Update CLI args
+    const cliInput = screen.getByDisplayValue(mockServerDetail.launchParameters!);
+    fireEvent.change(cliInput, { target: { value: '-cpuCount=8' } });
+
+    // Toggle default instance
+    const toggle = screen.getByLabelText(/Default Server Instance/i);
+    fireEvent.click(toggle);
+
+    // Click save
+    const saveButton = screen.getByRole('button', { name: /Save changes/i });
+    fireEvent.click(saveButton);
+
+    await waitFor(() => {
+      expect(apiClient.servers.update).toHaveBeenCalledWith(
+        mockServerDetail.id,
+        expect.objectContaining({
+          name: 'Updated Chernarus',
+          description: 'New Description',
+          gamePort: 2304,
+          queryPort: 27018,
+          rconPort: 2312,
+          rconPassword: 'newpassword123',
+          installPath: 'D:\\DayZServer',
+          profilePath: 'D:\\DayZServer\\profiles',
+          missionPath: 'mpmissions\\dayzOffline.livonia',
+          launchParameters: '-cpuCount=8',
+          isDefault: true,
+        }),
+      );
+      expect(screen.getByText('Server configuration updated successfully.')).toBeInTheDocument();
+    });
+  });
+
+  it('displays error notice when saving server settings fails', async () => {
+    vi.mocked(apiClient.servers.update).mockRejectedValue(
+      new Error('Failed to write server config to disk'),
+    );
+
+    renderView();
+
+    await waitFor(() => {
+      expect(screen.getByDisplayValue(mockServerDetail.name)).toBeInTheDocument();
+    });
+
+    const saveButton = screen.getByRole('button', { name: /Save changes/i });
+    fireEvent.click(saveButton);
+
+    await waitFor(() => {
+      expect(screen.getByText('Failed to write server config to disk')).toBeInTheDocument();
+    });
+  });
 });

@@ -61,6 +61,13 @@ describe('useActiveServer', () => {
         queries: { retry: false },
       },
     });
+    navigateMock.mockImplementation(
+      (opts: { search?: (prev: Record<string, unknown>) => Record<string, unknown> }) => {
+        if (typeof opts?.search === 'function') {
+          opts.search({ existingParam: 'val', serverId: 'old-id' });
+        }
+      },
+    );
     vi.mocked(useNavigate).mockReturnValue(navigateMock as never);
     vi.mocked(useSearch).mockReturnValue({});
     vi.mocked(apiClient.servers.list).mockResolvedValue(mockServers);
@@ -120,5 +127,22 @@ describe('useActiveServer', () => {
     expect(result.current.servers).toHaveLength(0);
     expect(result.current.activeServer).toBeNull();
     expect(result.current.activeServerId).toBeNull();
+  });
+
+  it('cleans up search params when active server is deleted/missing and searchServerId was present', async () => {
+    vi.mocked(apiClient.servers.list).mockResolvedValue([]);
+    vi.mocked(useSearch).mockReturnValue({ serverId: 'stale-id' });
+
+    const { result } = renderHook(() => useActiveServer(), { wrapper });
+
+    await vi.waitFor(() => {
+      expect(result.current.isLoading).toBe(false);
+    });
+
+    expect(navigateMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        replace: true,
+      }),
+    );
   });
 });

@@ -1,14 +1,23 @@
 import type { ReactNode } from 'react';
 
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { apiClient } from '@dsm/api-client';
 import type { ServerSummaryDto } from '@dsm/api-contracts';
 import { useActiveServer } from '@dsm/web/core';
 
 import { AuthContext } from '../auth/auth.context';
 
 import { Dashboard } from './Dashboard';
+
+vi.mock('@dsm/api-client', () => ({
+  apiClient: {
+    health: {
+      get: vi.fn(),
+    },
+  },
+}));
 
 vi.mock('@dsm/web/core', async importOriginal => {
   const actual = await importOriginal<typeof import('@dsm/web/core')>();
@@ -48,9 +57,14 @@ describe('Dashboard Component', () => {
 
   beforeEach(() => {
     vi.restoreAllMocks();
+    vi.mocked(apiClient.health.get).mockResolvedValue({
+      status: 'ok',
+      uptime: 125,
+      timestamp: new Date().toISOString(),
+    });
   });
 
-  it('renders zero-state onboarding banner when no servers are registered', () => {
+  it('renders zero-state onboarding banner when no servers are registered and opens modal', () => {
     vi.mocked(useActiveServer).mockReturnValue({
       servers: [],
       activeServer: null,
@@ -69,7 +83,11 @@ describe('Dashboard Component', () => {
     expect(screen.getByRole('heading', { name: /dashboard/i })).toBeInTheDocument();
     expect(screen.getByTestId('zero-state-banner')).toBeInTheDocument();
     expect(screen.getByText('No DayZ Servers Registered')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /add dayz server/i })).toBeInTheDocument();
+
+    const addBtn = screen.getByRole('button', { name: /add dayz server/i });
+    expect(addBtn).toBeInTheDocument();
+    fireEvent.click(addBtn);
+    expect(screen.getByTestId('create-server-modal')).toBeInTheDocument();
   });
 
   it('renders authenticated user information, active server console, and connectivity when servers exist', async () => {
@@ -108,5 +126,36 @@ describe('Dashboard Component', () => {
     expect(screen.getByText('usr-456')).toBeInTheDocument();
     expect(screen.getByText(/DayZ Chernarus/)).toBeInTheDocument();
     expect(screen.queryByTestId('zero-state-banner')).not.toBeInTheDocument();
+
+    await waitFor(() => {
+      expect(screen.getByText('125s')).toBeInTheDocument();
+    });
+
+    const headerAddBtn = screen.getByRole('button', { name: /add dayz server/i });
+    fireEvent.click(headerAddBtn);
+    expect(screen.getByTestId('create-server-modal')).toBeInTheDocument();
+  });
+
+  it('handles health check query failure gracefully', async () => {
+    vi.mocked(apiClient.health.get).mockRejectedValue(new Error('Network down'));
+
+    vi.mocked(useActiveServer).mockReturnValue({
+      servers: [],
+      activeServer: null,
+      activeServerId: null,
+      setActiveServerId: vi.fn(),
+      isLoading: false,
+      error: null,
+    });
+
+    render(
+      <AuthContext.Provider value={mockAuthContext}>
+        <Dashboard />
+      </AuthContext.Provider>,
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('Connecting...')).toBeInTheDocument();
+    });
   });
 });

@@ -11,7 +11,11 @@ export function RootLoader() {
   );
 }
 
-export function RootErrorFallback({ error, reset }: ErrorComponentProps) {
+export interface RootErrorFallbackProps extends Partial<ErrorComponentProps> {
+  error?: unknown;
+}
+
+export function RootErrorFallback({ error, reset }: RootErrorFallbackProps) {
   const errorMessage =
     error instanceof Error
       ? error.message
