@@ -31,8 +31,10 @@ export function buildApp(options: BuildAppOptions): FastifyInstance {
     ...options.serverOptions,
   });
 
-  const db = options.db ?? initDatabase({ dbPath: options.config.DATABASE_PATH });
-  app.decorate('db', db);
+  const dbInstance = options.db ?? initDatabase({ dbPath: options.config.DATABASE_PATH });
+  app.decorate('db', dbInstance.db);
+  app.decorate('sqlite', dbInstance.sqlite);
+  app.decorate('closeDb', () => dbInstance.close());
 
   // Allow empty bodies when Content-Type: application/json is sent on DELETE/GET requests
   app.addContentTypeParser('application/json', { parseAs: 'string' }, (_req, body, defaultDone) => {

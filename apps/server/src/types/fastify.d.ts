@@ -1,11 +1,13 @@
 import type { FastifyReply, FastifyRequest } from 'fastify';
 
-import type { DatabaseInstance } from '@dsm/database';
+import type { DatabaseInstance, DsmDatabase } from '@dsm/database';
 
 declare module 'fastify' {
   interface FastifyInstance {
     authenticate: (request: FastifyRequest, reply: FastifyReply) => Promise<void>;
-    db: DatabaseInstance;
+    db: DsmDatabase;
+    sqlite: DatabaseInstance['sqlite'];
+    closeDb: () => void;
   }
 }
 

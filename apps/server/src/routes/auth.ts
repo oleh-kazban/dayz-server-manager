@@ -64,7 +64,7 @@ export const registerAuthRoutes: FastifyPluginAsync = async fastify => {
       }
 
       const { usernameOrEmail, password } = parseResult.data;
-      const user = fastify.db.db
+      const user = fastify.db
         .select()
         .from(users)
         .where(or(eq(users.username, usernameOrEmail), eq(users.email, usernameOrEmail)))
@@ -75,11 +75,7 @@ export const registerAuthRoutes: FastifyPluginAsync = async fastify => {
       }
 
       // Update lastLoginAt timestamp
-      fastify.db.db
-        .update(users)
-        .set({ lastLoginAt: new Date() })
-        .where(eq(users.id, user.id))
-        .run();
+      fastify.db.update(users).set({ lastLoginAt: new Date() }).where(eq(users.id, user.id)).run();
 
       const accessToken = fastify.jwt.sign(
         {
@@ -160,7 +156,7 @@ export const registerAuthRoutes: FastifyPluginAsync = async fastify => {
           return sendApiError(reply, 401, 'AUTH_TOKEN_TYPE_INVALID', 'Invalid token type');
         }
 
-        const user = fastify.db.db.select().from(users).where(eq(users.id, payload.sub)).get();
+        const user = fastify.db.select().from(users).where(eq(users.id, payload.sub)).get();
         if (!user) {
           return sendApiError(reply, 401, 'AUTH_USER_NOT_FOUND', 'User not found');
         }
@@ -211,7 +207,7 @@ export const registerAuthRoutes: FastifyPluginAsync = async fastify => {
       },
     },
     async (request, reply) => {
-      const user = fastify.db.db.select().from(users).where(eq(users.id, request.user.sub)).get();
+      const user = fastify.db.select().from(users).where(eq(users.id, request.user.sub)).get();
       if (!user) {
         return sendApiError(reply, 401, 'AUTH_USER_NOT_FOUND', 'User not found');
       }
