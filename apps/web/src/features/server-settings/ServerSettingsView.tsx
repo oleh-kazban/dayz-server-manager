@@ -4,8 +4,9 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from '@tanstack/react-router';
 import { AlertTriangle, Plus, Save, Trash2 } from 'lucide-react';
 
-import { apiClient } from '@dsm/api-client';
+import { apiClient, ApiError } from '@dsm/api-client';
 import type {
+  ApiFieldErrorsMap,
   ServerDetailDto,
   ServerStatus,
   ServerSummaryDto,
@@ -23,7 +24,14 @@ import {
   Toggle,
 } from '@dsm/ui';
 import { EmptyServersState, PageContainer } from '@dsm/web/components';
-import { serverQueries, serverQueryKeys, useActiveServer } from '@dsm/web/core';
+import {
+  notifyApiError,
+  notifySuccess,
+  resolveFieldErrors,
+  serverQueries,
+  serverQueryKeys,
+  useActiveServer,
+} from '@dsm/web/core';
 
 import { CreateServerModal } from './CreateServerModal';
 
@@ -102,16 +110,16 @@ interface ServerSettingsFormProps {
   detail: ServerDetailDto;
   onSave: (payload: UpdateServerDto) => void;
   isSaving: boolean;
-  saveSuccess: boolean;
-  saveError: string | null;
+  serverFieldErrors: Record<string, string>;
+  onClearServerFieldError: (field: string) => void;
 }
 
 function ServerSettingsForm({
   detail,
   onSave,
   isSaving,
-  saveSuccess,
-  saveError,
+  serverFieldErrors,
+  onClearServerFieldError,
 }: ServerSettingsFormProps) {
   const [name, setName] = useState(detail.name);
   const [description, setDescription] = useState(detail.description ?? '');
@@ -126,6 +134,8 @@ function ServerSettingsForm({
   const [isDefault, setIsDefault] = useState(detail.isDefault);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
+  const mergedErrors = { ...serverFieldErrors, ...fieldErrors };
+
   const clearFieldError = (field: string) => {
     if (fieldErrors[field]) {
       setFieldErrors(prev => {
@@ -133,6 +143,9 @@ function ServerSettingsForm({
         delete next[field];
         return next;
       });
+    }
+    if (serverFieldErrors[field]) {
+      onClearServerFieldError(field);
     }
   };
 
@@ -187,18 +200,6 @@ function ServerSettingsForm({
 
   return (
     <form noValidate onSubmit={handleSubmit} className="space-y-6">
-      {saveSuccess && (
-        <Notice variant="success" title="Settings Saved">
-          Server configuration updated successfully.
-        </Notice>
-      )}
-
-      {saveError && (
-        <Notice variant="error" title="Update Failed">
-          {saveError}
-        </Notice>
-      )}
-
       {isServerLocked && (
         <Notice variant="warning" title="Server is Active — Configuration Locked">
           This server is currently <strong className="uppercase">{detail.status}</strong>. Network
@@ -217,7 +218,7 @@ function ServerSettingsForm({
             <Input
               label="Server Name"
               value={name}
-              error={fieldErrors.name}
+              error={mergedErrors.name}
               onChange={e => {
                 setName(e.target.value);
                 clearFieldError('name');
@@ -227,7 +228,7 @@ function ServerSettingsForm({
               label="Description"
               placeholder="Instance notes or purpose"
               value={description}
-              error={fieldErrors.description}
+              error={mergedErrors.description}
               onChange={e => {
                 setDescription(e.target.value);
                 clearFieldError('description');
@@ -258,7 +259,7 @@ function ServerSettingsForm({
               type="number"
               value={gamePort}
               disabled={isServerLocked}
-              error={fieldErrors.gamePort}
+              error={mergedErrors.gamePort}
               onChange={e => {
                 setGamePort(Number(e.target.value));
                 clearFieldError('gamePort');
@@ -269,7 +270,7 @@ function ServerSettingsForm({
               type="number"
               value={queryPort}
               disabled={isServerLocked}
-              error={fieldErrors.queryPort}
+              error={mergedErrors.queryPort}
               onChange={e => {
                 setQueryPort(Number(e.target.value));
                 clearFieldError('queryPort');
@@ -280,7 +281,7 @@ function ServerSettingsForm({
               type="number"
               value={rconPort}
               disabled={isServerLocked}
-              error={fieldErrors.rconPort}
+              error={mergedErrors.rconPort}
               onChange={e => {
                 setRconPort(Number(e.target.value));
                 clearFieldError('rconPort');
@@ -305,7 +306,7 @@ function ServerSettingsForm({
             label="New RCON Password"
             placeholder="Leave blank to keep existing password"
             value={rconPassword}
-            error={fieldErrors.rconPassword}
+            error={mergedErrors.rconPassword}
             onChange={e => {
               setRconPassword(e.target.value);
               clearFieldError('rconPassword');
@@ -329,7 +330,7 @@ function ServerSettingsForm({
             label="Installation Path"
             value={installPath}
             disabled={isServerLocked}
-            error={fieldErrors.installPath}
+            error={mergedErrors.installPath}
             onChange={e => {
               setInstallPath(e.target.value);
               clearFieldError('installPath');
@@ -340,7 +341,7 @@ function ServerSettingsForm({
               label="Profile Path"
               value={profilePath}
               disabled={isServerLocked}
-              error={fieldErrors.profilePath}
+              error={mergedErrors.profilePath}
               onChange={e => {
                 setProfilePath(e.target.value);
                 clearFieldError('profilePath');
@@ -350,7 +351,7 @@ function ServerSettingsForm({
               label="Mission Path"
               value={missionPath}
               disabled={isServerLocked}
-              error={fieldErrors.missionPath}
+              error={mergedErrors.missionPath}
               onChange={e => {
                 setMissionPath(e.target.value);
                 clearFieldError('missionPath');
@@ -402,8 +403,16 @@ export function ServerSettingsView() {
 
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const [saveSuccess, setSaveSuccess] = useState(false);
-  const [saveError, setSaveError] = useState<string | null>(null);
+  const [serverFieldErrors, setServerFieldErrors] = useState<Record<string, string>>({});
+
+  const clearServerFieldError = (field: string) => {
+    setServerFieldErrors(prev => {
+      if (!prev[field]) return prev;
+      const next = { ...prev };
+      delete next[field];
+      return next;
+    });
+  };
 
   // Delete Mutation declared ahead of detail query to guard active query state
   const deleteMutation = useMutation({
@@ -412,6 +421,10 @@ export function ServerSettingsView() {
       return apiClient.servers.delete(activeServerId);
     },
     onSuccess: () => {
+      const cachedDetail = activeServerId
+        ? queryClient.getQueryData<ServerDetailDto>(serverQueryKeys.detail(activeServerId))
+        : undefined;
+      const deletedServerName = cachedDetail?.name ?? activeServer?.name ?? 'Server';
       setShowDeleteConfirm(false);
       const deletedId = activeServerId;
       if (deletedId) {
@@ -421,6 +434,7 @@ export function ServerSettingsView() {
         old ? old.filter(s => s.id !== deletedId) : [],
       );
       queryClient.invalidateQueries({ queryKey: serverQueryKeys.list() });
+      notifySuccess('SERVER_DELETED', { name: deletedServerName });
 
       const nextServer = servers.find(s => s.id !== deletedId);
       if (nextServer) {
@@ -438,7 +452,7 @@ export function ServerSettingsView() {
     },
     onError: (err: Error) => {
       setShowDeleteConfirm(false);
-      setSaveError(err.message || 'Failed to delete server');
+      notifyApiError(err, 'Delete Failed');
     },
   });
 
@@ -466,12 +480,20 @@ export function ServerSettingsView() {
         queryClient.setQueryData(serverQueryKeys.detail(activeServerId), updatedServer);
       }
       queryClient.invalidateQueries({ queryKey: serverQueryKeys.list() });
-      setSaveSuccess(true);
-      setSaveError(null);
+      setServerFieldErrors({});
+      notifySuccess('SERVER_UPDATED', { name: updatedServer.name });
     },
     onError: (err: Error) => {
-      setSaveSuccess(false);
-      setSaveError(err.message || 'Failed to update server settings');
+      const rawFieldErrors =
+        (typeof ApiError === 'function' && err instanceof ApiError ? err.fieldErrors : undefined) ??
+        (err && typeof err === 'object' && 'fieldErrors' in err
+          ? (err as { fieldErrors?: ApiFieldErrorsMap }).fieldErrors
+          : undefined);
+
+      if (rawFieldErrors) {
+        setServerFieldErrors(resolveFieldErrors(rawFieldErrors));
+      }
+      notifyApiError(err, 'Update Failed');
     },
   });
 
@@ -547,8 +569,8 @@ export function ServerSettingsView() {
           detail={detail}
           onSave={payload => updateMutation.mutate(payload)}
           isSaving={updateMutation.isPending}
-          saveSuccess={saveSuccess}
-          saveError={saveError}
+          serverFieldErrors={serverFieldErrors}
+          onClearServerFieldError={clearServerFieldError}
         />
 
         {/* Danger Zone */}

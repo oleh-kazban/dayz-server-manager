@@ -2,7 +2,8 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { apiClient } from '@dsm/api-client';
+import { apiClient, ApiError } from '@dsm/api-client';
+import { showToast } from '@dsm/ui';
 
 import { CreateServerModal } from './CreateServerModal';
 
@@ -23,13 +24,19 @@ vi.mock('@dsm/web/core', async importOriginal => {
   };
 });
 
-vi.mock('@dsm/api-client', () => ({
-  apiClient: {
-    servers: {
-      create: vi.fn(),
+vi.mock('@dsm/api-client', async importOriginal => {
+  const actual = await importOriginal<typeof import('@dsm/api-client')>();
+  return {
+    ...actual,
+    apiClient: {
+      ...actual.apiClient,
+      servers: {
+        ...actual.apiClient.servers,
+        create: vi.fn(),
+      },
     },
-  },
-}));
+  };
+});
 
 describe('CreateServerModal', () => {
   let queryClient: QueryClient;
@@ -37,6 +44,8 @@ describe('CreateServerModal', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.spyOn(showToast, 'success').mockReturnValue('toast-success-id');
+    vi.spyOn(showToast, 'error').mockReturnValue('toast-error-id');
     queryClient = new QueryClient({
       defaultOptions: {
         queries: { retry: false },
@@ -132,6 +141,11 @@ describe('CreateServerModal', () => {
         launchParameters: '-cpuCount=4',
         isDefault: true,
       });
+      expect(showToast.success).toHaveBeenCalledWith(
+        'Server Created',
+        'Server "Namalsk Hardcore" has been created successfully.',
+        undefined,
+      );
       expect(mockSetActiveServerId).toHaveBeenCalledWith('srv-123');
       expect(mockOnClose).toHaveBeenCalled();
     });
@@ -166,11 +180,18 @@ describe('CreateServerModal', () => {
       screen.getByText('Game port, query port, and RCON port must all be distinct.'),
     ).toBeInTheDocument();
     expect(screen.getByText('RCON password must be at least 6 characters.')).toBeInTheDocument();
+    expect(showToast.error).not.toHaveBeenCalled();
   });
 
-  it('handles backend conflict errors on name and port', async () => {
+  it('triggers error toasts on backend conflict errors and highlights fields on 400 VALIDATION_FAILED without rendering Notice banner', async () => {
     vi.mocked(apiClient.servers.create).mockRejectedValueOnce(
-      new Error('A server with this name already exists'),
+      new ApiError('Server name conflict', 409, {
+        statusCode: 409,
+        error: 'Conflict',
+        errorCode: 'SERVER_NAME_CONFLICT',
+        message: "Server with name 'Duplicate Server' already exists",
+        params: { name: 'Duplicate Server' },
+      }),
     );
 
     renderModal(true);
@@ -181,12 +202,23 @@ describe('CreateServerModal', () => {
     fireEvent.click(screen.getByRole('button', { name: /^Create Server$/i }));
 
     await waitFor(() => {
-      expect(screen.getByText(/already exists/i)).toBeInTheDocument();
+      expect(showToast.error).toHaveBeenCalledWith(
+        'Server Name Conflict',
+        'A server named "Duplicate Server" already exists. Please choose a unique name.',
+        undefined,
+      );
     });
+    expect(screen.queryByText('Creation Error')).not.toBeInTheDocument();
 
-    // Test port collision rejection from backend
+    // Test port collision rejection from backend with parameterized error code
     vi.mocked(apiClient.servers.create).mockRejectedValueOnce(
-      new Error('Port 2302 is already allocated'),
+      new ApiError('Port collision', 409, {
+        statusCode: 409,
+        error: 'Conflict',
+        errorCode: 'SERVER_PORT_COLLISION',
+        message: 'Port 2302 collides',
+        params: { port: 2302, occupiedBy: 'DayZ Local', occupiedById: 'srv-1' },
+      }),
     );
 
     fireEvent.change(screen.getByLabelText(/Server Name/i), {
@@ -195,16 +227,38 @@ describe('CreateServerModal', () => {
     fireEvent.click(screen.getByRole('button', { name: /^Create Server$/i }));
 
     await waitFor(() => {
-      expect(screen.getByText(/Port 2302 is already allocated/i)).toBeInTheDocument();
+      expect(showToast.error).toHaveBeenCalledWith(
+        'Port Collision Detected',
+        'Port 2302 is already in use by server "DayZ Local".',
+        undefined,
+      );
     });
 
-    // Test generic backend rejection
-    vi.mocked(apiClient.servers.create).mockRejectedValueOnce(new Error('Database disk error'));
+    // Test 400 VALIDATION_FAILED with structured fieldErrors
+    vi.mocked(apiClient.servers.create).mockRejectedValueOnce(
+      new ApiError('Validation failed', 400, {
+        statusCode: 400,
+        error: 'Bad Request',
+        errorCode: 'VALIDATION_FAILED',
+        message: 'Path traversal (..) is not permitted',
+        fieldErrors: {
+          installPath: {
+            code: 'PATH_TRAVERSAL_FORBIDDEN',
+            message: 'Path traversal (..) is not permitted',
+          },
+        },
+      }),
+    );
 
     fireEvent.click(screen.getByRole('button', { name: /^Create Server$/i }));
 
     await waitFor(() => {
-      expect(screen.getByText(/Database disk error/i)).toBeInTheDocument();
+      expect(showToast.error).toHaveBeenCalledWith(
+        'Validation Error',
+        'Please review the highlighted fields and correct any invalid values.',
+        undefined,
+      );
+      expect(screen.getByText('Path traversal (..) is not permitted.')).toBeInTheDocument();
     });
   });
 

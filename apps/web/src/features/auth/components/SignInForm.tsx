@@ -4,8 +4,8 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useNavigate, useRouter, useSearch } from '@tanstack/react-router';
 import { ArrowRight, UserRound } from 'lucide-react';
 
-import { ApiError } from '@dsm/api-client';
 import { Button, Checkbox, Input, PasswordInput } from '@dsm/ui';
+import { notifyApiError, resolveApiErrorMessage } from '@dsm/web/core';
 
 import { useAuth } from '../auth.context';
 import { type SignInFormValues, signInSchema } from '../signIn.schema';
@@ -42,13 +42,13 @@ export function SignInForm() {
           : '/dashboard';
       await navigate({ to: targetUrl });
     } catch (err) {
-      let message = 'Invalid credentials. Please try again.';
-      if (err instanceof ApiError && err.apiMessage) {
-        message = err.apiMessage;
-      } else if (err instanceof Error) {
-        message = err.message;
-      }
-      setError('root', { message });
+      const resolved = resolveApiErrorMessage(
+        err,
+        'Sign in failed',
+        'Invalid credentials. Please try again.',
+      );
+      notifyApiError(err, 'Sign in failed', 'Invalid credentials. Please try again.');
+      setError('root', { message: resolved.description });
     }
   };
 
