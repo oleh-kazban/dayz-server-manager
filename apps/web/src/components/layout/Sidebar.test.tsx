@@ -139,10 +139,16 @@ describe('Sidebar', () => {
     expect(screen.queryByRole('link', { name: /loot heatmap/i })).not.toBeInTheDocument();
   });
 
-  it('prunes mods and economy workbench when their respective flags are disabled', () => {
+  it('prunes mods, economy workbench, and discord webhooks when their respective flags are disabled', () => {
     render(
       <AuthProvider>
-        <FeatureFlagsProvider initialFlags={{ modsManager: false, economyWorkbench: false }}>
+        <FeatureFlagsProvider
+          initialFlags={{
+            modsManager: false,
+            economyWorkbench: false,
+            discordNotifications: false,
+          }}
+        >
           <Sidebar />
         </FeatureFlagsProvider>
       </AuthProvider>,
@@ -150,6 +156,8 @@ describe('Sidebar', () => {
 
     expect(screen.queryByRole('link', { name: /mods/i })).not.toBeInTheDocument();
     expect(screen.queryByRole('link', { name: /types workbench/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: /discord webhooks/i })).not.toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /server settings/i })).toBeInTheDocument();
   });
 
   it('hides console operators link for non-admin users', () => {

@@ -156,6 +156,27 @@ describe('Router Topology & Navigation', () => {
     });
   });
 
+  it('renders accurate Header breadcrumb from route staticData on subroutes (/logs/adm and /settings/backups)', async () => {
+    renderRoute('/logs/adm', mockAdminAuth);
+
+    await waitFor(() => {
+      expect(screen.getByRole('heading', { name: /administration logs/i })).toBeInTheDocument();
+      const breadcrumbNav = screen.getByRole('navigation', { name: 'Breadcrumb' });
+      expect(breadcrumbNav).toHaveTextContent('Administration logs');
+    });
+  });
+
+  it('redirects /settings/discord and /economy/cfgspawnabletypes to /dashboard when their feature flags are disabled', async () => {
+    renderRoute('/settings/discord', mockAdminAuth, {
+      ...DEFAULT_MODULE_FLAGS,
+      discordNotifications: false,
+    });
+
+    await waitFor(() => {
+      expect(screen.getByRole('heading', { name: 'Dashboard' })).toBeInTheDocument();
+    });
+  });
+
   it('attaches staticData.breadcrumb to every leaf route under authedRoute matching ROUTE_BREADCRUMBS', () => {
     const router = createAppRouter();
     const topRoutes = (router.routeTree.children ?? []) as {
