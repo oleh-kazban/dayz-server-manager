@@ -3,10 +3,11 @@ import { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Server, X } from 'lucide-react';
 
-import { apiClient, ApiError } from '@dsm/api-client';
-import type { ApiFieldErrorsMap, CreateServerDto } from '@dsm/api-contracts';
+import { apiClient } from '@dsm/api-client';
+import type { CreateServerDto } from '@dsm/api-contracts';
 import { Button, Input, PasswordInput, Toggle } from '@dsm/ui';
 import {
+  extractApiFieldErrors,
   notifyApiError,
   notifySuccess,
   resolveFieldErrors,
@@ -56,14 +57,10 @@ export function CreateServerModal({ isOpen, onClose }: CreateServerModalProps) {
       onClose();
     },
     onError: (err: Error) => {
-      const rawFieldErrors =
-        (typeof ApiError === 'function' && err instanceof ApiError ? err.fieldErrors : undefined) ??
-        (err && typeof err === 'object' && 'fieldErrors' in err
-          ? (err as { fieldErrors?: ApiFieldErrorsMap }).fieldErrors
-          : undefined);
-
-      if (rawFieldErrors) {
-        setFieldErrors(resolveFieldErrors(rawFieldErrors));
+      const resolvedFields = resolveFieldErrors(extractApiFieldErrors(err));
+      if (Object.keys(resolvedFields).length > 0) {
+        setFieldErrors(resolvedFields);
+        return;
       }
       notifyApiError(err, 'Failed to create server');
     },

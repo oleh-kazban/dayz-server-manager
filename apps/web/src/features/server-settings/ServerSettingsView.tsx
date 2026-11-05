@@ -4,9 +4,8 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from '@tanstack/react-router';
 import { AlertTriangle, Plus, Save, Trash2 } from 'lucide-react';
 
-import { apiClient, ApiError } from '@dsm/api-client';
+import { apiClient } from '@dsm/api-client';
 import type {
-  ApiFieldErrorsMap,
   ServerDetailDto,
   ServerStatus,
   ServerSummaryDto,
@@ -25,6 +24,7 @@ import {
 } from '@dsm/ui';
 import { EmptyServersState, PageContainer } from '@dsm/web/components';
 import {
+  extractApiFieldErrors,
   notifyApiError,
   notifySuccess,
   resolveFieldErrors,
@@ -484,14 +484,10 @@ export function ServerSettingsView() {
       notifySuccess('SERVER_UPDATED', { name: updatedServer.name });
     },
     onError: (err: Error) => {
-      const rawFieldErrors =
-        (typeof ApiError === 'function' && err instanceof ApiError ? err.fieldErrors : undefined) ??
-        (err && typeof err === 'object' && 'fieldErrors' in err
-          ? (err as { fieldErrors?: ApiFieldErrorsMap }).fieldErrors
-          : undefined);
-
-      if (rawFieldErrors) {
-        setServerFieldErrors(resolveFieldErrors(rawFieldErrors));
+      const resolvedFields = resolveFieldErrors(extractApiFieldErrors(err));
+      if (Object.keys(resolvedFields).length > 0) {
+        setServerFieldErrors(resolvedFields);
+        return;
       }
       notifyApiError(err, 'Update Failed');
     },

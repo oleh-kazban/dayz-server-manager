@@ -103,6 +103,21 @@ export function resolveApiErrorMessage(
   };
 }
 
+export function extractApiFieldErrors(error: unknown): ApiFieldErrorsMap | undefined {
+  if (typeof ApiError === 'function' && error instanceof ApiError) {
+    return error.fieldErrors;
+  }
+
+  if (error && typeof error === 'object' && 'fieldErrors' in error) {
+    const raw = (error as { fieldErrors?: unknown }).fieldErrors;
+    if (raw && typeof raw === 'object') {
+      return raw as ApiFieldErrorsMap;
+    }
+  }
+
+  return undefined;
+}
+
 export function resolveFieldErrors(fieldErrors?: ApiFieldErrorsMap): Record<string, string> {
   if (!fieldErrors) {
     return {};

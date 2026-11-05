@@ -217,14 +217,14 @@ describe('ServerSettingsView', () => {
     expect(screen.queryByText('Settings Saved')).not.toBeInTheDocument();
   });
 
-  it('triggers error toast when update mutation fails with port collision without rendering inline Update Failed notice', async () => {
+  it('triggers error toast when update mutation fails with a non-field error (e.g. SERVER_RUNNING_CONFIG_LOCKED) without rendering inline Update Failed notice', async () => {
     vi.mocked(apiClient.servers.update).mockRejectedValueOnce(
-      new ApiError('Port collision', 409, {
+      new ApiError('Running lock', 409, {
         statusCode: 409,
         error: 'Conflict',
-        errorCode: 'SERVER_PORT_COLLISION',
-        message: 'Port 2302 collides with EU-01',
-        params: { port: 2302, occupiedBy: 'EU-01', occupiedById: 'srv-eu-01' },
+        errorCode: 'SERVER_RUNNING_CONFIG_LOCKED',
+        message: 'Cannot alter network ports while running',
+        params: { id: mockActiveServerSummary.id, name: 'DayZ Namalsk', status: 'running' },
       }),
     );
 
@@ -239,8 +239,8 @@ describe('ServerSettingsView', () => {
 
     await waitFor(() => {
       expect(showToast.error).toHaveBeenCalledWith(
-        'Port Collision Detected',
-        'Port 2302 is already in use by server "EU-01".',
+        'Configuration Locked',
+        'Cannot modify network ports or file paths while "DayZ Namalsk" is running.',
         undefined,
       );
     });
@@ -555,17 +555,37 @@ describe('ServerSettingsView', () => {
     });
   });
 
-  it('highlights inline form fields and triggers error toast when saving server settings fails with 400 fieldErrors', async () => {
+  it('highlights all conflicting/invalid form fields inline simultaneously without firing an error toast when saving server settings fails with 409 or 400 fieldErrors (REQ-03)', async () => {
     vi.mocked(apiClient.servers.update).mockRejectedValueOnce(
-      new ApiError('Validation failed', 400, {
-        statusCode: 400,
-        error: 'Bad Request',
-        errorCode: 'VALIDATION_FAILED',
-        message: 'Invalid path',
+      new ApiError('Conflicts detected', 409, {
+        statusCode: 409,
+        error: 'Conflict',
+        errorCode: 'SERVER_NAME_CONFLICT',
+        message: 'Conflict',
+        params: { name: 'DayZ Chernarus Vanilla' },
         fieldErrors: {
-          installPath: {
-            code: 'PATH_TRAVERSAL_FORBIDDEN',
-            message: 'Path traversal (..) is not permitted',
+          name: {
+            code: 'SERVER_NAME_CONFLICT',
+            message: 'Name conflict',
+            params: { name: 'DayZ Chernarus Vanilla' },
+          },
+          gamePort: {
+            code: 'SERVER_PORT_COLLISION',
+            message: 'Port 2302 conflict',
+            params: {
+              port: 2302,
+              occupiedBy: 'DayZ Chernarus Vanilla',
+              occupiedById: 'srv-1',
+            },
+          },
+          rconPort: {
+            code: 'SERVER_PORT_COLLISION',
+            message: 'Port 2310 conflict',
+            params: {
+              port: 2310,
+              occupiedBy: 'DayZ Chernarus Vanilla',
+              occupiedById: 'srv-1',
+            },
           },
         },
       }),
@@ -581,17 +601,26 @@ describe('ServerSettingsView', () => {
     fireEvent.click(saveButton);
 
     await waitFor(() => {
-      expect(showToast.error).toHaveBeenCalledWith(
-        'Validation Error',
-        'Please review the highlighted fields and correct any invalid values.',
-        undefined,
-      );
-      expect(screen.getByText('Path traversal (..) is not permitted.')).toBeInTheDocument();
+      expect(
+        screen.getByText('A server named "DayZ Chernarus Vanilla" already exists.'),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByText('Port 2302 is already in use by server "DayZ Chernarus Vanilla".'),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByText('Port 2310 is already in use by server "DayZ Chernarus Vanilla".'),
+      ).toBeInTheDocument();
     });
+    expect(showToast.error).not.toHaveBeenCalled();
 
-    // Editing the highlighted field clears the server field error
-    const installInput = screen.getByDisplayValue(mockServerDetail.installPath);
-    fireEvent.change(installInput, { target: { value: 'C:\\DayZServer\\Clean' } });
-    expect(screen.queryByText('Path traversal (..) is not permitted.')).not.toBeInTheDocument();
+    // Editing the highlighted name field clears only that field's error
+    const nameInput = screen.getByDisplayValue(mockServerDetail.name);
+    fireEvent.change(nameInput, { target: { value: 'DayZ Namalsk Unique' } });
+    expect(
+      screen.queryByText('A server named "DayZ Chernarus Vanilla" already exists.'),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByText('Port 2302 is already in use by server "DayZ Chernarus Vanilla".'),
+    ).toBeInTheDocument();
   });
 });
