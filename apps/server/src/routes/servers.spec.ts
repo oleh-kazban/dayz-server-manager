@@ -224,7 +224,7 @@ describe('Servers Routes (/api/v1/servers)', () => {
       expect(nullBody.message).toContain('Null bytes are forbidden');
     });
 
-    it('returns 409 when server name already exists', async () => {
+    it('returns 409 when server name already exists and populates fieldErrors.name', async () => {
       const response = await app.inject({
         method: 'POST',
         url: '/api/v1/servers',
@@ -244,9 +244,16 @@ describe('Servers Routes (/api/v1/servers)', () => {
       expect(apiErrorResponseSchema.safeParse(body).success).toBe(true);
       expect(body.errorCode).toBe('SERVER_NAME_CONFLICT');
       expect(body.params).toEqual({ name: 'DayZ (Local)' });
+      expect(body.fieldErrors).toEqual({
+        name: {
+          code: 'SERVER_NAME_CONFLICT',
+          message: "Server with name 'DayZ (Local)' already exists",
+          params: { name: 'DayZ (Local)' },
+        },
+      });
     });
 
-    it('returns 409 when port collides with an existing server on the host', async () => {
+    it('returns 409 when port collides with an existing server on the host and populates fieldErrors.gamePort', async () => {
       const response = await app.inject({
         method: 'POST',
         url: '/api/v1/servers',
@@ -270,7 +277,77 @@ describe('Servers Routes (/api/v1/servers)', () => {
         occupiedBy: 'DayZ (Local)',
         occupiedById: defaultServerId,
       });
+      expect(body.fieldErrors).toEqual({
+        gamePort: {
+          code: 'SERVER_PORT_COLLISION',
+          message: expect.stringContaining('collides with existing server'),
+          params: {
+            port: 2302,
+            occupiedBy: 'DayZ (Local)',
+            occupiedById: defaultServerId,
+          },
+        },
+      });
       expect(body.message).toContain('collides with existing server');
+    });
+
+    it('aggregates simultaneous name and multi-port conflicts in a single 409 response with zero DB mutations (REQ-01, GUARD-01)', async () => {
+      const response = await app.inject({
+        method: 'POST',
+        url: '/api/v1/servers',
+        headers: { authorization: `Bearer ${adminToken}` },
+        payload: {
+          name: 'DayZ (Local)',
+          installPath: '/opt/dayz',
+          profilePath: '/opt/dayz/profiles',
+          missionPath: 'mpmissions/dayzOffline.chernarusplus',
+          gamePort: 2302,
+          queryPort: 27016,
+          rconPort: 2310,
+        },
+      });
+
+      expect(response.statusCode).toBe(409);
+      const body = response.json();
+      expect(apiErrorResponseSchema.safeParse(body).success).toBe(true);
+      expect(body.errorCode).toBe('SERVER_NAME_CONFLICT');
+      expect(body.params).toEqual({ name: 'DayZ (Local)' });
+      expect(body.fieldErrors).toEqual({
+        name: {
+          code: 'SERVER_NAME_CONFLICT',
+          message: "Server with name 'DayZ (Local)' already exists",
+          params: { name: 'DayZ (Local)' },
+        },
+        gamePort: {
+          code: 'SERVER_PORT_COLLISION',
+          message: expect.stringContaining('Port 2302 collides'),
+          params: {
+            port: 2302,
+            occupiedBy: 'DayZ (Local)',
+            occupiedById: defaultServerId,
+          },
+        },
+        queryPort: {
+          code: 'SERVER_PORT_COLLISION',
+          message: expect.stringContaining('Port 27016 collides'),
+          params: {
+            port: 27016,
+            occupiedBy: 'DayZ (Local)',
+            occupiedById: defaultServerId,
+          },
+        },
+        rconPort: {
+          code: 'SERVER_PORT_COLLISION',
+          message: expect.stringContaining('Port 2310 collides'),
+          params: {
+            port: 2310,
+            occupiedBy: 'DayZ (Local)',
+            occupiedById: defaultServerId,
+          },
+        },
+      });
+
+      expect(dbInstance.db.select().from(servers).all()).toHaveLength(1);
     });
 
     it('returns 201 and creates new server when valid', async () => {
@@ -416,7 +493,7 @@ describe('Servers Routes (/api/v1/servers)', () => {
         .run();
     });
 
-    it('returns 409 if renaming to an existing server name', async () => {
+    it('returns 409 if renaming to an existing server name and populates fieldErrors.name', async () => {
       const response = await app.inject({
         method: 'PATCH',
         url: `/api/v1/servers/${secondServerId}`,
@@ -428,9 +505,16 @@ describe('Servers Routes (/api/v1/servers)', () => {
       expect(apiErrorResponseSchema.safeParse(body).success).toBe(true);
       expect(body.errorCode).toBe('SERVER_NAME_CONFLICT');
       expect(body.params).toEqual({ name: 'DayZ (Local)' });
+      expect(body.fieldErrors).toEqual({
+        name: {
+          code: 'SERVER_NAME_CONFLICT',
+          message: "Server with name 'DayZ (Local)' already exists",
+          params: { name: 'DayZ (Local)' },
+        },
+      });
     });
 
-    it('returns 409 if port update collides with another server', async () => {
+    it('returns 409 if port update collides with another server and populates fieldErrors.gamePort', async () => {
       const response = await app.inject({
         method: 'PATCH',
         url: `/api/v1/servers/${secondServerId}`,
@@ -446,6 +530,80 @@ describe('Servers Routes (/api/v1/servers)', () => {
         occupiedBy: 'DayZ (Local)',
         occupiedById: defaultServerId,
       });
+      expect(body.fieldErrors).toEqual({
+        gamePort: {
+          code: 'SERVER_PORT_COLLISION',
+          message: expect.stringContaining('Port 2302 collides'),
+          params: {
+            port: 2302,
+            occupiedBy: 'DayZ (Local)',
+            occupiedById: defaultServerId,
+          },
+        },
+      });
+    });
+
+    it('aggregates simultaneous name and multi-port conflicts on PATCH in a single 409 response with zero DB mutations (REQ-01, GUARD-01)', async () => {
+      const response = await app.inject({
+        method: 'PATCH',
+        url: `/api/v1/servers/${secondServerId}`,
+        headers: { authorization: `Bearer ${adminToken}` },
+        payload: {
+          name: 'DayZ (Local)',
+          gamePort: 2302,
+          queryPort: 27016,
+          rconPort: 2310,
+        },
+      });
+
+      expect(response.statusCode).toBe(409);
+      const body = response.json();
+      expect(apiErrorResponseSchema.safeParse(body).success).toBe(true);
+      expect(body.errorCode).toBe('SERVER_NAME_CONFLICT');
+      expect(body.fieldErrors).toEqual({
+        name: {
+          code: 'SERVER_NAME_CONFLICT',
+          message: "Server with name 'DayZ (Local)' already exists",
+          params: { name: 'DayZ (Local)' },
+        },
+        gamePort: {
+          code: 'SERVER_PORT_COLLISION',
+          message: expect.stringContaining('Port 2302 collides'),
+          params: {
+            port: 2302,
+            occupiedBy: 'DayZ (Local)',
+            occupiedById: defaultServerId,
+          },
+        },
+        queryPort: {
+          code: 'SERVER_PORT_COLLISION',
+          message: expect.stringContaining('Port 27016 collides'),
+          params: {
+            port: 27016,
+            occupiedBy: 'DayZ (Local)',
+            occupiedById: defaultServerId,
+          },
+        },
+        rconPort: {
+          code: 'SERVER_PORT_COLLISION',
+          message: expect.stringContaining('Port 2310 collides'),
+          params: {
+            port: 2310,
+            occupiedBy: 'DayZ (Local)',
+            occupiedById: defaultServerId,
+          },
+        },
+      });
+
+      const unchanged = dbInstance.db
+        .select()
+        .from(servers)
+        .where(eq(servers.id, secondServerId))
+        .get();
+      expect(unchanged!.name).toBe('Livonia Hardcore');
+      expect(unchanged!.gamePort).toBe(2402);
+      expect(unchanged!.queryPort).toBe(27017);
+      expect(unchanged!.rconPort).toBe(2311);
     });
 
     it('returns 400 if updating port causes intra-server collision', async () => {

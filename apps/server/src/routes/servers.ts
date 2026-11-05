@@ -18,39 +18,118 @@ import { type Server, servers } from '@dsm/database';
 
 import { formatZodFieldErrors, sendApiError } from '../utils/api-error';
 
-interface PortCollisionResult {
-  collides: boolean;
-  message?: string;
-  params?: ApiErrorParams;
+const PORT_FIELD_KEYS = ['gamePort', 'queryPort', 'rconPort'] as const;
+
+interface ServerConflictCandidate {
+  name?: string;
+  gamePort: number;
+  queryPort: number;
+  rconPort: number;
 }
 
-function checkInterServerPortCollision(
+interface AggregatedServerConflict {
+  errorCode: ApiErrorCode;
+  message: string;
+  params: ApiErrorParams;
+  fieldErrors: ApiFieldErrorsMap;
+}
+
+function findPortCollisionIssue(
+  targetServers: Server[],
+  port: number,
+): { message: string; params: ApiErrorParams } | null {
+  for (const s of targetServers) {
+    if (s.gamePort === port || s.queryPort === port || s.rconPort === port) {
+      return {
+        message: `Port ${port} collides with existing server '${s.name}' (ID: ${s.id})`,
+        params: {
+          port,
+          occupiedBy: s.name,
+          occupiedById: s.id,
+        },
+      };
+    }
+  }
+  return null;
+}
+
+function findServerFieldConflicts(
   allServers: Server[],
-  candidatePorts: number[],
+  candidate: ServerConflictCandidate,
   excludeServerId?: string,
-): PortCollisionResult {
+): AggregatedServerConflict | null {
   const targetServers = excludeServerId
     ? allServers.filter(s => s.id !== excludeServerId)
     : allServers;
 
-  for (const s of targetServers) {
-    const existingPorts = new Set([s.gamePort, s.queryPort, s.rconPort]);
-    for (const p of candidatePorts) {
-      if (existingPorts.has(p)) {
-        return {
-          collides: true,
-          message: `Port ${p} collides with existing server '${s.name}' (ID: ${s.id})`,
-          params: {
-            port: p,
-            occupiedBy: s.name,
-            occupiedById: s.id,
-          },
+  const fieldErrors: ApiFieldErrorsMap = {};
+  let primaryConflict: {
+    errorCode: ApiErrorCode;
+    message: string;
+    params: ApiErrorParams;
+  } | null = null;
+
+  if (candidate.name !== undefined && targetServers.some(s => s.name === candidate.name)) {
+    const message = `Server with name '${candidate.name}' already exists`;
+    const params: ApiErrorParams = { name: candidate.name };
+    fieldErrors.name = {
+      code: 'SERVER_NAME_CONFLICT',
+      message,
+      params,
+    };
+    primaryConflict = {
+      errorCode: 'SERVER_NAME_CONFLICT',
+      message,
+      params,
+    };
+  }
+
+  for (const portKey of PORT_FIELD_KEYS) {
+    const collision = findPortCollisionIssue(targetServers, candidate[portKey]);
+    if (collision) {
+      fieldErrors[portKey] = {
+        code: 'SERVER_PORT_COLLISION',
+        message: collision.message,
+        params: collision.params,
+      };
+      if (!primaryConflict) {
+        primaryConflict = {
+          errorCode: 'SERVER_PORT_COLLISION',
+          message: collision.message,
+          params: collision.params,
         };
       }
     }
   }
 
-  return { collides: false };
+  if (!primaryConflict) {
+    return null;
+  }
+
+  return {
+    ...primaryConflict,
+    fieldErrors,
+  };
+}
+
+function sendIfServerFieldConflicts(
+  fastify: FastifyInstance,
+  reply: FastifyReply,
+  candidate: ServerConflictCandidate,
+  excludeServerId?: string,
+): boolean {
+  const allServers = fastify.db.select().from(servers).all();
+  const conflict = findServerFieldConflicts(allServers, candidate, excludeServerId);
+  if (!conflict) {
+    return false;
+  }
+
+  sendApiError(reply, 409, conflict.errorCode, {
+    message: conflict.message,
+    params: conflict.params,
+    fieldErrors: conflict.fieldErrors,
+  });
+  return true;
 }
 
 function checkRunningMutationViolation(existing: Server, data: UpdateServerDto): boolean {
@@ -68,68 +147,6 @@ function checkRunningMutationViolation(existing: Server, data: UpdateServerDto):
     (data.profilePath !== undefined && data.profilePath !== existing.profilePath);
 
   return portChanged || pathChanged;
-}
-
-interface ValidPortsResult {
-  valid: true;
-  ports: { gamePort: number; queryPort: number; rconPort: number };
-}
-
-interface InvalidPortsResult {
-  valid: false;
-  status: 400 | 409;
-  errorCode: ApiErrorCode;
-  message: string;
-  params?: ApiErrorParams;
-  fieldErrors?: ApiFieldErrorsMap;
-}
-
-function validateCandidatePorts(
-  existing: Server,
-  data: UpdateServerDto,
-  allServers: Server[],
-  id: string,
-): ValidPortsResult | InvalidPortsResult {
-  const candidateGamePort = data.gamePort ?? existing.gamePort;
-  const candidateQueryPort = data.queryPort ?? existing.queryPort;
-  const candidateRconPort = data.rconPort ?? existing.rconPort;
-  const candidatePorts = [candidateGamePort, candidateQueryPort, candidateRconPort];
-
-  if (new Set(candidatePorts).size !== 3) {
-    const message = 'Effective gamePort, queryPort, and rconPort must all be distinct';
-    return {
-      valid: false,
-      status: 400,
-      errorCode: 'SERVER_PORTS_NOT_DISTINCT',
-      message,
-      fieldErrors: {
-        gamePort: {
-          code: 'PORTS_NOT_DISTINCT',
-          message,
-        },
-      },
-    };
-  }
-
-  const collisionCheck = checkInterServerPortCollision(allServers, candidatePorts, id);
-  if (collisionCheck.collides) {
-    return {
-      valid: false,
-      status: 409,
-      errorCode: 'SERVER_PORT_COLLISION',
-      message: collisionCheck.message ?? 'Port collision detected with another server',
-      params: collisionCheck.params,
-    };
-  }
-
-  return {
-    valid: true,
-    ports: {
-      gamePort: candidateGamePort,
-      queryPort: candidateQueryPort,
-      rconPort: candidateRconPort,
-    },
-  };
 }
 
 function mapServerDetail(s: Server) {
@@ -257,31 +274,15 @@ export const registerServersRoutes: FastifyPluginAsync = async fastify => {
 
       const data: CreateServerDto = parseResult.data;
 
-      const existingName = fastify.db
-        .select()
-        .from(servers)
-        .where(eq(servers.name, data.name))
-        .get();
-
-      if (existingName) {
-        return sendApiError(reply, 409, 'SERVER_NAME_CONFLICT', {
-          message: `Server with name '${data.name}' already exists`,
-          params: { name: data.name },
-        });
-      }
-
-      const allServers = fastify.db.select().from(servers).all();
-      const collisionCheck = checkInterServerPortCollision(allServers, [
-        data.gamePort,
-        data.queryPort,
-        data.rconPort,
-      ]);
-
-      if (collisionCheck.collides) {
-        return sendApiError(reply, 409, 'SERVER_PORT_COLLISION', {
-          message: collisionCheck.message ?? 'Port collision detected with another server',
-          params: collisionCheck.params,
-        });
+      if (
+        sendIfServerFieldConflicts(fastify, reply, {
+          name: data.name,
+          gamePort: data.gamePort,
+          queryPort: data.queryPort,
+          rconPort: data.rconPort,
+        })
+      ) {
+        return;
       }
 
       const serverId = crypto.randomUUID();
@@ -353,36 +354,38 @@ export const registerServersRoutes: FastifyPluginAsync = async fastify => {
         });
       }
 
-      if (data.name && data.name !== existing.name) {
-        const nameCollision = fastify.db
-          .select()
-          .from(servers)
-          .where(eq(servers.name, data.name))
-          .get();
+      const candidateGamePort = data.gamePort ?? existing.gamePort;
+      const candidateQueryPort = data.queryPort ?? existing.queryPort;
+      const candidateRconPort = data.rconPort ?? existing.rconPort;
 
-        if (nameCollision) {
-          return sendApiError(reply, 409, 'SERVER_NAME_CONFLICT', {
-            message: `Server with name '${data.name}' already exists`,
-            params: { name: data.name },
-          });
-        }
-      }
-
-      const allServers = fastify.db.select().from(servers).all();
-      const portCheck = validateCandidatePorts(existing, data, allServers, id);
-      if (!portCheck.valid) {
-        return sendApiError(reply, portCheck.status, portCheck.errorCode, {
-          message: portCheck.message,
-          params: portCheck.params,
-          fieldErrors: portCheck.fieldErrors,
+      if (new Set([candidateGamePort, candidateQueryPort, candidateRconPort]).size !== 3) {
+        const message = 'Effective gamePort, queryPort, and rconPort must all be distinct';
+        return sendApiError(reply, 400, 'SERVER_PORTS_NOT_DISTINCT', {
+          message,
+          fieldErrors: {
+            gamePort: {
+              code: 'PORTS_NOT_DISTINCT',
+              message,
+            },
+          },
         });
       }
 
-      const {
-        gamePort: candidateGamePort,
-        queryPort: candidateQueryPort,
-        rconPort: candidateRconPort,
-      } = portCheck.ports;
+      if (
+        sendIfServerFieldConflicts(
+          fastify,
+          reply,
+          {
+            name: data.name && data.name !== existing.name ? data.name : undefined,
+            gamePort: candidateGamePort,
+            queryPort: candidateQueryPort,
+            rconPort: candidateRconPort,
+          },
+          id,
+        )
+      ) {
+        return;
+      }
 
       if (data.isDefault) {
         fastify.db.update(servers).set({ isDefault: false }).run();
