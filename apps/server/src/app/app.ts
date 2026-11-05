@@ -14,6 +14,7 @@ import { type DatabaseInstance, initDatabase } from '@dsm/database';
 import { type EnvConfig } from '../config/env';
 import { registerAuthRoutes } from '../routes/auth';
 import { registerHealthRoutes } from '../routes/health';
+import { registerServersRoutes } from '../routes/servers';
 
 export interface BuildAppOptions {
   config: EnvConfig;
@@ -31,6 +32,19 @@ export function buildApp(options: BuildAppOptions): FastifyInstance {
 
   const db = options.db ?? initDatabase({ dbPath: options.config.DATABASE_PATH });
   app.decorate('db', db);
+
+  // Allow empty bodies when Content-Type: application/json is sent on DELETE/GET requests
+  app.addContentTypeParser('application/json', { parseAs: 'string' }, (_req, body, defaultDone) => {
+    if (typeof body === 'string' && body.trim() === '') {
+      return defaultDone(null, undefined);
+    }
+    try {
+      const json = JSON.parse(body as string);
+      return defaultDone(null, json);
+    } catch (err) {
+      return defaultDone(err as Error, undefined);
+    }
+  });
 
   app.register(cors, {
     origin: options.config.CORS_ORIGIN.split(',').map(o => o.trim()),
@@ -60,6 +74,7 @@ export function buildApp(options: BuildAppOptions): FastifyInstance {
 
   app.register(registerHealthRoutes);
   app.register(registerAuthRoutes, { prefix: '/api/v1/auth' });
+  app.register(registerServersRoutes, { prefix: '/api/v1/servers' });
 
   return app;
 }

@@ -2,22 +2,40 @@ import {
   createRootRouteWithContext,
   createRoute,
   createRouter,
-  lazyRouteComponent,
-  Outlet,
   redirect,
   type RouterHistory,
 } from '@tanstack/react-router';
 import { z } from 'zod';
 
-import { AppShell, PlaceholderView } from '@dsm/web/components';
+import {
+  AuthedLayout,
+  PlaceholderView,
+  RootErrorFallback,
+  RootLayout,
+  RootLoader,
+} from '@dsm/web/components';
 
-import type { AuthContextValue } from './features/auth';
-import type { FeatureFlagsContextValue } from './core';
+import { type AuthContextValue, SignIn } from './features/auth';
+import { Dashboard } from './features/dashboard';
+import { ServerSettingsView } from './features/server-settings';
+import { DEFAULT_MODULE_FLAGS, type FeatureFlagsContextValue, type ModuleFlags } from './core';
 
 export interface RouterContext {
   auth: AuthContextValue;
   features: FeatureFlagsContextValue;
 }
+
+export const defaultAuthContext: AuthContextValue = {
+  user: null,
+  isAuthenticated: false,
+  login: async () => {},
+  logout: () => {},
+};
+
+export const defaultFeaturesContext: FeatureFlagsContextValue = {
+  flags: DEFAULT_MODULE_FLAGS,
+  isEnabled: (flag: string) => Boolean(DEFAULT_MODULE_FLAGS[flag as keyof ModuleFlags]),
+};
 
 export interface SignInSearch {
   redirect?: string;
@@ -27,9 +45,20 @@ const signInSearchSchema = z.object({
   redirect: z.string().optional(),
 });
 
+export interface RootSearch {
+  serverId?: string;
+}
+
+export const rootSearchSchema = z.object({
+  serverId: z.string().uuid().optional(),
+});
+
 // 1. Root route with context contract
 const rootRoute = createRootRouteWithContext<RouterContext>()({
-  component: () => <Outlet />,
+  validateSearch: (search: Record<string, unknown>): RootSearch => rootSearchSchema.parse(search),
+  component: RootLayout,
+  errorComponent: RootErrorFallback,
+  pendingComponent: RootLoader,
 });
 
 // 2. Default Index Route: redirects to /dashboard
@@ -48,19 +77,29 @@ const signInRoute = createRoute({
   validateSearch: (search: Record<string, unknown>): SignInSearch =>
     signInSearchSchema.parse(search),
   beforeLoad: ({ context }) => {
-    if (context.auth.isAuthenticated) {
+    if (context?.auth?.isAuthenticated) {
       throw redirect({ to: '/dashboard' });
     }
   },
-  component: lazyRouteComponent(() => import('./features/auth'), 'SignIn'),
+  component: SignIn,
+});
+
+export interface AuthedSearch {
+  serverId?: string;
+}
+
+const authedSearchSchema = z.object({
+  serverId: z.string().uuid().optional(),
 });
 
 // 4. Authenticated Layout Route: hosts persistent AppShell and guards child routes
 const authedRoute = createRoute({
   id: 'authed',
   getParentRoute: () => rootRoute,
+  validateSearch: (search: Record<string, unknown>): AuthedSearch =>
+    authedSearchSchema.parse(search),
   beforeLoad: ({ context, location }) => {
-    if (!context.auth.isAuthenticated) {
+    if (!context?.auth?.isAuthenticated) {
       throw redirect({
         to: '/sign-in',
         search: {
@@ -69,18 +108,14 @@ const authedRoute = createRoute({
       });
     }
   },
-  component: () => (
-    <AppShell>
-      <Outlet />
-    </AppShell>
-  ),
+  component: AuthedLayout,
 });
 
 // 5. Protected Primary Routes
 const dashboardRoute = createRoute({
   getParentRoute: () => authedRoute,
   path: '/dashboard',
-  component: lazyRouteComponent(() => import('./features/dashboard'), 'Dashboard'),
+  component: Dashboard,
 });
 
 const systemRoute = createRoute({
@@ -109,7 +144,7 @@ const modsRoute = createRoute({
   getParentRoute: () => authedRoute,
   path: '/mods',
   beforeLoad: ({ context }) => {
-    if (!context.features.isEnabled('modsManager')) {
+    if (!context?.features?.isEnabled?.('modsManager')) {
       throw redirect({ to: '/dashboard' });
     }
   },
@@ -198,7 +233,7 @@ const worldMapRoute = createRoute({
   getParentRoute: () => authedRoute,
   path: '/world/map',
   beforeLoad: ({ context }) => {
-    if (!context.features.isEnabled('worldMap')) {
+    if (!context?.features?.isEnabled?.('worldMap')) {
       throw redirect({ to: '/dashboard' });
     }
   },
@@ -214,7 +249,7 @@ const worldLootRoute = createRoute({
   getParentRoute: () => authedRoute,
   path: '/world/loot',
   beforeLoad: ({ context }) => {
-    if (!context.features.isEnabled('worldMap')) {
+    if (!context?.features?.isEnabled?.('worldMap')) {
       throw redirect({ to: '/dashboard' });
     }
   },
@@ -239,7 +274,7 @@ const economyTypesRoute = createRoute({
   getParentRoute: () => authedRoute,
   path: '/economy/types',
   beforeLoad: ({ context }) => {
-    if (!context.features.isEnabled('economyWorkbench')) {
+    if (!context?.features?.isEnabled?.('economyWorkbench')) {
       throw redirect({ to: '/dashboard' });
     }
   },
@@ -255,7 +290,7 @@ const economySpawnsRoute = createRoute({
   getParentRoute: () => authedRoute,
   path: '/economy/cfgspawnabletypes',
   beforeLoad: ({ context }) => {
-    if (!context.features.isEnabled('economyWorkbench')) {
+    if (!context?.features?.isEnabled?.('economyWorkbench')) {
       throw redirect({ to: '/dashboard' });
     }
   },
@@ -291,12 +326,7 @@ const settingsIndexRoute = createRoute({
 const settingsServerRoute = createRoute({
   getParentRoute: () => authedRoute,
   path: '/settings/server',
-  component: () => (
-    <PlaceholderView
-      title="DayZ Server Configuration"
-      description="Game server executable paths, port assignments, launch flags, and serverDZ.cfg editor."
-    />
-  ),
+  component: ServerSettingsView,
 });
 
 const settingsAppRoute = createRoute({
@@ -314,7 +344,7 @@ const settingsDiscordRoute = createRoute({
   getParentRoute: () => authedRoute,
   path: '/settings/discord',
   beforeLoad: ({ context }) => {
-    if (!context.features.isEnabled('discordNotifications')) {
+    if (!context?.features?.isEnabled?.('discordNotifications')) {
       throw redirect({ to: '/dashboard' });
     }
   },
@@ -330,7 +360,7 @@ const settingsOperatorsRoute = createRoute({
   getParentRoute: () => authedRoute,
   path: '/settings/operators',
   beforeLoad: ({ context }) => {
-    if (context.auth.user?.role !== 'admin') {
+    if (context?.auth?.user?.role !== 'admin') {
       throw redirect({ to: '/dashboard' });
     }
   },
@@ -401,9 +431,12 @@ export function createAppRouter(history?: RouterHistory) {
     routeTree,
     history,
     context: {
-      auth: undefined!,
-      features: undefined!,
+      auth: defaultAuthContext,
+      features: defaultFeaturesContext,
     },
+    defaultPreload: 'intent',
+    defaultPendingComponent: RootLoader,
+    defaultErrorComponent: RootErrorFallback,
   });
 }
 

@@ -1,9 +1,10 @@
 import type { ReactNode } from 'react';
 
+import { QueryClientProvider } from '@tanstack/react-query';
 import { render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { FeatureFlagsProvider } from '@dsm/web/core';
+import { FeatureFlagsProvider, queryClient } from '@dsm/web/core';
 import { AuthProvider } from '@dsm/web/features/auth';
 import { ThemeProvider } from '@dsm/web/features/theme';
 
@@ -29,6 +30,7 @@ vi.mock('@tanstack/react-router', () => ({
     </a>
   ),
   useNavigate: () => vi.fn(),
+  useLocation: () => ({ pathname: '/dashboard' }),
   useRouter: () => ({
     invalidate: vi.fn(),
   }),
@@ -41,15 +43,17 @@ describe('AppShell', () => {
 
   it('renders Sidebar, Header, and page content within the layout frame', () => {
     render(
-      <ThemeProvider>
-        <AuthProvider>
-          <FeatureFlagsProvider>
-            <AppShell>
-              <div data-testid="dashboard-content">Dashboard View</div>
-            </AppShell>
-          </FeatureFlagsProvider>
-        </AuthProvider>
-      </ThemeProvider>,
+      <QueryClientProvider client={queryClient}>
+        <ThemeProvider>
+          <AuthProvider>
+            <FeatureFlagsProvider>
+              <AppShell>
+                <div data-testid="dashboard-content">Dashboard View</div>
+              </AppShell>
+            </FeatureFlagsProvider>
+          </AuthProvider>
+        </ThemeProvider>
+      </QueryClientProvider>,
     );
 
     expect(screen.getByRole('complementary', { name: 'Primary Navigation' })).toBeInTheDocument();

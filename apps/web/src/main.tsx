@@ -8,7 +8,12 @@ import './styles/theme.css';
 const rootElement = document.getElementById('root');
 
 if (rootElement) {
-  createRoot(rootElement).render(
+  const root =
+    (window as unknown as { __dsmRoot?: ReturnType<typeof createRoot> }).__dsmRoot ??
+    createRoot(rootElement);
+  (window as unknown as { __dsmRoot?: ReturnType<typeof createRoot> }).__dsmRoot = root;
+
+  root.render(
     <StrictMode>
       <App />
     </StrictMode>,

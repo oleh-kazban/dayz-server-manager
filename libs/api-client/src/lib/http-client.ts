@@ -65,6 +65,33 @@ export class HttpClient {
     return this.token;
   }
 
+  private prepareHeaders(init: RequestInit): Record<string, string> {
+    const headers: Record<string, string> = {
+      ...this.defaultHeaders,
+      ...(this.token ? { Authorization: `Bearer ${this.token}` } : {}),
+      ...(init.headers as Record<string, string>),
+    };
+
+    if (init.body === undefined || init.body === null) {
+      for (const key of Object.keys(headers)) {
+        if (key.toLowerCase() === 'content-type') {
+          delete headers[key];
+        }
+      }
+    }
+
+    return headers;
+  }
+
+  private async tryRefreshToken(): Promise<string | null> {
+    if (!this.refreshPromise && this.onRefreshToken) {
+      this.refreshPromise = this.onRefreshToken().finally(() => {
+        this.refreshPromise = null;
+      });
+    }
+    return this.refreshPromise;
+  }
+
   async request<T>(
     endpoint: string,
     schema: ZodType<T>,
@@ -72,11 +99,7 @@ export class HttpClient {
     isRetry = false,
   ): Promise<T> {
     const url = `${this.baseUrl}${endpoint}`;
-    const headers: Record<string, string> = {
-      ...this.defaultHeaders,
-      ...(this.token ? { Authorization: `Bearer ${this.token}` } : {}),
-      ...(init.headers as Record<string, string>),
-    };
+    const headers = this.prepareHeaders(init);
 
     const response = await fetch(url, {
       ...init,
@@ -84,20 +107,15 @@ export class HttpClient {
     });
 
     if (!response.ok) {
-      if (
+      const canRefresh =
         response.status === 401 &&
         !isRetry &&
-        this.onRefreshToken &&
+        Boolean(this.onRefreshToken) &&
         !endpoint.includes('/auth/login') &&
-        !endpoint.includes('/auth/refresh')
-      ) {
-        if (!this.refreshPromise) {
-          this.refreshPromise = this.onRefreshToken().finally(() => {
-            this.refreshPromise = null;
-          });
-        }
+        !endpoint.includes('/auth/refresh');
 
-        const newAccessToken = await this.refreshPromise;
+      if (canRefresh) {
+        const newAccessToken = await this.tryRefreshToken();
         if (newAccessToken) {
           this.setToken(newAccessToken);
           return this.request(endpoint, schema, init, true);
@@ -154,6 +172,19 @@ export class HttpClient {
     return this.request(endpoint, schema, {
       ...init,
       method: 'PUT',
+      body: body !== undefined ? JSON.stringify(body) : undefined,
+    });
+  }
+
+  patch<T>(
+    endpoint: string,
+    schema: ZodType<T>,
+    body?: unknown,
+    init?: Omit<RequestInit, 'method' | 'body'>,
+  ): Promise<T> {
+    return this.request(endpoint, schema, {
+      ...init,
+      method: 'PATCH',
       body: body !== undefined ? JSON.stringify(body) : undefined,
     });
   }

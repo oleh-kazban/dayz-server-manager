@@ -10,6 +10,10 @@ import type { AuthUser } from '@dsm/web/features/auth/auth.types';
 
 import { Sidebar } from './Sidebar';
 
+vi.mock('./ServerSelector', () => ({
+  ServerSelector: () => <div>dayz (local)</div>,
+}));
+
 vi.mock('@tanstack/react-router', () => ({
   Link: ({
     children,

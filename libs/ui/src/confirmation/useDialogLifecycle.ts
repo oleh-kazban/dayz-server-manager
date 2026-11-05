@@ -20,14 +20,14 @@ export function useDialogLifecycle({
   onConfirm,
 }: UseDialogLifecycleOptions): UseDialogLifecycleReturn {
   const dialogRef = useRef<HTMLDialogElement>(null);
-  const isUnmountingRef = useRef(false);
+  const isMountedRef = useRef(false);
 
   const closeDialog = (returnValue: 'confirm' | 'cancel' = 'cancel') => {
     dialogRef.current?.close(returnValue);
   };
 
   const handleClose = (event: SyntheticEvent<HTMLDialogElement>) => {
-    if (isLoading || isUnmountingRef.current) return;
+    if (isLoading || !isMountedRef.current || event.currentTarget.returnValue === 'cleanup') return;
     if (event.currentTarget.returnValue === 'confirm') {
       onConfirm();
     } else {
@@ -38,7 +38,7 @@ export function useDialogLifecycle({
   const handleDialogClick = (event: MouseEvent<HTMLDialogElement>) => {
     if (isLoading) return;
     if (event.target === event.currentTarget) {
-      dialogRef.current?.close('cancel');
+      closeDialog('cancel');
     }
   };
 
@@ -49,15 +49,15 @@ export function useDialogLifecycle({
   };
 
   useEffect(() => {
-    isUnmountingRef.current = false;
+    isMountedRef.current = true;
     const dialog = dialogRef.current;
     if (dialog && !dialog.open) {
       dialog.showModal();
     }
     return () => {
-      isUnmountingRef.current = true;
+      isMountedRef.current = false;
       if (dialog && dialog.open) {
-        dialog.close();
+        dialog.close('cleanup');
       }
     };
   }, []);
