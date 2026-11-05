@@ -159,7 +159,7 @@ export const registerServersRoutes: FastifyPluginAsync = async fastify => {
       onRequest: [fastify.authenticate],
     },
     async (_request, reply) => {
-      const rows = fastify.db.db.select().from(servers).all();
+      const rows = fastify.db.select().from(servers).all();
 
       const summaries = rows.map(s =>
         serverSummarySchema.parse({
@@ -196,7 +196,7 @@ export const registerServersRoutes: FastifyPluginAsync = async fastify => {
       }
       const { id } = paramResult.data;
 
-      const s = fastify.db.db.select().from(servers).where(eq(servers.id, id)).get();
+      const s = fastify.db.select().from(servers).where(eq(servers.id, id)).get();
 
       if (!s) {
         return sendApiError(reply, 404, 'SERVER_NOT_FOUND', {
@@ -235,7 +235,7 @@ export const registerServersRoutes: FastifyPluginAsync = async fastify => {
 
       const data: CreateServerDto = parseResult.data;
 
-      const existingName = fastify.db.db
+      const existingName = fastify.db
         .select()
         .from(servers)
         .where(eq(servers.name, data.name))
@@ -248,7 +248,7 @@ export const registerServersRoutes: FastifyPluginAsync = async fastify => {
         });
       }
 
-      const allServers = fastify.db.db.select().from(servers).all();
+      const allServers = fastify.db.select().from(servers).all();
       const collisionCheck = checkInterServerPortCollision(allServers, [
         data.gamePort,
         data.queryPort,
@@ -266,10 +266,10 @@ export const registerServersRoutes: FastifyPluginAsync = async fastify => {
       const now = new Date();
 
       if (data.isDefault) {
-        fastify.db.db.update(servers).set({ isDefault: false }).run();
+        fastify.db.update(servers).set({ isDefault: false }).run();
       }
 
-      fastify.db.db
+      fastify.db
         .insert(servers)
         .values({
           id: serverId,
@@ -290,7 +290,7 @@ export const registerServersRoutes: FastifyPluginAsync = async fastify => {
         })
         .run();
 
-      const created = fastify.db.db.select().from(servers).where(eq(servers.id, serverId)).get();
+      const created = fastify.db.select().from(servers).where(eq(servers.id, serverId)).get();
 
       return reply.status(201).send(mapServerDetail(created!));
     },
@@ -321,7 +321,7 @@ export const registerServersRoutes: FastifyPluginAsync = async fastify => {
       }
       const { id } = paramResult.data;
 
-      const existing = fastify.db.db.select().from(servers).where(eq(servers.id, id)).get();
+      const existing = fastify.db.select().from(servers).where(eq(servers.id, id)).get();
 
       if (!existing) {
         return sendApiError(reply, 404, 'SERVER_NOT_FOUND', {
@@ -349,7 +349,7 @@ export const registerServersRoutes: FastifyPluginAsync = async fastify => {
       }
 
       if (data.name && data.name !== existing.name) {
-        const nameCollision = fastify.db.db
+        const nameCollision = fastify.db
           .select()
           .from(servers)
           .where(eq(servers.name, data.name))
@@ -363,7 +363,7 @@ export const registerServersRoutes: FastifyPluginAsync = async fastify => {
         }
       }
 
-      const allServers = fastify.db.db.select().from(servers).all();
+      const allServers = fastify.db.select().from(servers).all();
       const portCheck = validateCandidatePorts(existing, data, allServers, id);
       if (!portCheck.valid) {
         return sendApiError(reply, portCheck.status, portCheck.errorCode, {
@@ -380,10 +380,10 @@ export const registerServersRoutes: FastifyPluginAsync = async fastify => {
       } = portCheck.ports;
 
       if (data.isDefault) {
-        fastify.db.db.update(servers).set({ isDefault: false }).run();
+        fastify.db.update(servers).set({ isDefault: false }).run();
       }
 
-      fastify.db.db
+      fastify.db
         .update(servers)
         .set({
           name: data.name ?? existing.name,
@@ -403,7 +403,7 @@ export const registerServersRoutes: FastifyPluginAsync = async fastify => {
         .where(eq(servers.id, id))
         .run();
 
-      const updated = fastify.db.db.select().from(servers).where(eq(servers.id, id)).get();
+      const updated = fastify.db.select().from(servers).where(eq(servers.id, id)).get();
 
       return reply.send(mapServerDetail(updated!));
     },
@@ -434,7 +434,7 @@ export const registerServersRoutes: FastifyPluginAsync = async fastify => {
       }
       const { id } = paramResult.data;
 
-      const existing = fastify.db.db.select().from(servers).where(eq(servers.id, id)).get();
+      const existing = fastify.db.select().from(servers).where(eq(servers.id, id)).get();
 
       if (!existing) {
         return sendApiError(reply, 404, 'SERVER_NOT_FOUND', {
@@ -451,11 +451,11 @@ export const registerServersRoutes: FastifyPluginAsync = async fastify => {
         });
       }
 
-      const executeDelete = fastify.db.sqlite.transaction(() => {
-        fastify.db.db.delete(servers).where(eq(servers.id, id)).run();
+      const executeDelete = fastify.sqlite.transaction(() => {
+        fastify.db.delete(servers).where(eq(servers.id, id)).run();
 
         if (existing.isDefault) {
-          const remaining = fastify.db.db
+          const remaining = fastify.db
             .select()
             .from(servers)
             .orderBy(asc(servers.createdAt))
@@ -463,7 +463,7 @@ export const registerServersRoutes: FastifyPluginAsync = async fastify => {
             .all();
 
           if (remaining.length > 0) {
-            fastify.db.db
+            fastify.db
               .update(servers)
               .set({ isDefault: true })
               .where(eq(servers.id, remaining[0].id))

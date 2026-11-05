@@ -9,7 +9,7 @@ async function bootstrap() {
     app.log.info(`Received ${signal}. Shutting down gracefully...`);
     try {
       await app.close();
-      app.db.close();
+      app.closeDb();
       app.log.info('Server and database closed cleanly.');
       process.exit(0);
     } catch (err) {

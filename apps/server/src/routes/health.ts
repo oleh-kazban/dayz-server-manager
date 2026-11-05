@@ -31,8 +31,8 @@ export async function registerHealthRoutes(fastify: FastifyInstance): Promise<vo
     },
     async (_request, reply): Promise<HealthResponseDto | void> => {
       try {
-        if (fastify.db?.sqlite) {
-          fastify.db.sqlite.prepare('SELECT 1').get();
+        if (fastify.sqlite) {
+          fastify.sqlite.prepare('SELECT 1').get();
         }
         return {
           status: 'ok',

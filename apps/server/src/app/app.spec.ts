@@ -31,7 +31,7 @@ describe('Fastify App', () => {
     expect(new Date(json.timestamp).toString()).not.toBe('Invalid Date');
 
     await app.close();
-    app.db.close();
+    app.closeDb();
   });
 
   it('sets CORS headers according to config', async () => {
@@ -48,7 +48,7 @@ describe('Fastify App', () => {
     expect(response.headers['access-control-allow-origin']).toBe('http://localhost:4200');
 
     await app.close();
-    app.db.close();
+    app.closeDb();
   });
 
   it('formats unhandled internal errors into structured INTERNAL_SERVER_ERROR without leaking stack traces', async () => {
@@ -70,6 +70,6 @@ describe('Fastify App', () => {
     expect(JSON.stringify(body)).not.toContain('C:\\secret\\db.sqlite');
 
     await app.close();
-    app.db.close();
+    app.closeDb();
   });
 });
