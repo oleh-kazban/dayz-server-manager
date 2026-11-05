@@ -10,6 +10,8 @@ import {
 } from '@dsm/api-contracts';
 import { users, verifyPassword } from '@dsm/database';
 
+import { formatZodFieldErrors, sendApiError } from '../utils/api-error';
+
 export const registerAuthRoutes: FastifyPluginAsync = async fastify => {
   fastify.post(
     '/login',
@@ -23,7 +25,6 @@ export const registerAuthRoutes: FastifyPluginAsync = async fastify => {
       schema: {
         body: {
           type: 'object',
-          required: ['usernameOrEmail', 'password'],
           properties: {
             usernameOrEmail: { type: 'string' },
             password: { type: 'string' },
@@ -56,7 +57,10 @@ export const registerAuthRoutes: FastifyPluginAsync = async fastify => {
     async (request, reply) => {
       const parseResult = signInRequestSchema.safeParse(request.body);
       if (!parseResult.success) {
-        return reply.badRequest('Invalid request payload');
+        return sendApiError(reply, 400, 'VALIDATION_FAILED', {
+          message: 'Invalid request payload',
+          fieldErrors: formatZodFieldErrors(parseResult.error),
+        });
       }
 
       const { usernameOrEmail, password } = parseResult.data;
@@ -67,7 +71,7 @@ export const registerAuthRoutes: FastifyPluginAsync = async fastify => {
         .get();
 
       if (!user || !verifyPassword(password, user.passwordHash)) {
-        return reply.unauthorized('Invalid username or password');
+        return sendApiError(reply, 401, 'AUTH_INVALID_CREDENTIALS', 'Invalid username or password');
       }
 
       // Update lastLoginAt timestamp
@@ -123,7 +127,6 @@ export const registerAuthRoutes: FastifyPluginAsync = async fastify => {
       schema: {
         body: {
           type: 'object',
-          required: ['refreshToken'],
           properties: {
             refreshToken: { type: 'string' },
           },
@@ -143,7 +146,10 @@ export const registerAuthRoutes: FastifyPluginAsync = async fastify => {
     async (request, reply) => {
       const parseResult = refreshRequestSchema.safeParse(request.body);
       if (!parseResult.success) {
-        return reply.badRequest('Invalid request payload');
+        return sendApiError(reply, 400, 'VALIDATION_FAILED', {
+          message: 'Invalid request payload',
+          fieldErrors: formatZodFieldErrors(parseResult.error),
+        });
       }
 
       const { refreshToken } = parseResult.data;
@@ -151,12 +157,12 @@ export const registerAuthRoutes: FastifyPluginAsync = async fastify => {
       try {
         const payload = fastify.jwt.verify<{ sub: string; type?: string }>(refreshToken);
         if (payload.type !== 'refresh') {
-          return reply.unauthorized('Invalid token type');
+          return sendApiError(reply, 401, 'AUTH_TOKEN_TYPE_INVALID', 'Invalid token type');
         }
 
         const user = fastify.db.db.select().from(users).where(eq(users.id, payload.sub)).get();
         if (!user) {
-          return reply.unauthorized('User not found');
+          return sendApiError(reply, 401, 'AUTH_USER_NOT_FOUND', 'User not found');
         }
 
         const accessToken = fastify.jwt.sign(
@@ -175,7 +181,12 @@ export const registerAuthRoutes: FastifyPluginAsync = async fastify => {
         };
         return reply.send(response);
       } catch {
-        return reply.unauthorized('Invalid or expired refresh token');
+        return sendApiError(
+          reply,
+          401,
+          'AUTH_REFRESH_TOKEN_INVALID',
+          'Invalid or expired refresh token',
+        );
       }
     },
   );
@@ -202,7 +213,7 @@ export const registerAuthRoutes: FastifyPluginAsync = async fastify => {
     async (request, reply) => {
       const user = fastify.db.db.select().from(users).where(eq(users.id, request.user.sub)).get();
       if (!user) {
-        return reply.unauthorized('User not found');
+        return sendApiError(reply, 401, 'AUTH_USER_NOT_FOUND', 'User not found');
       }
 
       const response: AuthUserDto = {

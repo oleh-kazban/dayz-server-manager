@@ -1,6 +1,7 @@
 import type { FastifyInstance } from 'fastify';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
+import { apiErrorResponseSchema } from '@dsm/api-contracts';
 import { type DatabaseInstance, initDatabase } from '@dsm/database';
 
 import { buildApp } from '../app/app';
@@ -81,6 +82,8 @@ describe('Auth Routes (/api/v1/auth)', () => {
 
       expect(response.statusCode).toBe(401);
       const body = response.json();
+      expect(apiErrorResponseSchema.safeParse(body).success).toBe(true);
+      expect(body.errorCode).toBe('AUTH_INVALID_CREDENTIALS');
       expect(body.message).toContain('Invalid username or password');
     });
 
@@ -96,6 +99,8 @@ describe('Auth Routes (/api/v1/auth)', () => {
 
       expect(response.statusCode).toBe(401);
       const body = response.json();
+      expect(apiErrorResponseSchema.safeParse(body).success).toBe(true);
+      expect(body.errorCode).toBe('AUTH_INVALID_CREDENTIALS');
       expect(body.message).toContain('Invalid username or password');
     });
 
@@ -110,6 +115,12 @@ describe('Auth Routes (/api/v1/auth)', () => {
       });
 
       expect(response.statusCode).toBe(400);
+      const body = response.json();
+      expect(apiErrorResponseSchema.safeParse(body).success).toBe(true);
+      expect(body.errorCode).toBe('VALIDATION_FAILED');
+      expect(body.fieldErrors).toBeDefined();
+      expect(body.fieldErrors.usernameOrEmail).toBeDefined();
+      expect(body.fieldErrors.password).toBeDefined();
     });
   });
 
@@ -149,6 +160,9 @@ describe('Auth Routes (/api/v1/auth)', () => {
       });
 
       expect(refreshRes.statusCode).toBe(401);
+      const body = refreshRes.json();
+      expect(apiErrorResponseSchema.safeParse(body).success).toBe(true);
+      expect(body.errorCode).toBe('AUTH_TOKEN_TYPE_INVALID');
     });
 
     it('returns 401 for corrupted refresh token', async () => {
@@ -159,6 +173,9 @@ describe('Auth Routes (/api/v1/auth)', () => {
       });
 
       expect(refreshRes.statusCode).toBe(401);
+      const body = refreshRes.json();
+      expect(apiErrorResponseSchema.safeParse(body).success).toBe(true);
+      expect(body.errorCode).toBe('AUTH_REFRESH_TOKEN_INVALID');
     });
 
     it('returns 400 for missing refresh token payload', async () => {
@@ -169,6 +186,10 @@ describe('Auth Routes (/api/v1/auth)', () => {
       });
 
       expect(refreshRes.statusCode).toBe(400);
+      const body = refreshRes.json();
+      expect(apiErrorResponseSchema.safeParse(body).success).toBe(true);
+      expect(body.errorCode).toBe('VALIDATION_FAILED');
+      expect(body.fieldErrors?.refreshToken).toBeDefined();
     });
 
     it('returns 401 if user in refresh token is no longer in database', async () => {
@@ -184,7 +205,10 @@ describe('Auth Routes (/api/v1/auth)', () => {
       });
 
       expect(refreshRes.statusCode).toBe(401);
-      expect(refreshRes.json().message).toContain('User not found');
+      const body = refreshRes.json();
+      expect(apiErrorResponseSchema.safeParse(body).success).toBe(true);
+      expect(body.errorCode).toBe('AUTH_USER_NOT_FOUND');
+      expect(body.message).toContain('User not found');
     });
   });
 
@@ -218,6 +242,9 @@ describe('Auth Routes (/api/v1/auth)', () => {
       });
 
       expect(meRes.statusCode).toBe(401);
+      const body = meRes.json();
+      expect(apiErrorResponseSchema.safeParse(body).success).toBe(true);
+      expect(body.errorCode).toBe('AUTH_TOKEN_MISSING_OR_INVALID');
     });
 
     it('returns 401 when token is invalid', async () => {
@@ -230,6 +257,9 @@ describe('Auth Routes (/api/v1/auth)', () => {
       });
 
       expect(meRes.statusCode).toBe(401);
+      const body = meRes.json();
+      expect(apiErrorResponseSchema.safeParse(body).success).toBe(true);
+      expect(body.errorCode).toBe('AUTH_TOKEN_MISSING_OR_INVALID');
     });
 
     it('returns 401 when a refresh token is used as Bearer token', async () => {
@@ -249,7 +279,10 @@ describe('Auth Routes (/api/v1/auth)', () => {
       });
 
       expect(meRes.statusCode).toBe(401);
-      expect(meRes.json().message).toContain('Invalid token type for authorization');
+      const body = meRes.json();
+      expect(apiErrorResponseSchema.safeParse(body).success).toBe(true);
+      expect(body.errorCode).toBe('AUTH_TOKEN_TYPE_INVALID');
+      expect(body.message).toContain('Invalid token type for authorization');
     });
 
     it('returns 401 when user in access token is not found in database', async () => {
@@ -267,7 +300,10 @@ describe('Auth Routes (/api/v1/auth)', () => {
       });
 
       expect(meRes.statusCode).toBe(401);
-      expect(meRes.json().message).toContain('User not found');
+      const body = meRes.json();
+      expect(apiErrorResponseSchema.safeParse(body).success).toBe(true);
+      expect(body.errorCode).toBe('AUTH_USER_NOT_FOUND');
+      expect(body.message).toContain('User not found');
     });
   });
 
@@ -311,7 +347,10 @@ describe('Auth Routes (/api/v1/auth)', () => {
       });
 
       expect(response.statusCode).toBe(429);
-      expect(response.json().message).toContain('Rate limit exceeded');
+      const body = response.json();
+      expect(apiErrorResponseSchema.safeParse(body).success).toBe(true);
+      expect(body.errorCode).toBe('AUTH_RATE_LIMIT_EXCEEDED');
+      expect(body.message).toContain('Rate limit exceeded');
     });
   });
 });
