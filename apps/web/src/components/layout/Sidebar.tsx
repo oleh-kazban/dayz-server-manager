@@ -1,23 +1,7 @@
 import { Link } from '@tanstack/react-router';
-import {
-  Activity,
-  Bell,
-  Box,
-  Cpu,
-  FileCode2,
-  Flame,
-  LayoutDashboard,
-  MapIcon,
-  RadioTower,
-  ShieldCheck,
-  Sliders,
-  Terminal,
-  UserCheck,
-  Users,
-  Wrench,
-} from 'lucide-react';
+import { RadioTower } from 'lucide-react';
 
-import { useFeatureFlag } from '@dsm/web/core';
+import { NAVIGATION_SECTIONS, useFeatureFlags } from '@dsm/web/core';
 import { useAuth } from '@dsm/web/features/auth';
 
 import { Logo } from './Logo';
@@ -28,17 +12,12 @@ import { UserProfile } from './UserProfile';
 PRIMARY NAVIGATION (SIDEBAR)
 Architectural Note:
 - Responsive: Drawer off-canvas on mobile, fixed rail on desktop.
-- Type-Safe: Integrated with TanStack Router `<Link>` components.
-- Modular: Dynamically prunes disabled subsystems based on feature flags.
+- Type-Safe: Driven by declarative NAVIGATION_SECTIONS manifest.
+- Modular: Dynamically prunes disabled subsystems based on feature flags and RBAC.
 ==================================================================== */
 export function Sidebar() {
   const { user } = useAuth();
-  const isMapEnabled = useFeatureFlag('worldMap');
-  const isEconomyEnabled = useFeatureFlag('economyWorkbench');
-  const isModsEnabled = useFeatureFlag('modsManager');
-  const isDiscordEnabled = useFeatureFlag('discordNotifications');
-
-  const isAdmin = user?.role === 'admin';
+  const { isEnabled } = useFeatureFlags();
 
   const linkActiveClasses =
     'bg-[var(--color-primary-light)] text-[var(--color-primary)] font-medium';
@@ -46,6 +25,31 @@ export function Sidebar() {
     'text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-hover)] hover:text-[var(--color-text-main)]';
   const linkBaseClasses =
     'flex items-center gap-3 px-3 py-2 rounded-lg text-xs transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)] focus-visible:ring-offset-1 focus-visible:ring-offset-[var(--color-sidebar)]';
+
+  const visibleSections = NAVIGATION_SECTIONS.map(section => {
+    if (section.featureFlag && !isEnabled(section.featureFlag)) {
+      return null;
+    }
+
+    const visibleItems = section.items.filter(item => {
+      if (item.featureFlag && !isEnabled(item.featureFlag)) {
+        return false;
+      }
+      if (item.requiredRole && user?.role !== item.requiredRole) {
+        return false;
+      }
+      return true;
+    });
+
+    if (visibleItems.length === 0) {
+      return null;
+    }
+
+    return {
+      ...section,
+      items: visibleItems,
+    };
+  }).filter((section): section is NonNullable<typeof section> => section !== null);
 
   return (
     <aside
@@ -72,176 +76,28 @@ export function Sidebar() {
 
         {/* Navigation Sections */}
         <div className="space-y-4">
-          {/* Section: OVERVIEW */}
-          <nav aria-label="Overview Navigation" className="space-y-1">
-            <div className="px-3 pb-1 text-[10px] font-semibold tracking-wider text-[var(--color-text-muted)] uppercase">
-              Overview
-            </div>
-            <Link
-              to="/dashboard"
-              activeProps={{ className: linkActiveClasses }}
-              inactiveProps={{ className: linkInactiveClasses }}
-              className={linkBaseClasses}
-            >
-              <LayoutDashboard className="w-[17px] h-[17px] shrink-0" />
-              <span className="truncate">Dashboard</span>
-            </Link>
-            <Link
-              to="/system"
-              activeProps={{ className: linkActiveClasses }}
-              inactiveProps={{ className: linkInactiveClasses }}
-              className={linkBaseClasses}
-            >
-              <Activity className="w-[17px] h-[17px] shrink-0" />
-              <span className="truncate">System telemetry</span>
-            </Link>
-          </nav>
-
-          {/* Section: OPERATIONS */}
-          <nav aria-label="Operations Navigation" className="space-y-1">
-            <div className="px-3 pb-1 text-[10px] font-semibold tracking-wider text-[var(--color-text-muted)] uppercase">
-              Operations
-            </div>
-            <Link
-              to="/players"
-              activeProps={{ className: linkActiveClasses }}
-              inactiveProps={{ className: linkInactiveClasses }}
-              className={linkBaseClasses}
-            >
-              <Users className="w-[17px] h-[17px] shrink-0" />
-              <span className="truncate">Players</span>
-            </Link>
-            {isModsEnabled && (
-              <Link
-                to="/mods"
-                activeProps={{ className: linkActiveClasses }}
-                inactiveProps={{ className: linkInactiveClasses }}
-                className={linkBaseClasses}
-              >
-                <Box className="w-[17px] h-[17px] shrink-0" />
-                <span className="truncate">Mods</span>
-              </Link>
-            )}
-            <Link
-              to="/maintenance"
-              activeProps={{ className: linkActiveClasses }}
-              inactiveProps={{ className: linkInactiveClasses }}
-              className={linkBaseClasses}
-            >
-              <Wrench className="w-[17px] h-[17px] shrink-0" />
-              <span className="truncate">Maintenance</span>
-            </Link>
-          </nav>
-
-          {/* Section: OBSERVABILITY */}
-          <nav aria-label="Observability Navigation" className="space-y-1">
-            <div className="px-3 pb-1 text-[10px] font-semibold tracking-wider text-[var(--color-text-muted)] uppercase">
-              Observability
-            </div>
-            <Link
-              to="/audit"
-              activeProps={{ className: linkActiveClasses }}
-              inactiveProps={{ className: linkInactiveClasses }}
-              className={linkBaseClasses}
-            >
-              <ShieldCheck className="w-[17px] h-[17px] shrink-0" />
-              <span className="truncate">Audit log</span>
-            </Link>
-            <Link
-              to="/logs/rpt"
-              activeProps={{ className: linkActiveClasses }}
-              inactiveProps={{ className: linkInactiveClasses }}
-              className={linkBaseClasses}
-            >
-              <Terminal className="w-[17px] h-[17px] shrink-0" />
-              <span className="truncate">Server logs</span>
-            </Link>
-          </nav>
-
-          {/* Section: WORLD (Gated by worldMap) */}
-          {isMapEnabled && (
-            <nav aria-label="World Navigation" className="space-y-1">
+          {visibleSections.map(section => (
+            <nav key={section.id} aria-label={section.ariaLabel} className="space-y-1">
               <div className="px-3 pb-1 text-[10px] font-semibold tracking-wider text-[var(--color-text-muted)] uppercase">
-                World
+                {section.title}
               </div>
-              <Link
-                to="/world/map"
-                activeProps={{ className: linkActiveClasses }}
-                inactiveProps={{ className: linkInactiveClasses }}
-                className={linkBaseClasses}
-              >
-                <MapIcon className="w-[17px] h-[17px] shrink-0" />
-                <span className="truncate">Tactical map</span>
-              </Link>
-              <Link
-                to="/world/loot"
-                activeProps={{ className: linkActiveClasses }}
-                inactiveProps={{ className: linkInactiveClasses }}
-                className={linkBaseClasses}
-              >
-                <Flame className="w-[17px] h-[17px] shrink-0" />
-                <span className="truncate">Loot heatmap</span>
-              </Link>
+              {section.items.map(item => {
+                const Icon = item.icon;
+                return (
+                  <Link
+                    key={item.to}
+                    to={item.to}
+                    activeProps={{ className: linkActiveClasses }}
+                    inactiveProps={{ className: linkInactiveClasses }}
+                    className={linkBaseClasses}
+                  >
+                    <Icon className="w-[17px] h-[17px] shrink-0" />
+                    <span className="truncate">{item.label}</span>
+                  </Link>
+                );
+              })}
             </nav>
-          )}
-
-          {/* Section: CONFIGURATION */}
-          <nav aria-label="Configuration Navigation" className="space-y-1">
-            <div className="px-3 pb-1 text-[10px] font-semibold tracking-wider text-[var(--color-text-muted)] uppercase">
-              Configuration
-            </div>
-            {isEconomyEnabled && (
-              <Link
-                to="/economy/types"
-                activeProps={{ className: linkActiveClasses }}
-                inactiveProps={{ className: linkInactiveClasses }}
-                className={linkBaseClasses}
-              >
-                <FileCode2 className="w-[17px] h-[17px] shrink-0" />
-                <span className="truncate">Types workbench</span>
-              </Link>
-            )}
-            <Link
-              to="/settings/server"
-              activeProps={{ className: linkActiveClasses }}
-              inactiveProps={{ className: linkInactiveClasses }}
-              className={linkBaseClasses}
-            >
-              <Sliders className="w-[17px] h-[17px] shrink-0" />
-              <span className="truncate">Server settings</span>
-            </Link>
-            {isDiscordEnabled && (
-              <Link
-                to="/settings/discord"
-                activeProps={{ className: linkActiveClasses }}
-                inactiveProps={{ className: linkInactiveClasses }}
-                className={linkBaseClasses}
-              >
-                <Bell className="w-[17px] h-[17px] shrink-0" />
-                <span className="truncate">Discord webhooks</span>
-              </Link>
-            )}
-            <Link
-              to="/settings/app"
-              activeProps={{ className: linkActiveClasses }}
-              inactiveProps={{ className: linkInactiveClasses }}
-              className={linkBaseClasses}
-            >
-              <Cpu className="w-[17px] h-[17px] shrink-0" />
-              <span className="truncate">Appliance settings</span>
-            </Link>
-            {isAdmin && (
-              <Link
-                to="/settings/operators"
-                activeProps={{ className: linkActiveClasses }}
-                inactiveProps={{ className: linkInactiveClasses }}
-                className={linkBaseClasses}
-              >
-                <UserCheck className="w-[17px] h-[17px] shrink-0" />
-                <span className="truncate">Console operators</span>
-              </Link>
-            )}
-          </nav>
+          ))}
         </div>
       </div>
 

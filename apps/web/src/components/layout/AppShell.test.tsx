@@ -31,6 +31,7 @@ vi.mock('@tanstack/react-router', () => ({
   ),
   useNavigate: () => vi.fn(),
   useLocation: () => ({ pathname: '/dashboard' }),
+  useMatches: () => [{ staticData: { breadcrumb: 'Dashboard' } }],
   useRouter: () => ({
     invalidate: vi.fn(),
   }),

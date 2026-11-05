@@ -84,6 +84,8 @@ export const enUSTranslations: TranslationCatalog = {
     NUMBER_TOO_LARGE: 'Port must be between 1024 and {{max}}.',
     INVALID_UUID: 'Invalid ID format. Must be a valid UUID.',
     PORTS_NOT_DISTINCT: 'Game port, query port, and RCON port must all be distinct.',
+    SERVER_NAME_CONFLICT: 'A server named "{{name}}" already exists.',
+    SERVER_PORT_COLLISION: 'Port {{port}} is already in use by server "{{occupiedBy}}".',
     PATH_TRAVERSAL_FORBIDDEN: 'Path traversal (..) is not permitted.',
     PATH_NULL_BYTES_FORBIDDEN: 'Null bytes are forbidden in paths.',
     PATH_INVALID_CHARS: 'Path contains invalid filesystem characters.',

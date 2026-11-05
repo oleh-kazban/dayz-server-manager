@@ -18,7 +18,12 @@ import {
 import { type AuthContextValue, SignIn } from './features/auth';
 import { Dashboard } from './features/dashboard';
 import { ServerSettingsView } from './features/server-settings';
-import { DEFAULT_MODULE_FLAGS, type FeatureFlagsContextValue, type ModuleFlags } from './core';
+import {
+  DEFAULT_MODULE_FLAGS,
+  type FeatureFlagsContextValue,
+  type ModuleFlags,
+  ROUTE_BREADCRUMBS,
+} from './core';
 
 export interface RouterContext {
   auth: AuthContextValue;
@@ -115,12 +120,14 @@ const authedRoute = createRoute({
 const dashboardRoute = createRoute({
   getParentRoute: () => authedRoute,
   path: '/dashboard',
+  staticData: { breadcrumb: ROUTE_BREADCRUMBS['/dashboard'] },
   component: Dashboard,
 });
 
 const systemRoute = createRoute({
   getParentRoute: () => authedRoute,
   path: '/system',
+  staticData: { breadcrumb: ROUTE_BREADCRUMBS['/system'] },
   component: () => (
     <PlaceholderView
       title="System Telemetry"
@@ -132,6 +139,7 @@ const systemRoute = createRoute({
 const playersRoute = createRoute({
   getParentRoute: () => authedRoute,
   path: '/players',
+  staticData: { breadcrumb: ROUTE_BREADCRUMBS['/players'] },
   component: () => (
     <PlaceholderView
       title="In-Game Players"
@@ -143,6 +151,7 @@ const playersRoute = createRoute({
 const modsRoute = createRoute({
   getParentRoute: () => authedRoute,
   path: '/mods',
+  staticData: { breadcrumb: ROUTE_BREADCRUMBS['/mods'] },
   beforeLoad: ({ context }) => {
     if (!context?.features?.isEnabled?.('modsManager')) {
       throw redirect({ to: '/dashboard' });
@@ -159,6 +168,7 @@ const modsRoute = createRoute({
 const maintenanceRoute = createRoute({
   getParentRoute: () => authedRoute,
   path: '/maintenance',
+  staticData: { breadcrumb: ROUTE_BREADCRUMBS['/maintenance'] },
   component: () => (
     <PlaceholderView
       title="Maintenance & Lifecycle"
@@ -170,6 +180,7 @@ const maintenanceRoute = createRoute({
 const auditRoute = createRoute({
   getParentRoute: () => authedRoute,
   path: '/audit',
+  staticData: { breadcrumb: ROUTE_BREADCRUMBS['/audit'] },
   component: () => (
     <PlaceholderView
       title="Audit Event Stream"
@@ -190,6 +201,7 @@ const logsIndexRoute = createRoute({
 const logsRptRoute = createRoute({
   getParentRoute: () => authedRoute,
   path: '/logs/rpt',
+  staticData: { breadcrumb: ROUTE_BREADCRUMBS['/logs/rpt'] },
   component: () => (
     <PlaceholderView
       title="Server RPT Logs"
@@ -201,6 +213,7 @@ const logsRptRoute = createRoute({
 const logsAdmRoute = createRoute({
   getParentRoute: () => authedRoute,
   path: '/logs/adm',
+  staticData: { breadcrumb: ROUTE_BREADCRUMBS['/logs/adm'] },
   component: () => (
     <PlaceholderView
       title="Administration Logs"
@@ -212,6 +225,7 @@ const logsAdmRoute = createRoute({
 const logsScriptRoute = createRoute({
   getParentRoute: () => authedRoute,
   path: '/logs/script',
+  staticData: { breadcrumb: ROUTE_BREADCRUMBS['/logs/script'] },
   component: () => (
     <PlaceholderView
       title="Script Engine Logs"
@@ -232,6 +246,7 @@ const worldIndexRoute = createRoute({
 const worldMapRoute = createRoute({
   getParentRoute: () => authedRoute,
   path: '/world/map',
+  staticData: { breadcrumb: ROUTE_BREADCRUMBS['/world/map'] },
   beforeLoad: ({ context }) => {
     if (!context?.features?.isEnabled?.('worldMap')) {
       throw redirect({ to: '/dashboard' });
@@ -248,6 +263,7 @@ const worldMapRoute = createRoute({
 const worldLootRoute = createRoute({
   getParentRoute: () => authedRoute,
   path: '/world/loot',
+  staticData: { breadcrumb: ROUTE_BREADCRUMBS['/world/loot'] },
   beforeLoad: ({ context }) => {
     if (!context?.features?.isEnabled?.('worldMap')) {
       throw redirect({ to: '/dashboard' });
@@ -273,6 +289,7 @@ const economyIndexRoute = createRoute({
 const economyTypesRoute = createRoute({
   getParentRoute: () => authedRoute,
   path: '/economy/types',
+  staticData: { breadcrumb: ROUTE_BREADCRUMBS['/economy/types'] },
   beforeLoad: ({ context }) => {
     if (!context?.features?.isEnabled?.('economyWorkbench')) {
       throw redirect({ to: '/dashboard' });
@@ -289,6 +306,7 @@ const economyTypesRoute = createRoute({
 const economySpawnsRoute = createRoute({
   getParentRoute: () => authedRoute,
   path: '/economy/cfgspawnabletypes',
+  staticData: { breadcrumb: ROUTE_BREADCRUMBS['/economy/cfgspawnabletypes'] },
   beforeLoad: ({ context }) => {
     if (!context?.features?.isEnabled?.('economyWorkbench')) {
       throw redirect({ to: '/dashboard' });
@@ -306,6 +324,7 @@ const economySpawnsRoute = createRoute({
 const profileRoute = createRoute({
   getParentRoute: () => authedRoute,
   path: '/profile',
+  staticData: { breadcrumb: ROUTE_BREADCRUMBS['/profile'] },
   component: () => (
     <PlaceholderView
       title="Personal Profile & Preferences"
@@ -326,12 +345,14 @@ const settingsIndexRoute = createRoute({
 const settingsServerRoute = createRoute({
   getParentRoute: () => authedRoute,
   path: '/settings/server',
+  staticData: { breadcrumb: ROUTE_BREADCRUMBS['/settings/server'] },
   component: ServerSettingsView,
 });
 
 const settingsAppRoute = createRoute({
   getParentRoute: () => authedRoute,
   path: '/settings/app',
+  staticData: { breadcrumb: ROUTE_BREADCRUMBS['/settings/app'] },
   component: () => (
     <PlaceholderView
       title="DSM Appliance Settings"
@@ -343,6 +364,7 @@ const settingsAppRoute = createRoute({
 const settingsDiscordRoute = createRoute({
   getParentRoute: () => authedRoute,
   path: '/settings/discord',
+  staticData: { breadcrumb: ROUTE_BREADCRUMBS['/settings/discord'] },
   beforeLoad: ({ context }) => {
     if (!context?.features?.isEnabled?.('discordNotifications')) {
       throw redirect({ to: '/dashboard' });
@@ -359,6 +381,7 @@ const settingsDiscordRoute = createRoute({
 const settingsOperatorsRoute = createRoute({
   getParentRoute: () => authedRoute,
   path: '/settings/operators',
+  staticData: { breadcrumb: ROUTE_BREADCRUMBS['/settings/operators'] },
   beforeLoad: ({ context }) => {
     if (context?.auth?.user?.role !== 'admin') {
       throw redirect({ to: '/dashboard' });
@@ -375,6 +398,7 @@ const settingsOperatorsRoute = createRoute({
 const settingsAutomationRoute = createRoute({
   getParentRoute: () => authedRoute,
   path: '/settings/automation',
+  staticData: { breadcrumb: ROUTE_BREADCRUMBS['/settings/automation'] },
   component: () => (
     <PlaceholderView
       title="Automation & Watchdog"
@@ -386,6 +410,7 @@ const settingsAutomationRoute = createRoute({
 const settingsBackupsRoute = createRoute({
   getParentRoute: () => authedRoute,
   path: '/settings/backups',
+  staticData: { breadcrumb: ROUTE_BREADCRUMBS['/settings/backups'] },
   component: () => (
     <PlaceholderView
       title="Backups & Retention"
@@ -446,5 +471,8 @@ export const router = createAppRouter();
 declare module '@tanstack/react-router' {
   interface Register {
     router: typeof router;
+  }
+  interface StaticDataRouteOption {
+    breadcrumb?: string;
   }
 }

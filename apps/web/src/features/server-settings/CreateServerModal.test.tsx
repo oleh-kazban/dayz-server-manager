@@ -183,14 +183,32 @@ describe('CreateServerModal', () => {
     expect(showToast.error).not.toHaveBeenCalled();
   });
 
-  it('triggers error toasts on backend conflict errors and highlights fields on 400 VALIDATION_FAILED without rendering Notice banner', async () => {
+  it('highlights all conflicting/invalid fields inline simultaneously without firing a toast when fieldErrors are present, and fires a toast only on non-field errors (REQ-03)', async () => {
+    // 1. Simultaneous 409 conflicts on name, gamePort, and rconPort
     vi.mocked(apiClient.servers.create).mockRejectedValueOnce(
-      new ApiError('Server name conflict', 409, {
+      new ApiError('Server conflicts', 409, {
         statusCode: 409,
         error: 'Conflict',
         errorCode: 'SERVER_NAME_CONFLICT',
         message: "Server with name 'Duplicate Server' already exists",
         params: { name: 'Duplicate Server' },
+        fieldErrors: {
+          name: {
+            code: 'SERVER_NAME_CONFLICT',
+            message: "Server with name 'Duplicate Server' already exists",
+            params: { name: 'Duplicate Server' },
+          },
+          gamePort: {
+            code: 'SERVER_PORT_COLLISION',
+            message: 'Port 2302 collides',
+            params: { port: 2302, occupiedBy: 'DayZ Local', occupiedById: 'srv-1' },
+          },
+          rconPort: {
+            code: 'SERVER_PORT_COLLISION',
+            message: 'Port 2310 collides',
+            params: { port: 2310, occupiedBy: 'DayZ Local', occupiedById: 'srv-1' },
+          },
+        },
       }),
     );
 
@@ -202,39 +220,20 @@ describe('CreateServerModal', () => {
     fireEvent.click(screen.getByRole('button', { name: /^Create Server$/i }));
 
     await waitFor(() => {
-      expect(showToast.error).toHaveBeenCalledWith(
-        'Server Name Conflict',
-        'A server named "Duplicate Server" already exists. Please choose a unique name.',
-        undefined,
-      );
+      expect(
+        screen.getByText('A server named "Duplicate Server" already exists.'),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByText('Port 2302 is already in use by server "DayZ Local".'),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByText('Port 2310 is already in use by server "DayZ Local".'),
+      ).toBeInTheDocument();
     });
+    expect(showToast.error).not.toHaveBeenCalled();
     expect(screen.queryByText('Creation Error')).not.toBeInTheDocument();
 
-    // Test port collision rejection from backend with parameterized error code
-    vi.mocked(apiClient.servers.create).mockRejectedValueOnce(
-      new ApiError('Port collision', 409, {
-        statusCode: 409,
-        error: 'Conflict',
-        errorCode: 'SERVER_PORT_COLLISION',
-        message: 'Port 2302 collides',
-        params: { port: 2302, occupiedBy: 'DayZ Local', occupiedById: 'srv-1' },
-      }),
-    );
-
-    fireEvent.change(screen.getByLabelText(/Server Name/i), {
-      target: { value: 'Valid Server' },
-    });
-    fireEvent.click(screen.getByRole('button', { name: /^Create Server$/i }));
-
-    await waitFor(() => {
-      expect(showToast.error).toHaveBeenCalledWith(
-        'Port Collision Detected',
-        'Port 2302 is already in use by server "DayZ Local".',
-        undefined,
-      );
-    });
-
-    // Test 400 VALIDATION_FAILED with structured fieldErrors
+    // 2. 400 VALIDATION_FAILED with structured fieldErrors -> inline only, no toast
     vi.mocked(apiClient.servers.create).mockRejectedValueOnce(
       new ApiError('Validation failed', 400, {
         statusCode: 400,
@@ -253,12 +252,28 @@ describe('CreateServerModal', () => {
     fireEvent.click(screen.getByRole('button', { name: /^Create Server$/i }));
 
     await waitFor(() => {
+      expect(screen.getByText('Path traversal (..) is not permitted.')).toBeInTheDocument();
+    });
+    expect(showToast.error).not.toHaveBeenCalled();
+
+    // 3. Non-field 500 server error -> triggers notifyApiError toast
+    vi.mocked(apiClient.servers.create).mockRejectedValueOnce(
+      new ApiError('Internal error', 500, {
+        statusCode: 500,
+        error: 'Internal Server Error',
+        errorCode: 'INTERNAL_SERVER_ERROR',
+        message: 'An unexpected internal server error occurred.',
+      }),
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: /^Create Server$/i }));
+
+    await waitFor(() => {
       expect(showToast.error).toHaveBeenCalledWith(
-        'Validation Error',
-        'Please review the highlighted fields and correct any invalid values.',
+        'Internal Server Error',
+        'An unexpected error occurred on the server. Please try again.',
         undefined,
       );
-      expect(screen.getByText('Path traversal (..) is not permitted.')).toBeInTheDocument();
     });
   });
 

@@ -8,6 +8,7 @@ import { notifyApiError, notifySuccess } from '../notifications';
 
 import {
   enUSTranslations,
+  extractApiFieldErrors,
   resolveApiErrorMessage,
   resolveFieldErrors,
   resolveNotificationMessage,
@@ -110,10 +111,20 @@ describe('i18n Error & Notification Resolution', () => {
     });
   });
 
-  describe('resolveFieldErrors', () => {
-    it('translates known validation issue codes with parameter interpolation and preserves unknown codes', () => {
+  describe('resolveFieldErrors & extractApiFieldErrors', () => {
+    it('translates known validation and conflict issue codes with parameter interpolation and preserves unknown codes', () => {
       const fieldErrors = resolveFieldErrors({
         name: { code: 'REQUIRED', message: 'Name is required' },
+        duplicateName: {
+          code: 'SERVER_NAME_CONFLICT',
+          message: 'Duplicate',
+          params: { name: 'DayZ Local' },
+        },
+        collidingPort: {
+          code: 'SERVER_PORT_COLLISION',
+          message: 'Port collision',
+          params: { port: 2302, occupiedBy: 'DayZ Local', occupiedById: 'srv-1' },
+        },
         rconPassword: {
           code: 'STRING_TOO_SHORT',
           message: 'Too short',
@@ -136,6 +147,8 @@ describe('i18n Error & Notification Resolution', () => {
 
       expect(fieldErrors).toEqual({
         name: 'This field is required.',
+        duplicateName: 'A server named "DayZ Local" already exists.',
+        collidingPort: 'Port 2302 is already in use by server "DayZ Local".',
         rconPassword: 'Must be at least 6 characters.',
         gamePort: 'Port must be between 1024 and 65535.',
         installPath: 'Path traversal (..) is not permitted.',
@@ -145,6 +158,43 @@ describe('i18n Error & Notification Resolution', () => {
 
     it('returns an empty object when fieldErrors is undefined', () => {
       expect(resolveFieldErrors(undefined)).toEqual({});
+    });
+
+    it('extracts fieldErrors from ApiError instances and plain error objects via extractApiFieldErrors', () => {
+      const apiErr = new ApiError('Conflict', 409, {
+        statusCode: 409,
+        error: 'Conflict',
+        errorCode: 'SERVER_NAME_CONFLICT',
+        message: 'Exists',
+        fieldErrors: {
+          name: {
+            code: 'SERVER_NAME_CONFLICT',
+            message: 'Exists',
+            params: { name: 'Namalsk' },
+          },
+        },
+      });
+      expect(extractApiFieldErrors(apiErr)).toEqual({
+        name: {
+          code: 'SERVER_NAME_CONFLICT',
+          message: 'Exists',
+          params: { name: 'Namalsk' },
+        },
+      });
+
+      const plainObj = {
+        fieldErrors: {
+          gamePort: {
+            code: 'SERVER_PORT_COLLISION',
+            message: 'In use',
+            params: { port: 2302, occupiedBy: 'Local' },
+          },
+        },
+      };
+      expect(extractApiFieldErrors(plainObj)).toEqual(plainObj.fieldErrors);
+
+      expect(extractApiFieldErrors(new Error('No field errors'))).toBeUndefined();
+      expect(extractApiFieldErrors(null)).toBeUndefined();
     });
   });
 

@@ -1,27 +1,8 @@
-import { Link, useLocation } from '@tanstack/react-router';
+import { Link, useLocation, useMatches } from '@tanstack/react-router';
 import { Bell, ChevronRight, HelpCircle, Menu, Search } from 'lucide-react';
 
 import { useActiveServer } from '@dsm/web/core';
 import { ThemeToggleButton } from '@dsm/web/features';
-
-const ROUTE_LABELS: Record<string, string> = {
-  '/dashboard': 'Dashboard',
-  '/system': 'System telemetry',
-  '/players': 'Players',
-  '/mods': 'Mods',
-  '/maintenance': 'Maintenance',
-  '/audit': 'Audit log',
-  '/logs/rpt': 'Server logs',
-  '/logs/crash': 'Crash dumps',
-  '/world/map': 'Tactical map',
-  '/world/loot': 'Loot heatmap',
-  '/economy/types': 'Types workbench',
-  '/settings/server': 'Server settings',
-  '/settings/discord': 'Discord webhooks',
-  '/settings/app': 'Appliance settings',
-  '/settings/operators': 'Console operators',
-  '/profile': 'Operator profile',
-};
 
 function renderBreadcrumbTrail(
   isLoading: boolean,
@@ -134,10 +115,14 @@ function renderBreadcrumbTrail(
 export function Header() {
   const { activeServer, isLoading } = useActiveServer();
   const location = useLocation();
+  const matches = useMatches();
   const pathname = location?.pathname ?? '/dashboard';
   const isDashboard = pathname === '/' || pathname === '/dashboard';
+  const matchedBreadcrumb = [...(matches ?? [])]
+    .reverse()
+    .find(match => Boolean(match.staticData?.breadcrumb))?.staticData?.breadcrumb;
   const subpageLabel =
-    ROUTE_LABELS[pathname] ?? (pathname.startsWith('/settings') ? 'Settings' : undefined);
+    matchedBreadcrumb ?? (pathname.startsWith('/settings') ? 'Settings' : undefined);
 
   return (
     <header className="h-16 lg:h-[76px] bg-[var(--color-surface)] border-b border-[var(--color-border)] px-4 sm:px-6 lg:px-8 flex items-center justify-between sticky top-0 z-20 shrink-0">
