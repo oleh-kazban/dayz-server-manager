@@ -1,4 +1,4 @@
-import { healthResponseSchema } from '@dsm/api-contracts';
+import { apiErrorResponseSchema, healthResponseSchema } from '@dsm/api-contracts';
 
 import { loadEnv } from '../config/env';
 
@@ -46,6 +46,28 @@ describe('Fastify App', () => {
     });
 
     expect(response.headers['access-control-allow-origin']).toBe('http://localhost:4200');
+
+    await app.close();
+    app.db.close();
+  });
+
+  it('formats unhandled internal errors into structured INTERNAL_SERVER_ERROR without leaking stack traces', async () => {
+    const app = buildApp({ config });
+    app.get('/api/v1/boom', async () => {
+      throw new Error('Sensitive database connection path C:\\secret\\db.sqlite');
+    });
+
+    const response = await app.inject({
+      method: 'GET',
+      url: '/api/v1/boom',
+    });
+
+    expect(response.statusCode).toBe(500);
+    const body = response.json();
+    expect(apiErrorResponseSchema.safeParse(body).success).toBe(true);
+    expect(body.errorCode).toBe('INTERNAL_SERVER_ERROR');
+    expect(body.message).toBe('An unexpected internal server error occurred.');
+    expect(JSON.stringify(body)).not.toContain('C:\\secret\\db.sqlite');
 
     await app.close();
     app.db.close();

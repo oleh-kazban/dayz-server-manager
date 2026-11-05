@@ -152,12 +152,82 @@ describe('HttpClient', () => {
     expect(health.uptime).toBe(123.45);
   });
 
-  it('extracts apiMessage from ApiError data object', () => {
-    const err = new ApiError('HTTP error', 400, { message: 'Bad parameters' });
-    expect(err.apiMessage).toBe('Bad parameters');
+  it('extracts apiMessage, errorCode, params, and fieldErrors from structured ApiError data object', () => {
+    const err = new ApiError('Bad parameters', 400, {
+      statusCode: 400,
+      error: 'Bad Request',
+      errorCode: 'VALIDATION_FAILED',
+      message: 'Bad parameters',
+      params: { port: 2302, occupiedBy: 'DayZ Local', locked: true },
+      fieldErrors: {
+        gamePort: {
+          code: 'NUMBER_TOO_SMALL',
+          message: 'Port must be >= 1024',
+          params: { min: 1024 },
+        },
+      },
+    });
 
-    const errNoMsg = new ApiError('HTTP error', 500, 'Raw string');
-    expect(errNoMsg.apiMessage).toBeUndefined();
+    expect(err.apiMessage).toBe('Bad parameters');
+    expect(err.errorCode).toBe('VALIDATION_FAILED');
+    expect(err.params).toEqual({ port: 2302, occupiedBy: 'DayZ Local', locked: true });
+    expect(err.fieldErrors).toEqual({
+      gamePort: {
+        code: 'NUMBER_TOO_SMALL',
+        message: 'Port must be >= 1024',
+        params: { min: 1024 },
+      },
+    });
+  });
+
+  it('gracefully returns undefined for errorCode, params, fieldErrors, and apiMessage on unstructured or invalid payloads', () => {
+    const errPlainText = new ApiError('HTTP error', 502, 'Bad Gateway');
+    expect(errPlainText.apiMessage).toBeUndefined();
+    expect(errPlainText.errorCode).toBeUndefined();
+    expect(errPlainText.params).toBeUndefined();
+    expect(errPlainText.fieldErrors).toBeUndefined();
+
+    const errInvalidFields = new ApiError('HTTP error', 400, {
+      message: 12345,
+      errorCode: 'UNRECOGNIZED_ERROR_CODE',
+      params: { nested: { invalid: true } },
+      fieldErrors: { badField: { code: '', message: '' } },
+    });
+    expect(errInvalidFields.apiMessage).toBeUndefined();
+    expect(errInvalidFields.errorCode).toBeUndefined();
+    expect(errInvalidFields.params).toBeUndefined();
+    expect(errInvalidFields.fieldErrors).toBeUndefined();
+  });
+
+  it('uses backend message as primary ApiError.message when HTTP request fails with structured JSON', async () => {
+    const errorPayload = {
+      statusCode: 409,
+      error: 'Conflict',
+      errorCode: 'SERVER_NAME_CONFLICT',
+      message: "Server with name 'DayZ (Local)' already exists",
+      params: { name: 'DayZ (Local)' },
+    };
+
+    vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(
+      new Response(JSON.stringify(errorPayload), {
+        status: 409,
+        headers: { 'Content-Type': 'application/json' },
+      }),
+    );
+
+    const client = new HttpClient();
+    await expect(client.post('/servers', dummySchema, { name: 'DayZ (Local)' })).rejects.toSatisfy(
+      (err: unknown) => {
+        expect(err).toBeInstanceOf(ApiError);
+        const apiErr = err as ApiError;
+        expect(apiErr.status).toBe(409);
+        expect(apiErr.message).toBe("Server with name 'DayZ (Local)' already exists");
+        expect(apiErr.apiMessage).toBe("Server with name 'DayZ (Local)' already exists");
+        expect(apiErr.errorCode).toBe('SERVER_NAME_CONFLICT');
+        expect(apiErr.params).toEqual({ name: 'DayZ (Local)' });
+        return true;
+      },
+    );
   });
 
   it('automatically refreshes token on 401 and retries the request', async () => {

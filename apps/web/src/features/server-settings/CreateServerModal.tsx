@@ -3,10 +3,16 @@ import { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Server, X } from 'lucide-react';
 
-import { apiClient } from '@dsm/api-client';
-import type { CreateServerDto } from '@dsm/api-contracts';
-import { Button, Input, Notice, PasswordInput, Toggle } from '@dsm/ui';
-import { serverQueryKeys, useActiveServer } from '@dsm/web/core';
+import { apiClient, ApiError } from '@dsm/api-client';
+import type { ApiFieldErrorsMap, CreateServerDto } from '@dsm/api-contracts';
+import { Button, Input, PasswordInput, Toggle } from '@dsm/ui';
+import {
+  notifyApiError,
+  notifySuccess,
+  resolveFieldErrors,
+  serverQueryKeys,
+  useActiveServer,
+} from '@dsm/web/core';
 
 export interface CreateServerModalProps {
   isOpen: boolean;
@@ -28,7 +34,6 @@ export function CreateServerModal({ isOpen, onClose }: CreateServerModalProps) {
   const [missionPath, setMissionPath] = useState('mpmissions\\dayzOffline.chernarusplus');
   const [launchParameters, setLaunchParameters] = useState('-cpuCount=4 -doLogs -adminLog -netLog');
   const [isDefault, setIsDefault] = useState(false);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
   const clearFieldError = (field: string) => {
@@ -47,17 +52,20 @@ export function CreateServerModal({ isOpen, onClose }: CreateServerModalProps) {
       queryClient.setQueryData(serverQueryKeys.detail(newServer.id), newServer);
       queryClient.invalidateQueries({ queryKey: serverQueryKeys.list() });
       setActiveServerId(newServer.id);
+      notifySuccess('SERVER_CREATED', { name: newServer.name });
       onClose();
     },
     onError: (err: Error) => {
-      const msg = err.message || 'Failed to create server instance.';
-      if (msg.includes('already exists') || msg.toLowerCase().includes('name')) {
-        setFieldErrors(prev => ({ ...prev, name: msg }));
-      } else if (msg.toLowerCase().includes('port')) {
-        setFieldErrors(prev => ({ ...prev, gamePort: msg }));
-      } else {
-        setErrorMessage(msg);
+      const rawFieldErrors =
+        (typeof ApiError === 'function' && err instanceof ApiError ? err.fieldErrors : undefined) ??
+        (err && typeof err === 'object' && 'fieldErrors' in err
+          ? (err as { fieldErrors?: ApiFieldErrorsMap }).fieldErrors
+          : undefined);
+
+      if (rawFieldErrors) {
+        setFieldErrors(resolveFieldErrors(rawFieldErrors));
       }
+      notifyApiError(err, 'Failed to create server');
     },
   });
 
@@ -65,7 +73,6 @@ export function CreateServerModal({ isOpen, onClose }: CreateServerModalProps) {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    setErrorMessage(null);
 
     const errors: Record<string, string> = {};
 
@@ -152,14 +159,6 @@ export function CreateServerModal({ isOpen, onClose }: CreateServerModalProps) {
             onClick={onClose}
           />
         </div>
-
-        {errorMessage && (
-          <div className="mt-4">
-            <Notice variant="error" title="Creation Error">
-              {errorMessage}
-            </Notice>
-          </div>
-        )}
 
         <form noValidate onSubmit={handleSubmit} className="mt-5 space-y-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

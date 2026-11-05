@@ -4,8 +4,9 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { apiClient } from '@dsm/api-client';
+import { apiClient, ApiError } from '@dsm/api-client';
 import type { ServerDetailDto, ServerSummaryDto } from '@dsm/api-contracts';
+import { showToast } from '@dsm/ui';
 
 import { ServerSettingsView } from './ServerSettingsView';
 
@@ -74,22 +75,30 @@ vi.mock('@tanstack/react-router', () => ({
   ),
 }));
 
-vi.mock('@dsm/api-client', () => ({
-  apiClient: {
-    servers: {
-      get: vi.fn(),
-      update: vi.fn(),
-      delete: vi.fn(),
-      create: vi.fn(),
+vi.mock('@dsm/api-client', async importOriginal => {
+  const actual = await importOriginal<typeof import('@dsm/api-client')>();
+  return {
+    ...actual,
+    apiClient: {
+      ...actual.apiClient,
+      servers: {
+        ...actual.apiClient.servers,
+        get: vi.fn(),
+        update: vi.fn(),
+        delete: vi.fn(),
+        create: vi.fn(),
+      },
     },
-  },
-}));
+  };
+});
 
 describe('ServerSettingsView', () => {
   let queryClient: QueryClient;
 
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.spyOn(showToast, 'success').mockReturnValue('toast-success-id');
+    vi.spyOn(showToast, 'error').mockReturnValue('toast-error-id');
     queryClient = new QueryClient({
       defaultOptions: {
         queries: { retry: false, gcTime: 0 },
@@ -174,7 +183,12 @@ describe('ServerSettingsView', () => {
     expect(installPathInput).toBeDisabled();
   });
 
-  it('submits updated settings and renders success notification', async () => {
+  it('submits updated settings and triggers SERVER_UPDATED toast without rendering inline Settings Saved notice', async () => {
+    vi.mocked(apiClient.servers.update).mockResolvedValueOnce({
+      ...mockServerDetail,
+      name: 'DayZ Namalsk Season 2',
+    });
+
     renderView();
 
     await waitFor(() => {
@@ -194,13 +208,24 @@ describe('ServerSettingsView', () => {
           name: 'DayZ Namalsk Season 2',
         }),
       );
-      expect(screen.getByText(/Settings Saved/i)).toBeInTheDocument();
+      expect(showToast.success).toHaveBeenCalledWith(
+        'Settings Saved',
+        'Configuration for "DayZ Namalsk Season 2" has been updated successfully.',
+        undefined,
+      );
     });
+    expect(screen.queryByText('Settings Saved')).not.toBeInTheDocument();
   });
 
-  it('displays error notification when update mutation fails', async () => {
+  it('triggers error toast when update mutation fails with port collision without rendering inline Update Failed notice', async () => {
     vi.mocked(apiClient.servers.update).mockRejectedValueOnce(
-      new Error('Port collision detected with server EU-01'),
+      new ApiError('Port collision', 409, {
+        statusCode: 409,
+        error: 'Conflict',
+        errorCode: 'SERVER_PORT_COLLISION',
+        message: 'Port 2302 collides with EU-01',
+        params: { port: 2302, occupiedBy: 'EU-01', occupiedById: 'srv-eu-01' },
+      }),
     );
 
     renderView();
@@ -213,9 +238,13 @@ describe('ServerSettingsView', () => {
     fireEvent.click(saveButton);
 
     await waitFor(() => {
-      expect(screen.getByText(/Update Failed/i)).toBeInTheDocument();
-      expect(screen.getByText(/Port collision detected with server EU-01/i)).toBeInTheDocument();
+      expect(showToast.error).toHaveBeenCalledWith(
+        'Port Collision Detected',
+        'Port 2302 is already in use by server "EU-01".',
+        undefined,
+      );
     });
+    expect(screen.queryByText('Update Failed')).not.toBeInTheDocument();
   });
 
   it('disables delete button when server is active (GUARD-SRV-01)', async () => {
@@ -290,7 +319,49 @@ describe('ServerSettingsView', () => {
 
     await waitFor(() => {
       expect(apiClient.servers.delete).toHaveBeenCalledWith(mockActiveServerSummary.id);
+      expect(showToast.success).toHaveBeenCalledWith(
+        'Server Deleted',
+        'Server "DayZ Namalsk" has been removed from DayZ Server Manager.',
+        undefined,
+      );
       expect(mockSetActiveServerId).toHaveBeenCalledWith(mockDefaultServerSummary.id);
+    });
+  });
+
+  it('triggers error toast when server deletion fails on backend', async () => {
+    vi.mocked(apiClient.servers.delete).mockRejectedValueOnce(
+      new ApiError('Server running', 409, {
+        statusCode: 409,
+        error: 'Conflict',
+        errorCode: 'SERVER_RUNNING_DELETE_LOCKED',
+        message: 'Cannot delete while running',
+        params: {
+          id: mockActiveServerSummary.id,
+          name: mockActiveServerSummary.name,
+          status: 'running',
+        },
+      }),
+    );
+
+    renderView();
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /Delete server/i })).not.toBeDisabled();
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: /Delete server/i }));
+    const dialog = screen.getByRole('alertdialog');
+    fireEvent.change(within(dialog).getByRole('textbox'), {
+      target: { value: mockActiveServerSummary.name },
+    });
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Delete server' }));
+
+    await waitFor(() => {
+      expect(showToast.error).toHaveBeenCalledWith(
+        'Deletion Locked',
+        'Cannot delete "DayZ Namalsk" while it is running. Stop the server first.',
+        undefined,
+      );
     });
   });
 
@@ -476,13 +547,28 @@ describe('ServerSettingsView', () => {
           isDefault: true,
         }),
       );
-      expect(screen.getByText('Server configuration updated successfully.')).toBeInTheDocument();
+      expect(showToast.success).toHaveBeenCalledWith(
+        'Settings Saved',
+        'Configuration for "Updated Chernarus" has been updated successfully.',
+        undefined,
+      );
     });
   });
 
-  it('displays error notice when saving server settings fails', async () => {
-    vi.mocked(apiClient.servers.update).mockRejectedValue(
-      new Error('Failed to write server config to disk'),
+  it('highlights inline form fields and triggers error toast when saving server settings fails with 400 fieldErrors', async () => {
+    vi.mocked(apiClient.servers.update).mockRejectedValueOnce(
+      new ApiError('Validation failed', 400, {
+        statusCode: 400,
+        error: 'Bad Request',
+        errorCode: 'VALIDATION_FAILED',
+        message: 'Invalid path',
+        fieldErrors: {
+          installPath: {
+            code: 'PATH_TRAVERSAL_FORBIDDEN',
+            message: 'Path traversal (..) is not permitted',
+          },
+        },
+      }),
     );
 
     renderView();
@@ -495,7 +581,17 @@ describe('ServerSettingsView', () => {
     fireEvent.click(saveButton);
 
     await waitFor(() => {
-      expect(screen.getByText('Failed to write server config to disk')).toBeInTheDocument();
+      expect(showToast.error).toHaveBeenCalledWith(
+        'Validation Error',
+        'Please review the highlighted fields and correct any invalid values.',
+        undefined,
+      );
+      expect(screen.getByText('Path traversal (..) is not permitted.')).toBeInTheDocument();
     });
+
+    // Editing the highlighted field clears the server field error
+    const installInput = screen.getByDisplayValue(mockServerDetail.installPath);
+    fireEvent.change(installInput, { target: { value: 'C:\\DayZServer\\Clean' } });
+    expect(screen.queryByText('Path traversal (..) is not permitted.')).not.toBeInTheDocument();
   });
 });

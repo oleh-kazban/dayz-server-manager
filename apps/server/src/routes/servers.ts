@@ -3,6 +3,9 @@ import type { FastifyPluginAsync } from 'fastify';
 import crypto from 'node:crypto';
 
 import {
+  type ApiErrorCode,
+  type ApiErrorParams,
+  type ApiFieldErrorsMap,
   type CreateServerDto,
   createServerSchema,
   serverDetailSchema,
@@ -13,11 +16,19 @@ import {
 } from '@dsm/api-contracts';
 import { type Server, servers } from '@dsm/database';
 
+import { formatZodFieldErrors, sendApiError } from '../utils/api-error';
+
+interface PortCollisionResult {
+  collides: boolean;
+  message?: string;
+  params?: ApiErrorParams;
+}
+
 function checkInterServerPortCollision(
   allServers: Server[],
   candidatePorts: number[],
   excludeServerId?: string,
-): { collides: boolean; message?: string } {
+): PortCollisionResult {
   const targetServers = excludeServerId
     ? allServers.filter(s => s.id !== excludeServerId)
     : allServers;
@@ -29,6 +40,11 @@ function checkInterServerPortCollision(
         return {
           collides: true,
           message: `Port ${p} collides with existing server '${s.name}' (ID: ${s.id})`,
+          params: {
+            port: p,
+            occupiedBy: s.name,
+            occupiedById: s.id,
+          },
         };
       }
     }
@@ -62,7 +78,10 @@ interface ValidPortsResult {
 interface InvalidPortsResult {
   valid: false;
   status: 400 | 409;
+  errorCode: ApiErrorCode;
   message: string;
+  params?: ApiErrorParams;
+  fieldErrors?: ApiFieldErrorsMap;
 }
 
 function validateCandidatePorts(
@@ -77,10 +96,18 @@ function validateCandidatePorts(
   const candidatePorts = [candidateGamePort, candidateQueryPort, candidateRconPort];
 
   if (new Set(candidatePorts).size !== 3) {
+    const message = 'Effective gamePort, queryPort, and rconPort must all be distinct';
     return {
       valid: false,
       status: 400,
-      message: 'Effective gamePort, queryPort, and rconPort must all be distinct',
+      errorCode: 'SERVER_PORTS_NOT_DISTINCT',
+      message,
+      fieldErrors: {
+        gamePort: {
+          code: 'PORTS_NOT_DISTINCT',
+          message,
+        },
+      },
     };
   }
 
@@ -89,7 +116,9 @@ function validateCandidatePorts(
     return {
       valid: false,
       status: 409,
+      errorCode: 'SERVER_PORT_COLLISION',
       message: collisionCheck.message ?? 'Port collision detected with another server',
+      params: collisionCheck.params,
     };
   }
 
@@ -160,14 +189,20 @@ export const registerServersRoutes: FastifyPluginAsync = async fastify => {
     async (request, reply) => {
       const paramResult = serverIdParamSchema.safeParse(request.params);
       if (!paramResult.success) {
-        return reply.badRequest(paramResult.error.issues[0].message);
+        return sendApiError(reply, 400, 'VALIDATION_FAILED', {
+          message: paramResult.error.issues[0].message,
+          fieldErrors: formatZodFieldErrors(paramResult.error),
+        });
       }
       const { id } = paramResult.data;
 
       const s = fastify.db.db.select().from(servers).where(eq(servers.id, id)).get();
 
       if (!s) {
-        return reply.notFound(`Server with ID '${id}' not found`);
+        return sendApiError(reply, 404, 'SERVER_NOT_FOUND', {
+          message: `Server with ID '${id}' not found`,
+          params: { id },
+        });
       }
 
       return reply.send(mapServerDetail(s));
@@ -182,12 +217,20 @@ export const registerServersRoutes: FastifyPluginAsync = async fastify => {
     },
     async (request, reply) => {
       if (request.user?.role !== 'admin') {
-        return reply.forbidden('Admin role required to create servers');
+        return sendApiError(
+          reply,
+          403,
+          'AUTH_FORBIDDEN_ADMIN_REQUIRED',
+          'Admin role required to create servers',
+        );
       }
 
       const parseResult = createServerSchema.safeParse(request.body);
       if (!parseResult.success) {
-        return reply.badRequest(parseResult.error.issues[0].message);
+        return sendApiError(reply, 400, 'VALIDATION_FAILED', {
+          message: parseResult.error.issues[0].message,
+          fieldErrors: formatZodFieldErrors(parseResult.error),
+        });
       }
 
       const data: CreateServerDto = parseResult.data;
@@ -199,7 +242,10 @@ export const registerServersRoutes: FastifyPluginAsync = async fastify => {
         .get();
 
       if (existingName) {
-        return reply.conflict(`Server with name '${data.name}' already exists`);
+        return sendApiError(reply, 409, 'SERVER_NAME_CONFLICT', {
+          message: `Server with name '${data.name}' already exists`,
+          params: { name: data.name },
+        });
       }
 
       const allServers = fastify.db.db.select().from(servers).all();
@@ -210,7 +256,10 @@ export const registerServersRoutes: FastifyPluginAsync = async fastify => {
       ]);
 
       if (collisionCheck.collides) {
-        return reply.conflict(collisionCheck.message);
+        return sendApiError(reply, 409, 'SERVER_PORT_COLLISION', {
+          message: collisionCheck.message ?? 'Port collision detected with another server',
+          params: collisionCheck.params,
+        });
       }
 
       const serverId = crypto.randomUUID();
@@ -255,33 +304,48 @@ export const registerServersRoutes: FastifyPluginAsync = async fastify => {
     },
     async (request, reply) => {
       if (request.user?.role !== 'admin') {
-        return reply.forbidden('Admin role required to update servers');
+        return sendApiError(
+          reply,
+          403,
+          'AUTH_FORBIDDEN_ADMIN_REQUIRED',
+          'Admin role required to update servers',
+        );
       }
 
       const paramResult = serverIdParamSchema.safeParse(request.params);
       if (!paramResult.success) {
-        return reply.badRequest(paramResult.error.issues[0].message);
+        return sendApiError(reply, 400, 'VALIDATION_FAILED', {
+          message: paramResult.error.issues[0].message,
+          fieldErrors: formatZodFieldErrors(paramResult.error),
+        });
       }
       const { id } = paramResult.data;
 
       const existing = fastify.db.db.select().from(servers).where(eq(servers.id, id)).get();
 
       if (!existing) {
-        return reply.notFound(`Server with ID '${id}' not found`);
+        return sendApiError(reply, 404, 'SERVER_NOT_FOUND', {
+          message: `Server with ID '${id}' not found`,
+          params: { id },
+        });
       }
 
       const parseResult = updateServerSchema.safeParse(request.body);
       if (!parseResult.success) {
-        return reply.badRequest(parseResult.error.issues[0].message);
+        return sendApiError(reply, 400, 'VALIDATION_FAILED', {
+          message: parseResult.error.issues[0].message,
+          fieldErrors: formatZodFieldErrors(parseResult.error),
+        });
       }
 
       const data: UpdateServerDto = parseResult.data;
 
       // GUARD-SRV-03: Running Configuration Mutation Guard
       if (checkRunningMutationViolation(existing, data)) {
-        return reply.conflict(
-          'Cannot alter network ports or filesystem paths while server is running.',
-        );
+        return sendApiError(reply, 409, 'SERVER_RUNNING_CONFIG_LOCKED', {
+          message: 'Cannot alter network ports or filesystem paths while server is running.',
+          params: { id: existing.id, name: existing.name, status: existing.status },
+        });
       }
 
       if (data.name && data.name !== existing.name) {
@@ -292,16 +356,21 @@ export const registerServersRoutes: FastifyPluginAsync = async fastify => {
           .get();
 
         if (nameCollision) {
-          return reply.conflict(`Server with name '${data.name}' already exists`);
+          return sendApiError(reply, 409, 'SERVER_NAME_CONFLICT', {
+            message: `Server with name '${data.name}' already exists`,
+            params: { name: data.name },
+          });
         }
       }
 
       const allServers = fastify.db.db.select().from(servers).all();
       const portCheck = validateCandidatePorts(existing, data, allServers, id);
       if (!portCheck.valid) {
-        return reply
-          .status(portCheck.status)
-          .send({ statusCode: portCheck.status, message: portCheck.message });
+        return sendApiError(reply, portCheck.status, portCheck.errorCode, {
+          message: portCheck.message,
+          params: portCheck.params,
+          fieldErrors: portCheck.fieldErrors,
+        });
       }
 
       const {
@@ -348,24 +417,38 @@ export const registerServersRoutes: FastifyPluginAsync = async fastify => {
     },
     async (request, reply) => {
       if (request.user?.role !== 'admin') {
-        return reply.forbidden('Admin role required to delete servers');
+        return sendApiError(
+          reply,
+          403,
+          'AUTH_FORBIDDEN_ADMIN_REQUIRED',
+          'Admin role required to delete servers',
+        );
       }
 
       const paramResult = serverIdParamSchema.safeParse(request.params);
       if (!paramResult.success) {
-        return reply.badRequest(paramResult.error.issues[0].message);
+        return sendApiError(reply, 400, 'VALIDATION_FAILED', {
+          message: paramResult.error.issues[0].message,
+          fieldErrors: formatZodFieldErrors(paramResult.error),
+        });
       }
       const { id } = paramResult.data;
 
       const existing = fastify.db.db.select().from(servers).where(eq(servers.id, id)).get();
 
       if (!existing) {
-        return reply.notFound(`Server with ID '${id}' not found`);
+        return sendApiError(reply, 404, 'SERVER_NOT_FOUND', {
+          message: `Server with ID '${id}' not found`,
+          params: { id },
+        });
       }
 
       // GUARD-SRV-01: Active Process Termination Guard
       if (existing.status !== 'stopped') {
-        return reply.conflict('Cannot delete server while it is running. Stop the server first.');
+        return sendApiError(reply, 409, 'SERVER_RUNNING_DELETE_LOCKED', {
+          message: 'Cannot delete server while it is running. Stop the server first.',
+          params: { id: existing.id, name: existing.name, status: existing.status },
+        });
       }
 
       const executeDelete = fastify.db.sqlite.transaction(() => {

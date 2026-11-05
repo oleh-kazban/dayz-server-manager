@@ -1,5 +1,7 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { act, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it } from 'vitest';
+
+import { showToast } from '@dsm/ui';
 
 import { authStorage } from './features/auth/auth.storage';
 import { App, AppErrorBoundary } from './App';
@@ -7,6 +9,7 @@ import { App, AppErrorBoundary } from './App';
 describe('App Root Component', () => {
   beforeEach(() => {
     authStorage.clear();
+    showToast.dismiss();
   });
 
   it('renders root app with providers and redirects guest to sign-in view', async () => {
@@ -15,6 +18,17 @@ describe('App Root Component', () => {
     await waitFor(() => {
       expect(screen.getByRole('button', { name: /sign in/i })).toBeInTheDocument();
     });
+  });
+
+  it('mounts global Toaster inside ThemeProvider and displays dispatched toasts (REQ-01)', async () => {
+    render(<App />);
+
+    act(() => {
+      showToast.success('Global Toast Ready', 'Toast overlay mounted at application root.');
+    });
+
+    expect(await screen.findByText('Global Toast Ready')).toBeInTheDocument();
+    expect(screen.getByText('Toast overlay mounted at application root.')).toBeInTheDocument();
   });
 
   it('renders persistent AppShell and navigation rail when authenticated without blank screen', async () => {

@@ -2,6 +2,7 @@ import { eq } from 'drizzle-orm';
 import type { FastifyInstance } from 'fastify';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
+import { apiErrorResponseSchema } from '@dsm/api-contracts';
 import { type DatabaseInstance, initDatabase, servers } from '@dsm/database';
 
 import { buildApp } from '../app/app';
@@ -74,6 +75,9 @@ describe('Servers Routes (/api/v1/servers)', () => {
         url: '/api/v1/servers',
       });
       expect(response.statusCode).toBe(401);
+      const body = response.json();
+      expect(apiErrorResponseSchema.safeParse(body).success).toBe(true);
+      expect(body.errorCode).toBe('AUTH_TOKEN_MISSING_OR_INVALID');
     });
 
     it('returns 200 and list of servers for authenticated user', async () => {
@@ -100,16 +104,27 @@ describe('Servers Routes (/api/v1/servers)', () => {
         headers: { authorization: `Bearer ${viewerToken}` },
       });
       expect(response.statusCode).toBe(400);
-      expect(response.json().message).toContain('Must be a valid UUID');
+      const body = response.json();
+      expect(apiErrorResponseSchema.safeParse(body).success).toBe(true);
+      expect(body.errorCode).toBe('VALIDATION_FAILED');
+      expect(body.fieldErrors?.id).toEqual({
+        code: 'INVALID_UUID',
+        message: expect.stringContaining('Must be a valid UUID'),
+      });
     });
 
     it('returns 404 for non-existent server', async () => {
+      const missingId = '123e4567-e89b-12d3-a456-426614174999';
       const response = await app.inject({
         method: 'GET',
-        url: '/api/v1/servers/123e4567-e89b-12d3-a456-426614174999',
+        url: `/api/v1/servers/${missingId}`,
         headers: { authorization: `Bearer ${viewerToken}` },
       });
       expect(response.statusCode).toBe(404);
+      const body = response.json();
+      expect(apiErrorResponseSchema.safeParse(body).success).toBe(true);
+      expect(body.errorCode).toBe('SERVER_NOT_FOUND');
+      expect(body.params).toEqual({ id: missingId });
     });
 
     it('returns 200 with server detail for valid id', async () => {
@@ -141,6 +156,9 @@ describe('Servers Routes (/api/v1/servers)', () => {
         },
       });
       expect(response.statusCode).toBe(403);
+      const body = response.json();
+      expect(apiErrorResponseSchema.safeParse(body).success).toBe(true);
+      expect(body.errorCode).toBe('AUTH_FORBIDDEN_ADMIN_REQUIRED');
     });
 
     it('returns 400 for invalid body or intra-server port collision', async () => {
@@ -159,6 +177,13 @@ describe('Servers Routes (/api/v1/servers)', () => {
         },
       });
       expect(response.statusCode).toBe(400);
+      const body = response.json();
+      expect(apiErrorResponseSchema.safeParse(body).success).toBe(true);
+      expect(body.errorCode).toBe('VALIDATION_FAILED');
+      expect(body.fieldErrors?.gamePort).toEqual({
+        code: 'PORTS_NOT_DISTINCT',
+        message: expect.stringContaining('distinct'),
+      });
     });
 
     it('returns 400 when filesystem path contains directory traversal or null bytes', async () => {
@@ -174,7 +199,11 @@ describe('Servers Routes (/api/v1/servers)', () => {
         },
       });
       expect(responseTraversal.statusCode).toBe(400);
-      expect(responseTraversal.json().message).toContain('Path traversal');
+      const traversalBody = responseTraversal.json();
+      expect(apiErrorResponseSchema.safeParse(traversalBody).success).toBe(true);
+      expect(traversalBody.errorCode).toBe('VALIDATION_FAILED');
+      expect(traversalBody.fieldErrors?.installPath?.code).toBe('PATH_TRAVERSAL_FORBIDDEN');
+      expect(traversalBody.message).toContain('Path traversal');
 
       const responseNull = await app.inject({
         method: 'POST',
@@ -188,7 +217,11 @@ describe('Servers Routes (/api/v1/servers)', () => {
         },
       });
       expect(responseNull.statusCode).toBe(400);
-      expect(responseNull.json().message).toContain('Null bytes are forbidden');
+      const nullBody = responseNull.json();
+      expect(apiErrorResponseSchema.safeParse(nullBody).success).toBe(true);
+      expect(nullBody.errorCode).toBe('VALIDATION_FAILED');
+      expect(nullBody.fieldErrors?.installPath?.code).toBe('PATH_NULL_BYTES_FORBIDDEN');
+      expect(nullBody.message).toContain('Null bytes are forbidden');
     });
 
     it('returns 409 when server name already exists', async () => {
@@ -207,6 +240,10 @@ describe('Servers Routes (/api/v1/servers)', () => {
         },
       });
       expect(response.statusCode).toBe(409);
+      const body = response.json();
+      expect(apiErrorResponseSchema.safeParse(body).success).toBe(true);
+      expect(body.errorCode).toBe('SERVER_NAME_CONFLICT');
+      expect(body.params).toEqual({ name: 'DayZ (Local)' });
     });
 
     it('returns 409 when port collides with an existing server on the host', async () => {
@@ -225,7 +262,15 @@ describe('Servers Routes (/api/v1/servers)', () => {
         },
       });
       expect(response.statusCode).toBe(409);
-      expect(response.json().message).toContain('collides with existing server');
+      const body = response.json();
+      expect(apiErrorResponseSchema.safeParse(body).success).toBe(true);
+      expect(body.errorCode).toBe('SERVER_PORT_COLLISION');
+      expect(body.params).toEqual({
+        port: 2302,
+        occupiedBy: 'DayZ (Local)',
+        occupiedById: defaultServerId,
+      });
+      expect(body.message).toContain('collides with existing server');
     });
 
     it('returns 201 and creates new server when valid', async () => {
@@ -281,6 +326,9 @@ describe('Servers Routes (/api/v1/servers)', () => {
         payload: { name: 'Unauthorized Change' },
       });
       expect(response.statusCode).toBe(403);
+      const body = response.json();
+      expect(apiErrorResponseSchema.safeParse(body).success).toBe(true);
+      expect(body.errorCode).toBe('AUTH_FORBIDDEN_ADMIN_REQUIRED');
     });
 
     it('returns 400 for malformed non-UUID server id', async () => {
@@ -291,17 +339,26 @@ describe('Servers Routes (/api/v1/servers)', () => {
         payload: { name: 'Ghost' },
       });
       expect(response.statusCode).toBe(400);
-      expect(response.json().message).toContain('Must be a valid UUID');
+      const body = response.json();
+      expect(apiErrorResponseSchema.safeParse(body).success).toBe(true);
+      expect(body.errorCode).toBe('VALIDATION_FAILED');
+      expect(body.fieldErrors?.id?.code).toBe('INVALID_UUID');
+      expect(body.message).toContain('Must be a valid UUID');
     });
 
     it('returns 404 for unknown server id', async () => {
+      const unknownId = '123e4567-e89b-12d3-a456-426614174999';
       const response = await app.inject({
         method: 'PATCH',
-        url: '/api/v1/servers/123e4567-e89b-12d3-a456-426614174999',
+        url: `/api/v1/servers/${unknownId}`,
         headers: { authorization: `Bearer ${adminToken}` },
         payload: { name: 'Ghost' },
       });
       expect(response.statusCode).toBe(404);
+      const body = response.json();
+      expect(apiErrorResponseSchema.safeParse(body).success).toBe(true);
+      expect(body.errorCode).toBe('SERVER_NOT_FOUND');
+      expect(body.params).toEqual({ id: unknownId });
     });
 
     it('enforces GUARD-SRV-03: returns 409 when altering ports while server is running', async () => {
@@ -320,7 +377,15 @@ describe('Servers Routes (/api/v1/servers)', () => {
       });
 
       expect(response.statusCode).toBe(409);
-      expect(response.json().message).toContain('Cannot alter network ports');
+      const body = response.json();
+      expect(apiErrorResponseSchema.safeParse(body).success).toBe(true);
+      expect(body.errorCode).toBe('SERVER_RUNNING_CONFIG_LOCKED');
+      expect(body.params).toEqual({
+        id: secondServerId,
+        name: 'Livonia Hardcore',
+        status: 'running',
+      });
+      expect(body.message).toContain('Cannot alter network ports');
 
       // Test path alteration while running
       const pathResponse = await app.inject({
@@ -330,6 +395,18 @@ describe('Servers Routes (/api/v1/servers)', () => {
         payload: { installPath: '/new/path' },
       });
       expect(pathResponse.statusCode).toBe(409);
+      const pathBody = pathResponse.json();
+      expect(apiErrorResponseSchema.safeParse(pathBody).success).toBe(true);
+      expect(pathBody.errorCode).toBe('SERVER_RUNNING_CONFIG_LOCKED');
+
+      // Verify zero database mutation occurred on refusal
+      const unchanged = dbInstance.db
+        .select()
+        .from(servers)
+        .where(eq(servers.id, secondServerId))
+        .get();
+      expect(unchanged!.gamePort).toBe(2402);
+      expect(unchanged!.installPath).toBe('/opt/dayz-livonia');
 
       // Reset to stopped
       dbInstance.db
@@ -347,6 +424,10 @@ describe('Servers Routes (/api/v1/servers)', () => {
         payload: { name: 'DayZ (Local)' },
       });
       expect(response.statusCode).toBe(409);
+      const body = response.json();
+      expect(apiErrorResponseSchema.safeParse(body).success).toBe(true);
+      expect(body.errorCode).toBe('SERVER_NAME_CONFLICT');
+      expect(body.params).toEqual({ name: 'DayZ (Local)' });
     });
 
     it('returns 409 if port update collides with another server', async () => {
@@ -357,6 +438,14 @@ describe('Servers Routes (/api/v1/servers)', () => {
         payload: { gamePort: 2302 }, // Collides with defaultServerId
       });
       expect(response.statusCode).toBe(409);
+      const body = response.json();
+      expect(apiErrorResponseSchema.safeParse(body).success).toBe(true);
+      expect(body.errorCode).toBe('SERVER_PORT_COLLISION');
+      expect(body.params).toEqual({
+        port: 2302,
+        occupiedBy: 'DayZ (Local)',
+        occupiedById: defaultServerId,
+      });
     });
 
     it('returns 400 if updating port causes intra-server collision', async () => {
@@ -367,6 +456,13 @@ describe('Servers Routes (/api/v1/servers)', () => {
         payload: { gamePort: 27017 }, // queryPort is already 27017!
       });
       expect(response.statusCode).toBe(400);
+      const body = response.json();
+      expect(apiErrorResponseSchema.safeParse(body).success).toBe(true);
+      expect(body.errorCode).toBe('SERVER_PORTS_NOT_DISTINCT');
+      expect(body.fieldErrors?.gamePort).toEqual({
+        code: 'PORTS_NOT_DISTINCT',
+        message: 'Effective gamePort, queryPort, and rconPort must all be distinct',
+      });
     });
 
     it('returns 200 and updates server fields cleanly', async () => {
@@ -416,6 +512,9 @@ describe('Servers Routes (/api/v1/servers)', () => {
         headers: { authorization: `Bearer ${viewerToken}` },
       });
       expect(response.statusCode).toBe(403);
+      const body = response.json();
+      expect(apiErrorResponseSchema.safeParse(body).success).toBe(true);
+      expect(body.errorCode).toBe('AUTH_FORBIDDEN_ADMIN_REQUIRED');
     });
 
     it('returns 400 for malformed non-UUID server id', async () => {
@@ -425,16 +524,25 @@ describe('Servers Routes (/api/v1/servers)', () => {
         headers: { authorization: `Bearer ${adminToken}` },
       });
       expect(response.statusCode).toBe(400);
-      expect(response.json().message).toContain('Must be a valid UUID');
+      const body = response.json();
+      expect(apiErrorResponseSchema.safeParse(body).success).toBe(true);
+      expect(body.errorCode).toBe('VALIDATION_FAILED');
+      expect(body.fieldErrors?.id?.code).toBe('INVALID_UUID');
+      expect(body.message).toContain('Must be a valid UUID');
     });
 
     it('returns 404 for unknown server', async () => {
+      const unknownId = '123e4567-e89b-12d3-a456-426614174999';
       const response = await app.inject({
         method: 'DELETE',
-        url: '/api/v1/servers/123e4567-e89b-12d3-a456-426614174999',
+        url: `/api/v1/servers/${unknownId}`,
         headers: { authorization: `Bearer ${adminToken}` },
       });
       expect(response.statusCode).toBe(404);
+      const body = response.json();
+      expect(apiErrorResponseSchema.safeParse(body).success).toBe(true);
+      expect(body.errorCode).toBe('SERVER_NOT_FOUND');
+      expect(body.params).toEqual({ id: unknownId });
     });
 
     it('enforces GUARD-SRV-01: returns 409 if server is running', async () => {
@@ -451,7 +559,22 @@ describe('Servers Routes (/api/v1/servers)', () => {
       });
 
       expect(response.statusCode).toBe(409);
-      expect(response.json().message).toContain('Cannot delete server while it is running');
+      const body = response.json();
+      expect(apiErrorResponseSchema.safeParse(body).success).toBe(true);
+      expect(body.errorCode).toBe('SERVER_RUNNING_DELETE_LOCKED');
+      expect(body.params).toEqual({
+        id: secondServerId,
+        name: 'Livonia Hardcore',
+        status: 'running',
+      });
+      expect(body.message).toContain('Cannot delete server while it is running');
+
+      const stillExists = dbInstance.db
+        .select()
+        .from(servers)
+        .where(eq(servers.id, secondServerId))
+        .get();
+      expect(stillExists).toBeDefined();
 
       dbInstance.db
         .update(servers)

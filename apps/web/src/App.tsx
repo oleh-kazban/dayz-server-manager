@@ -3,12 +3,15 @@ import { Component, type ErrorInfo, type ReactNode, useEffect } from 'react';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { RouterProvider } from '@tanstack/react-router';
 
+import { Toaster } from '@dsm/ui';
 import { RootErrorFallback } from '@dsm/web/components';
 
 import { AuthProvider, useAuth } from './features/auth';
 import { ThemeProvider } from './features/theme';
 import { FeatureFlagsProvider, queryClient, useFeatureFlags } from './core';
 import { router } from './router';
+
+import './core/i18n';
 
 interface AppErrorBoundaryProps {
   children: ReactNode;
@@ -61,6 +64,7 @@ export function App() {
     <AppErrorBoundary>
       <QueryClientProvider client={queryClient}>
         <ThemeProvider>
+          <Toaster />
           <AuthProvider>
             <FeatureFlagsProvider>
               <InnerApp />

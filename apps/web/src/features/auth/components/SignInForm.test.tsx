@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { apiClient, ApiError } from '@dsm/api-client';
+import { showToast } from '@dsm/ui';
 
 import { AuthProvider } from '../AuthProvider';
 
@@ -23,6 +24,8 @@ vi.mock('@tanstack/react-router', () => ({
 describe('SignInForm', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.spyOn(showToast, 'success').mockReturnValue('toast-success-id');
+    vi.spyOn(showToast, 'error').mockReturnValue('toast-error-id');
     mockSearchParams = {};
   });
 
@@ -116,6 +119,8 @@ describe('SignInForm', () => {
       expect(mockInvalidate).toHaveBeenCalled();
       expect(mockNavigate).toHaveBeenCalledWith({ to: '/dashboard' });
     });
+    expect(showToast.success).not.toHaveBeenCalled();
+    expect(showToast.error).not.toHaveBeenCalled();
   });
 
   it('navigates to preserved redirect query parameter destination upon successful sign in', async () => {
@@ -154,7 +159,7 @@ describe('SignInForm', () => {
     });
   });
 
-  it('displays root error message when login fails with invalid credentials', async () => {
+  it('displays root error message and triggers error toast when login fails with invalid credentials', async () => {
     const user = userEvent.setup();
 
     vi.spyOn(apiClient.auth, 'login').mockRejectedValue(new Error('Invalid username or password'));
@@ -175,19 +180,25 @@ describe('SignInForm', () => {
 
     await waitFor(() => {
       expect(screen.getByRole('alert')).toHaveTextContent('Invalid username or password');
+      expect(showToast.error).toHaveBeenCalledWith(
+        'Sign in failed',
+        'Invalid username or password',
+        undefined,
+      );
     });
 
     expect(mockNavigate).not.toHaveBeenCalled();
   });
 
-  it('displays API error message from ApiError response data payload', async () => {
+  it('resolves localized error code from ApiError response data payload for both toast and inline alert', async () => {
     const user = userEvent.setup();
 
     vi.spyOn(apiClient.auth, 'login').mockRejectedValue(
-      new ApiError('HTTP request failed with status 401', 401, {
-        statusCode: 401,
-        error: 'Unauthorized',
-        message: 'Custom backend rejection message',
+      new ApiError('Rate limit exceeded', 429, {
+        statusCode: 429,
+        error: 'Too Many Requests',
+        errorCode: 'AUTH_RATE_LIMIT_EXCEEDED',
+        message: 'Rate limit exceeded, retry in 1 minute',
       }),
     );
 
@@ -206,7 +217,14 @@ describe('SignInForm', () => {
     await user.click(submitBtn);
 
     await waitFor(() => {
-      expect(screen.getByRole('alert')).toHaveTextContent('Custom backend rejection message');
+      expect(screen.getByRole('alert')).toHaveTextContent(
+        'Too many attempts detected. Please wait a moment before trying again.',
+      );
+      expect(showToast.error).toHaveBeenCalledWith(
+        'Too Many Requests',
+        'Too many attempts detected. Please wait a moment before trying again.',
+        undefined,
+      );
     });
 
     expect(mockNavigate).not.toHaveBeenCalled();

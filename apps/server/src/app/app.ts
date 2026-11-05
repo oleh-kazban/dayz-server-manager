@@ -15,6 +15,7 @@ import { type EnvConfig } from '../config/env';
 import { registerAuthRoutes } from '../routes/auth';
 import { registerHealthRoutes } from '../routes/health';
 import { registerServersRoutes } from '../routes/servers';
+import { sendApiError } from '../utils/api-error';
 
 export interface BuildAppOptions {
   config: EnvConfig;
@@ -53,6 +54,12 @@ export function buildApp(options: BuildAppOptions): FastifyInstance {
 
   app.register(rateLimit, {
     global: false,
+    errorResponseBuilder: (_request, context) => ({
+      statusCode: 429,
+      error: 'Too Many Requests',
+      errorCode: 'AUTH_RATE_LIMIT_EXCEEDED',
+      message: `Rate limit exceeded, retry in ${context.after}`,
+    }),
   });
 
   app.register(sensible);
@@ -61,14 +68,43 @@ export function buildApp(options: BuildAppOptions): FastifyInstance {
     secret: options.config.SESSION_SECRET,
   });
 
+  app.setErrorHandler(
+    (error: Error & { statusCode?: number; errorCode?: string }, _request, reply) => {
+      const statusCode = error.statusCode ?? 500;
+      if (statusCode === 429) {
+        return sendApiError(reply, 429, 'AUTH_RATE_LIMIT_EXCEEDED', error.message);
+      }
+      if (statusCode === 400) {
+        return sendApiError(reply, 400, 'VALIDATION_FAILED', error.message);
+      }
+      app.log.error(error);
+      return sendApiError(
+        reply,
+        500,
+        'INTERNAL_SERVER_ERROR',
+        'An unexpected internal server error occurred.',
+      );
+    },
+  );
+
   app.decorate('authenticate', async (request: FastifyRequest, reply: FastifyReply) => {
     try {
       const payload = await request.jwtVerify<{ sub: string; role?: string; type?: string }>();
       if (!payload || payload.type !== 'access') {
-        return reply.unauthorized('Invalid token type for authorization');
+        return sendApiError(
+          reply,
+          401,
+          'AUTH_TOKEN_TYPE_INVALID',
+          'Invalid token type for authorization',
+        );
       }
     } catch {
-      return reply.unauthorized('Invalid or missing authentication token');
+      return sendApiError(
+        reply,
+        401,
+        'AUTH_TOKEN_MISSING_OR_INVALID',
+        'Invalid or missing authentication token',
+      );
     }
   });
 
