@@ -1,5 +1,5 @@
 import { asc, eq } from 'drizzle-orm';
-import type { FastifyPluginAsync } from 'fastify';
+import type { FastifyInstance, FastifyPluginAsync, FastifyReply, FastifyRequest } from 'fastify';
 import crypto from 'node:crypto';
 
 import {
@@ -151,6 +151,46 @@ function mapServerDetail(s: Server) {
   });
 }
 
+function resolveServerByIdOrSendError(
+  fastify: FastifyInstance,
+  params: unknown,
+  reply: FastifyReply,
+): Server | null {
+  const paramResult = serverIdParamSchema.safeParse(params);
+  if (!paramResult.success) {
+    sendApiError(reply, 400, 'VALIDATION_FAILED', {
+      message: paramResult.error.issues[0].message,
+      fieldErrors: formatZodFieldErrors(paramResult.error),
+    });
+    return null;
+  }
+
+  const { id } = paramResult.data;
+  const server = fastify.db.select().from(servers).where(eq(servers.id, id)).get();
+
+  if (!server) {
+    sendApiError(reply, 404, 'SERVER_NOT_FOUND', {
+      message: `Server with ID '${id}' not found`,
+      params: { id },
+    });
+    return null;
+  }
+
+  return server;
+}
+
+function ensureAdminRole(
+  request: FastifyRequest,
+  reply: FastifyReply,
+  actionMessage: string,
+): boolean {
+  if (request.user?.role !== 'admin') {
+    sendApiError(reply, 403, 'AUTH_FORBIDDEN_ADMIN_REQUIRED', actionMessage);
+    return false;
+  }
+  return true;
+}
+
 export const registerServersRoutes: FastifyPluginAsync = async fastify => {
   // GET /api/v1/servers - List all servers
   fastify.get(
@@ -187,22 +227,9 @@ export const registerServersRoutes: FastifyPluginAsync = async fastify => {
       onRequest: [fastify.authenticate],
     },
     async (request, reply) => {
-      const paramResult = serverIdParamSchema.safeParse(request.params);
-      if (!paramResult.success) {
-        return sendApiError(reply, 400, 'VALIDATION_FAILED', {
-          message: paramResult.error.issues[0].message,
-          fieldErrors: formatZodFieldErrors(paramResult.error),
-        });
-      }
-      const { id } = paramResult.data;
-
-      const s = fastify.db.select().from(servers).where(eq(servers.id, id)).get();
-
+      const s = resolveServerByIdOrSendError(fastify, request.params, reply);
       if (!s) {
-        return sendApiError(reply, 404, 'SERVER_NOT_FOUND', {
-          message: `Server with ID '${id}' not found`,
-          params: { id },
-        });
+        return;
       }
 
       return reply.send(mapServerDetail(s));
@@ -216,13 +243,8 @@ export const registerServersRoutes: FastifyPluginAsync = async fastify => {
       onRequest: [fastify.authenticate],
     },
     async (request, reply) => {
-      if (request.user?.role !== 'admin') {
-        return sendApiError(
-          reply,
-          403,
-          'AUTH_FORBIDDEN_ADMIN_REQUIRED',
-          'Admin role required to create servers',
-        );
+      if (!ensureAdminRole(request, reply, 'Admin role required to create servers')) {
+        return;
       }
 
       const parseResult = createServerSchema.safeParse(request.body);
@@ -303,32 +325,15 @@ export const registerServersRoutes: FastifyPluginAsync = async fastify => {
       onRequest: [fastify.authenticate],
     },
     async (request, reply) => {
-      if (request.user?.role !== 'admin') {
-        return sendApiError(
-          reply,
-          403,
-          'AUTH_FORBIDDEN_ADMIN_REQUIRED',
-          'Admin role required to update servers',
-        );
+      if (!ensureAdminRole(request, reply, 'Admin role required to update servers')) {
+        return;
       }
 
-      const paramResult = serverIdParamSchema.safeParse(request.params);
-      if (!paramResult.success) {
-        return sendApiError(reply, 400, 'VALIDATION_FAILED', {
-          message: paramResult.error.issues[0].message,
-          fieldErrors: formatZodFieldErrors(paramResult.error),
-        });
-      }
-      const { id } = paramResult.data;
-
-      const existing = fastify.db.select().from(servers).where(eq(servers.id, id)).get();
-
+      const existing = resolveServerByIdOrSendError(fastify, request.params, reply);
       if (!existing) {
-        return sendApiError(reply, 404, 'SERVER_NOT_FOUND', {
-          message: `Server with ID '${id}' not found`,
-          params: { id },
-        });
+        return;
       }
+      const { id } = existing;
 
       const parseResult = updateServerSchema.safeParse(request.body);
       if (!parseResult.success) {
@@ -416,32 +421,15 @@ export const registerServersRoutes: FastifyPluginAsync = async fastify => {
       onRequest: [fastify.authenticate],
     },
     async (request, reply) => {
-      if (request.user?.role !== 'admin') {
-        return sendApiError(
-          reply,
-          403,
-          'AUTH_FORBIDDEN_ADMIN_REQUIRED',
-          'Admin role required to delete servers',
-        );
+      if (!ensureAdminRole(request, reply, 'Admin role required to delete servers')) {
+        return;
       }
 
-      const paramResult = serverIdParamSchema.safeParse(request.params);
-      if (!paramResult.success) {
-        return sendApiError(reply, 400, 'VALIDATION_FAILED', {
-          message: paramResult.error.issues[0].message,
-          fieldErrors: formatZodFieldErrors(paramResult.error),
-        });
-      }
-      const { id } = paramResult.data;
-
-      const existing = fastify.db.select().from(servers).where(eq(servers.id, id)).get();
-
+      const existing = resolveServerByIdOrSendError(fastify, request.params, reply);
       if (!existing) {
-        return sendApiError(reply, 404, 'SERVER_NOT_FOUND', {
-          message: `Server with ID '${id}' not found`,
-          params: { id },
-        });
+        return;
       }
+      const { id } = existing;
 
       // GUARD-SRV-01: Active Process Termination Guard
       if (existing.status !== 'stopped') {
