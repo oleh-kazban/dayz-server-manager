@@ -139,7 +139,6 @@ export function ServerSelector() {
                 value={searchQuery}
                 onChange={e => setSearchQuery(e.target.value)}
                 className="w-full text-xs bg-transparent text-[var(--color-text-main)] placeholder-[var(--color-text-muted)] focus:outline-none"
-                autoFocus
               />
             </div>
           )}
