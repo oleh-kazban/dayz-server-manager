@@ -9,6 +9,7 @@ import { Header } from './Header';
 
 const mockUseActiveServer = vi.fn();
 const mockLocation = { pathname: '/dashboard' };
+const mockUseMatches = vi.fn();
 
 vi.mock('@dsm/web/core', () => ({
   useActiveServer: () => mockUseActiveServer(),
@@ -30,12 +31,14 @@ vi.mock('@tanstack/react-router', () => ({
     </a>
   ),
   useLocation: () => mockLocation,
+  useMatches: () => mockUseMatches(),
 }));
 
 describe('Header', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockLocation.pathname = '/dashboard';
+    mockUseMatches.mockReturnValue([{ staticData: { breadcrumb: 'Dashboard' } }]);
     mockUseActiveServer.mockReturnValue({
       activeServer: {
         id: '11111111-1111-4111-8111-111111111111',
@@ -71,6 +74,10 @@ describe('Header', () => {
 
   it('renders full hierarchy with subroute title when navigating to /settings/server', () => {
     mockLocation.pathname = '/settings/server';
+    mockUseMatches.mockReturnValue([
+      { staticData: {} },
+      { staticData: { breadcrumb: 'Server settings' } },
+    ]);
     render(
       <ThemeProvider>
         <Header />

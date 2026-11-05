@@ -7,7 +7,7 @@ import { AuthProvider } from './features/auth';
 import { authStorage } from './features/auth/auth.storage';
 import type { AuthContextValue } from './features/auth/auth.types';
 import { ThemeProvider } from './features/theme';
-import { DEFAULT_MODULE_FLAGS, queryClient } from './core';
+import { DEFAULT_MODULE_FLAGS, queryClient, ROUTE_BREADCRUMBS } from './core';
 import { createAppRouter } from './router';
 
 const mockAdminAuth: AuthContextValue = {
@@ -154,5 +154,20 @@ describe('Router Topology & Navigation', () => {
     await waitFor(() => {
       expect(screen.getByRole('heading', { name: /server rpt logs/i })).toBeInTheDocument();
     });
+  });
+
+  it('attaches staticData.breadcrumb to every leaf route under authedRoute matching ROUTE_BREADCRUMBS', () => {
+    const router = createAppRouter();
+    const topRoutes = (router.routeTree.children ?? []) as {
+      id?: string;
+      children?: { options?: { staticData?: { breadcrumb?: string } } }[];
+    }[];
+    const authedNode = topRoutes.find(route => route.id === '/authed');
+    expect(authedNode).toBeDefined();
+
+    const leafRoutes = (authedNode?.children ?? []).filter(route =>
+      Boolean(route.options?.staticData?.breadcrumb),
+    );
+    expect(leafRoutes).toHaveLength(Object.keys(ROUTE_BREADCRUMBS).length);
   });
 });
