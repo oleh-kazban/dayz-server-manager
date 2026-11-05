@@ -5,6 +5,8 @@ import { App } from './App';
 
 import './styles/theme.css';
 
+import './core/i18n';
+
 const rootElement = document.getElementById('root');
 
 if (rootElement) {
