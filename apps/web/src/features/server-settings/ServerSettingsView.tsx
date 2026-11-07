@@ -5,11 +5,11 @@ import { useNavigate } from '@tanstack/react-router';
 import { AlertTriangle, Plus, Save, Trash2 } from 'lucide-react';
 
 import { apiClient } from '@dsm/api-client';
-import type {
-  ServerDetailDto,
-  ServerStatus,
-  ServerSummaryDto,
-  UpdateServerDto,
+import {
+  isServerActiveStatus,
+  type ServerDetailDto,
+  type ServerSummaryDto,
+  type UpdateServerDto,
 } from '@dsm/api-contracts';
 import {
   Button,
@@ -19,12 +19,12 @@ import {
   Notice,
   PasswordInput,
   StatusTag,
-  type StatusTagStatus,
   Toggle,
 } from '@dsm/ui';
 import { EmptyServersState, PageContainer } from '@dsm/web/components';
 import {
   extractApiFieldErrors,
+  getServerStatusPresentation,
   notifyApiError,
   notifySuccess,
   resolveFieldErrors,
@@ -34,22 +34,6 @@ import {
 } from '@dsm/web/core';
 
 import { CreateServerModal } from './CreateServerModal';
-
-function mapServerStatusToTag(status: ServerStatus): { status: StatusTagStatus; label: string } {
-  switch (status) {
-    case 'running':
-      return { status: 'online', label: 'Running' };
-    case 'starting':
-      return { status: 'restarting', label: 'Starting' };
-    case 'stopping':
-      return { status: 'restarting', label: 'Stopping' };
-    case 'failed':
-      return { status: 'danger', label: 'Failed' };
-    case 'stopped':
-    default:
-      return { status: 'stopped', label: 'Stopped' };
-  }
-}
 
 interface ServerSettingsValidationInput {
   name: string;
@@ -149,7 +133,7 @@ function ServerSettingsForm({
     }
   };
 
-  const isServerLocked = detail.status !== 'stopped';
+  const isServerLocked = isServerActiveStatus(detail.status);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -466,7 +450,7 @@ export function ServerSettingsView() {
     enabled: Boolean(activeServerId) && !deleteMutation.isPending && !deleteMutation.isSuccess,
   });
 
-  const isServerLocked = detail ? detail.status !== 'stopped' : false;
+  const isServerLocked = detail ? isServerActiveStatus(detail.status) : false;
   const isDeleteDisabled = !detail || isServerLocked;
 
   // Save Mutation
@@ -532,7 +516,7 @@ export function ServerSettingsView() {
     );
   }
 
-  const statusTagInfo = mapServerStatusToTag(detail.status);
+  const statusPresentation = getServerStatusPresentation(detail.status);
 
   return (
     <PageContainer>
@@ -544,7 +528,7 @@ export function ServerSettingsView() {
               <h1 className="text-2xl font-bold tracking-tight text-[var(--color-text-main)]">
                 Server Settings
               </h1>
-              <StatusTag status={statusTagInfo.status} label={statusTagInfo.label} />
+              <StatusTag status={statusPresentation.tagStatus} label={statusPresentation.label} />
             </div>
             <p className="mt-1 text-sm text-[var(--color-text-secondary)]">
               Manage ports, execution flags, security credentials, and file paths for{' '}

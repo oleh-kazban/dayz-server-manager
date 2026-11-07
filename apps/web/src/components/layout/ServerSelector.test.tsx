@@ -9,7 +9,8 @@ import { useAuth } from '@dsm/web/features/auth';
 
 import { ServerSelector } from './ServerSelector';
 
-vi.mock('@dsm/web/core', () => ({
+vi.mock('@dsm/web/core', async importOriginal => ({
+  ...(await importOriginal<typeof import('@dsm/web/core')>()),
   useActiveServer: vi.fn(),
 }));
 
@@ -103,11 +104,12 @@ describe('ServerSelector', () => {
     });
   });
 
-  it('renders active server name and Connected status badge', () => {
+  it('renders active server name and localized Running status badge', () => {
     render(<ServerSelector />);
 
     expect(screen.getByText('DayZ Chernarus')).toBeInTheDocument();
-    expect(screen.getByText('Connected')).toBeInTheDocument();
+    expect(screen.getByText('Running')).toBeInTheDocument();
+    expect(screen.queryByText('Connected')).not.toBeInTheDocument();
   });
 
   it('toggles dropdown popover on trigger click', () => {

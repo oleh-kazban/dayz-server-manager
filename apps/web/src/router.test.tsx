@@ -3,12 +3,17 @@ import { createMemoryHistory, RouterProvider } from '@tanstack/react-router';
 import { render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it } from 'vitest';
 
-import { AuthProvider } from './features/auth';
-import { authStorage } from './features/auth/auth.storage';
-import type { AuthContextValue } from './features/auth/auth.types';
-import { ThemeProvider } from './features/theme';
-import { DEFAULT_MODULE_FLAGS, queryClient, ROUTE_BREADCRUMBS } from './core';
-import { createAppRouter } from './router';
+import {
+  DEFAULT_MODULE_FLAGS,
+  FeatureFlagsProvider,
+  queryClient,
+  ROUTE_BREADCRUMBS,
+} from '@dsm/web/core';
+import { AuthProvider } from '@dsm/web/features/auth';
+import { authStorage } from '@dsm/web/features/auth/auth.storage';
+import type { AuthContextValue } from '@dsm/web/features/auth/auth.types';
+import { ThemeProvider } from '@dsm/web/features/theme';
+import { createAppRouter } from '@dsm/web/router';
 
 const mockAdminAuth: AuthContextValue = {
   user: {
@@ -53,16 +58,18 @@ function renderRoute(initialPath: string, auth = mockAdminAuth, flags = DEFAULT_
     <QueryClientProvider client={queryClient}>
       <ThemeProvider>
         <AuthProvider>
-          <RouterProvider
-            router={router}
-            context={{
-              auth,
-              features: {
-                flags,
-                isEnabled: flag => Boolean(flags[flag]),
-              },
-            }}
-          />
+          <FeatureFlagsProvider initialFlags={flags}>
+            <RouterProvider
+              router={router}
+              context={{
+                auth,
+                features: {
+                  flags,
+                  isEnabled: flag => Boolean(flags[flag]),
+                },
+              }}
+            />
+          </FeatureFlagsProvider>
         </AuthProvider>
       </ThemeProvider>
     </QueryClientProvider>,

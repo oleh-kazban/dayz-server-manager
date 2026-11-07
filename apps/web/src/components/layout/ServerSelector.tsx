@@ -3,45 +3,9 @@ import { useEffect, useRef, useState } from 'react';
 import { Link } from '@tanstack/react-router';
 import { Check, ChevronsUpDown, Plus, Search, Server as ServerIcon } from 'lucide-react';
 
-import type { ServerStatus, ServerSummaryDto } from '@dsm/api-contracts';
-import { useActiveServer } from '@dsm/web/core';
+import type { ServerSummaryDto } from '@dsm/api-contracts';
+import { getServerStatusPresentation, useActiveServer } from '@dsm/web/core';
 import { useAuth } from '@dsm/web/features/auth';
-
-function getStatusBadge(status: ServerStatus) {
-  switch (status) {
-    case 'running':
-      return {
-        label: 'Connected',
-        dotClass: 'bg-[var(--color-success)]',
-        textClass: 'text-[var(--color-success)]',
-      };
-    case 'starting':
-      return {
-        label: 'Starting',
-        dotClass: 'bg-[var(--color-warning)] animate-pulse',
-        textClass: 'text-[var(--color-warning)]',
-      };
-    case 'stopping':
-      return {
-        label: 'Stopping',
-        dotClass: 'bg-[var(--color-warning)]',
-        textClass: 'text-[var(--color-warning)]',
-      };
-    case 'failed':
-      return {
-        label: 'Failed',
-        dotClass: 'bg-[var(--color-danger)]',
-        textClass: 'text-[var(--color-danger)]',
-      };
-    case 'stopped':
-    default:
-      return {
-        label: 'Stopped',
-        dotClass: 'bg-[var(--color-text-muted)]',
-        textClass: 'text-[var(--color-text-muted)]',
-      };
-  }
-}
 
 export function ServerSelector() {
   const { servers, activeServer, setActiveServerId, isLoading } = useActiveServer();
@@ -86,7 +50,7 @@ export function ServerSelector() {
     s.name.toLowerCase().includes(searchQuery.toLowerCase()),
   );
 
-  const activeBadge = activeServer ? getStatusBadge(activeServer.status) : null;
+  const activeBadge = activeServer ? getServerStatusPresentation(activeServer.status) : null;
 
   return (
     <div ref={containerRef} className="relative select-none">
@@ -152,7 +116,7 @@ export function ServerSelector() {
             ) : (
               filteredServers.map((server: ServerSummaryDto) => {
                 const isSelected = activeServer?.id === server.id;
-                const badge = getStatusBadge(server.status);
+                const badge = getServerStatusPresentation(server.status);
 
                 return (
                   <button

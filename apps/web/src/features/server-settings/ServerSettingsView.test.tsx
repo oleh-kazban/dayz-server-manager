@@ -280,6 +280,64 @@ describe('ServerSettingsView', () => {
     });
   });
 
+  it('keeps ports and paths editable and delete enabled for a failed server', async () => {
+    currentActiveSummary = { ...mockActiveServerSummary, status: 'failed' };
+    currentDetail = { ...mockServerDetail, status: 'failed' };
+
+    renderView();
+
+    await waitFor(() => {
+      expect(screen.getByText('Failed')).toBeInTheDocument();
+    });
+
+    expect(screen.getByDisplayValue('2402')).not.toBeDisabled();
+    expect(screen.getByDisplayValue('C:\\DayZServer\\Namalsk')).not.toBeDisabled();
+    expect(screen.queryByText(/Configuration Locked/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Server must be stopped before deletion/i)).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Delete server/i })).not.toBeDisabled();
+  });
+
+  it.each([
+    { status: 'starting', label: 'Starting' },
+    { status: 'stopping', label: 'Stopping' },
+  ] as const)(
+    'locks ports, paths and delete for a $status server (GUARD-SRV-01, GUARD-SRV-03)',
+    async ({ status, label }) => {
+      currentActiveSummary = { ...mockActiveServerSummary, status };
+      currentDetail = { ...mockServerDetail, status };
+
+      renderView();
+
+      await waitFor(() => {
+        expect(screen.getByText(label)).toBeInTheDocument();
+      });
+
+      expect(screen.getByText(/Configuration Locked/i)).toBeInTheDocument();
+      expect(screen.getByDisplayValue('2402')).toBeDisabled();
+      expect(screen.getByDisplayValue('C:\\DayZServer\\Namalsk')).toBeDisabled();
+      expect(screen.getByText(/Server must be stopped before deletion/i)).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /Delete server/i })).toBeDisabled();
+    },
+  );
+
+  it.each([
+    { status: 'running', label: 'Running' },
+    { status: 'stopped', label: 'Stopped' },
+  ] as const)(
+    'renders the localized $status label in the header status tag',
+    async ({ status, label }) => {
+      currentActiveSummary = { ...mockActiveServerSummary, status };
+      currentDetail = { ...mockServerDetail, status };
+
+      renderView();
+
+      await waitFor(() => {
+        expect(screen.getByDisplayValue('DayZ Namalsk')).toBeInTheDocument();
+      });
+      expect(screen.getByText(label)).toBeInTheDocument();
+    },
+  );
+
   it('renders empty zero-state notice when zero servers exist in DSM console', async () => {
     mockServers = [];
     currentActiveSummary = null;
