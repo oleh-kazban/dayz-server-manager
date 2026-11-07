@@ -63,6 +63,40 @@ export const migrations: DsmMigration[] = [
       `);
     },
   },
+  {
+    id: '0003_profile_and_sessions',
+    name: 'Add operator profile fields and sessions table',
+    up: (sqlite: Database.Database) => {
+      // 1. Additive columns for users
+      const columns = sqlite.pragma('table_info(users)') as { name: string }[];
+      const names = new Set(columns.map(c => c.name));
+
+      if (!names.has('display_name')) {
+        sqlite.exec('ALTER TABLE users ADD COLUMN display_name TEXT;');
+      }
+      if (!names.has('timezone')) {
+        sqlite.exec("ALTER TABLE users ADD COLUMN timezone TEXT NOT NULL DEFAULT 'UTC';");
+      }
+      if (!names.has('time_format')) {
+        sqlite.exec("ALTER TABLE users ADD COLUMN time_format TEXT NOT NULL DEFAULT '24h';");
+      }
+
+      // 2. Create stateful sessions table with indexes
+      sqlite.exec(`
+        CREATE TABLE IF NOT EXISTS sessions (
+          id TEXT PRIMARY KEY,
+          user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+          user_agent TEXT,
+          ip_address TEXT,
+          last_active_at INTEGER NOT NULL,
+          created_at INTEGER NOT NULL,
+          expires_at INTEGER NOT NULL
+        );
+        CREATE INDEX IF NOT EXISTS idx_sessions_user_id ON sessions(user_id);
+        CREATE INDEX IF NOT EXISTS idx_sessions_expires_at ON sessions(expires_at);
+      `);
+    },
+  },
 ];
 
 export function runMigrations(sqlite: Database.Database): void {

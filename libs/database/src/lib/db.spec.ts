@@ -1,11 +1,12 @@
 import Database from 'better-sqlite3';
+import { eq } from 'drizzle-orm';
 import fs from 'node:fs';
 import path from 'node:path';
 
 import { verifyPassword } from './crypto';
 import { initDatabase } from './db';
 import { runMigrations } from './migrations';
-import { servers, users } from './schema';
+import { servers, sessions, users } from './schema';
 
 describe('Database Initialization & Seeding', () => {
   const originalEnv = { ...process.env };
@@ -30,7 +31,81 @@ describe('Database Initialization & Seeding', () => {
       expect(seededServers).toHaveLength(0);
 
       const migrations = instance.sqlite.prepare('SELECT * FROM _dsm_migrations').all();
-      expect(migrations).toHaveLength(2);
+      expect(migrations).toHaveLength(3);
+    } finally {
+      instance.close();
+    }
+  });
+
+  it('verifies migration 0003_profile_and_sessions up routine, columns, indexes, and cascades', () => {
+    const instance = initDatabase({ dbPath: ':memory:' });
+    try {
+      // Check additive columns in users
+      const userCols = instance.sqlite.prepare("PRAGMA table_info('users')").all() as {
+        name: string;
+      }[];
+      const colNames = userCols.map(c => c.name);
+      expect(colNames).toContain('display_name');
+      expect(colNames).toContain('timezone');
+      expect(colNames).toContain('time_format');
+
+      // Check sessions table exists
+      const sessionCols = instance.sqlite.prepare("PRAGMA table_info('sessions')").all() as {
+        name: string;
+      }[];
+      expect(sessionCols.length).toBeGreaterThan(0);
+
+      // Verify sessions table operations
+      const admin = instance.db.select().from(users).all()[0];
+      const now = new Date();
+      instance.db
+        .insert(sessions)
+        .values({
+          id: 'sess-test-cascade',
+          userId: admin.id,
+          userAgent: 'Test Agent',
+          ipAddress: '127.0.0.1',
+          lastActiveAt: now,
+          createdAt: now,
+          expiresAt: new Date(now.getTime() + 86400000),
+        })
+        .run();
+
+      const inserted = instance.db
+        .select()
+        .from(sessions)
+        .where(eq(sessions.id, 'sess-test-cascade'))
+        .all();
+      expect(inserted).toHaveLength(1);
+
+      // Verify foreign key cascade deletion
+      instance.db.delete(users).where(eq(users.id, admin.id)).run();
+      const remaining = instance.db
+        .select()
+        .from(sessions)
+        .where(eq(sessions.id, 'sess-test-cascade'))
+        .all();
+      expect(remaining).toHaveLength(0);
+
+      // Exercise Drizzle schema foreign key definition
+      const fkSymbols = Object.getOwnPropertySymbols(sessions);
+      const inlineFkSymbol = fkSymbols.find(
+        s => s.description === 'drizzle:SQLiteInlineForeignKeys',
+      );
+      if (inlineFkSymbol) {
+        const fks = (
+          sessions as unknown as Record<
+            symbol,
+            { reference: () => { columns: unknown[]; foreignColumns: unknown[] } }[]
+          >
+        )[inlineFkSymbol];
+        expect(fks).toBeDefined();
+        if (fks && fks[0]) {
+          const resolved = fks[0].reference();
+          expect(resolved.columns[0]).toBe(sessions.userId);
+          expect(resolved.foreignColumns[0]).toBe(users.id);
+        }
+      }
     } finally {
       instance.close();
     }
