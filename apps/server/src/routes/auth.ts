@@ -1,5 +1,6 @@
 import { eq, or } from 'drizzle-orm';
 import type { FastifyPluginAsync } from 'fastify';
+import { randomUUID } from 'node:crypto';
 
 import {
   type AuthUserDto,
@@ -8,7 +9,7 @@ import {
   signInRequestSchema,
   type SignInResponseDto,
 } from '@dsm/api-contracts';
-import { users, verifyPassword } from '@dsm/database';
+import { sessions, users, verifyPassword } from '@dsm/database';
 
 import { formatZodFieldErrors, sendApiError } from '../utils/api-error';
 
@@ -45,6 +46,7 @@ export const registerAuthRoutes: FastifyPluginAsync = async fastify => {
                 properties: {
                   id: { type: 'string' },
                   username: { type: 'string' },
+                  displayName: { type: 'string' },
                   email: { type: 'string' },
                   role: { type: 'string', enum: ['admin', 'moderator', 'viewer'] },
                 },
@@ -77,12 +79,43 @@ export const registerAuthRoutes: FastifyPluginAsync = async fastify => {
       // Update lastLoginAt timestamp
       fastify.db.update(users).set({ lastLoginAt: new Date() }).where(eq(users.id, user.id)).run();
 
+      // Create stateful session row (ADR-001)
+      const sid = randomUUID();
+      const rememberMe = Boolean(parseResult.data.rememberMe);
+      const sessionTtlMs = rememberMe ? 30 * 24 * 60 * 60 * 1000 : 7 * 24 * 60 * 60 * 1000;
+      const now = Date.now();
+      const expiresAt = new Date(now + sessionTtlMs);
+
+      const rawXForwardedFor = request.headers['x-forwarded-for'];
+      let forwardedIp: string | undefined;
+      if (Array.isArray(rawXForwardedFor)) {
+        forwardedIp = rawXForwardedFor[0];
+      } else if (typeof rawXForwardedFor === 'string') {
+        forwardedIp = rawXForwardedFor.split(',')[0].trim();
+      }
+      const ipAddress = forwardedIp || request.ip || '127.0.0.1';
+      const userAgent = (request.headers['user-agent'] as string | undefined) ?? null;
+
+      fastify.db
+        .insert(sessions)
+        .values({
+          id: sid,
+          userId: user.id,
+          userAgent,
+          ipAddress,
+          lastActiveAt: new Date(now),
+          createdAt: new Date(now),
+          expiresAt,
+        })
+        .run();
+
       const accessToken = fastify.jwt.sign(
         {
           sub: user.id,
           username: user.username,
           role: user.role,
           type: 'access',
+          sid,
         },
         { expiresIn: '15m' },
       );
@@ -91,8 +124,9 @@ export const registerAuthRoutes: FastifyPluginAsync = async fastify => {
         {
           sub: user.id,
           type: 'refresh',
+          sid,
         },
-        { expiresIn: '7d' },
+        { expiresIn: rememberMe ? '30d' : '7d' },
       );
 
       const response: SignInResponseDto = {
@@ -102,6 +136,7 @@ export const registerAuthRoutes: FastifyPluginAsync = async fastify => {
         user: {
           id: user.id,
           username: user.username,
+          displayName: user.displayName ?? undefined,
           email: user.email ?? undefined,
           role: user.role,
         },
@@ -151,7 +186,9 @@ export const registerAuthRoutes: FastifyPluginAsync = async fastify => {
       const { refreshToken } = parseResult.data;
 
       try {
-        const payload = fastify.jwt.verify<{ sub: string; type?: string }>(refreshToken);
+        const payload = fastify.jwt.verify<{ sub: string; type?: string; sid?: string }>(
+          refreshToken,
+        );
         if (payload.type !== 'refresh') {
           return sendApiError(reply, 401, 'AUTH_TOKEN_TYPE_INVALID', 'Invalid token type');
         }
@@ -161,12 +198,39 @@ export const registerAuthRoutes: FastifyPluginAsync = async fastify => {
           return sendApiError(reply, 401, 'AUTH_USER_NOT_FOUND', 'User not found');
         }
 
+        if (payload.sid) {
+          const session = fastify.db
+            .select()
+            .from(sessions)
+            .where(eq(sessions.id, payload.sid))
+            .get();
+          if (!session || session.expiresAt.getTime() <= Date.now()) {
+            return sendApiError(
+              reply,
+              401,
+              'AUTH_SESSION_EXPIRED',
+              'Session has expired or was revoked',
+            );
+          }
+
+          // Throttle lastActiveAt update
+          const now = Date.now();
+          if (now - session.lastActiveAt.getTime() > 60_000) {
+            fastify.db
+              .update(sessions)
+              .set({ lastActiveAt: new Date(now) })
+              .where(eq(sessions.id, session.id))
+              .run();
+          }
+        }
+
         const accessToken = fastify.jwt.sign(
           {
             sub: user.id,
             username: user.username,
             role: user.role,
             type: 'access',
+            sid: payload.sid,
           },
           { expiresIn: '15m' },
         );
@@ -199,6 +263,7 @@ export const registerAuthRoutes: FastifyPluginAsync = async fastify => {
             properties: {
               id: { type: 'string' },
               username: { type: 'string' },
+              displayName: { type: 'string' },
               email: { type: 'string' },
               role: { type: 'string', enum: ['admin', 'moderator', 'viewer'] },
             },
@@ -215,6 +280,7 @@ export const registerAuthRoutes: FastifyPluginAsync = async fastify => {
       const response: AuthUserDto = {
         id: user.id,
         username: user.username,
+        displayName: user.displayName ?? undefined,
         email: user.email ?? undefined,
         role: user.role,
       };

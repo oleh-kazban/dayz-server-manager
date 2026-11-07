@@ -18,12 +18,14 @@ declare module '@fastify/jwt' {
       username?: string;
       role?: string;
       type?: 'access' | 'refresh';
+      sid?: string;
     };
     user: {
       sub: string;
       username?: string;
       role?: string;
       type?: 'access' | 'refresh';
+      sid?: string;
     };
   }
 }
