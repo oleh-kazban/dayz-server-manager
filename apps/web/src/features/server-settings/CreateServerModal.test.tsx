@@ -151,22 +151,31 @@ describe('CreateServerModal', () => {
     });
   });
 
-  it('validates port range bounds, distinct port collisions, and short passwords', async () => {
+  it('validates port range bounds, distinct port collisions, short passwords, and required paths', async () => {
     renderModal(true);
 
     fireEvent.change(screen.getByLabelText(/Server Name/i), {
       target: { value: 'Test' },
     });
-    // Set invalid port < 1024 for queryPort
+    // Clear required paths
+    fireEvent.change(screen.getByLabelText(/Installation Path/i), {
+      target: { value: '   ' },
+    });
+    fireEvent.change(screen.getByLabelText(/Profile Path/i), {
+      target: { value: '   ' },
+    });
+    fireEvent.change(screen.getByLabelText(/Mission Path/i), {
+      target: { value: '   ' },
+    });
+    // Set invalid port bounds
+    fireEvent.change(screen.getByLabelText(/^Game Port$/i), {
+      target: { value: '500' },
+    });
     fireEvent.change(screen.getByLabelText(/Query Port/i), {
       target: { value: '80' },
     });
-    // Set matching game and rcon ports to trigger distinct validation
-    fireEvent.change(screen.getByLabelText(/^Game Port$/i), {
-      target: { value: '2302' },
-    });
     fireEvent.change(screen.getByLabelText(/RCON Port/i), {
-      target: { value: '2302' },
+      target: { value: '70000' },
     });
     // Set short rcon password
     fireEvent.change(screen.getByLabelText(/RCON Password/i), {
@@ -175,12 +184,44 @@ describe('CreateServerModal', () => {
 
     fireEvent.click(screen.getByRole('button', { name: /^Create Server$/i }));
 
-    expect(screen.getByText('Port must be between 1024 and 65535.')).toBeInTheDocument();
+    expect(screen.getByText('Installation path is required.')).toBeInTheDocument();
+    expect(screen.getByText('Profile path is required.')).toBeInTheDocument();
+    expect(screen.getByText('Mission path is required.')).toBeInTheDocument();
+    expect(screen.getAllByText('Port must be between 1024 and 65535.')).toHaveLength(3);
+    expect(screen.getByText('RCON password must be at least 6 characters.')).toBeInTheDocument();
+    expect(showToast.error).not.toHaveBeenCalled();
+
+    // Type into gamePort to clear its error
+    fireEvent.change(screen.getByLabelText(/^Game Port$/i), {
+      target: { value: '2302' },
+    });
+    expect(screen.getAllByText('Port must be between 1024 and 65535.')).toHaveLength(2);
+
+    // Set matching game and rcon ports to trigger distinct validation
+    fireEvent.change(screen.getByLabelText(/Query Port/i), {
+      target: { value: '27016' },
+    });
+    fireEvent.change(screen.getByLabelText(/RCON Port/i), {
+      target: { value: '2302' },
+    });
+    fireEvent.change(screen.getByLabelText(/Installation Path/i), {
+      target: { value: 'C:\\DayZ' },
+    });
+    fireEvent.change(screen.getByLabelText(/Profile Path/i), {
+      target: { value: 'C:\\DayZ\\profiles' },
+    });
+    fireEvent.change(screen.getByLabelText(/Mission Path/i), {
+      target: { value: 'mpmissions\\namalsk' },
+    });
+    fireEvent.change(screen.getByLabelText(/RCON Password/i), {
+      target: { value: 'validpass' },
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: /^Create Server$/i }));
+
     expect(
       screen.getByText('Game port, query port, and RCON port must all be distinct.'),
     ).toBeInTheDocument();
-    expect(screen.getByText('RCON password must be at least 6 characters.')).toBeInTheDocument();
-    expect(showToast.error).not.toHaveBeenCalled();
   });
 
   it('highlights all conflicting/invalid fields inline simultaneously without firing a toast when fieldErrors are present, and fires a toast only on non-field errors (REQ-03)', async () => {

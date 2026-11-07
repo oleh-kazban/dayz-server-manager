@@ -160,6 +160,10 @@ describe('ServerSelector', () => {
     fireEvent.click(trigger);
     expect(screen.getByRole('listbox')).toBeInTheDocument();
 
+    // Key other than Escape does not close
+    fireEvent.keyDown(document, { key: 'Tab' });
+    expect(screen.getByRole('listbox')).toBeInTheDocument();
+
     fireEvent.keyDown(document, { key: 'Escape' });
     expect(screen.queryByRole('listbox')).not.toBeInTheDocument();
   });
@@ -169,6 +173,10 @@ describe('ServerSelector', () => {
 
     const trigger = screen.getByRole('button', { name: /select dayz server instance/i });
     fireEvent.click(trigger);
+    expect(screen.getByRole('listbox')).toBeInTheDocument();
+
+    // Click inside container does not close
+    fireEvent.mouseDown(trigger);
     expect(screen.getByRole('listbox')).toBeInTheDocument();
 
     fireEvent.mouseDown(document.body);
@@ -182,6 +190,58 @@ describe('ServerSelector', () => {
     fireEvent.click(trigger);
 
     expect(screen.getByText('Add new server')).toBeInTheDocument();
+  });
+
+  it('closes popover when Add new server link is clicked', () => {
+    render(<ServerSelector />);
+
+    const trigger = screen.getByRole('button', { name: /select dayz server instance/i });
+    fireEvent.click(trigger);
+
+    const addServerLink = screen.getByText('Add new server');
+    fireEvent.click(addServerLink);
+
+    expect(screen.queryByRole('listbox')).not.toBeInTheDocument();
+  });
+
+  it('displays "No servers found" when search filter matches nothing', () => {
+    render(<ServerSelector />);
+
+    const trigger = screen.getByRole('button', { name: /select dayz server instance/i });
+    fireEvent.click(trigger);
+
+    const searchInput = screen.getByPlaceholderText('Filter servers...');
+    fireEvent.change(searchInput, { target: { value: 'Nonexistent Server XYZ' } });
+
+    expect(screen.getByText('No servers found')).toBeInTheDocument();
+  });
+
+  it('renders loading skeleton when activeServer is not loaded yet', () => {
+    vi.mocked(useActiveServer).mockReturnValue({
+      servers: [],
+      activeServer: null,
+      activeServerId: null,
+      setActiveServerId: setActiveServerIdMock,
+      isLoading: true,
+      error: null,
+    });
+
+    const { container } = render(<ServerSelector />);
+    expect(container.querySelector('.animate-pulse')).toBeInTheDocument();
+  });
+
+  it('renders "No server registered" when there are no servers', () => {
+    vi.mocked(useActiveServer).mockReturnValue({
+      servers: [],
+      activeServer: null,
+      activeServerId: null,
+      setActiveServerId: setActiveServerIdMock,
+      isLoading: false,
+      error: null,
+    });
+
+    render(<ServerSelector />);
+    expect(screen.getByText('No server registered')).toBeInTheDocument();
   });
 
   it('does not render Add new server link for non-admin operators', () => {
