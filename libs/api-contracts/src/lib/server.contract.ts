@@ -1,7 +1,35 @@
 import { z } from 'zod';
 
-export const serverStatusSchema = z.enum(['stopped', 'starting', 'running', 'stopping', 'failed']);
+export const SERVER_STATUS = {
+  STOPPED: 'stopped',
+  STARTING: 'starting',
+  RUNNING: 'running',
+  STOPPING: 'stopping',
+  FAILED: 'failed',
+} as const;
+
+export const SERVER_STATUS_VALUES = [
+  SERVER_STATUS.STOPPED,
+  SERVER_STATUS.STARTING,
+  SERVER_STATUS.RUNNING,
+  SERVER_STATUS.STOPPING,
+  SERVER_STATUS.FAILED,
+] as const;
+
+export const serverStatusSchema = z.enum(SERVER_STATUS_VALUES);
 export type ServerStatus = z.infer<typeof serverStatusSchema>;
+
+export const ACTIVE_SERVER_STATUSES: readonly ServerStatus[] = [
+  SERVER_STATUS.RUNNING,
+  SERVER_STATUS.STARTING,
+  SERVER_STATUS.STOPPING,
+];
+
+const ACTIVE_SERVER_STATUS_SET = new Set<ServerStatus>(ACTIVE_SERVER_STATUSES);
+
+export function isServerActiveStatus(status: ServerStatus): boolean {
+  return ACTIVE_SERVER_STATUS_SET.has(status);
+}
 
 export const serverSummarySchema = z.object({
   id: z.string().uuid(),
