@@ -493,6 +493,95 @@ describe('Servers Routes (/api/v1/servers)', () => {
         .run();
     });
 
+    it.each(['starting', 'stopping'] as const)(
+      'enforces GUARD-SRV-03: returns 409 when altering ports or paths while server is %s',
+      async activeStatus => {
+        dbInstance.db
+          .update(servers)
+          .set({ status: activeStatus })
+          .where(eq(servers.id, secondServerId))
+          .run();
+
+        const portResponse = await app.inject({
+          method: 'PATCH',
+          url: `/api/v1/servers/${secondServerId}`,
+          headers: { authorization: `Bearer ${adminToken}` },
+          payload: { gamePort: 2502 },
+        });
+
+        expect(portResponse.statusCode).toBe(409);
+        const portBody = portResponse.json();
+        expect(apiErrorResponseSchema.safeParse(portBody).success).toBe(true);
+        expect(portBody.errorCode).toBe('SERVER_RUNNING_CONFIG_LOCKED');
+        expect(portBody.params).toEqual({
+          id: secondServerId,
+          name: 'Livonia Hardcore',
+          status: activeStatus,
+        });
+
+        const pathResponse = await app.inject({
+          method: 'PATCH',
+          url: `/api/v1/servers/${secondServerId}`,
+          headers: { authorization: `Bearer ${adminToken}` },
+          payload: { installPath: '/new/path' },
+        });
+
+        expect(pathResponse.statusCode).toBe(409);
+        const pathBody = pathResponse.json();
+        expect(apiErrorResponseSchema.safeParse(pathBody).success).toBe(true);
+        expect(pathBody.errorCode).toBe('SERVER_RUNNING_CONFIG_LOCKED');
+
+        // Verify zero database mutation occurred on refusal
+        const unchanged = dbInstance.db
+          .select()
+          .from(servers)
+          .where(eq(servers.id, secondServerId))
+          .get();
+        expect(unchanged!.gamePort).toBe(2402);
+        expect(unchanged!.installPath).toBe('/opt/dayz-livonia');
+
+        dbInstance.db
+          .update(servers)
+          .set({ status: 'stopped' })
+          .where(eq(servers.id, secondServerId))
+          .run();
+      },
+    );
+
+    it('allows altering ports and paths when server status is failed (returns 200)', async () => {
+      dbInstance.db
+        .update(servers)
+        .set({ status: 'failed' })
+        .where(eq(servers.id, secondServerId))
+        .run();
+
+      const response = await app.inject({
+        method: 'PATCH',
+        url: `/api/v1/servers/${secondServerId}`,
+        headers: { authorization: `Bearer ${adminToken}` },
+        payload: {
+          gamePort: 2502,
+          installPath: 'C:\\DayZServerUpdated',
+        },
+      });
+
+      expect(response.statusCode).toBe(200);
+      const updated = response.json();
+      expect(updated.gamePort).toBe(2502);
+      expect(updated.installPath).toBe('C:\\DayZServerUpdated');
+
+      // Reset port, installPath, and status to stopped for subsequent tests
+      dbInstance.db
+        .update(servers)
+        .set({
+          status: 'stopped',
+          gamePort: 2402,
+          installPath: '/opt/dayz-livonia',
+        })
+        .where(eq(servers.id, secondServerId))
+        .run();
+    });
+
     it('returns 409 if renaming to an existing server name and populates fieldErrors.name', async () => {
       const response = await app.inject({
         method: 'PATCH',
@@ -739,6 +828,86 @@ describe('Servers Routes (/api/v1/servers)', () => {
         .set({ status: 'stopped' })
         .where(eq(servers.id, secondServerId))
         .run();
+    });
+
+    it.each(['starting', 'stopping'] as const)(
+      'enforces GUARD-SRV-01: returns 409 if server is %s',
+      async activeStatus => {
+        dbInstance.db
+          .update(servers)
+          .set({ status: activeStatus })
+          .where(eq(servers.id, secondServerId))
+          .run();
+
+        const response = await app.inject({
+          method: 'DELETE',
+          url: `/api/v1/servers/${secondServerId}`,
+          headers: { authorization: `Bearer ${adminToken}` },
+        });
+
+        expect(response.statusCode).toBe(409);
+        const body = response.json();
+        expect(apiErrorResponseSchema.safeParse(body).success).toBe(true);
+        expect(body.errorCode).toBe('SERVER_RUNNING_DELETE_LOCKED');
+        expect(body.params).toEqual({
+          id: secondServerId,
+          name: 'Livonia Hardcore',
+          status: activeStatus,
+        });
+
+        const stillExists = dbInstance.db
+          .select()
+          .from(servers)
+          .where(eq(servers.id, secondServerId))
+          .get();
+        expect(stillExists).toBeDefined();
+
+        dbInstance.db
+          .update(servers)
+          .set({ status: 'stopped' })
+          .where(eq(servers.id, secondServerId))
+          .run();
+      },
+    );
+
+    it('allows deleting a server when status is failed (returns 200)', async () => {
+      const failedServerId = '33333333-3333-4333-a333-333333333333';
+      const now = new Date();
+      dbInstance.db
+        .insert(servers)
+        .values({
+          id: failedServerId,
+          name: 'Temporary Failed Server',
+          description: 'Server in failed state',
+          isDefault: false,
+          status: 'failed',
+          gamePort: 2602,
+          queryPort: 27018,
+          rconPort: 2312,
+          rconPassword: 'test-rcon-password',
+          installPath: 'C:\\DayZFailedServer',
+          profilePath: 'profiles',
+          missionPath: 'mpmissions/dayzOffline.chernarusplus',
+          createdAt: now,
+          updatedAt: now,
+        })
+        .run();
+
+      const response = await app.inject({
+        method: 'DELETE',
+        url: `/api/v1/servers/${failedServerId}`,
+        headers: { authorization: `Bearer ${adminToken}` },
+      });
+
+      expect(response.statusCode).toBe(200);
+      expect(response.json().success).toBe(true);
+
+      const deletedCheck = dbInstance.db
+        .select()
+        .from(servers)
+        .where(eq(servers.id, failedServerId))
+        .get();
+      expect(deletedCheck).toBeUndefined();
     });
 
     it('tolerates Content-Type: application/json with empty body on DELETE', async () => {
