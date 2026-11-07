@@ -1,6 +1,7 @@
 export * from './config/app-version';
 export * from './features';
 export * from './i18n';
+export * from './layout';
 export * from './navigation';
 export * from './notifications';
 export * from './query/query-client';

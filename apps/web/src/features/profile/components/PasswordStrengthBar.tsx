@@ -77,8 +77,8 @@ export function PasswordStrengthBar({ password = '', className = '' }: PasswordS
         })}
       </div>
 
-      {/* 3-Column Tips Grid: 2 rows x 3 cols */}
-      <div className="grid grid-cols-3 gap-x-2.5 gap-y-1 pt-1">
+      {/* Fluid Wrapping Rows: tight natural flow without artificial column gutters */}
+      <div className="flex flex-wrap items-center gap-x-3.5 gap-y-1.5 pt-1">
         {checklist.map(item => (
           <div
             key={item.label}

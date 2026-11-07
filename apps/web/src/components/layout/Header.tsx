@@ -1,7 +1,7 @@
 import { Link, useLocation, useMatches } from '@tanstack/react-router';
 import { Bell, ChevronRight, HelpCircle, Menu, Search } from 'lucide-react';
 
-import { useActiveServer } from '@dsm/web/core';
+import { useActiveServer, useLayoutStore } from '@dsm/web/core';
 import { ThemeToggleButton } from '@dsm/web/features';
 
 function renderBreadcrumbTrail(
@@ -113,6 +113,7 @@ function renderBreadcrumbTrail(
 
 /* Workspace Top Header Bar */
 export function Header() {
+  const { isMobileSidebarOpen, toggleMobileSidebar } = useLayoutStore();
   const { activeServer, isLoading } = useActiveServer();
   const location = useLocation();
   const matches = useMatches();
@@ -132,7 +133,9 @@ export function Header() {
         <button
           type="button"
           aria-label="Toggle navigation menu"
-          className="lg:hidden p-2 rounded-lg border border-[var(--color-border)] text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-hover)] transition-colors mr-1"
+          aria-expanded={isMobileSidebarOpen}
+          onClick={toggleMobileSidebar}
+          className="lg:hidden p-2 rounded-lg border border-[var(--color-border)] text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-hover)] transition-colors mr-1 cursor-pointer"
         >
           <Menu className="w-4 h-4" />
         </button>

@@ -11,7 +11,7 @@ export function ProfileView() {
 
   return (
     <PageContainer>
-      <div className="space-y-6 max-w-5xl mx-auto">
+      <div className="space-y-6">
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-[var(--color-text-main)]">
             Operator Profile & Preferences

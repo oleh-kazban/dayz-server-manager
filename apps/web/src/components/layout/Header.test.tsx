@@ -1,8 +1,9 @@
 import type { ReactNode } from 'react';
 
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { useLayoutStore } from '@dsm/web/core';
 import { ThemeProvider } from '@dsm/web/features/theme';
 
 import { Header } from './Header';
@@ -11,9 +12,13 @@ const mockUseActiveServer = vi.fn();
 const mockLocation = { pathname: '/dashboard' };
 const mockUseMatches = vi.fn();
 
-vi.mock('@dsm/web/core', () => ({
-  useActiveServer: () => mockUseActiveServer(),
-}));
+vi.mock('@dsm/web/core', async () => {
+  const actual = await vi.importActual<typeof import('@dsm/web/core')>('@dsm/web/core');
+  return {
+    ...actual,
+    useActiveServer: () => mockUseActiveServer(),
+  };
+});
 
 vi.mock('@tanstack/react-router', () => ({
   Link: ({
@@ -37,6 +42,7 @@ vi.mock('@tanstack/react-router', () => ({
 describe('Header', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    useLayoutStore.setState({ isMobileSidebarOpen: false });
     mockLocation.pathname = '/dashboard';
     mockUseMatches.mockReturnValue([{ staticData: { breadcrumb: 'Dashboard' } }]);
     mockUseActiveServer.mockReturnValue({
@@ -182,5 +188,25 @@ describe('Header', () => {
     const leaf = screen.getByText('Settings');
     expect(leaf).toBeInTheDocument();
     expect(leaf).toHaveAttribute('aria-current', 'page');
+  });
+
+  it('toggles mobile sidebar store state and aria-expanded on burger menu click', () => {
+    render(
+      <ThemeProvider>
+        <Header />
+      </ThemeProvider>,
+    );
+
+    const toggleBtn = screen.getByRole('button', { name: 'Toggle navigation menu' });
+    expect(toggleBtn).toHaveAttribute('aria-expanded', 'false');
+    expect(useLayoutStore.getState().isMobileSidebarOpen).toBe(false);
+
+    fireEvent.click(toggleBtn);
+    expect(toggleBtn).toHaveAttribute('aria-expanded', 'true');
+    expect(useLayoutStore.getState().isMobileSidebarOpen).toBe(true);
+
+    fireEvent.click(toggleBtn);
+    expect(toggleBtn).toHaveAttribute('aria-expanded', 'false');
+    expect(useLayoutStore.getState().isMobileSidebarOpen).toBe(false);
   });
 });
