@@ -1,4 +1,4 @@
-import type { ApiErrorCode } from '@dsm/api-contracts';
+import type { ApiErrorCode, ServerStatus } from '@dsm/api-contracts';
 
 export type NotificationCode = 'SERVER_CREATED' | 'SERVER_UPDATED' | 'SERVER_DELETED';
 
@@ -11,6 +11,7 @@ export interface TranslationCatalog {
   errors: Record<ApiErrorCode, ToastTranslationEntry>;
   validation: Record<string, string>;
   notifications: Record<NotificationCode, ToastTranslationEntry>;
+  serverStatus: Record<ServerStatus, string>;
 }
 
 export const enUSTranslations: TranslationCatalog = {
@@ -106,5 +107,12 @@ export const enUSTranslations: TranslationCatalog = {
       title: 'Server Deleted',
       description: 'Server "{{name}}" has been removed from DayZ Server Manager.',
     },
+  },
+  serverStatus: {
+    running: 'Running',
+    starting: 'Starting',
+    stopping: 'Stopping',
+    stopped: 'Stopped',
+    failed: 'Failed',
   },
 };

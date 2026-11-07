@@ -1,5 +1,7 @@
 import { integer, sqliteTable, text } from 'drizzle-orm/sqlite-core';
 
+import { SERVER_STATUS, SERVER_STATUS_VALUES } from '@dsm/api-contracts';
+
 export const users = sqliteTable('users', {
   id: text('id').primaryKey(),
   username: text('username').notNull().unique(),
@@ -19,11 +21,7 @@ export const servers = sqliteTable('servers', {
   id: text('id').primaryKey(),
   name: text('name').notNull().unique(),
   description: text('description'),
-  status: text('status', {
-    enum: ['stopped', 'starting', 'running', 'stopping', 'failed'],
-  })
-    .notNull()
-    .default('stopped'),
+  status: text('status', { enum: SERVER_STATUS_VALUES }).notNull().default(SERVER_STATUS.STOPPED),
   installPath: text('install_path').notNull(),
   profilePath: text('profile_path').notNull(),
   missionPath: text('mission_path').notNull(),

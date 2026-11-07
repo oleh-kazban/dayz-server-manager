@@ -10,6 +10,7 @@ export default defineConfig({
   resolve: {
     alias: {
       '@dsm/database': path.resolve(__dirname, 'src/index.ts'),
+      '@dsm/api-contracts': path.resolve(workspaceRoot, 'libs/api-contracts/src/index.ts'),
     },
   },
   test: {

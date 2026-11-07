@@ -8,6 +8,8 @@ import {
   type ApiFieldErrorsMap,
   type CreateServerDto,
   createServerSchema,
+  isServerActiveStatus,
+  SERVER_STATUS,
   serverDetailSchema,
   serverIdParamSchema,
   serverSummarySchema,
@@ -133,7 +135,7 @@ function sendIfServerFieldConflicts(
 }
 
 function checkRunningMutationViolation(existing: Server, data: UpdateServerDto): boolean {
-  if (existing.status === 'stopped') {
+  if (!isServerActiveStatus(existing.status)) {
     return false;
   }
 
@@ -298,7 +300,7 @@ export const registerServersRoutes: FastifyPluginAsync = async fastify => {
           id: serverId,
           name: data.name,
           description: data.description ?? null,
-          status: 'stopped',
+          status: SERVER_STATUS.STOPPED,
           installPath: data.installPath,
           profilePath: data.profilePath,
           missionPath: data.missionPath,
@@ -435,7 +437,7 @@ export const registerServersRoutes: FastifyPluginAsync = async fastify => {
       const { id } = existing;
 
       // GUARD-SRV-01: Active Process Termination Guard
-      if (existing.status !== 'stopped') {
+      if (isServerActiveStatus(existing.status)) {
         return sendApiError(reply, 409, 'SERVER_RUNNING_DELETE_LOCKED', {
           message: 'Cannot delete server while it is running. Stop the server first.',
           params: { id: existing.id, name: existing.name, status: existing.status },

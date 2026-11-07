@@ -280,6 +280,64 @@ describe('ServerSettingsView', () => {
     });
   });
 
+  it('keeps ports and paths editable and delete enabled for a failed server', async () => {
+    currentActiveSummary = { ...mockActiveServerSummary, status: 'failed' };
+    currentDetail = { ...mockServerDetail, status: 'failed' };
+
+    renderView();
+
+    await waitFor(() => {
+      expect(screen.getByText('Failed')).toBeInTheDocument();
+    });
+
+    expect(screen.getByDisplayValue('2402')).not.toBeDisabled();
+    expect(screen.getByDisplayValue('C:\\DayZServer\\Namalsk')).not.toBeDisabled();
+    expect(screen.queryByText(/Configuration Locked/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Server must be stopped before deletion/i)).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Delete server/i })).not.toBeDisabled();
+  });
+
+  it.each([
+    { status: 'starting', label: 'Starting' },
+    { status: 'stopping', label: 'Stopping' },
+  ] as const)(
+    'locks ports, paths and delete for a $status server (GUARD-SRV-01, GUARD-SRV-03)',
+    async ({ status, label }) => {
+      currentActiveSummary = { ...mockActiveServerSummary, status };
+      currentDetail = { ...mockServerDetail, status };
+
+      renderView();
+
+      await waitFor(() => {
+        expect(screen.getByText(label)).toBeInTheDocument();
+      });
+
+      expect(screen.getByText(/Configuration Locked/i)).toBeInTheDocument();
+      expect(screen.getByDisplayValue('2402')).toBeDisabled();
+      expect(screen.getByDisplayValue('C:\\DayZServer\\Namalsk')).toBeDisabled();
+      expect(screen.getByText(/Server must be stopped before deletion/i)).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /Delete server/i })).toBeDisabled();
+    },
+  );
+
+  it.each([
+    { status: 'running', label: 'Running' },
+    { status: 'stopped', label: 'Stopped' },
+  ] as const)(
+    'renders the localized $status label in the header status tag',
+    async ({ status, label }) => {
+      currentActiveSummary = { ...mockActiveServerSummary, status };
+      currentDetail = { ...mockServerDetail, status };
+
+      renderView();
+
+      await waitFor(() => {
+        expect(screen.getByDisplayValue('DayZ Namalsk')).toBeInTheDocument();
+      });
+      expect(screen.getByText(label)).toBeInTheDocument();
+    },
+  );
+
   it('renders empty zero-state notice when zero servers exist in DSM console', async () => {
     mockServers = [];
     currentActiveSummary = null;
@@ -291,6 +349,17 @@ describe('ServerSettingsView', () => {
       expect(screen.getByText(/No DayZ Servers Registered/i)).toBeInTheDocument();
       expect(screen.getByRole('button', { name: /Add DayZ Server/i })).toBeInTheDocument();
     });
+
+    const addServerBtn = screen.getByRole('button', { name: /Add DayZ Server/i });
+    fireEvent.click(addServerBtn);
+
+    const dialog = screen.getByRole('dialog', { name: /Create DayZ Server/i });
+    expect(dialog).toBeInTheDocument();
+
+    const cancelBtn = within(dialog).getByRole('button', { name: /Cancel/i });
+    fireEvent.click(cancelBtn);
+
+    expect(screen.queryByRole('dialog', { name: /Create DayZ Server/i })).not.toBeInTheDocument();
   });
 
   it('opens KeywordConfirmation modal and executes server deletion only after keyword matches', async () => {
@@ -326,6 +395,25 @@ describe('ServerSettingsView', () => {
       );
       expect(mockSetActiveServerId).toHaveBeenCalledWith(mockDefaultServerSummary.id);
     });
+  });
+
+  it('closes KeywordConfirmation modal when Cancel button is clicked', async () => {
+    renderView();
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /Delete server/i })).not.toBeDisabled();
+    });
+
+    const deleteButton = screen.getByRole('button', { name: /Delete server/i });
+    fireEvent.click(deleteButton);
+
+    const dialog = screen.getByRole('alertdialog');
+    expect(dialog).toBeInTheDocument();
+
+    const cancelButton = within(dialog).getByRole('button', { name: 'Cancel' });
+    fireEvent.click(cancelButton);
+
+    expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
   });
 
   it('triggers error toast when server deletion fails on backend', async () => {
@@ -393,6 +481,10 @@ describe('ServerSettingsView', () => {
           search: expect.any(Function),
         }),
       );
+      const searchUpdater = mockNavigate.mock.calls[0][0].search as (
+        prev: Record<string, unknown>,
+      ) => Record<string, unknown>;
+      expect(searchUpdater({ serverId: '123', tab: 'logs' })).toEqual({ tab: 'logs' });
     });
   });
 
@@ -622,5 +714,132 @@ describe('ServerSettingsView', () => {
     expect(
       screen.getByText('Port 2302 is already in use by server "DayZ Chernarus Vanilla".'),
     ).toBeInTheDocument();
+  });
+
+  it('opens and closes CreateServerModal from header Add new server button', async () => {
+    renderView();
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /Add new server/i })).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: /Add new server/i }));
+    const dialog = screen.getByRole('dialog', { name: /Create DayZ Server/i });
+    expect(dialog).toBeInTheDocument();
+
+    const cancelBtn = within(dialog).getByRole('button', { name: /Cancel/i });
+    fireEvent.click(cancelBtn);
+
+    expect(screen.queryByRole('dialog', { name: /Create DayZ Server/i })).not.toBeInTheDocument();
+  });
+
+  it('validates client-side required fields, port bounds, port collisions, and short rcon password in ServerSettingsForm', async () => {
+    renderView();
+
+    await waitFor(() => {
+      expect(screen.getByDisplayValue(mockServerDetail.name)).toBeInTheDocument();
+    });
+
+    // 1. Clear paths and set invalid ports and short password
+    const installInput = screen.getByDisplayValue(mockServerDetail.installPath);
+    fireEvent.change(installInput, { target: { value: '   ' } });
+
+    const profileInput = screen.getByDisplayValue(mockServerDetail.profilePath);
+    fireEvent.change(profileInput, { target: { value: '   ' } });
+
+    const missionInput = screen.getByDisplayValue(mockServerDetail.missionPath);
+    fireEvent.change(missionInput, { target: { value: '   ' } });
+
+    const gamePortInput = screen.getByDisplayValue(String(mockServerDetail.gamePort));
+    fireEvent.change(gamePortInput, { target: { value: '500' } });
+
+    const queryPortInput = screen.getByDisplayValue(String(mockServerDetail.queryPort));
+    fireEvent.change(queryPortInput, { target: { value: '70000' } });
+
+    const rconPortInput = screen.getByDisplayValue(String(mockServerDetail.rconPort));
+    fireEvent.change(rconPortInput, { target: { value: '0' } });
+
+    const rconPassInput = screen.getByLabelText(/RCON Password/i);
+    fireEvent.change(rconPassInput, { target: { value: '123' } });
+
+    const saveButton = screen.getByRole('button', { name: /Save changes/i });
+    fireEvent.click(saveButton);
+
+    expect(screen.getByText('Installation path is required.')).toBeInTheDocument();
+    expect(screen.getByText('Profile path is required.')).toBeInTheDocument();
+    expect(screen.getByText('Mission path is required.')).toBeInTheDocument();
+    expect(screen.getAllByText('Port must be between 1024 and 65535.')).toHaveLength(3);
+    expect(screen.getByText('RCON password must be at least 6 characters.')).toBeInTheDocument();
+    expect(apiClient.servers.update).not.toHaveBeenCalled();
+
+    // 2. Test port collision when ports are equal
+    fireEvent.change(installInput, { target: { value: 'C:\\DayZServer\\Namalsk' } });
+    fireEvent.change(profileInput, { target: { value: 'C:\\DayZServer\\Namalsk\\profiles' } });
+    fireEvent.change(missionInput, { target: { value: 'mpmissions\\dayzOffline.namalsk' } });
+    fireEvent.change(rconPassInput, { target: { value: 'secretpass' } });
+
+    fireEvent.change(gamePortInput, { target: { value: '2302' } });
+    fireEvent.change(queryPortInput, { target: { value: '2302' } });
+    fireEvent.change(rconPortInput, { target: { value: '2310' } });
+
+    fireEvent.click(saveButton);
+
+    expect(
+      screen.getByText('Game port, query port, and RCON port must all be distinct.'),
+    ).toBeInTheDocument();
+    expect(apiClient.servers.update).not.toHaveBeenCalled();
+
+    // Changing gamePort clears the distinct port error attached to gamePort
+    fireEvent.change(gamePortInput, { target: { value: '2305' } });
+    expect(
+      screen.queryByText('Game port, query port, and RCON port must all be distinct.'),
+    ).not.toBeInTheDocument();
+
+    // Changing rconPort and queryPort exercises their onChange and clearFieldError
+    fireEvent.change(queryPortInput, { target: { value: '27016' } });
+    fireEvent.change(rconPortInput, { target: { value: '2315' } });
+  });
+
+  it('allows saving general settings without validating locked paths/ports when server is locked', async () => {
+    currentActiveSummary = { ...mockDefaultServerSummary };
+    currentDetail = {
+      ...mockServerDetail,
+      ...mockDefaultServerSummary,
+      status: 'running',
+    };
+
+    renderView();
+
+    await waitFor(() => {
+      expect(screen.getByText(/Configuration Locked/i)).toBeInTheDocument();
+    });
+
+    const nameInput = screen.getByDisplayValue(mockDefaultServerSummary.name);
+    fireEvent.change(nameInput, { target: { value: 'Running Server Renamed' } });
+
+    const saveButton = screen.getByRole('button', { name: /Save changes/i });
+    fireEvent.click(saveButton);
+
+    await waitFor(() => {
+      expect(apiClient.servers.update).toHaveBeenCalledWith(
+        mockDefaultServerSummary.id,
+        expect.objectContaining({
+          name: 'Running Server Renamed',
+        }),
+      );
+    });
+  });
+
+  it('renders Server Not Found notice when server detail query fails', async () => {
+    vi.mocked(apiClient.servers.get).mockRejectedValueOnce(new Error('Failed to fetch detail'));
+
+    renderView();
+
+    await waitFor(() => {
+      expect(screen.getByText('Server Not Found')).toBeInTheDocument();
+      expect(
+        screen.getByText(/Unable to load configuration for the selected server/i),
+      ).toBeInTheDocument();
+    });
   });
 });
