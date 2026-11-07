@@ -14,8 +14,8 @@ import {
 
 const DEFAULT_THEME_SETTINGS: ThemeSettings = {
   mode: 'light',
-  preferredLight: 'light',
-  preferredDark: 'darcula',
+  preferredLight: 'vanilla',
+  preferredDark: 'obsidian',
 };
 
 function getInitialSettings(): ThemeSettings {

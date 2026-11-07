@@ -36,8 +36,8 @@ describe('ThemeProvider & useTheme', () => {
     );
 
     expect(screen.getByTestId('mode')).toHaveTextContent('light');
-    expect(screen.getByTestId('active')).toHaveTextContent('light');
-    expect(document.documentElement.getAttribute('data-theme')).toBe('light');
+    expect(screen.getByTestId('active')).toHaveTextContent('vanilla');
+    expect(document.documentElement.getAttribute('data-theme')).toBe('vanilla');
   });
 
   it('toggles mode between light and dark and updates document attribute', () => {
@@ -67,16 +67,16 @@ describe('ThemeProvider & useTheme', () => {
     });
 
     expect(screen.getByTestId('mode')).toHaveTextContent('dark');
-    expect(screen.getByTestId('active')).toHaveTextContent('darcula');
-    expect(document.documentElement.getAttribute('data-theme')).toBe('darcula');
+    expect(screen.getByTestId('active')).toHaveTextContent('obsidian');
+    expect(document.documentElement.getAttribute('data-theme')).toBe('obsidian');
 
     act(() => {
       screen.getByRole('button', { name: 'Toggle' }).click();
     });
 
     expect(screen.getByTestId('mode')).toHaveTextContent('light');
-    expect(screen.getByTestId('active')).toHaveTextContent('light');
-    expect(document.documentElement.getAttribute('data-theme')).toBe('light');
+    expect(screen.getByTestId('active')).toHaveTextContent('vanilla');
+    expect(document.documentElement.getAttribute('data-theme')).toBe('vanilla');
   });
 
   it('allows setting mode, preferredDark, and preferredLight explicitly', () => {
@@ -91,8 +91,8 @@ describe('ThemeProvider & useTheme', () => {
           <button type="button" onClick={() => setPreferredDark('darcula')}>
             Set Darcula
           </button>
-          <button type="button" onClick={() => setPreferredLight('light')}>
-            Set Light
+          <button type="button" onClick={() => setPreferredLight('vanilla')}>
+            Set Vanilla
           </button>
         </div>
       );
@@ -107,7 +107,7 @@ describe('ThemeProvider & useTheme', () => {
     act(() => {
       screen.getByRole('button', { name: 'Set Dark' }).click();
       screen.getByRole('button', { name: 'Set Darcula' }).click();
-      screen.getByRole('button', { name: 'Set Light' }).click();
+      screen.getByRole('button', { name: 'Set Vanilla' }).click();
     });
 
     expect(screen.getByTestId('mode')).toHaveTextContent('dark');
@@ -116,7 +116,7 @@ describe('ThemeProvider & useTheme', () => {
   it('loads existing settings from localStorage', () => {
     localStorageDriver.set(THEME_STORAGE_KEY, {
       mode: 'dark',
-      preferredLight: 'light',
+      preferredLight: 'vanilla',
       preferredDark: 'darcula',
     });
 
@@ -132,6 +132,30 @@ describe('ThemeProvider & useTheme', () => {
     );
 
     expect(screen.getByTestId('mode')).toHaveTextContent('dark');
+  });
+
+  it('safely migrates legacy light / dark theme IDs to vanilla / obsidian', () => {
+    window.localStorage.setItem(
+      THEME_STORAGE_KEY,
+      JSON.stringify({
+        mode: 'dark',
+        preferredLight: 'light',
+        preferredDark: 'dark',
+      }),
+    );
+
+    function MigrationConsumer() {
+      const { mode, activeThemeId } = useTheme();
+      return <div data-testid="migrated">{`${mode}:${activeThemeId}`}</div>;
+    }
+
+    render(
+      <ThemeProvider>
+        <MigrationConsumer />
+      </ThemeProvider>,
+    );
+
+    expect(screen.getByTestId('migrated')).toHaveTextContent('dark:obsidian');
   });
 
   it('safely migrates legacy prefferedDark / prefferedLight keys and partial storage', () => {
