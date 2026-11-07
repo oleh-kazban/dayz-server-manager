@@ -20,8 +20,8 @@ export function UserProfile() {
     await navigate({ to: '/sign-in' });
   };
 
-  // Derive initials from username (e.g., "Alex Kovac" -> "AK", "Administrator" -> "AD")
-  const displayName = user?.username ?? 'Administrator';
+  // Derive initials from displayName or username (e.g., "Alex Kovac" -> "AK", "Administrator" -> "AD")
+  const displayName = user?.displayName || user?.username || 'Administrator';
   const displayRole = user?.role ? ROLE_LABELS[user.role] : 'Administrator';
   const parts = displayName
     .trim()
