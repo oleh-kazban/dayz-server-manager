@@ -6,6 +6,8 @@ import { Button, Card, Notice, PasswordInput, showToast } from '@dsm/ui';
 
 import { useChangePasswordMutation } from '../api/profile.mutations';
 
+import { PasswordStrengthBar } from './PasswordStrengthBar';
+
 function extractErrorMessage(err: unknown, fallback: string): string {
   if (err && typeof err === 'object') {
     const record = err as Record<string, unknown>;
@@ -25,6 +27,8 @@ export function PasswordRotationCard() {
 
   const changePasswordMutation = useChangePasswordMutation();
 
+  const confirmMismatch = confirmPassword.length > 0 && confirmPassword !== newPassword;
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setValidationError(null);
@@ -39,8 +43,38 @@ export function PasswordRotationCard() {
       return;
     }
 
-    if (!/[0-9\W_]/.test(newPassword)) {
+    if (newPassword.length > 64) {
+      setValidationError('New password must not exceed 64 characters.');
+      return;
+    }
+
+    if (!/[\d\W_]/.test(newPassword)) {
       setValidationError('New password must contain at least 1 number or special character.');
+      return;
+    }
+
+    if (!/\d/.test(newPassword)) {
+      setValidationError('Password must contain at least 1 number.');
+      return;
+    }
+
+    if (!/[!@#$%^&*()_+\-=[\]{}|;':",.<>?/~`\\]/.test(newPassword)) {
+      setValidationError('Password must contain at least 1 special symbol.');
+      return;
+    }
+
+    if (!/[a-z]/.test(newPassword)) {
+      setValidationError('Password must contain at least 1 lowercase letter.');
+      return;
+    }
+
+    if (!/[A-Z]/.test(newPassword)) {
+      setValidationError('Password must contain at least 1 uppercase letter.');
+      return;
+    }
+
+    if (/\s/.test(newPassword)) {
+      setValidationError('Whitespace is not permitted in passwords.');
       return;
     }
 
@@ -92,7 +126,7 @@ export function PasswordRotationCard() {
           </div>
         )}
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-start">
           <PasswordInput
             id="current-password-input"
             label="Current Password"
@@ -119,9 +153,7 @@ export function PasswordRotationCard() {
               disabled={changePasswordMutation.isPending}
               required
             />
-            <p className="mt-1 text-xs text-[var(--color-text-muted)]">
-              Min. 8 characters, with 1 digit or symbol.
-            </p>
+            <PasswordStrengthBar password={newPassword} />
           </div>
 
           <PasswordInput
@@ -129,6 +161,7 @@ export function PasswordRotationCard() {
             label="Confirm New Password"
             placeholder="••••••••••••"
             value={confirmPassword}
+            error={confirmMismatch ? 'Passwords do not match' : undefined}
             onChange={e => {
               setConfirmPassword(e.target.value);
               if (validationError) setValidationError(null);

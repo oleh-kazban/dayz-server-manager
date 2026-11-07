@@ -59,15 +59,45 @@ describe('PasswordRotationCard', () => {
       expectedError: 'New password must be at least 8 characters in length.',
     },
     {
-      name: 'complexity (number or special character required)',
-      newPass: 'allletterspassword',
-      confirmPass: 'allletterspassword',
-      expectedError: 'New password must contain at least 1 number or special character.',
+      name: 'maximum length of 64 characters',
+      newPass: 'Str0ng!Pass1' + 'a'.repeat(60),
+      confirmPass: 'Str0ng!Pass1' + 'a'.repeat(60),
+      expectedError: 'New password must not exceed 64 characters.',
+    },
+    {
+      name: 'missing number',
+      newPass: 'NoNumberPass!',
+      confirmPass: 'NoNumberPass!',
+      expectedError: 'Password must contain at least 1 number.',
+    },
+    {
+      name: 'missing special symbol',
+      newPass: 'NoSymbolPass123',
+      confirmPass: 'NoSymbolPass123',
+      expectedError: 'Password must contain at least 1 special symbol.',
+    },
+    {
+      name: 'missing lowercase letter',
+      newPass: 'ALLUPPER123!',
+      confirmPass: 'ALLUPPER123!',
+      expectedError: 'Password must contain at least 1 lowercase letter.',
+    },
+    {
+      name: 'missing uppercase letter',
+      newPass: 'alllower123!',
+      confirmPass: 'alllower123!',
+      expectedError: 'Password must contain at least 1 uppercase letter.',
+    },
+    {
+      name: 'whitespace in password',
+      newPass: 'Str0ng !Pass1',
+      confirmPass: 'Str0ng !Pass1',
+      expectedError: 'Whitespace is not permitted in passwords.',
     },
     {
       name: 'confirmation match',
-      newPass: 'validPass1!',
-      confirmPass: 'mismatchPass2@',
+      newPass: 'Str0ng!Pass1',
+      confirmPass: 'Different2@Pass',
       expectedError: 'New password and confirmation do not match.',
     },
   ])('validates new password $name', ({ newPass, confirmPass, expectedError }) => {
@@ -83,6 +113,21 @@ describe('PasswordRotationCard', () => {
 
     expect(screen.getByText(expectedError)).toBeInTheDocument();
     expect(mockMutate).not.toHaveBeenCalled();
+  });
+
+  it('displays real-time inline error on confirm input when mismatching and clears when matched', () => {
+    render(<PasswordRotationCard />);
+
+    const newInput = screen.getByLabelText('New Password');
+    const confirmInput = screen.getByLabelText('Confirm New Password');
+
+    fireEvent.change(newInput, { target: { value: 'Str0ng!Pass1' } });
+    fireEvent.change(confirmInput, { target: { value: 'Different2@Pass' } });
+
+    expect(screen.getByText('Passwords do not match')).toBeInTheDocument();
+
+    fireEvent.change(confirmInput, { target: { value: 'Str0ng!Pass1' } });
+    expect(screen.queryByText('Passwords do not match')).not.toBeInTheDocument();
   });
 
   it('submits valid rotation and resets inputs on success', () => {

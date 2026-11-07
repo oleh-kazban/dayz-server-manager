@@ -360,8 +360,10 @@ describe('Profile Routes (/api/v1/profile & /api/v1/auth/profile)', () => {
       expect(body.fieldErrors?.confirmPassword).toBeDefined();
     });
 
-    it('rejects passwords without numbers or special characters', async () => {
-      const response = await app.inject({
+    it('rejects passwords failing complexity rules or containing whitespace', async () => {
+      // Test missing number
+      const passWithoutDigits = 'AllLettersSpecial!';
+      const resNoNumber = await app.inject({
         method: 'POST',
         url: '/api/v1/profile/change-password',
         headers: {
@@ -369,15 +371,30 @@ describe('Profile Routes (/api/v1/profile & /api/v1/auth/profile)', () => {
         },
         payload: {
           currentPassword: 'admin',
-          newPassword: 'allletterspassword',
-          confirmPassword: 'allletterspassword',
+          newPassword: passWithoutDigits,
+          confirmPassword: passWithoutDigits,
         },
       });
 
-      expect(response.statusCode).toBe(400);
-      const body = response.json();
-      expect(body.errorCode).toBe('VALIDATION_FAILED');
-      expect(body.message).toContain('at least 1 number or special character');
+      expect(resNoNumber.statusCode).toBe(400);
+      expect(resNoNumber.json().message).toContain('Password must contain at least 1 number');
+
+      // Test containing whitespace
+      const resWhitespace = await app.inject({
+        method: 'POST',
+        url: '/api/v1/profile/change-password',
+        headers: {
+          authorization: `Bearer ${userAccessToken}`,
+        },
+        payload: {
+          currentPassword: 'admin',
+          newPassword: 'Str0ng! Pass1',
+          confirmPassword: 'Str0ng! Pass1',
+        },
+      });
+
+      expect(resWhitespace.statusCode).toBe(400);
+      expect(resWhitespace.json().message).toContain('Whitespace is not permitted in passwords');
     });
 
     it('enforces GUARD-01: wrong currentPassword refuses mutation with 400 AUTH_PASSWORD_MISMATCH', async () => {

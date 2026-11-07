@@ -110,22 +110,12 @@ export const registerProfileRoutes: FastifyPluginAsync = async fastify => {
       const parseResult = changePasswordSchema.safeParse(request.body);
       if (!parseResult.success) {
         return sendApiError(reply, 400, 'VALIDATION_FAILED', {
-          message: 'Invalid password change payload',
+          message: parseResult.error.issues[0]?.message || 'Invalid password change payload',
           fieldErrors: formatZodFieldErrors(parseResult.error),
         });
       }
 
       const { currentPassword, newPassword } = parseResult.data;
-
-      // REQ-04 complexity constraint: minimum 8 characters, at least 1 number or special character
-      if (!/[0-9\W_]/.test(newPassword)) {
-        return sendApiError(
-          reply,
-          400,
-          'VALIDATION_FAILED',
-          'New password must contain at least 1 number or special character',
-        );
-      }
 
       const user = fastify.db.select().from(users).where(eq(users.id, request.user.sub)).get();
       if (!user) {

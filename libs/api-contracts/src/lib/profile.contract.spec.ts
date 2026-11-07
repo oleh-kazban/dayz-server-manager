@@ -170,6 +170,62 @@ describe('Profile Contracts', () => {
 
       const result = changePasswordSchema.safeParse(short);
       expect(result.success).toBe(false);
+      if (!result.success) {
+        expect(result.error.issues[0].message).toBe('New password must be at least 8 characters');
+      }
+    });
+
+    it('rejects new password exceeding 64 characters', () => {
+      const longPass = 'Str0ng!Pass' + 'a'.repeat(55);
+      const result = changePasswordSchema.safeParse({
+        currentPassword: 'currentPassword1!',
+        newPassword: longPass,
+        confirmPassword: longPass,
+      });
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        expect(
+          result.error.issues.some(i => i.message === 'New password must not exceed 64 characters'),
+        ).toBe(true);
+      }
+    });
+
+    it.each([
+      {
+        desc: 'missing number',
+        pass: 'NoNumberPass!',
+        expectedMsg: 'Password must contain at least 1 number',
+      },
+      {
+        desc: 'missing lowercase letter',
+        pass: 'NOLOWER123!',
+        expectedMsg: 'Password must contain at least 1 lowercase letter',
+      },
+      {
+        desc: 'missing uppercase letter',
+        pass: 'noupper123!',
+        expectedMsg: 'Password must contain at least 1 uppercase letter',
+      },
+      {
+        desc: 'missing special symbol',
+        pass: 'NoSymbolPass123',
+        expectedMsg: 'Password must contain at least 1 special symbol',
+      },
+      {
+        desc: 'contains whitespace',
+        pass: 'Has Space1!Pass',
+        expectedMsg: 'Whitespace is not permitted in passwords',
+      },
+    ])('rejects password failing complexity ($desc)', ({ pass, expectedMsg }) => {
+      const result = changePasswordSchema.safeParse({
+        currentPassword: 'currentPassword1!',
+        newPassword: pass,
+        confirmPassword: pass,
+      });
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        expect(result.error.issues.some(i => i.message === expectedMsg)).toBe(true);
+      }
     });
 
     it('rejects empty current password', () => {
