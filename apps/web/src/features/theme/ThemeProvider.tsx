@@ -68,12 +68,23 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     () => ({
       mode: settings.mode,
       activeThemeId,
+      preferredLight: settings.preferredLight,
+      preferredDark: settings.preferredDark,
       toggleTheme,
       setMode,
       setPreferredDark,
       setPreferredLight,
     }),
-    [settings.mode, activeThemeId, toggleTheme, setMode, setPreferredDark, setPreferredLight],
+    [
+      settings.mode,
+      activeThemeId,
+      settings.preferredLight,
+      settings.preferredDark,
+      toggleTheme,
+      setMode,
+      setPreferredDark,
+      setPreferredLight,
+    ],
   );
 
   return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;

@@ -3,7 +3,13 @@ import { z } from 'zod';
 export const themeModeSchema = z.enum(['light', 'dark']);
 export type ThemeMode = z.infer<typeof themeModeSchema>;
 
-export const lightThemeIdSchema = z.enum(['vanilla']);
+export const lightThemeIdSchema = z.enum([
+  'vanilla',
+  'darcula-light',
+  'graphite-light',
+  'tokyo-light',
+  'catppuccin-latte',
+]);
 export type LightThemeId = z.infer<typeof lightThemeIdSchema>;
 
 export const darkThemeIdSchema = z.enum(['obsidian', 'darcula', 'graphite', 'tokyo', 'catppuccin']);
@@ -34,6 +40,8 @@ export type ThemeSettings = z.infer<typeof themeSettingsSchema>;
 export interface ThemeContextValue {
   mode: ThemeMode;
   activeThemeId: ThemeId;
+  preferredLight?: LightThemeId;
+  preferredDark?: DarkThemeId;
   toggleTheme: () => void;
   setMode: (mode: ThemeMode) => void;
   setPreferredDark: (theme: DarkThemeId) => void;
