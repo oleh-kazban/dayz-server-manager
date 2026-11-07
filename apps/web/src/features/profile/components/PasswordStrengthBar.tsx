@@ -77,22 +77,24 @@ export function PasswordStrengthBar({ password = '', className = '' }: PasswordS
         })}
       </div>
 
-      {/* Checklist items beneath the bar */}
-      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 pt-1">
+      {/* 2-Column Tips Grid: 3 rows x 2 cols with content-hugging widths */}
+      <div className="grid grid-cols-[max-content_max-content] gap-x-6 gap-y-1 pt-1">
         {checklist.map(item => (
-          <span
+          <div
             key={item.label}
-            className={`inline-flex items-center gap-1 text-[11px] font-medium whitespace-nowrap transition-colors ${
+            className={`flex items-center gap-1.5 text-xs font-medium whitespace-nowrap transition-colors ${
               item.valid ? 'text-[var(--color-success)]' : 'text-[var(--color-text-muted)]'
             }`}
           >
             {item.valid ? (
-              <Check className="w-3 h-3 text-[var(--color-success)] shrink-0 stroke-[2.5]" />
+              <Check className="w-3.5 h-3.5 text-[var(--color-success)] shrink-0 stroke-[2.5]" />
             ) : (
-              <span className="w-1 h-1 rounded-full bg-[var(--color-text-muted)]/50 shrink-0" />
+              <span className="w-3.5 h-3.5 flex items-center justify-center shrink-0">
+                <span className="w-1.5 h-1.5 rounded-full bg-[var(--color-text-muted)]/50" />
+              </span>
             )}
             <span>{item.label}</span>
-          </span>
+          </div>
         ))}
       </div>
     </div>
