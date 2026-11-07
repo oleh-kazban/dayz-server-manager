@@ -112,9 +112,9 @@ export function ProfileIdentityCard({ profile, isLoading }: ProfileIdentityCardP
       <form onSubmit={handleSubmit} className="space-y-6">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label className="block text-xs font-semibold text-[var(--color-text-muted)] uppercase tracking-wider mb-2">
+            <span className="block text-xs font-semibold text-[var(--color-text-muted)] uppercase tracking-wider mb-2">
               Operator Handle (Immutable)
-            </label>
+            </span>
             <div className="flex items-center gap-2 p-2.5 rounded-lg border border-[var(--color-border-subtle)] bg-[var(--color-surface-subtle)]">
               <User className="w-4 h-4 text-[var(--color-text-muted)] shrink-0" />
               <span className="font-mono text-sm font-semibold text-[var(--color-text-main)] truncate">
@@ -127,9 +127,9 @@ export function ProfileIdentityCard({ profile, isLoading }: ProfileIdentityCardP
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-[var(--color-text-muted)] uppercase tracking-wider mb-2">
+            <span className="block text-xs font-semibold text-[var(--color-text-muted)] uppercase tracking-wider mb-2">
               Assigned Security Role
-            </label>
+            </span>
             <div className="flex items-center gap-2 p-2.5 rounded-lg border border-[var(--color-border-subtle)] bg-[var(--color-surface-subtle)]">
               <Shield className="w-4 h-4 text-[var(--color-text-muted)] shrink-0" />
               <Tag color={roleColor} variant="subtle">
