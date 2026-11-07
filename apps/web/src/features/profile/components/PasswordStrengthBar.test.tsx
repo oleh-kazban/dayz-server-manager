@@ -11,12 +11,12 @@ describe('PasswordStrengthBar', () => {
     expect(screen.getByText('Empty')).toBeInTheDocument();
 
     // Verify all 6 checklist items are displayed
-    expect(screen.getByText('8–64 characters')).toBeInTheDocument();
-    expect(screen.getByText('At least 1 number')).toBeInTheDocument();
-    expect(screen.getByText('At least 1 symbol')).toBeInTheDocument();
-    expect(screen.getByText('Uppercase letter')).toBeInTheDocument();
-    expect(screen.getByText('Lowercase letter')).toBeInTheDocument();
-    expect(screen.getByText('No whitespace')).toBeInTheDocument();
+    expect(screen.getByText('At least 8')).toBeInTheDocument();
+    expect(screen.getByText('1+ number')).toBeInTheDocument();
+    expect(screen.getByText('1+ symbol')).toBeInTheDocument();
+    expect(screen.getByText('Uppercase')).toBeInTheDocument();
+    expect(screen.getByText('Lowercase')).toBeInTheDocument();
+    expect(screen.getByText('No spaces')).toBeInTheDocument();
 
     // When omitted completely (testing default props)
     rerender(
