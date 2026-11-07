@@ -10,6 +10,87 @@ import {
   useThemePreference,
 } from '../hooks/useThemePreference';
 
+type GenericThemeOption = LightThemeOption | DarkThemeOption;
+
+interface ThemePaletteGridProps<T extends GenericThemeOption> {
+  themes: readonly T[];
+  selectedThemeId: string;
+  isCurrentModeActive: boolean;
+  currentThemeId: string;
+  onSelect: (theme: T) => void;
+}
+
+function ThemePaletteGrid<T extends GenericThemeOption>({
+  themes,
+  selectedThemeId,
+  isCurrentModeActive,
+  currentThemeId,
+  onSelect,
+}: ThemePaletteGridProps<T>) {
+  return (
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3.5">
+      {themes.map(theme => {
+        const isSelected =
+          selectedThemeId === theme.id || (isCurrentModeActive && currentThemeId === theme.id);
+
+        return (
+          <button
+            key={theme.id}
+            type="button"
+            aria-pressed={isSelected}
+            onClick={() => onSelect(theme)}
+            className={`relative flex flex-col text-left p-3.5 rounded-xl border-2 transition-all cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)] ${
+              isSelected
+                ? 'border-[var(--color-primary)] bg-[var(--color-surface-hover)] shadow-sm'
+                : 'border-[var(--color-border-subtle)] bg-[var(--color-surface)] hover:border-[var(--color-border-hover)]'
+            }`}
+          >
+            <div className="flex items-center justify-between w-full mb-2">
+              <span className="font-semibold text-sm text-[var(--color-text-main)] truncate">
+                {theme.name}
+              </span>
+              {isSelected && (
+                <div className="w-5 h-5 rounded-full bg-[var(--color-primary)] text-[var(--color-primary-fg,#ffffff)] flex items-center justify-center shrink-0">
+                  <Check className="w-3 h-3 stroke-[3]" />
+                </div>
+              )}
+            </div>
+
+            <p className="text-xs text-[var(--color-text-muted)] mb-3 flex-1 line-clamp-2">
+              {theme.description}
+            </p>
+
+            <div
+              className="w-full h-7 rounded-lg overflow-hidden flex border border-black/10 shadow-inner"
+              style={{ backgroundColor: theme.previewColors.background }}
+            >
+              <div
+                className="w-1/3 h-full flex items-center justify-center text-[10px] font-mono font-bold"
+                style={{
+                  backgroundColor: theme.previewColors.surface,
+                  color: theme.previewColors.text,
+                }}
+              >
+                Aa
+              </div>
+              <div
+                className="w-1/3 h-full"
+                style={{ backgroundColor: theme.previewColors.background }}
+              />
+              <div
+                className="w-1/3 h-full flex items-center justify-center"
+                style={{ backgroundColor: theme.previewColors.accent }}
+              >
+                <div className="w-2 h-2 rounded-full bg-white/80" />
+              </div>
+            </div>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
 export function ThemeSelectorCard() {
   const themePref = useThemePreference();
   const mode = themePref.mode ?? 'light';
@@ -106,67 +187,13 @@ export function ThemeSelectorCard() {
             </span>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3.5">
-            {lightThemes.map((theme: LightThemeOption) => {
-              const isSelected =
-                preferredLight === theme.id ||
-                (mode === 'light' && themePref.currentThemeId === theme.id);
-
-              return (
-                <button
-                  key={theme.id}
-                  type="button"
-                  aria-pressed={isSelected}
-                  onClick={() => handleSelectLight(theme)}
-                  className={`relative flex flex-col text-left p-3.5 rounded-xl border-2 transition-all cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)] ${
-                    isSelected
-                      ? 'border-[var(--color-primary)] bg-[var(--color-surface-hover)] shadow-sm'
-                      : 'border-[var(--color-border-subtle)] bg-[var(--color-surface)] hover:border-[var(--color-border-hover)]'
-                  }`}
-                >
-                  <div className="flex items-center justify-between w-full mb-2">
-                    <span className="font-semibold text-sm text-[var(--color-text-main)] truncate">
-                      {theme.name}
-                    </span>
-                    {isSelected && (
-                      <div className="w-5 h-5 rounded-full bg-[var(--color-primary)] text-[var(--color-primary-fg,#ffffff)] flex items-center justify-center shrink-0">
-                        <Check className="w-3 h-3 stroke-[3]" />
-                      </div>
-                    )}
-                  </div>
-
-                  <p className="text-xs text-[var(--color-text-muted)] mb-3 flex-1 line-clamp-2">
-                    {theme.description}
-                  </p>
-
-                  <div
-                    className="w-full h-7 rounded-lg overflow-hidden flex border border-black/10 shadow-inner"
-                    style={{ backgroundColor: theme.previewColors.background }}
-                  >
-                    <div
-                      className="w-1/3 h-full flex items-center justify-center text-[10px] font-mono font-bold"
-                      style={{
-                        backgroundColor: theme.previewColors.surface,
-                        color: theme.previewColors.text,
-                      }}
-                    >
-                      Aa
-                    </div>
-                    <div
-                      className="w-1/3 h-full"
-                      style={{ backgroundColor: theme.previewColors.background }}
-                    />
-                    <div
-                      className="w-1/3 h-full flex items-center justify-center"
-                      style={{ backgroundColor: theme.previewColors.accent }}
-                    >
-                      <div className="w-2 h-2 rounded-full bg-white/80" />
-                    </div>
-                  </div>
-                </button>
-              );
-            })}
-          </div>
+          <ThemePaletteGrid
+            themes={lightThemes}
+            selectedThemeId={preferredLight}
+            isCurrentModeActive={mode === 'light'}
+            currentThemeId={themePref.currentThemeId ?? ''}
+            onSelect={handleSelectLight}
+          />
         </div>
 
         {/* Section 2: Preferred Dark Theme */}
@@ -188,67 +215,13 @@ export function ThemeSelectorCard() {
             </span>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3.5">
-            {darkThemes.map((theme: DarkThemeOption) => {
-              const isSelected =
-                preferredDark === theme.id ||
-                (mode === 'dark' && themePref.currentThemeId === theme.id);
-
-              return (
-                <button
-                  key={theme.id}
-                  type="button"
-                  aria-pressed={isSelected}
-                  onClick={() => handleSelectDark(theme)}
-                  className={`relative flex flex-col text-left p-3.5 rounded-xl border-2 transition-all cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)] ${
-                    isSelected
-                      ? 'border-[var(--color-primary)] bg-[var(--color-surface-hover)] shadow-sm'
-                      : 'border-[var(--color-border-subtle)] bg-[var(--color-surface)] hover:border-[var(--color-border-hover)]'
-                  }`}
-                >
-                  <div className="flex items-center justify-between w-full mb-2">
-                    <span className="font-semibold text-sm text-[var(--color-text-main)] truncate">
-                      {theme.name}
-                    </span>
-                    {isSelected && (
-                      <div className="w-5 h-5 rounded-full bg-[var(--color-primary)] text-[var(--color-primary-fg,#ffffff)] flex items-center justify-center shrink-0">
-                        <Check className="w-3 h-3 stroke-[3]" />
-                      </div>
-                    )}
-                  </div>
-
-                  <p className="text-xs text-[var(--color-text-muted)] mb-3 flex-1 line-clamp-2">
-                    {theme.description}
-                  </p>
-
-                  <div
-                    className="w-full h-7 rounded-lg overflow-hidden flex border border-black/10 shadow-inner"
-                    style={{ backgroundColor: theme.previewColors.background }}
-                  >
-                    <div
-                      className="w-1/3 h-full flex items-center justify-center text-[10px] font-mono font-bold"
-                      style={{
-                        backgroundColor: theme.previewColors.surface,
-                        color: theme.previewColors.text,
-                      }}
-                    >
-                      Aa
-                    </div>
-                    <div
-                      className="w-1/3 h-full"
-                      style={{ backgroundColor: theme.previewColors.background }}
-                    />
-                    <div
-                      className="w-1/3 h-full flex items-center justify-center"
-                      style={{ backgroundColor: theme.previewColors.accent }}
-                    >
-                      <div className="w-2 h-2 rounded-full bg-white/80" />
-                    </div>
-                  </div>
-                </button>
-              );
-            })}
-          </div>
+          <ThemePaletteGrid
+            themes={darkThemes}
+            selectedThemeId={preferredDark}
+            isCurrentModeActive={mode === 'dark'}
+            currentThemeId={themePref.currentThemeId ?? ''}
+            onSelect={handleSelectDark}
+          />
         </div>
       </div>
     </Card>
