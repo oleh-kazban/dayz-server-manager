@@ -49,6 +49,12 @@ export function Checkbox({
   );
 
   useEffect(() => {
+    if (autoFocus) {
+      internalInputRef.current?.focus();
+    }
+  }, [autoFocus]);
+
+  useEffect(() => {
     if (internalInputRef.current) {
       internalInputRef.current.indeterminate = Boolean(indeterminate);
     }
@@ -78,7 +84,6 @@ export function Checkbox({
           onFocus={onFocus}
           disabled={disabled}
           required={required}
-          autoFocus={autoFocus}
           tabIndex={tabIndex}
           aria-checked={indeterminate ? 'mixed' : undefined}
           aria-invalid={Boolean(error)}
