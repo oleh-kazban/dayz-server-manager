@@ -6,16 +6,36 @@ export const users = sqliteTable('users', {
   id: text('id').primaryKey(),
   username: text('username').notNull().unique(),
   passwordHash: text('password_hash').notNull(),
+  displayName: text('display_name'),
   email: text('email'),
   role: text('role', { enum: ['admin', 'moderator', 'viewer'] })
     .notNull()
     .default('viewer'),
+  timezone: text('timezone').notNull().default('UTC'),
+  timeFormat: text('time_format', { enum: ['12h', '24h'] })
+    .notNull()
+    .default('24h'),
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
   lastLoginAt: integer('last_login_at', { mode: 'timestamp' }),
 });
 
 export type User = typeof users.$inferSelect;
 export type NewUser = typeof users.$inferInsert;
+
+export const sessions = sqliteTable('sessions', {
+  id: text('id').primaryKey(),
+  userId: text('user_id')
+    .notNull()
+    .references(() => users.id, { onDelete: 'cascade' }),
+  userAgent: text('user_agent'),
+  ipAddress: text('ip_address'),
+  lastActiveAt: integer('last_active_at', { mode: 'timestamp' }).notNull(),
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+  expiresAt: integer('expires_at', { mode: 'timestamp' }).notNull(),
+});
+
+export type Session = typeof sessions.$inferSelect;
+export type NewSession = typeof sessions.$inferInsert;
 
 export const servers = sqliteTable('servers', {
   id: text('id').primaryKey(),

@@ -17,6 +17,7 @@ import {
 
 import { type AuthContextValue, SignIn } from './features/auth';
 import { Dashboard } from './features/dashboard';
+import { ProfileView } from './features/profile';
 import { ServerSettingsView } from './features/server-settings';
 import {
   DEFAULT_MODULE_FLAGS,
@@ -325,12 +326,7 @@ const profileRoute = createRoute({
   getParentRoute: () => authedRoute,
   path: '/profile',
   staticData: { breadcrumb: ROUTE_BREADCRUMBS['/profile'] },
-  component: () => (
-    <PlaceholderView
-      title="Personal Profile & Preferences"
-      description="Operator account credentials, active sessions management, theme selection, and alert preferences."
-    />
-  ),
+  component: ProfileView,
 });
 
 // Settings Subsystem

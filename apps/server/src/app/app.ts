@@ -2,6 +2,7 @@ import cors from '@fastify/cors';
 import jwt from '@fastify/jwt';
 import rateLimit from '@fastify/rate-limit';
 import sensible from '@fastify/sensible';
+import { eq } from 'drizzle-orm';
 import Fastify, {
   type FastifyInstance,
   type FastifyReply,
@@ -9,12 +10,14 @@ import Fastify, {
   type FastifyServerOptions,
 } from 'fastify';
 
-import { type DatabaseInstance, initDatabase } from '@dsm/database';
+import { type DatabaseInstance, initDatabase, sessions } from '@dsm/database';
 
 import { type EnvConfig } from '../config/env';
 import { registerAuthRoutes } from '../routes/auth';
 import { registerHealthRoutes } from '../routes/health';
+import { registerProfileRoutes } from '../routes/profile';
 import { registerServersRoutes } from '../routes/servers';
+import { registerSessionsRoutes } from '../routes/sessions';
 import { sendApiError } from '../utils/api-error';
 
 export interface BuildAppOptions {
@@ -91,7 +94,13 @@ export function buildApp(options: BuildAppOptions): FastifyInstance {
 
   app.decorate('authenticate', async (request: FastifyRequest, reply: FastifyReply) => {
     try {
-      const payload = await request.jwtVerify<{ sub: string; role?: string; type?: string }>();
+      const payload = await request.jwtVerify<{
+        sub: string;
+        username?: string;
+        role?: string;
+        type?: string;
+        sid?: string;
+      }>();
       if (!payload || payload.type !== 'access') {
         return sendApiError(
           reply,
@@ -99,6 +108,23 @@ export function buildApp(options: BuildAppOptions): FastifyInstance {
           'AUTH_TOKEN_TYPE_INVALID',
           'Invalid token type for authorization',
         );
+      }
+
+      if (payload.sid) {
+        const session = app.db.select().from(sessions).where(eq(sessions.id, payload.sid)).get();
+        if (!session || session.expiresAt.getTime() <= Date.now()) {
+          return sendApiError(reply, 401, 'AUTH_SESSION_INVALID', 'Session is invalid or expired');
+        }
+
+        // SQLite WAL Write Contention Guard (ARCH-04): throttled to 60s
+        const now = Date.now();
+        if (now - session.lastActiveAt.getTime() > 60_000) {
+          app.db
+            .update(sessions)
+            .set({ lastActiveAt: new Date(now) })
+            .where(eq(sessions.id, session.id))
+            .run();
+        }
       }
     } catch {
       return sendApiError(
@@ -112,6 +138,9 @@ export function buildApp(options: BuildAppOptions): FastifyInstance {
 
   app.register(registerHealthRoutes);
   app.register(registerAuthRoutes, { prefix: '/api/v1/auth' });
+  app.register(registerProfileRoutes, { prefix: '/api/v1/profile' });
+  app.register(registerProfileRoutes, { prefix: '/api/v1/auth/profile' });
+  app.register(registerSessionsRoutes, { prefix: '/api/v1/auth/sessions' });
   app.register(registerServersRoutes, { prefix: '/api/v1/servers' });
 
   return app;

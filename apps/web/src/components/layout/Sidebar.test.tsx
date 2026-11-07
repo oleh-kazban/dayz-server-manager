@@ -1,14 +1,16 @@
 import type { ReactNode } from 'react';
 
-import { render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { FeatureFlagsProvider } from '@dsm/web/core';
+import { FeatureFlagsProvider, useLayoutStore } from '@dsm/web/core';
 import { AuthProvider } from '@dsm/web/features/auth';
 import { authStorage } from '@dsm/web/features/auth/auth.storage';
 import type { AuthUser } from '@dsm/web/features/auth/auth.types';
 
 import { Sidebar } from './Sidebar';
+
+const mockLocation = { pathname: '/dashboard' };
 
 vi.mock('./ServerSelector', () => ({
   ServerSelector: () => <div>dayz (local)</div>,
@@ -33,6 +35,7 @@ vi.mock('@tanstack/react-router', () => ({
       {children}
     </a>
   ),
+  useLocation: () => mockLocation,
   useNavigate: () => vi.fn(),
   useRouter: () => ({
     invalidate: vi.fn(),
@@ -58,6 +61,9 @@ const moderatorUser: AuthUser = {
 describe('Sidebar', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    useLayoutStore.setState({ isMobileSidebarOpen: false });
+    document.body.style.overflow = '';
+    mockLocation.pathname = '/dashboard';
     authStorage.set(adminUser, false);
   });
 
@@ -172,5 +178,168 @@ describe('Sidebar', () => {
     );
 
     expect(screen.queryByRole('link', { name: /console operators/i })).not.toBeInTheDocument();
+  });
+
+  describe('Mobile Off-Canvas Drawer', () => {
+    it('does not render mobile backdrop and drawer when closed', () => {
+      render(
+        <AuthProvider>
+          <FeatureFlagsProvider>
+            <Sidebar />
+          </FeatureFlagsProvider>
+        </AuthProvider>,
+      );
+
+      expect(screen.queryByTestId('mobile-sidebar-backdrop')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('mobile-sidebar-drawer')).not.toBeInTheDocument();
+    });
+
+    it('renders mobile drawer and backdrop when isMobileSidebarOpen is true', () => {
+      render(
+        <AuthProvider>
+          <FeatureFlagsProvider>
+            <Sidebar />
+          </FeatureFlagsProvider>
+        </AuthProvider>,
+      );
+
+      act(() => {
+        useLayoutStore.getState().openMobileSidebar();
+      });
+
+      expect(screen.getByTestId('mobile-sidebar-backdrop')).toBeInTheDocument();
+      expect(screen.getByTestId('mobile-sidebar-drawer')).toBeInTheDocument();
+      expect(screen.getByRole('dialog', { name: 'Mobile Navigation' })).toBeInTheDocument();
+    });
+
+    it('closes mobile drawer when clicking backdrop or close button', () => {
+      render(
+        <AuthProvider>
+          <FeatureFlagsProvider>
+            <Sidebar />
+          </FeatureFlagsProvider>
+        </AuthProvider>,
+      );
+
+      act(() => {
+        useLayoutStore.getState().openMobileSidebar();
+      });
+
+      // Click backdrop
+      const backdrop = screen.getByTestId('mobile-sidebar-backdrop');
+      fireEvent.click(backdrop);
+      expect(useLayoutStore.getState().isMobileSidebarOpen).toBe(false);
+
+      // Re-open and click close button (X)
+      act(() => {
+        useLayoutStore.getState().openMobileSidebar();
+      });
+      const closeBtn = screen.getByRole('button', { name: 'Close navigation' });
+      fireEvent.click(closeBtn);
+      expect(useLayoutStore.getState().isMobileSidebarOpen).toBe(false);
+    });
+
+    it('closes mobile drawer when clicking a navigation link inside the drawer', () => {
+      render(
+        <AuthProvider>
+          <FeatureFlagsProvider>
+            <Sidebar />
+          </FeatureFlagsProvider>
+        </AuthProvider>,
+      );
+
+      act(() => {
+        useLayoutStore.getState().openMobileSidebar();
+      });
+
+      const drawer = screen.getByTestId('mobile-sidebar-drawer');
+      const drawerLinks = drawer.querySelectorAll('a');
+      expect(drawerLinks.length).toBeGreaterThan(0);
+
+      fireEvent.click(drawerLinks[0]);
+      expect(useLayoutStore.getState().isMobileSidebarOpen).toBe(false);
+    });
+
+    it('closes mobile drawer on Escape key press but ignores other keys', () => {
+      render(
+        <AuthProvider>
+          <FeatureFlagsProvider>
+            <Sidebar />
+          </FeatureFlagsProvider>
+        </AuthProvider>,
+      );
+
+      act(() => {
+        useLayoutStore.getState().openMobileSidebar();
+      });
+
+      // Non-Escape key does not close
+      fireEvent.keyDown(window, { key: 'Enter' });
+      expect(useLayoutStore.getState().isMobileSidebarOpen).toBe(true);
+
+      // Escape key closes
+      fireEvent.keyDown(window, { key: 'Escape' });
+      expect(useLayoutStore.getState().isMobileSidebarOpen).toBe(false);
+    });
+
+    it('locks body scroll when mobile drawer is open and restores it when closed or unmounted', () => {
+      expect(document.body.style.overflow).toBe('');
+
+      const { unmount } = render(
+        <AuthProvider>
+          <FeatureFlagsProvider>
+            <Sidebar />
+          </FeatureFlagsProvider>
+        </AuthProvider>,
+      );
+
+      act(() => {
+        useLayoutStore.getState().openMobileSidebar();
+      });
+
+      expect(document.body.style.overflow).toBe('hidden');
+
+      act(() => {
+        useLayoutStore.getState().closeMobileSidebar();
+      });
+
+      expect(document.body.style.overflow).toBe('');
+
+      // Also verify unmount cleanup
+      act(() => {
+        useLayoutStore.getState().openMobileSidebar();
+      });
+      expect(document.body.style.overflow).toBe('hidden');
+
+      unmount();
+      expect(document.body.style.overflow).toBe('');
+    });
+
+    it('auto-closes mobile drawer on route pathname change', () => {
+      const { rerender } = render(
+        <AuthProvider>
+          <FeatureFlagsProvider>
+            <Sidebar />
+          </FeatureFlagsProvider>
+        </AuthProvider>,
+      );
+
+      act(() => {
+        useLayoutStore.getState().openMobileSidebar();
+      });
+      expect(useLayoutStore.getState().isMobileSidebarOpen).toBe(true);
+
+      // Change route pathname and re-render
+      mockLocation.pathname = '/settings';
+      rerender(
+        <AuthProvider>
+          <FeatureFlagsProvider>
+            <Sidebar />
+          </FeatureFlagsProvider>
+        </AuthProvider>,
+      );
+
+      expect(useLayoutStore.getState().isMobileSidebarOpen).toBe(false);
+    });
   });
 });

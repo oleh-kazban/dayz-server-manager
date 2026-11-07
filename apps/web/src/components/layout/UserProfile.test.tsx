@@ -49,7 +49,25 @@ describe('UserProfile', () => {
     expect(screen.getByText('Alex Kovac')).toBeInTheDocument();
     expect(screen.getByText('Administrator')).toBeInTheDocument();
     expect(screen.getByTitle('View profile & preferences')).toHaveAttribute('href', '/profile');
-    expect(screen.getByTitle('View profile & preferences')).toHaveAttribute('href', '/profile');
+  });
+
+  it('renders custom displayName when provided instead of username', () => {
+    authStorage.set(
+      {
+        ...testUser,
+        displayName: 'Commander Kovac',
+      },
+      false,
+    );
+
+    render(
+      <AuthProvider>
+        <UserProfile />
+      </AuthProvider>,
+    );
+
+    expect(screen.getByText('CK')).toBeInTheDocument();
+    expect(screen.getByText('Commander Kovac')).toBeInTheDocument();
   });
 
   it('triggers logout, router invalidation, and navigation to /sign-in on logout button click', async () => {

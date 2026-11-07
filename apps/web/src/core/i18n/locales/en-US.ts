@@ -44,6 +44,22 @@ export const enUSTranslations: TranslationCatalog = {
       title: 'Too Many Requests',
       description: 'Too many attempts detected. Please wait a moment before trying again.',
     },
+    AUTH_PASSWORD_MISMATCH: {
+      title: 'Password Mismatch',
+      description: 'The current password provided is incorrect.',
+    },
+    AUTH_SESSION_INVALID: {
+      title: 'Session Invalid',
+      description: 'Your session is invalid or has expired. Please sign in again.',
+    },
+    AUTH_SESSION_EXPIRED: {
+      title: 'Session Expired',
+      description: 'Your session has expired or was revoked. Please sign in again.',
+    },
+    AUTH_SESSION_NOT_FOUND: {
+      title: 'Session Not Found',
+      description: 'The requested session could not be found or has already been terminated.',
+    },
     VALIDATION_FAILED: {
       title: 'Validation Error',
       description: 'Please review the highlighted fields and correct any invalid values.',

@@ -27,6 +27,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null);
   };
 
+  const updateUser = (patch: Partial<AuthUser>) => {
+    setUser(prev => {
+      if (!prev) return null;
+      const updated = { ...prev, ...patch };
+      authStorage.set(updated);
+      return updated;
+    });
+  };
+
   const login = async (credentials: SignInCredentials) => {
     const response = await apiClient.auth.login({
       usernameOrEmail: credentials.usernameOrEmail,
@@ -37,6 +46,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const authenticatedUser: AuthUser = {
       id: response.user.id,
       username: response.user.username,
+      displayName: response.user.displayName,
       email: response.user.email ?? '',
       role: response.user.role,
       roles: [response.user.role],
@@ -85,6 +95,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       isAuthenticated: !!user,
       login,
       logout,
+      updateUser,
     }),
     [user],
   );

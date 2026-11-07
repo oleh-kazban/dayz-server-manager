@@ -4,6 +4,7 @@
    Extensible: Supports [data-theme="dark"] and alternate palettes
    ========================================================================== */
 :root,
+[data-theme='vanilla'],
 [data-theme='light'] {
   color-scheme: light;
 
@@ -71,6 +72,7 @@
     0 10px 25px -5px rgba(36, 60, 88, 0.12), 0 8px 10px -6px rgba(36, 60, 88, 0.08);
 }
 
+[data-theme='obsidian'],
 [data-theme='dark'] {
   color-scheme: dark;
 

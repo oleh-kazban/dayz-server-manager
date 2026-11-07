@@ -6,6 +6,7 @@ export type UserRole = z.infer<typeof userRoleSchema>;
 export const authUserSchema = z.object({
   id: z.string(),
   username: z.string(),
+  displayName: z.string().nullable().optional(),
   email: z.string(),
   role: userRoleSchema,
   roles: z.array(userRoleSchema).optional(),
@@ -23,4 +24,5 @@ export interface AuthContextValue {
   isAuthenticated: boolean;
   login: (credentials: SignInCredentials) => Promise<void> | void;
   logout: () => void;
+  updateUser?: (patch: Partial<AuthUser>) => void;
 }

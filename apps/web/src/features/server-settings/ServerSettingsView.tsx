@@ -480,7 +480,7 @@ export function ServerSettingsView() {
   if (isServersLoading || isDetailLoading) {
     return (
       <PageContainer>
-        <div className="max-w-5xl mx-auto space-y-6">
+        <div className="space-y-6">
           <div className="h-8 w-64 bg-[var(--color-surface-subtle)] animate-pulse rounded" />
           <div className="h-48 bg-[var(--color-surface-subtle)] animate-pulse rounded-2xl" />
           <div className="h-64 bg-[var(--color-surface-subtle)] animate-pulse rounded-2xl" />
@@ -492,7 +492,7 @@ export function ServerSettingsView() {
   if (servers.length === 0) {
     return (
       <PageContainer>
-        <div className="max-w-5xl mx-auto space-y-6">
+        <div className="space-y-6">
           <EmptyServersState onAddServer={() => setIsCreateModalOpen(true)} />
           <CreateServerModal
             isOpen={isCreateModalOpen}
@@ -506,7 +506,7 @@ export function ServerSettingsView() {
   if (detailError || !activeServer || !detail) {
     return (
       <PageContainer>
-        <div className="max-w-5xl mx-auto">
+        <div>
           <Notice variant="error" title="Server Not Found">
             Unable to load configuration for the selected server. It may have been deleted or the ID
             is invalid.
@@ -520,7 +520,7 @@ export function ServerSettingsView() {
 
   return (
     <PageContainer>
-      <div className="max-w-5xl mx-auto space-y-8">
+      <div className="space-y-8">
         {/* View Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-[var(--color-border)]">
           <div>

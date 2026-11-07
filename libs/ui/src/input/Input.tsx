@@ -34,12 +34,15 @@ export function Input({
     }
   };
 
-  const handleContainerClick = (e: MouseEvent<HTMLDivElement>) => {
+  const handleContainerMouseDown = (e: MouseEvent<HTMLDivElement>) => {
     if (disabled) return;
     if ((e.target as HTMLElement).closest('button, a, [role="button"]')) {
       return;
     }
-    internalInputRef.current?.focus();
+    if (document.activeElement !== internalInputRef.current) {
+      e.preventDefault();
+      internalInputRef.current?.focus();
+    }
   };
 
   const resolvedContainerClass = containerClassName || customClassName || '';
@@ -60,7 +63,7 @@ export function Input({
       )}
 
       <div
-        onClick={handleContainerClick}
+        onMouseDown={handleContainerMouseDown}
         className={`flex items-center rounded-lg border bg-[var(--color-surface)] shadow-xs transition-colors cursor-text h-9 px-3.5 gap-2.5 ${
           disabled ? 'opacity-50 cursor-not-allowed bg-[var(--color-surface-subtle)]' : ''
         } ${

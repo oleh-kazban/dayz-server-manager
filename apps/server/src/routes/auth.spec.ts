@@ -1,8 +1,9 @@
+import { eq } from 'drizzle-orm';
 import type { FastifyInstance } from 'fastify';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import { apiErrorResponseSchema } from '@dsm/api-contracts';
-import { type DatabaseInstance, initDatabase } from '@dsm/database';
+import { type DatabaseInstance, initDatabase, sessions } from '@dsm/database';
 
 import { buildApp } from '../app/app';
 import { loadEnv } from '../config/env';
@@ -351,6 +352,221 @@ describe('Auth Routes (/api/v1/auth)', () => {
       expect(apiErrorResponseSchema.safeParse(body).success).toBe(true);
       expect(body.errorCode).toBe('AUTH_RATE_LIMIT_EXCEEDED');
       expect(body.message).toContain('Rate limit exceeded');
+    });
+  });
+
+  describe('Stateful Session Tracking & Invalidation', () => {
+    let sessionApp: FastifyInstance;
+    let sessionDb: DatabaseInstance;
+
+    beforeAll(async () => {
+      sessionDb = initDatabase({ dbPath: ':memory:' });
+      const config = loadEnv({
+        SESSION_SECRET: 'test-session-secret-at-least-32-chars-long!',
+        LOG_LEVEL: 'silent',
+      });
+      sessionApp = buildApp({
+        config,
+        db: sessionDb,
+      });
+      await sessionApp.ready();
+    });
+
+    afterAll(async () => {
+      await sessionApp.close();
+      sessionDb.close();
+    });
+
+    it('creates a session with 30-day expiration when rememberMe is true', async () => {
+      const response = await sessionApp.inject({
+        method: 'POST',
+        url: '/api/v1/auth/login',
+        payload: {
+          usernameOrEmail: 'admin',
+          password: 'admin',
+          rememberMe: true,
+        },
+      });
+
+      expect(response.statusCode).toBe(200);
+      const body = response.json();
+      const payload = sessionApp.jwt.decode<{ sid: string }>(body.accessToken);
+      expect(payload?.sid).toBeDefined();
+
+      const session = sessionDb.db
+        .select()
+        .from(sessions)
+        .where(eq(sessions.id, payload!.sid))
+        .get();
+      expect(session).toBeDefined();
+      const expectedTtl = 30 * 24 * 60 * 60 * 1000;
+      const actualTtl = session!.expiresAt.getTime() - session!.createdAt.getTime();
+      expect(Math.abs(actualTtl - expectedTtl)).toBeLessThan(5000);
+    });
+
+    it('parses forwarded IP from x-forwarded-for header string and array', async () => {
+      // Test string x-forwarded-for
+      const resString = await sessionApp.inject({
+        method: 'POST',
+        url: '/api/v1/auth/login',
+        headers: {
+          'x-forwarded-for': '203.0.113.195, 70.41.3.18',
+        },
+        payload: { usernameOrEmail: 'admin', password: 'admin' },
+      });
+      const sidString = sessionApp.jwt.decode<{ sid: string }>(resString.json().accessToken)?.sid;
+      const sessString = sessionDb.db
+        .select()
+        .from(sessions)
+        .where(eq(sessions.id, sidString!))
+        .get();
+      expect(sessString?.ipAddress).toBe('203.0.113.195');
+
+      // Test array x-forwarded-for (simulated via raw headers)
+      const resArray = await sessionApp.inject({
+        method: 'POST',
+        url: '/api/v1/auth/login',
+        headers: {
+          // eslint-disable-next-line sonarjs/no-hardcoded-ip
+          'x-forwarded-for': ['198.51.100.10', '10.0.0.1'] as unknown as string,
+        },
+        payload: { usernameOrEmail: 'admin', password: 'admin' },
+      });
+      const sidArray = sessionApp.jwt.decode<{ sid: string }>(resArray.json().accessToken)?.sid;
+      const sessArray = sessionDb.db
+        .select()
+        .from(sessions)
+        .where(eq(sessions.id, sidArray!))
+        .get();
+      expect(sessArray?.ipAddress).toBe('198.51.100.10');
+    });
+
+    it('rejects access token when session is revoked from database', async () => {
+      const loginRes = await sessionApp.inject({
+        method: 'POST',
+        url: '/api/v1/auth/login',
+        payload: { usernameOrEmail: 'admin', password: 'admin' },
+      });
+      const { accessToken } = loginRes.json();
+      const sid = sessionApp.jwt.decode<{ sid: string }>(accessToken)!.sid;
+
+      // Delete session
+      sessionDb.db.delete(sessions).where(eq(sessions.id, sid)).run();
+
+      const meRes = await sessionApp.inject({
+        method: 'GET',
+        url: '/api/v1/auth/me',
+        headers: { authorization: `Bearer ${accessToken}` },
+      });
+
+      expect(meRes.statusCode).toBe(401);
+      const body = meRes.json();
+      expect(body.errorCode).toBe('AUTH_SESSION_INVALID');
+      expect(body.message).toContain('Session is invalid or expired');
+    });
+
+    it('rejects access token when session is expired in database', async () => {
+      const loginRes = await sessionApp.inject({
+        method: 'POST',
+        url: '/api/v1/auth/login',
+        payload: { usernameOrEmail: 'admin', password: 'admin' },
+      });
+      const { accessToken } = loginRes.json();
+      const sid = sessionApp.jwt.decode<{ sid: string }>(accessToken)!.sid;
+
+      // Set expiresAt to the past
+      sessionDb.db
+        .update(sessions)
+        .set({ expiresAt: new Date(Date.now() - 1000) })
+        .where(eq(sessions.id, sid))
+        .run();
+
+      const meRes = await sessionApp.inject({
+        method: 'GET',
+        url: '/api/v1/auth/me',
+        headers: { authorization: `Bearer ${accessToken}` },
+      });
+
+      expect(meRes.statusCode).toBe(401);
+      const body = meRes.json();
+      expect(body.errorCode).toBe('AUTH_SESSION_INVALID');
+    });
+
+    it('updates lastActiveAt in authenticate when more than 60 seconds have elapsed', async () => {
+      const loginRes = await sessionApp.inject({
+        method: 'POST',
+        url: '/api/v1/auth/login',
+        payload: { usernameOrEmail: 'admin', password: 'admin' },
+      });
+      const { accessToken } = loginRes.json();
+      const sid = sessionApp.jwt.decode<{ sid: string }>(accessToken)!.sid;
+
+      const oldTime = new Date(Date.now() - 120_000);
+      sessionDb.db
+        .update(sessions)
+        .set({ lastActiveAt: oldTime })
+        .where(eq(sessions.id, sid))
+        .run();
+
+      const meRes = await sessionApp.inject({
+        method: 'GET',
+        url: '/api/v1/auth/me',
+        headers: { authorization: `Bearer ${accessToken}` },
+      });
+
+      expect(meRes.statusCode).toBe(200);
+      const updatedSess = sessionDb.db.select().from(sessions).where(eq(sessions.id, sid)).get();
+      expect(updatedSess!.lastActiveAt.getTime()).toBeGreaterThan(oldTime.getTime());
+    });
+
+    it('rejects refresh token when session is revoked or expired', async () => {
+      const loginRes = await sessionApp.inject({
+        method: 'POST',
+        url: '/api/v1/auth/login',
+        payload: { usernameOrEmail: 'admin', password: 'admin' },
+      });
+      const { refreshToken } = loginRes.json();
+      const sid = sessionApp.jwt.decode<{ sid: string }>(refreshToken)!.sid;
+
+      // Revoke session
+      sessionDb.db.delete(sessions).where(eq(sessions.id, sid)).run();
+
+      const refreshRes = await sessionApp.inject({
+        method: 'POST',
+        url: '/api/v1/auth/refresh',
+        payload: { refreshToken },
+      });
+
+      expect(refreshRes.statusCode).toBe(401);
+      const body = refreshRes.json();
+      expect(body.errorCode).toBe('AUTH_SESSION_EXPIRED');
+    });
+
+    it('updates lastActiveAt during token refresh if throttled window passed', async () => {
+      const loginRes = await sessionApp.inject({
+        method: 'POST',
+        url: '/api/v1/auth/login',
+        payload: { usernameOrEmail: 'admin', password: 'admin' },
+      });
+      const { refreshToken } = loginRes.json();
+      const sid = sessionApp.jwt.decode<{ sid: string }>(refreshToken)!.sid;
+
+      const oldTime = new Date(Date.now() - 120_000);
+      sessionDb.db
+        .update(sessions)
+        .set({ lastActiveAt: oldTime })
+        .where(eq(sessions.id, sid))
+        .run();
+
+      const refreshRes = await sessionApp.inject({
+        method: 'POST',
+        url: '/api/v1/auth/refresh',
+        payload: { refreshToken },
+      });
+
+      expect(refreshRes.statusCode).toBe(200);
+      const updatedSess = sessionDb.db.select().from(sessions).where(eq(sessions.id, sid)).get();
+      expect(updatedSess!.lastActiveAt.getTime()).toBeGreaterThan(oldTime.getTime());
     });
   });
 });
