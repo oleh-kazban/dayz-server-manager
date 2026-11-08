@@ -1,0 +1,89 @@
+/* =========================================
+   AEGIS LOGO ANIMATION
+   ========================================= */
+
+.aegis-logo {
+  display: block;
+  overflow: visible;
+
+  perspective: 900px;
+  perspective-origin: 50% 50%;
+}
+
+/* Shared 3D settings */
+.aegis-logo__tent,
+.aegis-logo__bridge {
+  transform-box: fill-box;
+  transform-style: preserve-3d;
+  transform-origin: center center;
+  will-change: transform;
+}
+
+/* =========================================
+   LOADING ANIMATION
+   Total duration: 8 seconds
+   ========================================= */
+
+.aegis-logo.is-loading .aegis-logo__tent {
+  animation: aegis-tent-loading 8s infinite;
+}
+
+.aegis-logo.is-loading .aegis-logo__bridge {
+  animation: aegis-bridge-loading 8s infinite;
+}
+
+/* -----------------------------------------
+   Tent:
+   0 - 3s: One full rotation around Y
+   3 - 8s: Idle
+   ----------------------------------------- */
+@keyframes aegis-tent-loading {
+  0% {
+    transform: rotateY(0deg);
+    animation-timing-function: ease-in-out;
+  }
+
+  37.5% {
+    transform: rotateY(360deg);
+  }
+
+  100% {
+    transform: rotateY(360deg);
+  }
+}
+
+/* -----------------------------------------
+   Bridge:
+   0 - 3s: Three rotations around Y
+   3 - 6s: Three rotations around X
+   6 - 8s: Idle
+   ----------------------------------------- */
+@keyframes aegis-bridge-loading {
+  0% {
+    transform: rotateY(0deg) rotateX(0deg);
+    animation-timing-function: ease-in-out;
+  }
+
+  37.5% {
+    transform: rotateY(-1080deg) rotateX(0deg);
+    animation-timing-function: ease-in-out;
+  }
+
+  75% {
+    transform: rotateY(-1080deg) rotateX(1080deg);
+  }
+
+  100% {
+    transform: rotateY(-1080deg) rotateX(1080deg);
+  }
+}
+
+/* =========================================
+   ACCESSIBILITY
+   ========================================= */
+@media (prefers-reduced-motion: reduce) {
+  .aegis-logo.is-loading .aegis-logo__tent,
+  .aegis-logo.is-loading .aegis-logo__bridge {
+    animation: none;
+  }
+}
