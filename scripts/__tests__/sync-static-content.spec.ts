@@ -86,14 +86,27 @@ describe('sync-static-content pipeline', () => {
       );
     });
 
-    it('throws PreconditionFailedError when BACKLOG.md does not exist', () => {
+    it('succeeds when BACKLOG.md is missing but fallback history.md exists and is readable (CI mode)', () => {
       const faqPath = path.join(tempDir, 'faq.md');
       const backlogPath = path.join(tempDir, 'missing-backlog.md');
+      const historyPath = path.join(tempDir, 'history.md');
+      fs.writeFileSync(faqPath, '# FAQ', 'utf-8');
+      fs.writeFileSync(historyPath, '# Pre-existing History', 'utf-8');
+
+      expect(() => verifySourcesExist(faqPath, backlogPath, historyPath)).not.toThrow();
+    });
+
+    it('throws PreconditionFailedError when neither BACKLOG.md nor history.md exists', () => {
+      const faqPath = path.join(tempDir, 'faq.md');
+      const backlogPath = path.join(tempDir, 'missing-backlog.md');
+      const historyPath = path.join(tempDir, 'missing-history.md');
       fs.writeFileSync(faqPath, '# FAQ', 'utf-8');
 
-      expect(() => verifySourcesExist(faqPath, backlogPath)).toThrow(PreconditionFailedError);
-      expect(() => verifySourcesExist(faqPath, backlogPath)).toThrow(
-        /Source Backlog file does not exist at/,
+      expect(() => verifySourcesExist(faqPath, backlogPath, historyPath)).toThrow(
+        PreconditionFailedError,
+      );
+      expect(() => verifySourcesExist(faqPath, backlogPath, historyPath)).toThrow(
+        /Neither source Backlog file .* nor fallback history file .* exists/,
       );
     });
 
@@ -273,6 +286,25 @@ describe('sync-static-content pipeline', () => {
       // Mutation guarantee: zero destination files were created or modified
       expect(fs.existsSync(targetDir)).toBe(false);
       expect(fs.existsSync(rootHistory)).toBe(false);
+    });
+
+    it('CI mode: uses pre-existing root history.md when .agents/BACKLOG.md is missing', () => {
+      const faqPath = path.join(tempDir, 'faq.md');
+      const rootHistory = path.join(tempDir, 'history.md');
+
+      fs.writeFileSync(faqPath, '# FAQ\n', 'utf-8');
+      fs.writeFileSync(rootHistory, '# Committed History\n\n## [DSM-00100] Setup\n', 'utf-8');
+
+      runSync({ workspaceRoot: tempDir });
+
+      const assetFaq = path.join(tempDir, 'apps/web/public/assets/content/faq.md');
+      const assetHistory = path.join(tempDir, 'apps/web/public/assets/content/history.md');
+
+      expect(fs.existsSync(assetFaq)).toBe(true);
+      expect(fs.existsSync(assetHistory)).toBe(true);
+      expect(fs.readFileSync(assetHistory, 'utf-8')).toBe(
+        '# Committed History\n\n## [DSM-00100] Setup\n',
+      );
     });
   });
 });

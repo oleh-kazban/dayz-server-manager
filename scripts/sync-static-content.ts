@@ -20,9 +20,13 @@ export interface BacklogItem {
   scopeExcluded?: string;
 }
 
-export function verifySourcesExist(faqPath: string, backlogPath: string): void {
+export function verifySourcesExist(
+  faqPath: string,
+  backlogPath: string,
+  fallbackHistoryPath?: string,
+): void {
   // GUARD-01: Content Source Integrity Guard
-  // Verify that faq.md and .agents/BACKLOG.md exist and are readable ahead of any filesystem mutation
+  // Verify that faq.md exists and is readable ahead of any filesystem mutation
   if (!fs.existsSync(faqPath)) {
     throw new PreconditionFailedError(`Source FAQ file does not exist at: ${faqPath}`);
   }
@@ -34,14 +38,31 @@ export function verifySourcesExist(faqPath: string, backlogPath: string): void {
     );
   }
 
-  if (!fs.existsSync(backlogPath)) {
-    throw new PreconditionFailedError(`Source Backlog file does not exist at: ${backlogPath}`);
+  // Check if .agents/BACKLOG.md exists and is readable
+  const hasBacklog = fs.existsSync(backlogPath);
+  if (hasBacklog) {
+    try {
+      fs.accessSync(backlogPath, fs.constants.R_OK);
+    } catch (err) {
+      throw new PreconditionFailedError(
+        `Source Backlog file is not readable at: ${backlogPath} (${(err as Error).message})`,
+      );
+    }
+    return;
+  }
+
+  // If BACKLOG.md is not present (e.g. CI environments where .agents/ is git-excluded),
+  // fallback to the committed root history.md
+  if (!fallbackHistoryPath || !fs.existsSync(fallbackHistoryPath)) {
+    throw new PreconditionFailedError(
+      `Neither source Backlog file (${backlogPath}) nor fallback history file (${fallbackHistoryPath ?? 'undefined'}) exists`,
+    );
   }
   try {
-    fs.accessSync(backlogPath, fs.constants.R_OK);
+    fs.accessSync(fallbackHistoryPath, fs.constants.R_OK);
   } catch (err) {
     throw new PreconditionFailedError(
-      `Source Backlog file is not readable at: ${backlogPath} (${(err as Error).message})`,
+      `Fallback history file is not readable at: ${fallbackHistoryPath} (${(err as Error).message})`,
     );
   }
 }
@@ -169,14 +190,16 @@ export function runSync(options?: { workspaceRoot?: string }): void {
 
   // Precondition guard GUARD-01: verify before any file system write
   try {
-    verifySourcesExist(faqPath, backlogPath);
+    verifySourcesExist(faqPath, backlogPath, rootHistoryPath);
   } catch (err) {
     console.error(`[GUARD-01] Precondition Check Failed: ${(err as Error).message}`);
     process.exit(1);
   }
 
-  // Generate root history.md from .agents/BACKLOG.md
-  generateReleaseHistory(backlogPath, rootHistoryPath);
+  // If source backlog exists, regenerate root history.md; otherwise use existing committed history.md
+  if (fs.existsSync(backlogPath)) {
+    generateReleaseHistory(backlogPath, rootHistoryPath);
+  }
 
   if (!fs.existsSync(targetDir)) {
     fs.mkdirSync(targetDir, { recursive: true });
