@@ -11,6 +11,15 @@ describe('Logo', () => {
 
     const svg = container.querySelector('svg');
     expect(svg).toBeInTheDocument();
-    expect(svg).toHaveClass('w-12', 'h-12');
+    expect(svg).toHaveClass('aegis-logo', 'w-12', 'h-12');
+    expect(container.querySelector('.aegis-logo__tent')).toBeInTheDocument();
+    expect(container.querySelector('.aegis-logo__bridge')).toBeInTheDocument();
+  });
+
+  it('applies is-loading class when isLoading prop is true', () => {
+    const { container } = render(<Logo isLoading />);
+
+    const svg = container.querySelector('svg');
+    expect(svg).toHaveClass('aegis-logo', 'is-loading');
   });
 });
