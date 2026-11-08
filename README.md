@@ -65,6 +65,14 @@ DayZ's `types.xml` contains anywhere from 2,000 to over 20,000 item definitions.
 
 ---
 
+## Documentation & Operator Guides
+
+- **[Operator Cheatsheet & FAQ](faq.md):** Essential technical cheatsheet covering default network ports (`2302`, `27016`, `2310`), graceful persistence flush via BattlEye `#shutdown`, `.bikey` signature key distribution, and scoped backup geometries.
+- **[Release History & Changelog](history.md):** Structured changelog of completed product backlog items compiled directly from `.agents/BACKLOG.md`.
+- **In-App Knowledge Base:** Operators can press <kbd>Shift + ?</kbd> anywhere within the web console or click the help icon in the top navigation bar to open the live searchable documentation modal.
+
+---
+
 ## How It Works
 
 DSM is designed as a standalone, self-hosted appliance that runs on the same machine (or local network) as your DayZ server:
@@ -138,16 +146,17 @@ Built from the ground up as a modern, high-throughput monorepo:
 
 ## Workspace Commands
 
-| Command             | Purpose                                                              |
-| :------------------ | :------------------------------------------------------------------- |
-| `pnpm dev`          | Starts the web console development server (`http://localhost:4200`)  |
-| `pnpm build`        | Compiles production builds for all applications and packages         |
-| `pnpm typecheck`    | Runs project-wide TypeScript verification (`tsc --noEmit`)           |
-| `pnpm lint`         | Runs ESLint Flat Config with module boundary and import order checks |
-| `pnpm lint:fix`     | Automatically fixes linting and import sorting violations            |
-| `pnpm format:check` | Checks code formatting against Prettier rules                        |
-| `pnpm format`       | Auto-formats all source files with Prettier                          |
-| `pnpm check:cycles` | Detects circular dependencies across apps and libraries (`madge`)    |
+| Command             | Purpose                                                                |
+| :------------------ | :--------------------------------------------------------------------- |
+| `pnpm dev`          | Starts the web console development server (`http://localhost:4200`)    |
+| `pnpm docs:sync`    | Synchronizes static documentation and compiles backlog release history |
+| `pnpm build`        | Compiles production builds for all applications and packages           |
+| `pnpm typecheck`    | Runs project-wide TypeScript verification (`tsc --noEmit`)             |
+| `pnpm lint`         | Runs ESLint Flat Config with module boundary and import order checks   |
+| `pnpm lint:fix`     | Automatically fixes linting and import sorting violations              |
+| `pnpm format:check` | Checks code formatting against Prettier rules                          |
+| `pnpm format`       | Auto-formats all source files with Prettier                            |
+| `pnpm check:cycles` | Detects circular dependencies across apps and libraries (`madge`)      |
 
 ---
 
