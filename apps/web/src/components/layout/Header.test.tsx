@@ -1,9 +1,11 @@
 import type { ReactNode } from 'react';
 
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { fireEvent, render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { useLayoutStore } from '@dsm/web/core';
+import { useFaqStore } from '@dsm/web/features';
 import { ThemeProvider } from '@dsm/web/features/theme';
 
 import { Header } from './Header';
@@ -11,6 +13,23 @@ import { Header } from './Header';
 const mockUseActiveServer = vi.fn();
 const mockLocation = { pathname: '/dashboard' };
 const mockUseMatches = vi.fn();
+
+const renderHeader = () => {
+  const queryClient = new QueryClient({
+    defaultOptions: {
+      queries: {
+        retry: false,
+      },
+    },
+  });
+  return render(
+    <QueryClientProvider client={queryClient}>
+      <ThemeProvider>
+        <Header />
+      </ThemeProvider>
+    </QueryClientProvider>,
+  );
+};
 
 vi.mock('@dsm/web/core', async () => {
   const actual = await vi.importActual<typeof import('@dsm/web/core')>('@dsm/web/core');
@@ -43,6 +62,7 @@ describe('Header', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     useLayoutStore.setState({ isMobileSidebarOpen: false });
+    useFaqStore.setState({ isOpen: false, activeTab: 'faq', searchQuery: '' });
     mockLocation.pathname = '/dashboard';
     mockUseMatches.mockReturnValue([{ staticData: { breadcrumb: 'Dashboard' } }]);
     mockUseActiveServer.mockReturnValue({
@@ -208,5 +228,161 @@ describe('Header', () => {
     fireEvent.click(toggleBtn);
     expect(toggleBtn).toHaveAttribute('aria-expanded', 'false');
     expect(useLayoutStore.getState().isMobileSidebarOpen).toBe(false);
+  });
+
+  describe('FAQ Modal Triggers and GUARD-02 Shortcut Collision Guard', () => {
+    it('toggles FAQ modal and reflects aria-expanded when Documentation button is clicked', () => {
+      renderHeader();
+
+      const helpBtn = screen.getByRole('button', { name: 'Documentation and help' });
+      expect(helpBtn).toHaveAttribute('aria-expanded', 'false');
+      expect(useFaqStore.getState().isOpen).toBe(false);
+
+      fireEvent.click(helpBtn);
+      expect(helpBtn).toHaveAttribute('aria-expanded', 'true');
+      expect(useFaqStore.getState().isOpen).toBe(true);
+
+      fireEvent.click(helpBtn);
+      expect(helpBtn).toHaveAttribute('aria-expanded', 'false');
+      expect(useFaqStore.getState().isOpen).toBe(false);
+    });
+
+    it('toggles FAQ modal when pressing Shift + ? globally', () => {
+      renderHeader();
+
+      expect(useFaqStore.getState().isOpen).toBe(false);
+
+      // Trigger via key === '?'
+      fireEvent.keyDown(document.body, { key: '?' });
+      expect(useFaqStore.getState().isOpen).toBe(true);
+
+      // Trigger via shiftKey + '/'
+      fireEvent.keyDown(document.body, { key: '/', shiftKey: true });
+      expect(useFaqStore.getState().isOpen).toBe(false);
+    });
+
+    it('GUARD-02 refusal: does NOT toggle modal when pressing ? while focused on an <input>', () => {
+      const queryClient = new QueryClient();
+      render(
+        <QueryClientProvider client={queryClient}>
+          <ThemeProvider>
+            <div>
+              <input data-testid="test-input" type="text" />
+              <Header />
+            </div>
+          </ThemeProvider>
+        </QueryClientProvider>,
+      );
+
+      const input = screen.getByTestId('test-input');
+      input.focus();
+      expect(document.activeElement).toBe(input);
+
+      fireEvent.keyDown(input, { key: '?', shiftKey: true });
+
+      // Invariant: modal state must NOT change
+      expect(useFaqStore.getState().isOpen).toBe(false);
+    });
+
+    it('GUARD-02 refusal: does NOT toggle modal when pressing ? while focused on a <textarea>', () => {
+      const queryClient = new QueryClient();
+      render(
+        <QueryClientProvider client={queryClient}>
+          <ThemeProvider>
+            <div>
+              <textarea data-testid="test-textarea" />
+              <Header />
+            </div>
+          </ThemeProvider>
+        </QueryClientProvider>,
+      );
+
+      const textarea = screen.getByTestId('test-textarea');
+      textarea.focus();
+      expect(document.activeElement).toBe(textarea);
+
+      fireEvent.keyDown(textarea, { key: '?' });
+
+      expect(useFaqStore.getState().isOpen).toBe(false);
+    });
+
+    it('GUARD-02 refusal: does NOT toggle modal when pressing ? while focused on a <select>', () => {
+      const queryClient = new QueryClient();
+      render(
+        <QueryClientProvider client={queryClient}>
+          <ThemeProvider>
+            <div>
+              <select data-testid="test-select">
+                <option value="1">Option 1</option>
+              </select>
+              <Header />
+            </div>
+          </ThemeProvider>
+        </QueryClientProvider>,
+      );
+
+      const select = screen.getByTestId('test-select');
+      select.focus();
+
+      fireEvent.keyDown(select, { key: '?' });
+
+      expect(useFaqStore.getState().isOpen).toBe(false);
+    });
+
+    it('GUARD-02 refusal: does NOT toggle modal when pressing ? on contentEditable element', () => {
+      const queryClient = new QueryClient();
+      render(
+        <QueryClientProvider client={queryClient}>
+          <ThemeProvider>
+            <div>
+              <div data-testid="test-editable" contentEditable="true" />
+              <Header />
+            </div>
+          </ThemeProvider>
+        </QueryClientProvider>,
+      );
+
+      const editable = screen.getByTestId('test-editable');
+      Object.defineProperty(editable, 'isContentEditable', { value: true, configurable: true });
+      editable.focus();
+
+      fireEvent.keyDown(editable, { key: '?' });
+
+      expect(useFaqStore.getState().isOpen).toBe(false);
+    });
+
+    it('GUARD-02 refusal: does NOT toggle modal when pressing ? on element with role="textbox" or role="searchbox"', () => {
+      const queryClient = new QueryClient();
+      render(
+        <QueryClientProvider client={queryClient}>
+          <ThemeProvider>
+            <div>
+              <div data-testid="test-role-textbox" role="textbox" tabIndex={0} />
+              <div data-testid="test-role-searchbox" role="searchbox" tabIndex={0} />
+              <Header />
+            </div>
+          </ThemeProvider>
+        </QueryClientProvider>,
+      );
+
+      const textbox = screen.getByTestId('test-role-textbox');
+      textbox.focus();
+      fireEvent.keyDown(textbox, { key: '?' });
+      expect(useFaqStore.getState().isOpen).toBe(false);
+
+      const searchbox = screen.getByTestId('test-role-searchbox');
+      searchbox.focus();
+      fireEvent.keyDown(searchbox, { key: '?' });
+      expect(useFaqStore.getState().isOpen).toBe(false);
+    });
+
+    it('unregisters keydown event listener on unmount', () => {
+      const { unmount } = renderHeader();
+
+      unmount();
+
+      fireEvent.keyDown(document.body, { key: '?' });
+      expect(useFaqStore.getState().isOpen).toBe(false);
+    });
   });
 });

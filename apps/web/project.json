@@ -9,13 +9,13 @@
       "executor": "nx:run-commands",
       "outputs": ["{workspaceRoot}/dist/apps/web"],
       "options": {
-        "command": "vite build apps/web"
+        "command": "tsx scripts/sync-static-content.ts && vite build apps/web"
       }
     },
     "serve": {
       "executor": "nx:run-commands",
       "options": {
-        "command": "vite apps/web"
+        "command": "tsx scripts/sync-static-content.ts && vite apps/web"
       }
     },
     "lint": {

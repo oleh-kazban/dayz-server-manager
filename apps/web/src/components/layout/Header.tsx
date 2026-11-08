@@ -1,8 +1,10 @@
+import { useEffect } from 'react';
+
 import { Link, useLocation, useMatches } from '@tanstack/react-router';
 import { Bell, ChevronRight, HelpCircle, Menu, Search } from 'lucide-react';
 
 import { useActiveServer, useLayoutStore } from '@dsm/web/core';
-import { ThemeToggleButton } from '@dsm/web/features';
+import { FaqModal, ThemeToggleButton, useFaqStore } from '@dsm/web/features';
 
 function renderBreadcrumbTrail(
   isLoading: boolean,
@@ -115,6 +117,7 @@ function renderBreadcrumbTrail(
 export function Header() {
   const { isMobileSidebarOpen, toggleMobileSidebar } = useLayoutStore();
   const { activeServer, isLoading } = useActiveServer();
+  const { isOpen: isFaqOpen, toggleModal: toggleFaqModal } = useFaqStore();
   const location = useLocation();
   const matches = useMatches();
   const pathname = location?.pathname ?? '/dashboard';
@@ -125,66 +128,99 @@ export function Header() {
   const subpageLabel =
     matchedBreadcrumb ?? (pathname.startsWith('/settings') ? 'Settings' : undefined);
 
+  // GUARD-02: Keyboard Shortcut Input Collision Guard
+  useEffect(() => {
+    const handleGlobalKeyDown = (event: KeyboardEvent) => {
+      if (event.key === '?' || (event.shiftKey && event.key === '/')) {
+        const target = event.target as HTMLElement | null;
+        const isInteractiveInput =
+          target instanceof HTMLInputElement ||
+          target instanceof HTMLTextAreaElement ||
+          target instanceof HTMLSelectElement ||
+          Boolean(target?.isContentEditable) ||
+          target?.getAttribute('role') === 'textbox' ||
+          target?.getAttribute('role') === 'searchbox';
+
+        if (isInteractiveInput) {
+          return;
+        }
+
+        event.preventDefault();
+        toggleFaqModal();
+      }
+    };
+
+    window.addEventListener('keydown', handleGlobalKeyDown);
+    return () => {
+      window.removeEventListener('keydown', handleGlobalKeyDown);
+    };
+  }, [toggleFaqModal]);
+
   return (
-    <header className="h-16 lg:h-[76px] bg-[var(--color-surface)] border-b border-[var(--color-border)] px-4 sm:px-6 lg:px-8 flex items-center justify-between sticky top-0 z-20 shrink-0">
-      {/* Breadcrumbs + Mobile Menu Trigger */}
-      <div className="flex items-center gap-2.5 min-w-0">
-        {/* Sidebar toggle button (mobile / future desktop collapse hook) */}
-        <button
-          type="button"
-          aria-label="Toggle navigation menu"
-          aria-expanded={isMobileSidebarOpen}
-          onClick={toggleMobileSidebar}
-          className="lg:hidden p-2 rounded-lg border border-[var(--color-border)] text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-hover)] transition-colors mr-1 cursor-pointer"
-        >
-          <Menu className="w-4 h-4" />
-        </button>
-
-        <nav aria-label="Breadcrumb" className="flex items-center gap-2 text-xs truncate">
-          <Link
-            to="/dashboard"
-            search={activeServer ? { serverId: activeServer.id } : undefined}
-            className="text-[var(--color-text-muted)] hover:text-[var(--color-text-main)] cursor-pointer transition-colors"
+    <>
+      <header className="h-16 lg:h-[76px] bg-[var(--color-surface)] border-b border-[var(--color-border)] px-4 sm:px-6 lg:px-8 flex items-center justify-between sticky top-0 z-20 shrink-0">
+        {/* Breadcrumbs + Mobile Menu Trigger */}
+        <div className="flex items-center gap-2.5 min-w-0">
+          {/* Sidebar toggle button (mobile / future desktop collapse hook) */}
+          <button
+            type="button"
+            aria-label="Toggle navigation menu"
+            aria-expanded={isMobileSidebarOpen}
+            onClick={toggleMobileSidebar}
+            className="lg:hidden p-2 rounded-lg border border-[var(--color-border)] text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-hover)] transition-colors mr-1 cursor-pointer"
           >
-            Workspace
-          </Link>
-          <ChevronRight className="w-3 h-3 text-[var(--color-text-secondary)] shrink-0" />
+            <Menu className="w-4 h-4" />
+          </button>
 
-          {renderBreadcrumbTrail(isLoading, isDashboard, activeServer, subpageLabel)}
-        </nav>
-      </div>
+          <nav aria-label="Breadcrumb" className="flex items-center gap-2 text-xs truncate">
+            <Link
+              to="/dashboard"
+              search={activeServer ? { serverId: activeServer.id } : undefined}
+              className="text-[var(--color-text-muted)] hover:text-[var(--color-text-main)] cursor-pointer transition-colors"
+            >
+              Workspace
+            </Link>
+            <ChevronRight className="w-3 h-3 text-[var(--color-text-secondary)] shrink-0" />
 
-      {/* Header Controls: Search, Notifications, Help */}
-      <div className="flex items-center gap-3 sm:gap-5 shrink-0">
-        {/* Search Input Box */}
-        <div className="hidden sm:flex items-center gap-2 w-48 md:w-56 px-3 py-1.5 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-subtle)] text-xs text-[var(--color-text-muted)] focus-within:border-[var(--color-primary)] transition-colors">
-          <Search className="w-3.5 h-3.5 shrink-0" />
-          <span className="flex-1 truncate">Search anything…</span>
-          <kbd className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-[var(--color-surface)] border border-[var(--color-border)] text-[var(--color-text-secondary)]">
-            ⌘ K
-          </kbd>
+            {renderBreadcrumbTrail(isLoading, isDashboard, activeServer, subpageLabel)}
+          </nav>
         </div>
 
-        {/* Notification Bell */}
-        <button
-          type="button"
-          aria-label="Notifications"
-          className="relative p-2 rounded-lg text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-hover)] hover:text-[var(--color-text-main)] transition-colors"
-        >
-          <Bell className="w-[19px] h-[19px]" />
-          <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full bg-[var(--color-primary)] ring-2 ring-[var(--color-surface)]" />
-        </button>
+        {/* Header Controls: Search, Notifications, Help */}
+        <div className="flex items-center gap-3 sm:gap-5 shrink-0">
+          {/* Search Input Box */}
+          <div className="hidden sm:flex items-center gap-2 w-48 md:w-56 px-3 py-1.5 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-subtle)] text-xs text-[var(--color-text-muted)] focus-within:border-[var(--color-primary)] transition-colors">
+            <Search className="w-3.5 h-3.5 shrink-0" />
+            <span className="flex-1 truncate">Search anything…</span>
+            <kbd className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-[var(--color-surface)] border border-[var(--color-border)] text-[var(--color-text-secondary)]">
+              ⌘ K
+            </kbd>
+          </div>
 
-        <ThemeToggleButton />
-        {/* Help / Docs */}
-        <button
-          type="button"
-          aria-label="Documentation and help"
-          className="p-2 rounded-lg text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-hover)] hover:text-[var(--color-text-main)] transition-colors"
-        >
-          <HelpCircle className="w-[19px] h-[19px]" />
-        </button>
-      </div>
-    </header>
+          {/* Notification Bell */}
+          <button
+            type="button"
+            aria-label="Notifications"
+            className="relative p-2 rounded-lg text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-hover)] hover:text-[var(--color-text-main)] transition-colors"
+          >
+            <Bell className="w-[19px] h-[19px]" />
+            <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full bg-[var(--color-primary)] ring-2 ring-[var(--color-surface)]" />
+          </button>
+
+          <ThemeToggleButton />
+          {/* Help / Docs */}
+          <button
+            type="button"
+            aria-label="Documentation and help"
+            aria-expanded={isFaqOpen}
+            onClick={() => toggleFaqModal()}
+            className="p-2 rounded-lg text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-hover)] hover:text-[var(--color-text-main)] transition-colors cursor-pointer"
+          >
+            <HelpCircle className="w-[19px] h-[19px]" />
+          </button>
+        </div>
+      </header>
+      <FaqModal />
+    </>
   );
 }
