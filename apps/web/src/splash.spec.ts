@@ -5,15 +5,16 @@ import { act } from '@testing-library/react';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const indexPath = path.resolve(__dirname, '../index.html');
 
-describe('Pre-Bootstrap Animated Splash Screen (DSM-00101)', () => {
+describe('Pre-Bootstrap Animated Splash Screen (DSM-00101 & DSM-00102)', () => {
   let htmlContent: string;
   let parsedDoc: Document;
+  let scriptElement: HTMLScriptElement | null;
   let styleElement: HTMLStyleElement | null;
   let rootElement: HTMLElement | null;
   let splashElement: HTMLElement | null;
@@ -22,15 +23,62 @@ describe('Pre-Bootstrap Animated Splash Screen (DSM-00101)', () => {
     htmlContent = fs.readFileSync(indexPath, 'utf-8');
     const parser = new DOMParser();
     parsedDoc = parser.parseFromString(htmlContent, 'text/html');
+    scriptElement = parsedDoc.querySelector('head > script');
     styleElement = parsedDoc.querySelector('head > style');
     rootElement = parsedDoc.getElementById('root');
     splashElement = parsedDoc.getElementById('dsm-splash');
   });
 
-  describe('REQ-01 & REQ-02: Static Markup & Critical CSS Contract', () => {
+  describe('Static Structure Contract & Synchronous Head Script', () => {
+    it('contains an inline <script> block immediately before <style> in <head>', () => {
+      expect(scriptElement).not.toBeNull();
+      expect(styleElement).not.toBeNull();
+      expect(scriptElement?.nextElementSibling).toBe(styleElement);
+    });
+
+    it('encloses pre-bootstrap theme detection script in an IIFE with try/catch', () => {
+      const scriptCode = scriptElement?.textContent ?? '';
+      expect(scriptCode).toMatch(/\(function\s*\(\)/);
+      expect(scriptCode).toContain('try {');
+      expect(scriptCode).toContain('dsm-theme-settings');
+      expect(scriptCode).toContain('dsm-theme-preference');
+      expect(scriptCode).toContain('document.documentElement.setAttribute');
+    });
+
     it('contains an inline <style> block in <head>', () => {
       expect(styleElement).not.toBeNull();
       expect(styleElement?.textContent).toBeDefined();
+    });
+
+    it('defines CSS custom properties for splash background and logo colors', () => {
+      const css = styleElement?.textContent ?? '';
+      expect(css).toContain('--splash-bg');
+      expect(css).toContain('--splash-fg-main');
+      expect(css).toContain('--splash-fg-secondary');
+      expect(css).toContain('var(--splash-bg)');
+      expect(css).toContain('var(--splash-fg-main)');
+      expect(css).toContain('var(--splash-fg-secondary)');
+    });
+
+    it('defines explicit theme selectors in <style> for all themes defined in theme.types.ts', () => {
+      const css = styleElement?.textContent ?? '';
+      const lightThemes = [
+        'vanilla',
+        'darcula-light',
+        'graphite-light',
+        'tokyo-light',
+        'catppuccin-latte',
+      ];
+      const darkThemes = ['obsidian', 'darcula', 'graphite', 'tokyo', 'catppuccin'];
+
+      for (const theme of lightThemes) {
+        expect(css).toContain(`[data-theme='${theme}']`);
+      }
+      for (const theme of darkThemes) {
+        expect(css).toContain(`[data-theme='${theme}']`);
+      }
+      expect(css).toContain(`[data-theme='light']`);
+      expect(css).toContain(`[data-theme='dark']`);
     });
 
     it('defines critical layout and 3D perspective rules in inline <style>', () => {
@@ -57,7 +105,7 @@ describe('Pre-Bootstrap Animated Splash Screen (DSM-00101)', () => {
     it('defines dark color scheme support in critical <style>', () => {
       const css = styleElement?.textContent ?? '';
       expect(css).toContain('@media (prefers-color-scheme: dark)');
-      expect(css).toContain('background-color: #090d12');
+      expect(css).toContain('--splash-bg: #090d12');
     });
 
     it('contains #dsm-splash inside #root with accessibility attributes', () => {
@@ -93,11 +141,81 @@ describe('Pre-Bootstrap Animated Splash Screen (DSM-00101)', () => {
     });
   });
 
+  describe('Theme Resolution & Storage Matrix Simulation (GUARD-02 & REQ-03)', () => {
+    let scriptCode: string;
+
+    beforeEach(() => {
+      scriptCode = scriptElement?.textContent ?? '';
+      document.documentElement.removeAttribute('data-theme');
+      window.localStorage.clear();
+    });
+
+    afterEach(() => {
+      document.documentElement.removeAttribute('data-theme');
+      window.localStorage.clear();
+      vi.restoreAllMocks();
+    });
+
+    const runThemeScript = () => {
+      // eslint-disable-next-line sonarjs/code-eval -- Test helper executes isolated static script extracted from index.html
+      const fn = new Function(scriptCode);
+      fn();
+    };
+
+    it('Test A: sets data-theme to light preferred theme when stored mode is light', () => {
+      window.localStorage.setItem(
+        'dsm-theme-settings',
+        JSON.stringify({ mode: 'light', preferredLight: 'vanilla' }),
+      );
+      runThemeScript();
+      expect(document.documentElement.getAttribute('data-theme')).toBe('vanilla');
+    });
+
+    it('Test B: sets data-theme to dark preferred theme when stored mode is dark', () => {
+      window.localStorage.setItem(
+        'dsm-theme-settings',
+        JSON.stringify({ mode: 'dark', preferredDark: 'catppuccin' }),
+      );
+      runThemeScript();
+      expect(document.documentElement.getAttribute('data-theme')).toBe('catppuccin');
+    });
+
+    it('Test C: sets data-theme when raw string is stored in dsm-theme-preference or settings', () => {
+      window.localStorage.setItem('dsm-theme-preference', 'graphite');
+      runThemeScript();
+      expect(document.documentElement.getAttribute('data-theme')).toBe('graphite');
+
+      document.documentElement.removeAttribute('data-theme');
+      window.localStorage.clear();
+      window.localStorage.setItem('dsm-theme-settings', 'graphite');
+      runThemeScript();
+      expect(document.documentElement.getAttribute('data-theme')).toBe('graphite');
+    });
+
+    it('Test D: leaves data-theme unset when localStorage is empty', () => {
+      runThemeScript();
+      expect(document.documentElement.getAttribute('data-theme')).toBeNull();
+    });
+
+    it('Test E: executes cleanly with zero unhandled exceptions when storage throws DOMException/SecurityError', () => {
+      vi.spyOn(window.localStorage, 'getItem').mockImplementation(() => {
+        throw new DOMException('The operation is insecure.', 'SecurityError');
+      });
+
+      expect(() => runThemeScript()).not.toThrow();
+      expect(document.documentElement.getAttribute('data-theme')).toBeNull();
+    });
+  });
+
   describe('GUARD-01: Critical Payload Budget Guard (< 4096 bytes)', () => {
-    it('keeps inline critical CSS and splash SVG markup under 4,096 bytes', () => {
+    it('keeps combined inline script, critical CSS, and splash SVG markup under 4,096 bytes', () => {
+      const scriptMarkup = scriptElement?.outerHTML ?? '';
       const styleMarkup = styleElement?.outerHTML ?? '';
       const splashMarkup = splashElement?.outerHTML ?? '';
-      const totalPayloadBytes = Buffer.byteLength(styleMarkup + splashMarkup, 'utf-8');
+      const totalPayloadBytes = Buffer.byteLength(
+        scriptMarkup + styleMarkup + splashMarkup,
+        'utf-8',
+      );
 
       // Must be non-trivial and strictly under the 4KB budget
       expect(totalPayloadBytes).toBeGreaterThan(500);
