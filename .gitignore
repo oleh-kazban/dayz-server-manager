@@ -16,6 +16,7 @@ tmp/
 .nx/
 *.tsbuildinfo
 .vite/
+apps/web/public/assets/content/
 
 # ==============================================================================
 # Test Coverage, Reports & Fixtures

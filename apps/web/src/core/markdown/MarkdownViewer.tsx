@@ -4,7 +4,8 @@ import { Search } from 'lucide-react';
 import { marked } from 'marked';
 
 import { EmptyState } from '@dsm/ui';
-import { filterMarkdownSections, sanitizeContent } from '@dsm/web/core';
+
+import { filterMarkdownSections, sanitizeContent } from './markdown.utils';
 
 export interface MarkdownViewerProps {
   content: string;
