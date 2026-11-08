@@ -208,7 +208,6 @@ function FaqModalDialog() {
             </kbd>{' '}
             to toggle documentation anytime
           </span>
-          <span>Source: static markdown build pipeline</span>
         </div>
       </div>
     </div>
