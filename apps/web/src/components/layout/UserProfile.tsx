@@ -34,6 +34,7 @@ export function UserProfile() {
     <div className="flex items-center justify-between pt-1 border-t border-[var(--color-border-subtle)]">
       <Link
         to="/profile"
+        search={() => ({})}
         title="View profile & preferences"
         className="flex items-center gap-2.5 min-w-0 hover:opacity-85 transition-opacity"
       >

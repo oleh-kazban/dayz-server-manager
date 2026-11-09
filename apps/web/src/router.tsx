@@ -19,10 +19,12 @@ import { type AuthContextValue, SignIn } from './features/auth';
 import { Dashboard } from './features/dashboard';
 import { ProfileView } from './features/profile';
 import { ServerSettingsView } from './features/server-settings';
+import { SteamSettingsView } from './features/steam';
 import {
   DEFAULT_MODULE_FLAGS,
   type FeatureFlagsContextValue,
   type ModuleFlags,
+  type NavigationScope,
   ROUTE_BREADCRUMBS,
 } from './core';
 
@@ -181,7 +183,7 @@ const maintenanceRoute = createRoute({
 const auditRoute = createRoute({
   getParentRoute: () => authedRoute,
   path: '/audit',
-  staticData: { breadcrumb: ROUTE_BREADCRUMBS['/audit'] },
+  staticData: { breadcrumb: ROUTE_BREADCRUMBS['/audit'], scope: 'appliance' },
   component: () => (
     <PlaceholderView
       title="Audit Event Stream"
@@ -325,7 +327,7 @@ const economySpawnsRoute = createRoute({
 const profileRoute = createRoute({
   getParentRoute: () => authedRoute,
   path: '/profile',
-  staticData: { breadcrumb: ROUTE_BREADCRUMBS['/profile'] },
+  staticData: { breadcrumb: ROUTE_BREADCRUMBS['/profile'], scope: 'user' },
   component: ProfileView,
 });
 
@@ -334,21 +336,33 @@ const settingsIndexRoute = createRoute({
   getParentRoute: () => authedRoute,
   path: '/settings',
   beforeLoad: () => {
-    throw redirect({ to: '/settings/server' });
+    throw redirect({ to: '/settings/steam' });
   },
 });
 
 const settingsServerRoute = createRoute({
   getParentRoute: () => authedRoute,
   path: '/settings/server',
-  staticData: { breadcrumb: ROUTE_BREADCRUMBS['/settings/server'] },
+  staticData: { breadcrumb: ROUTE_BREADCRUMBS['/settings/server'], scope: 'server' },
   component: ServerSettingsView,
+});
+
+const settingsSteamRoute = createRoute({
+  getParentRoute: () => authedRoute,
+  path: '/settings/steam',
+  staticData: { breadcrumb: ROUTE_BREADCRUMBS['/settings/steam'], scope: 'appliance' },
+  beforeLoad: ({ context }) => {
+    if (context?.auth?.user?.role !== 'admin') {
+      throw redirect({ to: '/dashboard' });
+    }
+  },
+  component: SteamSettingsView,
 });
 
 const settingsAppRoute = createRoute({
   getParentRoute: () => authedRoute,
   path: '/settings/app',
-  staticData: { breadcrumb: ROUTE_BREADCRUMBS['/settings/app'] },
+  staticData: { breadcrumb: ROUTE_BREADCRUMBS['/settings/app'], scope: 'appliance' },
   component: () => (
     <PlaceholderView
       title="DSM Appliance Settings"
@@ -360,7 +374,7 @@ const settingsAppRoute = createRoute({
 const settingsDiscordRoute = createRoute({
   getParentRoute: () => authedRoute,
   path: '/settings/discord',
-  staticData: { breadcrumb: ROUTE_BREADCRUMBS['/settings/discord'] },
+  staticData: { breadcrumb: ROUTE_BREADCRUMBS['/settings/discord'], scope: 'server' },
   beforeLoad: ({ context }) => {
     if (!context?.features?.isEnabled?.('discordNotifications')) {
       throw redirect({ to: '/dashboard' });
@@ -377,7 +391,7 @@ const settingsDiscordRoute = createRoute({
 const settingsOperatorsRoute = createRoute({
   getParentRoute: () => authedRoute,
   path: '/settings/operators',
-  staticData: { breadcrumb: ROUTE_BREADCRUMBS['/settings/operators'] },
+  staticData: { breadcrumb: ROUTE_BREADCRUMBS['/settings/operators'], scope: 'appliance' },
   beforeLoad: ({ context }) => {
     if (context?.auth?.user?.role !== 'admin') {
       throw redirect({ to: '/dashboard' });
@@ -439,6 +453,7 @@ const routeTree = rootRoute.addChildren([
     profileRoute,
     settingsIndexRoute,
     settingsServerRoute,
+    settingsSteamRoute,
     settingsAppRoute,
     settingsDiscordRoute,
     settingsOperatorsRoute,
@@ -470,5 +485,6 @@ declare module '@tanstack/react-router' {
   }
   interface StaticDataRouteOption {
     breadcrumb?: string;
+    scope?: NavigationScope;
   }
 }

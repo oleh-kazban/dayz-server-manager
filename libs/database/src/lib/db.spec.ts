@@ -31,7 +31,7 @@ describe('Database Initialization & Seeding', () => {
       expect(seededServers).toHaveLength(0);
 
       const migrations = instance.sqlite.prepare('SELECT * FROM _dsm_migrations').all();
-      expect(migrations).toHaveLength(3);
+      expect(migrations).toHaveLength(4);
     } finally {
       instance.close();
     }

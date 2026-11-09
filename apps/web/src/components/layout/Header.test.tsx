@@ -385,4 +385,66 @@ describe('Header', () => {
       expect(useFaqStore.getState().isOpen).toBe(false);
     });
   });
+
+  describe('Appliance Administration & Dual-Scope Breadcrumbs', () => {
+    it('renders the Appliance Administration gear link pointing to /settings/steam', () => {
+      renderHeader();
+
+      const gearLink = screen.getByRole('link', { name: 'Appliance administration' });
+      expect(gearLink).toBeInTheDocument();
+      expect(gearLink).toHaveAttribute('href', '/settings/steam');
+    });
+
+    it('renders appliance-scope breadcrumbs without active server name on appliance routes', () => {
+      mockLocation.pathname = '/settings/steam';
+      mockUseMatches.mockReturnValue([
+        { staticData: { scope: 'appliance', breadcrumb: 'Steam CMD & Workshop' } },
+      ]);
+
+      renderHeader();
+
+      const breadcrumbNav = screen.getByRole('navigation', { name: 'Breadcrumb' });
+      expect(breadcrumbNav).toBeInTheDocument();
+
+      // Renders Workspace root link
+      expect(screen.getByRole('link', { name: 'Workspace' })).toBeInTheDocument();
+
+      // Renders Appliance Administration breadcrumb link
+      const applianceLink = screen.getByRole('link', { name: 'Appliance Administration' });
+      expect(applianceLink).toBeInTheDocument();
+      expect(applianceLink).toHaveAttribute('href', '/settings/steam');
+
+      // Renders current page title
+      const currentPage = screen.getByText('Steam CMD & Workshop');
+      expect(currentPage).toBeInTheDocument();
+      expect(currentPage).toHaveAttribute('aria-current', 'page');
+
+      // Active server name is NOT rendered in appliance scope
+      expect(screen.queryByText('Chernarus Survival')).not.toBeInTheDocument();
+    });
+
+    it('renders user-scope breadcrumbs (Workspace > Operator profile) without active server name', () => {
+      mockLocation.pathname = '/profile';
+      mockUseMatches.mockReturnValue([
+        { staticData: { scope: 'user', breadcrumb: 'Operator profile' } },
+      ]);
+
+      renderHeader();
+
+      const breadcrumbNav = screen.getByRole('navigation', { name: 'Breadcrumb' });
+      expect(breadcrumbNav).toBeInTheDocument();
+
+      // Renders Workspace root link
+      expect(screen.getByRole('link', { name: 'Workspace' })).toBeInTheDocument();
+
+      // Renders current page title
+      const currentPage = screen.getByText('Operator profile');
+      expect(currentPage).toBeInTheDocument();
+      expect(currentPage).toHaveAttribute('aria-current', 'page');
+
+      // Active server name and 'Servers' are NOT rendered in user scope
+      expect(screen.queryByText('Chernarus Survival')).not.toBeInTheDocument();
+      expect(screen.queryByText('Servers')).not.toBeInTheDocument();
+    });
+  });
 });

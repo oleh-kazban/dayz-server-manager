@@ -1,17 +1,59 @@
 import { useEffect } from 'react';
 
 import { Link, useLocation, useMatches } from '@tanstack/react-router';
-import { Bell, ChevronRight, HelpCircle, Menu, Search } from 'lucide-react';
+import { Bell, ChevronRight, HelpCircle, Menu, Search, Settings } from 'lucide-react';
 
-import { useActiveServer, useLayoutStore } from '@aegis/web/core';
+import { useActiveServer, useLayoutStore, useNavigationContext } from '@aegis/web/core';
 import { FaqModal, ThemeToggleButton, useFaqStore } from '@aegis/web/features';
 
-function renderBreadcrumbTrail(
-  isLoading: boolean,
-  isDashboard: boolean,
-  activeServer: { id: string; name: string } | null,
-  subpageLabel?: string,
-) {
+interface BreadcrumbTrailProps {
+  isLoading: boolean;
+  isDashboard: boolean;
+  activeServer: { id: string; name: string } | null;
+  subpageLabel?: string;
+  scope: string;
+}
+
+function renderBreadcrumbTrail({
+  isLoading,
+  isDashboard,
+  activeServer,
+  subpageLabel,
+  scope,
+}: BreadcrumbTrailProps) {
+  if (scope === 'user') {
+    return (
+      <span aria-current="page" className="font-semibold text-[var(--color-text-main)] truncate">
+        {subpageLabel ?? 'Operator profile'}
+      </span>
+    );
+  }
+
+  if (scope === 'appliance') {
+    return (
+      <>
+        <Link
+          to="/settings/steam"
+          search={() => ({})}
+          className="text-[var(--color-text-secondary)] hover:text-[var(--color-text-main)] cursor-pointer transition-colors"
+        >
+          Appliance Administration
+        </Link>
+        {subpageLabel && subpageLabel !== 'Appliance Administration' && (
+          <>
+            <ChevronRight className="w-3 h-3 text-[var(--color-text-secondary)] shrink-0" />
+            <span
+              aria-current="page"
+              className="font-semibold text-[var(--color-text-main)] truncate"
+            >
+              {subpageLabel}
+            </span>
+          </>
+        )}
+      </>
+    );
+  }
+
   if (isLoading) {
     return (
       <>
@@ -117,6 +159,7 @@ function renderBreadcrumbTrail(
 export function Header() {
   const { isMobileSidebarOpen, toggleMobileSidebar } = useLayoutStore();
   const { activeServer, isLoading } = useActiveServer();
+  const { scope, isAppliance } = useNavigationContext();
   const { isOpen: isFaqOpen, toggleModal: toggleFaqModal } = useFaqStore();
   const location = useLocation();
   const matches = useMatches();
@@ -182,12 +225,18 @@ export function Header() {
             </Link>
             <ChevronRight className="w-3 h-3 text-[var(--color-text-secondary)] shrink-0" />
 
-            {renderBreadcrumbTrail(isLoading, isDashboard, activeServer, subpageLabel)}
+            {renderBreadcrumbTrail({
+              isLoading,
+              isDashboard,
+              activeServer,
+              subpageLabel,
+              scope,
+            })}
           </nav>
         </div>
 
-        {/* Header Controls: Search, Notifications, Help */}
-        <div className="flex items-center gap-3 sm:gap-5 shrink-0">
+        {/* Header Controls: Search, Notifications, Appliance Settings, Theme, Help */}
+        <div className="flex items-center gap-1.5 shrink-0">
           {/* Search Input Box */}
           <div className="hidden sm:flex items-center gap-2 w-48 md:w-56 px-3 py-1.5 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-subtle)] text-xs text-[var(--color-text-muted)] focus-within:border-[var(--color-primary)] transition-colors">
             <Search className="w-3.5 h-3.5 shrink-0" />
@@ -206,6 +255,21 @@ export function Header() {
             <Bell className="w-[19px] h-[19px]" />
             <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full bg-[var(--color-primary)] ring-2 ring-[var(--color-surface)]" />
           </button>
+
+          {/* Appliance Administration Gear */}
+          <Link
+            to="/settings/steam"
+            search={() => ({})}
+            aria-label="Appliance administration"
+            title="Appliance Administration"
+            className={`p-2 rounded-lg transition-colors cursor-pointer ${
+              isAppliance
+                ? 'bg-[var(--color-primary-light)] text-[var(--color-primary)]'
+                : 'text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-hover)] hover:text-[var(--color-text-main)]'
+            }`}
+          >
+            <Settings className="w-[19px] h-[19px]" />
+          </Link>
 
           <ThemeToggleButton />
           {/* Help / Docs */}

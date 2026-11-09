@@ -12,6 +12,10 @@ export function notifySuccess(
   return showToast.success(title, description, duration);
 }
 
+export function notifyInfo(title: string, description?: string, duration?: number): string {
+  return showToast.info(title, description, duration);
+}
+
 export function notifyApiError(
   error: unknown,
   fallbackTitle = 'Operation Failed',
