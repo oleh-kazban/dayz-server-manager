@@ -24,11 +24,15 @@
    Total duration: 8 seconds
    ========================================= */
 
-.aegis-logo.is-loading .aegis-logo__tent {
+.aegis-logo.is-loading .aegis-logo__tent,
+.aegis-logo.animate-on-hover:hover .aegis-logo__tent,
+.group:hover .aegis-logo.animate-on-hover .aegis-logo__tent {
   animation: aegis-tent-loading 8s infinite;
 }
 
-.aegis-logo.is-loading .aegis-logo__bridge {
+.aegis-logo.is-loading .aegis-logo__bridge,
+.aegis-logo.animate-on-hover:hover .aegis-logo__bridge,
+.group:hover .aegis-logo.animate-on-hover .aegis-logo__bridge {
   animation: aegis-bridge-loading 8s infinite;
 }
 
@@ -83,7 +87,11 @@
    ========================================= */
 @media (prefers-reduced-motion: reduce) {
   .aegis-logo.is-loading .aegis-logo__tent,
-  .aegis-logo.is-loading .aegis-logo__bridge {
+  .aegis-logo.is-loading .aegis-logo__bridge,
+  .aegis-logo.animate-on-hover:hover .aegis-logo__tent,
+  .aegis-logo.animate-on-hover:hover .aegis-logo__bridge,
+  .group:hover .aegis-logo.animate-on-hover .aegis-logo__tent,
+  .group:hover .aegis-logo.animate-on-hover .aegis-logo__bridge {
     animation: none;
   }
 }

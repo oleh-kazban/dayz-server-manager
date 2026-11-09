@@ -4,6 +4,7 @@ export interface LogoProps extends ComponentPropsWithoutRef<'svg'> {
   mainColor?: string;
   secondaryColor?: string;
   isLoading?: boolean;
+  animateOnHover?: boolean;
 }
 
 export function Logo({
@@ -11,9 +12,15 @@ export function Logo({
   mainColor = 'var(--color-text-main, #1a2a46)',
   secondaryColor = 'var(--color-text-secondary, #273962)',
   isLoading = false,
+  animateOnHover = false,
   ...props
 }: LogoProps) {
-  const rootClassName = ['aegis-logo', isLoading ? 'is-loading' : '', className]
+  const rootClassName = [
+    'aegis-logo',
+    isLoading ? 'is-loading' : '',
+    animateOnHover ? 'animate-on-hover' : '',
+    className,
+  ]
     .filter(Boolean)
     .join(' ');
 

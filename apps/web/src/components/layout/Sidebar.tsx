@@ -193,8 +193,8 @@ export function Sidebar() {
           >
             {/* Header with Logo and Close Button */}
             <div className="flex items-center justify-between px-1 py-1 mb-5">
-              <div className="flex items-center gap-2.5">
-                <Logo className="w-[30px] h-[31px] shrink-0" />
+              <div className="flex items-center gap-2.5 group cursor-pointer">
+                <Logo className="w-[30px] h-[31px] shrink-0" animateOnHover />
                 <div className="flex flex-col leading-none">
                   <span className="font-semibold text-[18px] tracking-tight text-[var(--color-text-main)]">
                     OUTLIVE
@@ -231,8 +231,8 @@ export function Sidebar() {
         aria-label="Primary Navigation"
         className="hidden lg:flex w-[228px] min-w-[228px] max-w-[228px] flex-col justify-between border-r border-[var(--color-border)] bg-[var(--color-sidebar)] h-screen sticky top-0 shrink-0 p-4 transition-all duration-300 z-30 select-none overflow-y-auto"
       >
-        <div className="flex items-center gap-2.5 px-1 py-1 mb-5">
-          <Logo className="w-[30px] h-[31px] shrink-0" />
+        <div className="flex items-center gap-2.5 px-1 py-1 mb-5 group cursor-pointer">
+          <Logo className="w-[30px] h-[31px] shrink-0" animateOnHover />
           <div className="flex flex-col leading-none">
             <span className="font-semibold text-[18px] tracking-tight text-[var(--color-text-main)]">
               OUTLIVE
