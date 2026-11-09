@@ -33,6 +33,9 @@ export function createSteamEndpoint(client: HttpClient) {
     clearSession: (): Promise<{ success: boolean; message?: string }> =>
       client.post('/api/v1/settings/steam/session/clear', sessionClearResponseSchema),
 
+    loginSession: (): Promise<{ success: boolean; message?: string }> =>
+      client.post('/api/v1/settings/steam/session/login', sessionClearResponseSchema),
+
     respondChallenge: (
       dto: SteamChallengeResponseDto,
     ): Promise<{ success: boolean; message?: string }> =>

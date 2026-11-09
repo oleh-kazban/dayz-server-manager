@@ -25,6 +25,7 @@ import { PageContainer } from '@aegis/web/components';
 import {
   extractApiFieldErrors,
   notifyApiError,
+  notifyInfo,
   notifySuccess,
   resolveFieldErrors,
 } from '../../core';
@@ -111,6 +112,8 @@ interface SteamSettingsFormProps {
   settings: SteamSettingsDto;
   onClearSession: () => void;
   isClearingSession: boolean;
+  onLoginSession: () => void;
+  isLoggingIn: boolean;
   onRunDiagnostics: () => void;
   isRunningDiagnostics: boolean;
 }
@@ -119,6 +122,8 @@ function SteamSettingsForm({
   settings,
   onClearSession,
   isClearingSession,
+  onLoginSession,
+  isLoggingIn,
   onRunDiagnostics,
   isRunningDiagnostics,
 }: SteamSettingsFormProps) {
@@ -261,7 +266,7 @@ function SteamSettingsForm({
       </div>
 
       {/* Session Status Banner */}
-      <div className="flex items-center justify-between p-4 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-[var(--shadow-card)]">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-[var(--shadow-card)]">
         <div className="flex items-center gap-3">
           <div className="p-2.5 rounded-xl bg-[var(--color-primary-subtle)] text-[var(--color-primary)]">
             <RefreshCw className="w-5 h-5" />
@@ -276,7 +281,30 @@ function SteamSettingsForm({
             </div>
           </div>
         </div>
-        <div>{getSessionBadge(settings.sessionStatus)}</div>
+        <div className="flex flex-wrap items-center gap-3">
+          {getSessionBadge(settings.sessionStatus)}
+          {settings.authMode === 'account' &&
+            settings.hasPassword &&
+            (settings.sessionStatus === 'AUTHENTICATED' ? (
+              <Button
+                variant="secondary"
+                leftIcon={Trash2}
+                onClick={onClearSession}
+                isLoading={isClearingSession}
+              >
+                Clear Session
+              </Button>
+            ) : (
+              <Button
+                variant="primary"
+                leftIcon={KeyRound}
+                onClick={onLoginSession}
+                isLoading={isLoggingIn}
+              >
+                Authenticate Session
+              </Button>
+            ))}
+        </div>
       </div>
 
       {/* Form Grid: 3 Cards */}
@@ -573,6 +601,19 @@ export function SteamSettingsView() {
     },
   });
 
+  const loginSessionMutation = useMutation({
+    mutationFn: () => apiClient.steam.loginSession(),
+    onSuccess: () => {
+      notifyInfo(
+        'Authentication Initiated',
+        'SteamCMD is establishing an authenticated session. Follow any Steam Guard prompts on your screen or mobile device.',
+      );
+    },
+    onError: (err: Error) => {
+      notifyApiError(err, 'Failed to Initiate Steam Login');
+    },
+  });
+
   const diagMutation = useMutation({
     mutationFn: () => apiClient.steam.runDiagnostics(),
     onSuccess: result => {
@@ -593,6 +634,8 @@ export function SteamSettingsView() {
           settings={settings}
           onClearSession={() => clearSessionMutation.mutate()}
           isClearingSession={clearSessionMutation.isPending}
+          onLoginSession={() => loginSessionMutation.mutate()}
+          isLoggingIn={loginSessionMutation.isPending}
           onRunDiagnostics={() => diagMutation.mutate()}
           isRunningDiagnostics={diagMutation.isPending}
         />

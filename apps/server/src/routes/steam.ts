@@ -330,6 +330,60 @@ export const registerSteamRoutes: FastifyPluginAsync = async fastify => {
     },
   );
 
+  // POST /api/v1/settings/steam/session/login
+  fastify.post(
+    '/session/login',
+    {
+      onRequest: [fastify.authenticate],
+    },
+    async (request, reply) => {
+      if (!ensureAdminRole(request, reply, 'Admin role required to authenticate Steam session')) {
+        return;
+      }
+
+      const current = getOrCreateDefaultSettings(fastify);
+      if (current.authMode !== 'account' || !current.steamUsername) {
+        return sendApiError(reply, 400, 'STEAM_USERNAME_REQUIRED', {
+          message:
+            'Dedicated Steam account mode and username are required to initiate authentication.',
+        });
+      }
+
+      if (!current.steamPasswordEncrypted) {
+        return sendApiError(reply, 400, 'VALIDATION_FAILED', {
+          message:
+            'No Steam account password stored in vault. Save credentials before authenticating.',
+        });
+      }
+
+      const vaultKey = resolveVaultKey();
+      try {
+        await steamRunnerService.spawnAuthenticatedLogin(current, vaultKey, status => {
+          fastify.db
+            .update(steamSettings)
+            .set({
+              sessionStatus: status,
+              updatedAt: new Date(),
+            })
+            .where(eq(steamSettings.id, 'default'))
+            .run();
+        });
+
+        return reply.send({ success: true, message: 'Authentication process initiated.' });
+      } catch (err: unknown) {
+        const error = err as { errorCode?: ApiErrorCode; message?: string };
+        if (error.errorCode === 'TASK_CONCURRENCY_CONFLICT') {
+          return sendApiError(reply, 409, 'TASK_CONCURRENCY_CONFLICT', {
+            message: error.message ?? 'Another Steam task is already in progress.',
+          });
+        }
+        return sendApiError(reply, 500, 'INTERNAL_SERVER_ERROR', {
+          message: (err as Error).message,
+        });
+      }
+    },
+  );
+
   // POST /api/v1/settings/steam/challenge/respond
   fastify.post(
     '/challenge/respond',

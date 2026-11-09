@@ -49,6 +49,7 @@ vi.mock('@aegis/api-client', async importOriginal => {
         getSettings: vi.fn(),
         updateSettings: vi.fn(),
         clearSession: vi.fn(),
+        loginSession: vi.fn(),
         respondChallenge: vi.fn(),
         abortChallenge: vi.fn(),
         runDiagnostics: vi.fn(),
@@ -90,6 +91,10 @@ describe('SteamSettingsView (REQ-01, REQ-02, REQ-03, REQ-04, REQ-07)', () => {
     vi.mocked(apiClient.steam.clearSession).mockResolvedValue({
       success: true,
       message: 'Cleared',
+    });
+    vi.mocked(apiClient.steam.loginSession).mockResolvedValue({
+      success: true,
+      message: 'Initiated',
     });
     vi.mocked(apiClient.steam.runDiagnostics).mockResolvedValue({ ...mockDiagnosticsResult });
   });
@@ -267,5 +272,29 @@ describe('SteamSettingsView (REQ-01, REQ-02, REQ-03, REQ-04, REQ-07)', () => {
     });
 
     expect(screen.getByText('[INFO] Probe test log entry')).toBeInTheDocument();
+  });
+
+  it('triggers login session mutation when clicking Authenticate Session button', async () => {
+    vi.mocked(apiClient.steam.getSettings).mockResolvedValue({
+      ...mockDefaultSettings,
+      authMode: 'account',
+      steamUsername: 'dayz_operator',
+      hasPassword: true,
+      sessionStatus: 'UNAUTHENTICATED',
+    });
+
+    renderView();
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'Authenticate Session' })).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Authenticate Session' }));
+
+    await waitFor(() => {
+      expect(apiClient.steam.loginSession).toHaveBeenCalled();
+    });
+
+    expect(showToast.info).toHaveBeenCalled();
   });
 });

@@ -322,6 +322,68 @@ describe('Steam Routes (/api/v1/settings/steam)', () => {
     });
   });
 
+  describe('POST /api/v1/settings/steam/session/login', () => {
+    it('returns 400 STEAM_USERNAME_REQUIRED if authMode is not account', async () => {
+      dbInstance.db
+        .update(steamSettings)
+        .set({ authMode: 'anonymous' })
+        .where(eq(steamSettings.id, 'default'))
+        .run();
+
+      const res = await app.inject({
+        method: 'POST',
+        url: '/api/v1/settings/steam/session/login',
+        headers: { authorization: `Bearer ${adminToken}` },
+      });
+
+      expect(res.statusCode).toBe(400);
+      expect(res.json().errorCode).toBe('STEAM_USERNAME_REQUIRED');
+    });
+
+    it('returns 400 VALIDATION_FAILED if password is not saved', async () => {
+      dbInstance.db
+        .update(steamSettings)
+        .set({ authMode: 'account', steamUsername: 'admin_user', steamPasswordEncrypted: null })
+        .where(eq(steamSettings.id, 'default'))
+        .run();
+
+      const res = await app.inject({
+        method: 'POST',
+        url: '/api/v1/settings/steam/session/login',
+        headers: { authorization: `Bearer ${adminToken}` },
+      });
+
+      expect(res.statusCode).toBe(400);
+      expect(res.json().errorCode).toBe('VALIDATION_FAILED');
+    });
+
+    it('successfully spawns authenticated login workflow', async () => {
+      dbInstance.db
+        .update(steamSettings)
+        .set({
+          authMode: 'account',
+          steamUsername: 'admin_user',
+          steamPasswordEncrypted: 'mock-encrypted-password',
+        })
+        .where(eq(steamSettings.id, 'default'))
+        .run();
+
+      const spawnSpy = vi
+        .spyOn(steamRunnerService, 'spawnAuthenticatedLogin')
+        .mockResolvedValue(undefined);
+
+      const res = await app.inject({
+        method: 'POST',
+        url: '/api/v1/settings/steam/session/login',
+        headers: { authorization: `Bearer ${adminToken}` },
+      });
+
+      expect(res.statusCode).toBe(200);
+      expect(res.json().success).toBe(true);
+      expect(spawnSpy).toHaveBeenCalled();
+    });
+  });
+
   describe('POST /api/v1/settings/steam/challenge/respond (REQ-06, GUARD-02)', () => {
     it('rejects invalid OTP code format with 400 VALIDATION_FAILED', async () => {
       const res = await app.inject({
