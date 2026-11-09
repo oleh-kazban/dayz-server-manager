@@ -8,9 +8,12 @@ import {
   getNavigationScope,
   getNavigationSections,
   isApplianceRoute,
+  isServerRoute,
+  isUserRoute,
   NAVIGATION_SECTIONS,
   ROUTE_BREADCRUMBS,
   SERVER_NAVIGATION_SECTIONS,
+  USER_NAVIGATION_SECTIONS,
 } from './navigation.config';
 
 interface InspectableRouteNode {
@@ -94,12 +97,42 @@ describe('Navigation & Breadcrumb Manifest (ARCH-01 Zero Drift)', () => {
     expect(isApplianceRoute('/settings/server')).toBe(false);
     expect(isApplianceRoute('/settings/discord')).toBe(false);
     expect(isApplianceRoute('/players')).toBe(false);
+    expect(isApplianceRoute('/profile')).toBe(false);
+
+    expect(isUserRoute('/profile')).toBe(true);
+    expect(isUserRoute('/profile/details')).toBe(true);
+    expect(isUserRoute('/dashboard')).toBe(false);
+
+    expect(isServerRoute('/dashboard')).toBe(true);
+    expect(isServerRoute('/settings/server')).toBe(true);
+    expect(isServerRoute('/settings/steam')).toBe(false);
+    expect(isServerRoute('/profile')).toBe(false);
 
     expect(getNavigationScope('/settings/steam')).toBe('appliance');
+    expect(getNavigationScope('/profile')).toBe('user');
     expect(getNavigationScope('/dashboard')).toBe('server');
 
     expect(getNavigationSections('appliance')).toBe(APPLIANCE_NAVIGATION_SECTIONS);
+    expect(getNavigationSections('user')).toBe(USER_NAVIGATION_SECTIONS);
     expect(getNavigationSections('server')).toBe(SERVER_NAVIGATION_SECTIONS);
+  });
+
+  it('ensures every item in USER_NAVIGATION_SECTIONS references a valid ROUTE_BREADCRUMBS key with matching label', () => {
+    const seenSectionIds = new Set<string>();
+    const seenPaths = new Set<string>();
+
+    for (const section of USER_NAVIGATION_SECTIONS) {
+      expect(seenSectionIds.has(section.id)).toBe(false);
+      seenSectionIds.add(section.id);
+      expect(section.items.length).toBeGreaterThan(0);
+
+      for (const item of section.items) {
+        expect(seenPaths.has(item.to)).toBe(false);
+        seenPaths.add(item.to);
+        expect(item.to in ROUTE_BREADCRUMBS).toBe(true);
+        expect(item.label).toBe(ROUTE_BREADCRUMBS[item.to]);
+      }
+    }
   });
 
   it('ensures every item in APPLIANCE_NAVIGATION_SECTIONS references a valid ROUTE_BREADCRUMBS key with matching label', () => {

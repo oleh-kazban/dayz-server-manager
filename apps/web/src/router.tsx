@@ -327,7 +327,7 @@ const economySpawnsRoute = createRoute({
 const profileRoute = createRoute({
   getParentRoute: () => authedRoute,
   path: '/profile',
-  staticData: { breadcrumb: ROUTE_BREADCRUMBS['/profile'] },
+  staticData: { breadcrumb: ROUTE_BREADCRUMBS['/profile'], scope: 'user' },
   component: ProfileView,
 });
 

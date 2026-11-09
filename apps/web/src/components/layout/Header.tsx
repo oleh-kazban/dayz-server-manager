@@ -11,7 +11,7 @@ interface BreadcrumbTrailProps {
   isDashboard: boolean;
   activeServer: { id: string; name: string } | null;
   subpageLabel?: string;
-  isAppliance?: boolean;
+  scope: string;
 }
 
 function renderBreadcrumbTrail({
@@ -19,9 +19,17 @@ function renderBreadcrumbTrail({
   isDashboard,
   activeServer,
   subpageLabel,
-  isAppliance,
+  scope,
 }: BreadcrumbTrailProps) {
-  if (isAppliance) {
+  if (scope === 'user') {
+    return (
+      <span aria-current="page" className="font-semibold text-[var(--color-text-main)] truncate">
+        {subpageLabel ?? 'Operator profile'}
+      </span>
+    );
+  }
+
+  if (scope === 'appliance') {
     return (
       <>
         <Link
@@ -151,7 +159,7 @@ function renderBreadcrumbTrail({
 export function Header() {
   const { isMobileSidebarOpen, toggleMobileSidebar } = useLayoutStore();
   const { activeServer, isLoading } = useActiveServer();
-  const { isAppliance } = useNavigationContext();
+  const { scope, isAppliance } = useNavigationContext();
   const { isOpen: isFaqOpen, toggleModal: toggleFaqModal } = useFaqStore();
   const location = useLocation();
   const matches = useMatches();
@@ -222,7 +230,7 @@ export function Header() {
               isDashboard,
               activeServer,
               subpageLabel,
-              isAppliance,
+              scope,
             })}
           </nav>
         </div>

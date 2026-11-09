@@ -10,12 +10,13 @@ import {
 export interface UseNavigationContextResult {
   scope: NavigationScope;
   isAppliance: boolean;
+  isUser: boolean;
   sections: NavigationSectionConfig[];
   searchPolicy: 'preserve-server' | 'clear-all';
 }
 
 /**
- * Resolves active navigation context (Server Scope vs. Appliance Scope)
+ * Resolves active navigation context (Server Scope vs. Appliance Scope vs. User Scope)
  * based on active TanStack Router staticData metadata, falling back to URL heuristics.
  */
 export function useNavigationContext(): UseNavigationContextResult {
@@ -29,12 +30,14 @@ export function useNavigationContext(): UseNavigationContextResult {
 
   const scope: NavigationScope = matchedScope ?? getNavigationScope(pathname);
   const isAppliance = scope === 'appliance';
+  const isUser = scope === 'user';
   const sections = getNavigationSections(scope);
 
   return {
     scope,
     isAppliance,
+    isUser,
     sections,
-    searchPolicy: isAppliance ? 'clear-all' : 'preserve-server',
+    searchPolicy: scope === 'server' ? 'preserve-server' : 'clear-all',
   };
 }

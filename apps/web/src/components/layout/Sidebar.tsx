@@ -55,10 +55,10 @@ function SidebarContent({
   linkInactiveClasses,
   onNavigate,
 }: SidebarContentProps) {
-  const isAppliance = scope === 'appliance';
+  const isServer = scope === 'server';
 
   const resolveItemSearch = () => {
-    if (isAppliance) {
+    if (!isServer) {
       return () => ({});
     }
     if (activeServer) {
@@ -71,8 +71,8 @@ function SidebarContent({
   return (
     <>
       <div className="space-y-5">
-        {/* Top Control: Node Selector (Server Scope) vs. Back to Server Button (Appliance Scope) */}
-        {isAppliance ? (
+        {/* Top Control: Node Selector (Server Scope) vs. Back to Server Button (Appliance & User Scope) */}
+        {!isServer ? (
           <Link
             to="/dashboard"
             search={activeServer ? { serverId: activeServer.id } : undefined}
@@ -83,7 +83,7 @@ function SidebarContent({
             <ArrowLeft className="w-4 h-4 shrink-0 text-[var(--color-primary)] transition-transform group-hover:-translate-x-0.5" />
             <div className="flex flex-col min-w-0">
               <span className="text-[9px] font-semibold tracking-wider text-[var(--color-text-muted)] uppercase">
-                Console Scope
+                {scope === 'user' ? 'Operator Scope' : 'Console Scope'}
               </span>
               <span className="font-semibold text-[var(--color-text-main)] truncate text-xs">
                 {activeServer ? activeServer.name : 'Server Console'}

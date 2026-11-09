@@ -179,4 +179,34 @@ describe('useActiveServer', () => {
 
     expect(navigateMock).not.toHaveBeenCalled();
   });
+
+  it('strips serverId from URL search params when mounted on a user route (/profile)', async () => {
+    mockLocation.pathname = '/profile';
+    vi.mocked(useSearch).mockReturnValue({ serverId: '11111111-1111-1111-1111-111111111111' });
+
+    const { result } = renderHook(() => useActiveServer(), { wrapper });
+
+    await vi.waitFor(() => {
+      expect(result.current.isLoading).toBe(false);
+    });
+
+    expect(navigateMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        replace: true,
+      }),
+    );
+  });
+
+  it('does not inject serverId into URL when on a user route (/profile) without serverId', async () => {
+    mockLocation.pathname = '/profile';
+    vi.mocked(useSearch).mockReturnValue({});
+
+    const { result } = renderHook(() => useActiveServer(), { wrapper });
+
+    await vi.waitFor(() => {
+      expect(result.current.isLoading).toBe(false);
+    });
+
+    expect(navigateMock).not.toHaveBeenCalled();
+  });
 });

@@ -5,7 +5,7 @@ import { useLocation, useNavigate, useSearch } from '@tanstack/react-router';
 
 import type { ServerSummaryDto } from '@aegis/api-contracts';
 
-import { isApplianceRoute } from '../navigation';
+import { isServerRoute } from '../navigation';
 
 import { serverQueries } from './server.queries';
 
@@ -31,7 +31,7 @@ export function useActiveServer(): UseActiveServerResult {
 
   const location = useLocation();
   const pathname = location?.pathname ?? '';
-  const isAppliance = isApplianceRoute(pathname);
+  const isServer = isServerRoute(pathname);
 
   const navigate = useNavigate();
 
@@ -48,7 +48,7 @@ export function useActiveServer(): UseActiveServerResult {
   useEffect(() => {
     if (isLoading) return;
 
-    if (isAppliance) {
+    if (!isServer) {
       if (searchServerId) {
         navigate({
           search: ((prev: Record<string, unknown>) => {
@@ -80,7 +80,7 @@ export function useActiveServer(): UseActiveServerResult {
         replace: true,
       });
     }
-  }, [isLoading, isAppliance, activeServer, searchServerId, navigate]);
+  }, [isLoading, isServer, activeServer, searchServerId, navigate]);
 
   const setActiveServerId = (id: string) => {
     navigate({

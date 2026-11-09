@@ -6,6 +6,7 @@ import {
   getNavigationScope,
   isApplianceRoute,
   SERVER_NAVIGATION_SECTIONS,
+  USER_NAVIGATION_SECTIONS,
 } from './navigation.config';
 import { useNavigationContext } from './useNavigationContext';
 
@@ -50,8 +51,24 @@ describe('useNavigationContext', () => {
 
       expect(result.current.scope).toBe('server');
       expect(result.current.isAppliance).toBe(false);
+      expect(result.current.isUser).toBe(false);
       expect(result.current.searchPolicy).toBe('preserve-server');
       expect(result.current.sections).toEqual(SERVER_NAVIGATION_SECTIONS);
+    });
+
+    it('extracts scope: "user" when provided in staticData', () => {
+      mockUseMatches.mockReturnValue([
+        { staticData: { scope: 'user', breadcrumb: 'Operator profile' } },
+      ]);
+      mockUseLocation.mockReturnValue({ pathname: '/profile' });
+
+      const { result } = renderHook(() => useNavigationContext());
+
+      expect(result.current.scope).toBe('user');
+      expect(result.current.isAppliance).toBe(false);
+      expect(result.current.isUser).toBe(true);
+      expect(result.current.searchPolicy).toBe('clear-all');
+      expect(result.current.sections).toEqual(USER_NAVIGATION_SECTIONS);
     });
 
     it('prioritizes leaf route staticData when multiple matches exist', () => {

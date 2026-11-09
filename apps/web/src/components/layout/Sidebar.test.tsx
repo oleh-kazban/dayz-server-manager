@@ -9,6 +9,7 @@ import {
   FeatureFlagsProvider,
   SERVER_NAVIGATION_SECTIONS,
   useLayoutStore,
+  USER_NAVIGATION_SECTIONS,
 } from '@aegis/web/core';
 import { AuthProvider } from '@aegis/web/features/auth';
 import { authStorage } from '@aegis/web/features/auth/auth.storage';
@@ -314,6 +315,35 @@ describe('Sidebar', () => {
       // Non-admin links remain visible
       expect(screen.getByRole('link', { name: /appliance settings/i })).toBeInTheDocument();
       expect(screen.getByRole('link', { name: /audit log/i })).toBeInTheDocument();
+    });
+  });
+
+  describe('User Scope Rendering', () => {
+    beforeEach(() => {
+      mockUseNavigationContext.mockReturnValue({
+        scope: 'user',
+        isAppliance: false,
+        isUser: true,
+        sections: USER_NAVIGATION_SECTIONS,
+        searchPolicy: 'clear-all',
+      });
+      mockLocation.pathname = '/profile';
+    });
+
+    it('renders back button [ ← activeServer.name ] with Operator Scope label and Account section', () => {
+      renderSidebar();
+
+      const backButton = screen.getByRole('link', { name: 'Back to server console' });
+      expect(backButton).toBeInTheDocument();
+      expect(backButton).toHaveAttribute('href', '/dashboard');
+      expect(within(backButton).getByText('Operator Scope')).toBeInTheDocument();
+      expect(within(backButton).getByText('dayz (local)')).toBeInTheDocument();
+
+      expect(screen.getByText('Account')).toBeInTheDocument();
+      const profileLink = screen.getByRole('link', { name: /operator profile/i });
+      expect(profileLink).toBeInTheDocument();
+      expect(profileLink).toHaveAttribute('href', '/profile');
+      expect(profileLink).toHaveAttribute('data-search', '{}');
     });
   });
 

@@ -422,5 +422,29 @@ describe('Header', () => {
       // Active server name is NOT rendered in appliance scope
       expect(screen.queryByText('Chernarus Survival')).not.toBeInTheDocument();
     });
+
+    it('renders user-scope breadcrumbs (Workspace > Operator profile) without active server name', () => {
+      mockLocation.pathname = '/profile';
+      mockUseMatches.mockReturnValue([
+        { staticData: { scope: 'user', breadcrumb: 'Operator profile' } },
+      ]);
+
+      renderHeader();
+
+      const breadcrumbNav = screen.getByRole('navigation', { name: 'Breadcrumb' });
+      expect(breadcrumbNav).toBeInTheDocument();
+
+      // Renders Workspace root link
+      expect(screen.getByRole('link', { name: 'Workspace' })).toBeInTheDocument();
+
+      // Renders current page title
+      const currentPage = screen.getByText('Operator profile');
+      expect(currentPage).toBeInTheDocument();
+      expect(currentPage).toHaveAttribute('aria-current', 'page');
+
+      // Active server name and 'Servers' are NOT rendered in user scope
+      expect(screen.queryByText('Chernarus Survival')).not.toBeInTheDocument();
+      expect(screen.queryByText('Servers')).not.toBeInTheDocument();
+    });
   });
 });

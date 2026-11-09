@@ -12,6 +12,7 @@ import {
   ShieldCheck,
   Sliders,
   Terminal,
+  User,
   UserCheck,
   Users,
   Wrench,
@@ -42,7 +43,7 @@ export type AppRoutePath =
   | '/settings/automation'
   | '/settings/backups';
 
-export type NavigationScope = 'server' | 'appliance';
+export type NavigationScope = 'server' | 'appliance' | 'user';
 
 export const APPLIANCE_ROUTE_PREFIXES: AppRoutePath[] = [
   '/settings/steam',
@@ -51,13 +52,26 @@ export const APPLIANCE_ROUTE_PREFIXES: AppRoutePath[] = [
   '/audit',
 ];
 
+export const USER_ROUTE_PREFIXES: AppRoutePath[] = ['/profile'];
+
 export function isApplianceRoute(pathname: string): boolean {
   return APPLIANCE_ROUTE_PREFIXES.some(
     route => pathname === route || pathname.startsWith(`${route}/`),
   );
 }
 
+export function isUserRoute(pathname: string): boolean {
+  return USER_ROUTE_PREFIXES.some(route => pathname === route || pathname.startsWith(`${route}/`));
+}
+
+export function isServerRoute(pathname: string): boolean {
+  return !isApplianceRoute(pathname) && !isUserRoute(pathname);
+}
+
 export function getNavigationScope(pathname: string): NavigationScope {
+  if (isUserRoute(pathname)) {
+    return 'user';
+  }
   return isApplianceRoute(pathname) ? 'appliance' : 'server';
 }
 
@@ -241,8 +255,31 @@ export const APPLIANCE_NAVIGATION_SECTIONS: NavigationSectionConfig[] = [
   },
 ];
 
+export const USER_NAVIGATION_SECTIONS: NavigationSectionConfig[] = [
+  {
+    id: 'account',
+    title: 'Account',
+    ariaLabel: 'Account Navigation',
+    items: [
+      {
+        to: '/profile',
+        label: ROUTE_BREADCRUMBS['/profile'],
+        icon: User,
+      },
+    ],
+  },
+];
+
 export const NAVIGATION_SECTIONS = SERVER_NAVIGATION_SECTIONS;
 
 export function getNavigationSections(scope: NavigationScope): NavigationSectionConfig[] {
-  return scope === 'appliance' ? APPLIANCE_NAVIGATION_SECTIONS : SERVER_NAVIGATION_SECTIONS;
+  switch (scope) {
+    case 'appliance':
+      return APPLIANCE_NAVIGATION_SECTIONS;
+    case 'user':
+      return USER_NAVIGATION_SECTIONS;
+    case 'server':
+    default:
+      return SERVER_NAVIGATION_SECTIONS;
+  }
 }
