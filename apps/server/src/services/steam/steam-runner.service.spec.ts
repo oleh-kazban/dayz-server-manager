@@ -121,6 +121,18 @@ describe('SteamRunnerService (apps/server/src/services/steam)', () => {
       expect(result.success).toBe(true);
       expect(result.clearedCount).toBe(0);
     });
+
+    it('throws SESSION_CLEAR_FAILED when filesystem operation throws an error', () => {
+      const readdirSpy = vi.spyOn(fs, 'readdirSync').mockImplementation(() => {
+        throw new Error('EACCES: permission denied');
+      });
+
+      expect(() => runner.clearSessionTokens(tempMetaDir)).toThrow(
+        'Failed to clear session tokens',
+      );
+
+      readdirSpy.mockRestore();
+    });
   });
 
   describe('2FA Challenge Detection & Dispatch (REQ-05, REQ-06)', () => {
@@ -291,6 +303,12 @@ describe('SteamRunnerService (apps/server/src/services/steam)', () => {
 
       mockProc.emit('close', 0);
       await loginPromise;
+    });
+
+    it('throws CHALLENGE_NOT_FOUND_OR_EXPIRED when aborting unknown challengeId', () => {
+      expect(() => runner.abortChallenge('unknown-challenge-uuid')).toThrow(
+        'Challenge session not found or has expired.',
+      );
     });
 
     it('enforces concurrency lock: rejects concurrent runs with TASK_CONCURRENCY_CONFLICT', async () => {
