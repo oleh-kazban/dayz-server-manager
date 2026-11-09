@@ -341,5 +341,53 @@ describe('Sidebar', () => {
 
       expect(useLayoutStore.getState().isMobileSidebarOpen).toBe(false);
     });
+
+    it('renders brand header logo with animate-on-hover class and group wrapper in mobile drawer', () => {
+      const { container } = render(
+        <AuthProvider>
+          <FeatureFlagsProvider>
+            <Sidebar />
+          </FeatureFlagsProvider>
+        </AuthProvider>,
+      );
+
+      act(() => {
+        useLayoutStore.getState().openMobileSidebar();
+      });
+
+      const mobileDrawer = container.querySelector('#mobile-sidebar');
+      expect(mobileDrawer).toBeInTheDocument();
+
+      const logoSvg = mobileDrawer?.querySelector('svg.aegis-logo');
+      expect(logoSvg).toBeInTheDocument();
+      expect(logoSvg).toHaveClass('animate-on-hover');
+      expect(logoSvg).not.toHaveClass('is-loading');
+
+      const brandWrapper = logoSvg?.closest('.group');
+      expect(brandWrapper).toBeInTheDocument();
+      expect(brandWrapper).toHaveClass('cursor-pointer');
+    });
+  });
+
+  it('renders brand header logo with animate-on-hover class and group wrapper in desktop sidebar', () => {
+    const { container } = render(
+      <AuthProvider>
+        <FeatureFlagsProvider>
+          <Sidebar />
+        </FeatureFlagsProvider>
+      </AuthProvider>,
+    );
+
+    const desktopSidebar = container.querySelector('#app-sidebar');
+    expect(desktopSidebar).toBeInTheDocument();
+
+    const logoSvg = desktopSidebar?.querySelector('svg.aegis-logo');
+    expect(logoSvg).toBeInTheDocument();
+    expect(logoSvg).toHaveClass('animate-on-hover');
+    expect(logoSvg).not.toHaveClass('is-loading');
+
+    const brandWrapper = logoSvg?.closest('.group');
+    expect(brandWrapper).toBeInTheDocument();
+    expect(brandWrapper).toHaveClass('cursor-pointer');
   });
 });
