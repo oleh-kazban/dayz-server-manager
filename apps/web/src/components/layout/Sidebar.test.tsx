@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 
-import { act, fireEvent, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { FeatureFlagsProvider, useLayoutStore } from '@dsm/web/core';
@@ -88,7 +88,14 @@ describe('Sidebar', () => {
     expect(screen.getByText('Configuration')).toBeInTheDocument();
 
     // Links
-    expect(screen.getByRole('link', { name: /dashboard/i })).toHaveAttribute('href', '/dashboard');
+    expect(screen.getByRole('link', { name: /^dashboard$/i })).toHaveAttribute(
+      'href',
+      '/dashboard',
+    );
+    expect(screen.getByRole('link', { name: 'Outlive Project Dashboard' })).toHaveAttribute(
+      'href',
+      '/dashboard',
+    );
     expect(screen.getByRole('link', { name: /system telemetry/i })).toHaveAttribute(
       'href',
       '/system',
@@ -342,7 +349,7 @@ describe('Sidebar', () => {
       expect(useLayoutStore.getState().isMobileSidebarOpen).toBe(false);
     });
 
-    it('renders brand header logo with animate-on-hover class and group wrapper in mobile drawer', () => {
+    it('renders brand header as a link navigating to /dashboard and closes mobile drawer on click', () => {
       const { container } = render(
         <AuthProvider>
           <FeatureFlagsProvider>
@@ -358,18 +365,24 @@ describe('Sidebar', () => {
       const mobileDrawer = container.querySelector('#mobile-sidebar');
       expect(mobileDrawer).toBeInTheDocument();
 
-      const logoSvg = mobileDrawer?.querySelector('svg.aegis-logo');
+      const brandLink = within(mobileDrawer as HTMLElement).getByRole('link', {
+        name: 'Outlive Project Dashboard',
+      });
+      expect(brandLink).toBeInTheDocument();
+      expect(brandLink).toHaveAttribute('href', '/dashboard');
+      expect(brandLink).toHaveClass('cursor-pointer');
+
+      const logoSvg = brandLink.querySelector('svg.aegis-logo');
       expect(logoSvg).toBeInTheDocument();
       expect(logoSvg).toHaveClass('animate-on-hover');
       expect(logoSvg).not.toHaveClass('is-loading');
 
-      const brandWrapper = logoSvg?.closest('.group');
-      expect(brandWrapper).toBeInTheDocument();
-      expect(brandWrapper).toHaveClass('cursor-pointer');
+      fireEvent.click(brandLink);
+      expect(useLayoutStore.getState().isMobileSidebarOpen).toBe(false);
     });
   });
 
-  it('renders brand header logo with animate-on-hover class and group wrapper in desktop sidebar', () => {
+  it('renders brand header as a link navigating to /dashboard with animate-on-hover logo in desktop sidebar', () => {
     const { container } = render(
       <AuthProvider>
         <FeatureFlagsProvider>
@@ -381,13 +394,16 @@ describe('Sidebar', () => {
     const desktopSidebar = container.querySelector('#app-sidebar');
     expect(desktopSidebar).toBeInTheDocument();
 
-    const logoSvg = desktopSidebar?.querySelector('svg.aegis-logo');
+    const brandLink = within(desktopSidebar as HTMLElement).getByRole('link', {
+      name: 'Outlive Project Dashboard',
+    });
+    expect(brandLink).toBeInTheDocument();
+    expect(brandLink).toHaveAttribute('href', '/dashboard');
+    expect(brandLink).toHaveClass('cursor-pointer');
+
+    const logoSvg = brandLink.querySelector('svg.aegis-logo');
     expect(logoSvg).toBeInTheDocument();
     expect(logoSvg).toHaveClass('animate-on-hover');
     expect(logoSvg).not.toHaveClass('is-loading');
-
-    const brandWrapper = logoSvg?.closest('.group');
-    expect(brandWrapper).toBeInTheDocument();
-    expect(brandWrapper).toHaveClass('cursor-pointer');
   });
 });
