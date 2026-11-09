@@ -420,6 +420,19 @@ export const registerSteamRoutes: FastifyPluginAsync = async fastify => {
           current,
           vaultKey,
         );
+
+        if (result.connectionSuccess && current.authMode === 'account') {
+          fastify.db
+            .update(steamSettings)
+            .set({
+              sessionStatus: 'AUTHENTICATED',
+              updatedAt: new Date(),
+            })
+            .where(eq(steamSettings.id, 'default'))
+            .run();
+          fastify.sseHub.broadcast('steam.auth.status', { status: 'AUTHENTICATED' });
+        }
+
         return reply.send(result);
       } catch (err: unknown) {
         const error = err as { errorCode?: ApiErrorCode; message?: string };
