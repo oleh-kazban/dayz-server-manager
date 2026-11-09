@@ -1,6 +1,6 @@
 import { integer, sqliteTable, text } from 'drizzle-orm/sqlite-core';
 
-import { SERVER_STATUS, SERVER_STATUS_VALUES } from '@dsm/api-contracts';
+import { SERVER_STATUS, SERVER_STATUS_VALUES } from '@aegis/api-contracts';
 
 export const users = sqliteTable('users', {
   id: text('id').primaryKey(),

@@ -1,4 +1,4 @@
-import { FlavorText } from '@dsm/web/features/flavor-text';
+import { FlavorText } from '@aegis/web/features/flavor-text';
 
 import { APP_VERSION } from '../../core/config/app-version';
 

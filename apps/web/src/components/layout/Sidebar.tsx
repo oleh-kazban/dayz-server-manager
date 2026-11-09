@@ -3,8 +3,8 @@ import { useEffect } from 'react';
 import { Link, useLocation } from '@tanstack/react-router';
 import { type LucideIcon, RadioTower, X } from 'lucide-react';
 
-import { NAVIGATION_SECTIONS, useFeatureFlags, useLayoutStore } from '@dsm/web/core';
-import { useAuth } from '@dsm/web/features/auth';
+import { NAVIGATION_SECTIONS, useFeatureFlags, useLayoutStore } from '@aegis/web/core';
+import { useAuth } from '@aegis/web/features/auth';
 
 import { Logo } from './Logo';
 import { ServerSelector } from './ServerSelector';
@@ -196,16 +196,16 @@ export function Sidebar() {
               <Link
                 to="/dashboard"
                 onClick={closeMobileSidebar}
-                aria-label="Outlive Project Dashboard"
+                aria-label="Aegis Console Dashboard"
                 className="flex items-center gap-2.5 cursor-pointer select-none"
               >
                 <Logo className="w-[30px] h-[31px] shrink-0" animateOnHover />
                 <div className="flex flex-col leading-none">
                   <span className="font-semibold text-[18px] tracking-tight text-[var(--color-text-main)]">
-                    OUTLIVE
+                    AEGIS
                   </span>
                   <span className="text-[8px] font-semibold tracking-[0.25em] text-[var(--color-text-muted)] mt-0.5">
-                    PROJECT
+                    CONSOLE
                   </span>
                 </div>
               </Link>
@@ -238,16 +238,16 @@ export function Sidebar() {
       >
         <Link
           to="/dashboard"
-          aria-label="Outlive Project Dashboard"
+          aria-label="Aegis Console Dashboard"
           className="flex items-center gap-2.5 px-1 py-1 mb-5 cursor-pointer select-none"
         >
           <Logo className="w-[30px] h-[31px] shrink-0" animateOnHover />
           <div className="flex flex-col leading-none">
             <span className="font-semibold text-[18px] tracking-tight text-[var(--color-text-main)]">
-              OUTLIVE
+              AEGIS
             </span>
             <span className="text-[8px] font-semibold tracking-[0.25em] text-[var(--color-text-muted)] mt-0.5">
-              PROJECT
+              CONSOLE
             </span>
           </div>
         </Link>

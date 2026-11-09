@@ -3,7 +3,7 @@ import { useMemo } from 'react';
 import { Search } from 'lucide-react';
 import { marked } from 'marked';
 
-import { EmptyState } from '@dsm/ui';
+import { EmptyState } from '@aegis/ui';
 
 import { filterMarkdownSections, sanitizeContent } from './markdown.utils';
 

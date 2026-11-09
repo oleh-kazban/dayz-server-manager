@@ -1,4 +1,4 @@
-import { PageContainer } from '@dsm/web/components';
+import { PageContainer } from '@aegis/web/components';
 
 import { useProfileQuery } from '../api/profile.queries';
 import { ActiveSessionsCard } from '../components/ActiveSessionsCard';

@@ -1,6 +1,6 @@
 import type { FastifyReply, FastifyRequest } from 'fastify';
 
-import type { DatabaseInstance, DsmDatabase } from '@dsm/database';
+import type { DatabaseInstance, DsmDatabase } from '@aegis/database';
 
 declare module 'fastify' {
   interface FastifyInstance {

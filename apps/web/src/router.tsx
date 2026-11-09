@@ -13,7 +13,7 @@ import {
   RootErrorFallback,
   RootLayout,
   RootLoader,
-} from '@dsm/web/components';
+} from '@aegis/web/components';
 
 import { type AuthContextValue, SignIn } from './features/auth';
 import { Dashboard } from './features/dashboard';

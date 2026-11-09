@@ -1,7 +1,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 
-import { apiClient } from '@dsm/api-client';
-import type { ChangePasswordDto, UpdateProfileDto } from '@dsm/api-contracts';
+import { apiClient } from '@aegis/api-client';
+import type { ChangePasswordDto, UpdateProfileDto } from '@aegis/api-contracts';
 
 import { useAuth } from '../../auth';
 

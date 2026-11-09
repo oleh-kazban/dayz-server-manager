@@ -8,8 +8,8 @@ import {
   type RefreshResponseDto,
   signInRequestSchema,
   type SignInResponseDto,
-} from '@dsm/api-contracts';
-import { sessions, users, verifyPassword } from '@dsm/database';
+} from '@aegis/api-contracts';
+import { sessions, users, verifyPassword } from '@aegis/database';
 
 import { formatZodFieldErrors, sendApiError } from '../utils/api-error';
 

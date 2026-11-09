@@ -1,4 +1,4 @@
-import { type HealthResponseDto, healthResponseSchema } from '@dsm/api-contracts';
+import { type HealthResponseDto, healthResponseSchema } from '@aegis/api-contracts';
 
 import { type HttpClient } from '../http-client';
 

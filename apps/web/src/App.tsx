@@ -3,8 +3,8 @@ import { Component, type ErrorInfo, type ReactNode, useEffect } from 'react';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { RouterProvider } from '@tanstack/react-router';
 
-import { Toaster } from '@dsm/ui';
-import { RootErrorFallback } from '@dsm/web/components';
+import { Toaster } from '@aegis/ui';
+import { RootErrorFallback } from '@aegis/web/components';
 
 import { AuthProvider, useAuth } from './features/auth';
 import { ThemeProvider } from './features/theme';

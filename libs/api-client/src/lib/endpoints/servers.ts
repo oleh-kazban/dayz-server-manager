@@ -7,7 +7,7 @@ import {
   type ServerSummaryDto,
   serverSummarySchema,
   type UpdateServerDto,
-} from '@dsm/api-contracts';
+} from '@aegis/api-contracts';
 
 import { type HttpClient } from '../http-client';
 

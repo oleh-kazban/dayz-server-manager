@@ -3,8 +3,8 @@ import { useState } from 'react';
 import { Check, Globe, Mail, Shield, User } from 'lucide-react';
 import { z } from 'zod';
 
-import type { UserProfileDto } from '@dsm/api-contracts';
-import { Button, Card, Input, Select, type SelectOption, showToast, Tag, Toggle } from '@dsm/ui';
+import type { UserProfileDto } from '@aegis/api-contracts';
+import { Button, Card, Input, Select, type SelectOption, showToast, Tag, Toggle } from '@aegis/ui';
 
 import { useUpdateProfileMutation } from '../api/profile.mutations';
 

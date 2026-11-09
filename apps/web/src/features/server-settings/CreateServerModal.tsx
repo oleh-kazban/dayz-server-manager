@@ -3,9 +3,9 @@ import { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Server, X } from 'lucide-react';
 
-import { apiClient } from '@dsm/api-client';
-import type { CreateServerDto } from '@dsm/api-contracts';
-import { Button, Input, PasswordInput, Toggle } from '@dsm/ui';
+import { apiClient } from '@aegis/api-client';
+import type { CreateServerDto } from '@aegis/api-contracts';
+import { Button, Input, PasswordInput, Toggle } from '@aegis/ui';
 import {
   extractApiFieldErrors,
   notifyApiError,
@@ -13,7 +13,7 @@ import {
   resolveFieldErrors,
   serverQueryKeys,
   useActiveServer,
-} from '@dsm/web/core';
+} from '@aegis/web/core';
 
 export interface CreateServerModalProps {
   isOpen: boolean;

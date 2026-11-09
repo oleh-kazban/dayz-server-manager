@@ -7,7 +7,7 @@ import {
   apiErrorParamsSchema,
   type ApiFieldErrorsMap,
   apiFieldErrorsMapSchema,
-} from '@dsm/api-contracts';
+} from '@aegis/api-contracts';
 
 export type RefreshTokenHandler = () => Promise<string | null>;
 

@@ -1,8 +1,8 @@
 import { and, eq, ne } from 'drizzle-orm';
 import type { FastifyPluginAsync } from 'fastify';
 
-import { changePasswordSchema, updateProfileSchema } from '@dsm/api-contracts';
-import { hashPassword, sessions, users, verifyPassword } from '@dsm/database';
+import { changePasswordSchema, updateProfileSchema } from '@aegis/api-contracts';
+import { hashPassword, sessions, users, verifyPassword } from '@aegis/database';
 
 import { formatZodFieldErrors, sendApiError } from '../utils/api-error';
 

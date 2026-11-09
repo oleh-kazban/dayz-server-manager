@@ -2,8 +2,8 @@ import { useEffect, useRef } from 'react';
 
 import { BookOpen, FileText, HelpCircle, Loader2, Search, X } from 'lucide-react';
 
-import { Button, EmptyState, Tabs } from '@dsm/ui';
-import { MarkdownViewer } from '@dsm/web/core';
+import { Button, EmptyState, Tabs } from '@aegis/ui';
+import { MarkdownViewer } from '@aegis/web/core';
 
 import type { FaqTab } from './types';
 import { useFaqStore } from './useFaqStore';

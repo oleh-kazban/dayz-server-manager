@@ -3,8 +3,8 @@ import { useEffect } from 'react';
 import { Link, useLocation, useMatches } from '@tanstack/react-router';
 import { Bell, ChevronRight, HelpCircle, Menu, Search } from 'lucide-react';
 
-import { useActiveServer, useLayoutStore } from '@dsm/web/core';
-import { FaqModal, ThemeToggleButton, useFaqStore } from '@dsm/web/features';
+import { useActiveServer, useLayoutStore } from '@aegis/web/core';
+import { FaqModal, ThemeToggleButton, useFaqStore } from '@aegis/web/features';
 
 function renderBreadcrumbTrail(
   isLoading: boolean,

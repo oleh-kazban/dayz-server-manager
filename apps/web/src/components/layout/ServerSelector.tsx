@@ -3,9 +3,9 @@ import { useEffect, useRef, useState } from 'react';
 import { Link } from '@tanstack/react-router';
 import { Check, ChevronsUpDown, Plus, Search, Server as ServerIcon } from 'lucide-react';
 
-import type { ServerSummaryDto } from '@dsm/api-contracts';
-import { getServerStatusPresentation, useActiveServer } from '@dsm/web/core';
-import { useAuth } from '@dsm/web/features/auth';
+import type { ServerSummaryDto } from '@aegis/api-contracts';
+import { getServerStatusPresentation, useActiveServer } from '@aegis/web/core';
+import { useAuth } from '@aegis/web/features/auth';
 
 export function ServerSelector() {
   const { servers, activeServer, setActiveServerId, isLoading } = useActiveServer();

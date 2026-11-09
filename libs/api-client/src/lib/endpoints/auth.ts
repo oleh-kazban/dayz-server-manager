@@ -7,7 +7,7 @@ import {
   type SignInRequestDto,
   type SignInResponseDto,
   signInResponseSchema,
-} from '@dsm/api-contracts';
+} from '@aegis/api-contracts';
 
 import { type HttpClient } from '../http-client';
 

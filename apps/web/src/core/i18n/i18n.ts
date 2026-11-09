@@ -2,8 +2,8 @@ import { initReactI18next } from 'react-i18next';
 
 import i18n from 'i18next';
 
-import { ApiError } from '@dsm/api-client';
-import type { ApiErrorCode, ApiErrorParams, ApiFieldErrorsMap } from '@dsm/api-contracts';
+import { ApiError } from '@aegis/api-client';
+import type { ApiErrorCode, ApiErrorParams, ApiFieldErrorsMap } from '@aegis/api-contracts';
 
 import {
   enUSTranslations,

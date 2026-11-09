@@ -5,7 +5,7 @@ import {
   revokeOthersResponseSchema,
   type SessionListResponseDto,
   sessionListResponseSchema,
-} from '@dsm/api-contracts';
+} from '@aegis/api-contracts';
 
 import { type HttpClient } from '../http-client';
 

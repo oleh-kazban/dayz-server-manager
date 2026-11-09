@@ -10,7 +10,7 @@ import Fastify, {
   type FastifyServerOptions,
 } from 'fastify';
 
-import { type DatabaseInstance, initDatabase, sessions } from '@dsm/database';
+import { type DatabaseInstance, initDatabase, sessions } from '@aegis/database';
 
 import { type EnvConfig } from '../config/env';
 import { registerAuthRoutes } from '../routes/auth';

@@ -1,1 +1,1 @@
-export * from '@dsm/ui';
+export * from '@aegis/ui';

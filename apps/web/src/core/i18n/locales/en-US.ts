@@ -1,4 +1,4 @@
-import type { ApiErrorCode, ServerStatus } from '@dsm/api-contracts';
+import type { ApiErrorCode, ServerStatus } from '@aegis/api-contracts';
 
 export type NotificationCode = 'SERVER_CREATED' | 'SERVER_UPDATED' | 'SERVER_DELETED';
 

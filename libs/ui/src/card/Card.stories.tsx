@@ -86,7 +86,7 @@ export const Default: Story = {
       <div className="text-xs text-[var(--color-text-secondary)] space-y-2">
         <div className="flex justify-between py-1 border-b border-[var(--color-border)]">
           <span className="text-[var(--color-text-muted)]">Server Name</span>
-          <span className="font-medium text-[var(--color-text-main)]">Outlive PvE Chernarus</span>
+          <span className="font-medium text-[var(--color-text-main)]">Aegis PvE Chernarus</span>
         </div>
         <div className="flex justify-between py-1 border-b border-[var(--color-border)]">
           <span className="text-[var(--color-text-muted)]">Address</span>
