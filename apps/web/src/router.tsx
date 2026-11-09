@@ -19,6 +19,7 @@ import { type AuthContextValue, SignIn } from './features/auth';
 import { Dashboard } from './features/dashboard';
 import { ProfileView } from './features/profile';
 import { ServerSettingsView } from './features/server-settings';
+import { SteamSettingsView } from './features/steam';
 import {
   DEFAULT_MODULE_FLAGS,
   type FeatureFlagsContextValue,
@@ -345,6 +346,18 @@ const settingsServerRoute = createRoute({
   component: ServerSettingsView,
 });
 
+const settingsSteamRoute = createRoute({
+  getParentRoute: () => authedRoute,
+  path: '/settings/steam',
+  staticData: { breadcrumb: ROUTE_BREADCRUMBS['/settings/steam'] },
+  beforeLoad: ({ context }) => {
+    if (context?.auth?.user?.role !== 'admin') {
+      throw redirect({ to: '/dashboard' });
+    }
+  },
+  component: SteamSettingsView,
+});
+
 const settingsAppRoute = createRoute({
   getParentRoute: () => authedRoute,
   path: '/settings/app',
@@ -439,6 +452,7 @@ const routeTree = rootRoute.addChildren([
     profileRoute,
     settingsIndexRoute,
     settingsServerRoute,
+    settingsSteamRoute,
     settingsAppRoute,
     settingsDiscordRoute,
     settingsOperatorsRoute,

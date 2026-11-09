@@ -1,6 +1,15 @@
 import type { ApiErrorCode, ServerStatus } from '@aegis/api-contracts';
 
-export type NotificationCode = 'SERVER_CREATED' | 'SERVER_UPDATED' | 'SERVER_DELETED';
+export type NotificationCode =
+  | 'SERVER_CREATED'
+  | 'SERVER_UPDATED'
+  | 'SERVER_DELETED'
+  | 'STEAM_SETTINGS_UPDATED'
+  | 'STEAM_SESSION_CLEARED'
+  | 'STEAM_AUTH_SUCCESS'
+  | 'STEAM_CHALLENGE_SUBMITTED'
+  | 'STEAM_CHALLENGE_ABORTED'
+  | 'STEAM_DIAGNOSTICS_COMPLETED';
 
 export interface ToastTranslationEntry {
   title: string;
@@ -88,6 +97,65 @@ export const enUSTranslations: TranslationCatalog = {
       title: 'Deletion Locked',
       description: 'Cannot delete "{{name}}" while it is {{status}}. Stop the server first.',
     },
+    INVALID_STEAMCMD_PATH: {
+      title: 'Invalid SteamCMD Path',
+      description:
+        'The configured SteamCMD executable does not exist or lacks execute permissions.',
+    },
+    STORAGE_PATH_NOT_WRITABLE: {
+      title: 'Storage Path Unwritable',
+      description: 'The configured path is not writable or cannot be created.',
+    },
+    STORAGE_PATH_INVALID: {
+      title: 'Invalid Storage Path',
+      description:
+        'The provided storage path is invalid or contains forbidden traversal sequences.',
+    },
+    INSUFFICIENT_STORAGE_SPACE: {
+      title: 'Insufficient Disk Space',
+      description: 'The target volume has less than the minimum required storage capacity.',
+    },
+    INVALID_APP_ID: {
+      title: 'Invalid App ID',
+      description: 'The provided Steam App ID is invalid or not recognized.',
+    },
+    INVALID_BRANCH_NAME: {
+      title: 'Invalid Branch Name',
+      description: 'Branch name contains disallowed characters or formatting.',
+    },
+    STEAM_USERNAME_REQUIRED: {
+      title: 'Username Required',
+      description: 'A Steam username must be provided when Dedicated Account mode is selected.',
+    },
+    VAULT_ENCRYPTION_FAILED: {
+      title: 'Encryption Failed',
+      description: 'Failed to encrypt credentials using the appliance vault key.',
+    },
+    VAULT_KEY_UNAVAILABLE: {
+      title: 'Vault Key Unavailable',
+      description: 'The master vault encryption key is unavailable or failed verification.',
+    },
+    SESSION_CLEAR_FAILED: {
+      title: 'Session Purge Failed',
+      description:
+        'Could not remove cached session tokens due to a filesystem lock or permission issue.',
+    },
+    CHALLENGE_NOT_FOUND_OR_EXPIRED: {
+      title: 'Challenge Expired',
+      description: 'The Steam Guard challenge session was not found or has timed out.',
+    },
+    CHALLENGE_PROCESS_INVALID: {
+      title: 'SteamCMD Process Inactive',
+      description: 'The underlying SteamCMD process has terminated or cannot receive input.',
+    },
+    STEAMCMD_PROCESS_TERMINATED: {
+      title: 'Process Terminated',
+      description: 'The SteamCMD process was terminated before authentication could finish.',
+    },
+    TASK_CONCURRENCY_CONFLICT: {
+      title: 'Task Conflict',
+      description: 'Another SteamCMD operation or diagnostic task is currently active.',
+    },
     INTERNAL_SERVER_ERROR: {
       title: 'Internal Server Error',
       description: 'An unexpected error occurred on the server. Please try again.',
@@ -122,6 +190,30 @@ export const enUSTranslations: TranslationCatalog = {
     SERVER_DELETED: {
       title: 'Server Deleted',
       description: 'Server "{{name}}" has been removed from DayZ Server Manager.',
+    },
+    STEAM_SETTINGS_UPDATED: {
+      title: 'Steam Settings Saved',
+      description: 'Steam configuration and paths have been updated successfully.',
+    },
+    STEAM_SESSION_CLEARED: {
+      title: 'Session Tokens Cleared',
+      description: 'Cached SteamCMD SSFN and VDF credentials have been removed.',
+    },
+    STEAM_AUTH_SUCCESS: {
+      title: 'Steam Account Authenticated',
+      description: 'Steam account authenticated successfully.',
+    },
+    STEAM_CHALLENGE_SUBMITTED: {
+      title: 'Challenge Code Submitted',
+      description: 'Steam Guard verification code has been submitted to SteamCMD.',
+    },
+    STEAM_CHALLENGE_ABORTED: {
+      title: 'Challenge Aborted',
+      description: 'Steam Guard authentication challenge was cancelled.',
+    },
+    STEAM_DIAGNOSTICS_COMPLETED: {
+      title: 'Diagnostics Completed',
+      description: 'Steam connection and path diagnostics have finished.',
     },
   },
   serverStatus: {

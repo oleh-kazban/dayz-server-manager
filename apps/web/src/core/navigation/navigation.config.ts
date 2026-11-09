@@ -2,6 +2,7 @@ import {
   Activity,
   Bell,
   Box,
+  CloudDownload,
   Cpu,
   FileCode2,
   Flame,
@@ -35,6 +36,7 @@ export type AppRoutePath =
   | '/profile'
   | '/settings/server'
   | '/settings/app'
+  | '/settings/steam'
   | '/settings/discord'
   | '/settings/operators'
   | '/settings/automation'
@@ -60,6 +62,7 @@ export const ROUTE_BREADCRUMBS: Record<AppRoutePath, string> = {
   '/economy/cfgspawnabletypes': 'Spawnable types',
   '/profile': 'Operator profile',
   '/settings/server': 'Server settings',
+  '/settings/steam': 'Steam CMD & Workshop',
   '/settings/app': 'Appliance settings',
   '/settings/discord': 'Discord webhooks',
   '/settings/operators': 'Console operators',
@@ -174,6 +177,12 @@ export const NAVIGATION_SECTIONS: NavigationSectionConfig[] = [
         to: '/settings/server',
         label: ROUTE_BREADCRUMBS['/settings/server'],
         icon: Sliders,
+      },
+      {
+        to: '/settings/steam',
+        label: ROUTE_BREADCRUMBS['/settings/steam'],
+        icon: CloudDownload,
+        requiredRole: 'admin',
       },
       {
         to: '/settings/discord',
