@@ -1,7 +1,7 @@
 import { useState } from 'react';
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { KeyRound, RefreshCw, Save, Terminal, Trash2 } from 'lucide-react';
+import { Fingerprint, KeyRound, Save, Terminal, Trash2 } from 'lucide-react';
 
 import { apiClient } from '@aegis/api-client';
 import type {
@@ -312,7 +312,7 @@ function SteamSettingsForm({
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-[var(--shadow-card)]">
         <div className="flex items-center gap-3">
           <div className="p-2.5 rounded-xl bg-[var(--color-primary-subtle)] text-[var(--color-primary)]">
-            <RefreshCw className="w-5 h-5" />
+            <Fingerprint className="w-5 h-5" />
           </div>
           <div>
             <div className="text-sm font-semibold text-[var(--color-text-main)]">
@@ -340,7 +340,7 @@ function SteamSettingsForm({
             ) : (
               <Button
                 variant="primary"
-                leftIcon={KeyRound}
+                leftIcon={Fingerprint}
                 onClick={onLoginSession}
                 isLoading={isLoggingIn}
               >
