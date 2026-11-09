@@ -11,7 +11,7 @@ export default defineConfig({
   plugins: [react()],
   resolve: {
     alias: {
-      '@dsm/ui': path.resolve(__dirname, 'src'),
+      '@aegis/ui': path.resolve(__dirname, 'src'),
     },
   },
   test: {

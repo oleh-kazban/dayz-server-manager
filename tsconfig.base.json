@@ -16,15 +16,15 @@
     "baseUrl": ".",
     "strict": true,
     "paths": {
-      "@dsm/api-client": ["libs/api-client/src/index.ts"],
-      "@dsm/api-client/*": ["libs/api-client/src/*"],
-      "@dsm/api-contracts": ["libs/api-contracts/src/index.ts"],
-      "@dsm/api-contracts/*": ["libs/api-contracts/src/*"],
-      "@dsm/database": ["libs/database/src/index.ts"],
-      "@dsm/database/*": ["libs/database/src/*"],
-      "@dsm/ui": ["libs/ui/src/index.ts"],
-      "@dsm/ui/*": ["libs/ui/src/*"],
-      "@dsm/web/*": ["apps/web/src/*"]
+      "@aegis/api-client": ["libs/api-client/src/index.ts"],
+      "@aegis/api-client/*": ["libs/api-client/src/*"],
+      "@aegis/api-contracts": ["libs/api-contracts/src/index.ts"],
+      "@aegis/api-contracts/*": ["libs/api-contracts/src/*"],
+      "@aegis/database": ["libs/database/src/index.ts"],
+      "@aegis/database/*": ["libs/database/src/*"],
+      "@aegis/ui": ["libs/ui/src/index.ts"],
+      "@aegis/ui/*": ["libs/ui/src/*"],
+      "@aegis/web/*": ["apps/web/src/*"]
     }
   },
   "exclude": ["node_modules", "tmp", "dist"]

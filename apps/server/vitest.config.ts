@@ -9,9 +9,9 @@ export default defineConfig({
   root: __dirname,
   resolve: {
     alias: {
-      '@dsm/api-contracts': path.resolve(workspaceRoot, 'libs/api-contracts/src/index.ts'),
-      '@dsm/database': path.resolve(workspaceRoot, 'libs/database/src/index.ts'),
-      '@dsm/server': path.resolve(__dirname, 'src'),
+      '@aegis/api-contracts': path.resolve(workspaceRoot, 'libs/api-contracts/src/index.ts'),
+      '@aegis/database': path.resolve(workspaceRoot, 'libs/database/src/index.ts'),
+      '@aegis/server': path.resolve(__dirname, 'src'),
     },
   },
   test: {
