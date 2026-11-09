@@ -203,6 +203,40 @@ describe('SteamSettingsView (REQ-01, REQ-02, REQ-03, REQ-04, REQ-07)', () => {
     expect(showToast.success).toHaveBeenCalled();
   });
 
+  it('reverts branch to public when custom branch toggle is turned off (REQ-09)', async () => {
+    vi.mocked(apiClient.steam.getSettings).mockResolvedValue({
+      ...mockDefaultSettings,
+      branch: 'experimental',
+    });
+
+    renderView();
+
+    await waitFor(() => {
+      expect(screen.getByLabelText('Branch')).toHaveValue('experimental');
+    });
+
+    // Toggle custom branch OFF
+    const branchToggle = screen.getByLabelText(/Custom \/ Pre-release Branch/i);
+    fireEvent.click(branchToggle);
+
+    // Branch input should disappear
+    expect(screen.queryByLabelText('Branch')).not.toBeInTheDocument();
+
+    // Click Save Changes
+    const saveButton = screen.getByRole('button', { name: 'Save Changes' });
+    fireEvent.click(saveButton);
+
+    await waitFor(() => {
+      expect(apiClient.steam.updateSettings).toHaveBeenCalledWith(
+        expect.objectContaining({
+          branch: 'public',
+        }),
+      );
+    });
+
+    expect(showToast.success).toHaveBeenCalled();
+  });
+
   it('submits newly entered password for dedicated Steam account when hasPassword is false', async () => {
     vi.mocked(apiClient.steam.getSettings).mockResolvedValue({
       ...mockDefaultSettings,
@@ -257,7 +291,14 @@ describe('SteamSettingsView (REQ-01, REQ-02, REQ-03, REQ-04, REQ-07)', () => {
     expect(showToast.success).toHaveBeenCalled();
   });
 
-  it('runs diagnostics probe and opens diagnostics modal when clicking Run Diagnostics', async () => {
+  it('provides immediate onMutate diagnostics feedback opening modal in loading state and dispatching toast (REQ-10)', async () => {
+    let resolveDiagPromise!: (value: SteamDiagnosticsResultDto) => void;
+    const diagPromise = new Promise<SteamDiagnosticsResultDto>(resolve => {
+      resolveDiagPromise = resolve;
+    });
+
+    vi.mocked(apiClient.steam.runDiagnostics).mockReturnValue(diagPromise);
+
     renderView();
 
     await waitFor(() => {
@@ -266,15 +307,25 @@ describe('SteamSettingsView (REQ-01, REQ-02, REQ-03, REQ-04, REQ-07)', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Run Diagnostics' }));
 
-    await waitFor(() => {
-      expect(apiClient.steam.runDiagnostics).toHaveBeenCalled();
-      expect(screen.getByText('SteamCMD Diagnostics & Connectivity')).toBeInTheDocument();
-    });
+    // Assert immediate onMutate feedback before promise resolution
+    expect(showToast.info).toHaveBeenCalledWith(
+      'Diagnostics Initiated',
+      'Validating SteamCMD binary, storage volumes, and probing Valve network latency...',
+      undefined,
+    );
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+    expect(screen.getByText('Running SteamCMD diagnostic probe...')).toBeInTheDocument();
 
-    expect(screen.getByText('[INFO] Probe test log entry')).toBeInTheDocument();
+    // Resolve the probe promise
+    resolveDiagPromise(mockDiagnosticsResult);
+
+    await waitFor(() => {
+      expect(screen.getByText('Diagnostics Passed')).toBeInTheDocument();
+      expect(screen.getByText('[INFO] Probe test log entry')).toBeInTheDocument();
+    });
   });
 
-  it('triggers login session mutation when clicking Authenticate Session button', async () => {
+  it('triggers login session mutation when clicking Authenticate Session button (REQ-08)', async () => {
     vi.mocked(apiClient.steam.getSettings).mockResolvedValue({
       ...mockDefaultSettings,
       authMode: 'account',
@@ -296,5 +347,31 @@ describe('SteamSettingsView (REQ-01, REQ-02, REQ-03, REQ-04, REQ-07)', () => {
     });
 
     expect(showToast.info).toHaveBeenCalled();
+  });
+
+  it('renders Clear Session button when authenticated and invokes clearSession (REQ-08)', async () => {
+    vi.mocked(apiClient.steam.getSettings).mockResolvedValue({
+      ...mockDefaultSettings,
+      authMode: 'account',
+      steamUsername: 'dayz_operator',
+      hasPassword: true,
+      sessionStatus: 'AUTHENTICATED',
+    });
+
+    renderView();
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'Clear Session' })).toBeInTheDocument();
+    });
+
+    expect(screen.queryByRole('button', { name: 'Authenticate Session' })).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Clear Session' }));
+
+    await waitFor(() => {
+      expect(apiClient.steam.clearSession).toHaveBeenCalled();
+    });
+
+    expect(showToast.success).toHaveBeenCalled();
   });
 });

@@ -92,6 +92,16 @@ describe('Steam Routes (/api/v1/settings/steam)', () => {
       });
       expect(res.statusCode).toBe(403);
     });
+
+    it('returns 403 Forbidden when non-admin attempts POST /session/login (REQ-08)', async () => {
+      const res = await app.inject({
+        method: 'POST',
+        url: '/api/v1/settings/steam/session/login',
+        headers: { authorization: `Bearer ${viewerToken}` },
+      });
+      expect(res.statusCode).toBe(403);
+      expect(res.json().errorCode).toBe('AUTH_FORBIDDEN_ADMIN_REQUIRED');
+    });
   });
 
   describe('GET /api/v1/settings/steam (REQ-01, ARCH-01)', () => {
@@ -382,6 +392,33 @@ describe('Steam Routes (/api/v1/settings/steam)', () => {
       expect(res.json().success).toBe(true);
       expect(spawnSpy).toHaveBeenCalled();
     });
+
+    it('returns 409 TASK_CONCURRENCY_CONFLICT if runner is busy (REQ-08)', async () => {
+      dbInstance.db
+        .update(steamSettings)
+        .set({
+          authMode: 'account',
+          steamUsername: 'admin_user',
+          steamPasswordEncrypted: 'mock-encrypted-password',
+        })
+        .where(eq(steamSettings.id, 'default'))
+        .run();
+
+      vi.spyOn(steamRunnerService, 'spawnAuthenticatedLogin').mockImplementation(() => {
+        const err = new Error('Task in progress');
+        (err as unknown as { errorCode: string }).errorCode = 'TASK_CONCURRENCY_CONFLICT';
+        throw err;
+      });
+
+      const res = await app.inject({
+        method: 'POST',
+        url: '/api/v1/settings/steam/session/login',
+        headers: { authorization: `Bearer ${adminToken}` },
+      });
+
+      expect(res.statusCode).toBe(409);
+      expect(res.json().errorCode).toBe('TASK_CONCURRENCY_CONFLICT');
+    });
   });
 
   describe('POST /api/v1/settings/steam/challenge/respond (REQ-06, GUARD-02)', () => {
@@ -528,6 +565,136 @@ describe('Steam Routes (/api/v1/settings/steam)', () => {
       expect(res.statusCode).toBe(409);
       const body = res.json();
       expect(body.errorCode).toBe('TASK_CONCURRENCY_CONFLICT');
+    });
+
+    it('transitions database sessionStatus to AUTHENTICATED and broadcasts SSE event on probe success in account mode (REQ-11)', async () => {
+      dbInstance.db
+        .update(steamSettings)
+        .set({
+          authMode: 'account',
+          sessionStatus: 'UNAUTHENTICATED',
+        })
+        .where(eq(steamSettings.id, 'default'))
+        .run();
+
+      const broadcastSpy = vi.spyOn(app.sseHub, 'broadcast');
+
+      vi.spyOn(steamRunnerService, 'runDiagnostics').mockResolvedValue({
+        success: true,
+        steamCmdValid: true,
+        steamCmdVersion: '1730000000',
+        workshopPathWritable: true,
+        workshopFreeBytes: 150000000000,
+        metaPathWritable: true,
+        metaFreeBytes: 80000000000,
+        connectionSuccess: true,
+        latencyMs: 82,
+        logs: ['Probe started', 'Connecting anonymously to Steam Public...', 'Success'],
+        timestamp: new Date().toISOString(),
+      });
+
+      const res = await app.inject({
+        method: 'POST',
+        url: '/api/v1/settings/steam/diagnostics',
+        headers: { authorization: `Bearer ${adminToken}` },
+      });
+
+      expect(res.statusCode).toBe(200);
+
+      const updated = dbInstance.db
+        .select()
+        .from(steamSettings)
+        .where(eq(steamSettings.id, 'default'))
+        .get();
+
+      expect(updated?.sessionStatus).toBe('AUTHENTICATED');
+      expect(broadcastSpy).toHaveBeenCalledWith('steam.auth.status', { status: 'AUTHENTICATED' });
+    });
+
+    it('does not transition sessionStatus when connection fails or when in anonymous mode (REQ-11)', async () => {
+      // Case A: connectionSuccess is false in account mode
+      dbInstance.db
+        .update(steamSettings)
+        .set({
+          authMode: 'account',
+          sessionStatus: 'UNAUTHENTICATED',
+        })
+        .where(eq(steamSettings.id, 'default'))
+        .run();
+
+      const broadcastSpy = vi.spyOn(app.sseHub, 'broadcast');
+
+      vi.spyOn(steamRunnerService, 'runDiagnostics').mockResolvedValue({
+        success: false,
+        steamCmdValid: true,
+        steamCmdVersion: '1730000000',
+        workshopPathWritable: true,
+        workshopFreeBytes: 150000000000,
+        metaPathWritable: true,
+        metaFreeBytes: 80000000000,
+        connectionSuccess: false,
+        latencyMs: null,
+        logs: ['Connection timed out'],
+        timestamp: new Date().toISOString(),
+      });
+
+      const resFail = await app.inject({
+        method: 'POST',
+        url: '/api/v1/settings/steam/diagnostics',
+        headers: { authorization: `Bearer ${adminToken}` },
+      });
+
+      expect(resFail.statusCode).toBe(200);
+      let settingsRow = dbInstance.db
+        .select()
+        .from(steamSettings)
+        .where(eq(steamSettings.id, 'default'))
+        .get();
+      expect(settingsRow?.sessionStatus).toBe('UNAUTHENTICATED');
+      expect(broadcastSpy).not.toHaveBeenCalledWith('steam.auth.status', {
+        status: 'AUTHENTICATED',
+      });
+
+      // Case B: connectionSuccess is true but in anonymous mode
+      dbInstance.db
+        .update(steamSettings)
+        .set({
+          authMode: 'anonymous',
+          sessionStatus: 'UNAUTHENTICATED',
+        })
+        .where(eq(steamSettings.id, 'default'))
+        .run();
+
+      vi.spyOn(steamRunnerService, 'runDiagnostics').mockResolvedValue({
+        success: true,
+        steamCmdValid: true,
+        steamCmdVersion: '1730000000',
+        workshopPathWritable: true,
+        workshopFreeBytes: 150000000000,
+        metaPathWritable: true,
+        metaFreeBytes: 80000000000,
+        connectionSuccess: true,
+        latencyMs: 75,
+        logs: ['OK'],
+        timestamp: new Date().toISOString(),
+      });
+
+      const resAnon = await app.inject({
+        method: 'POST',
+        url: '/api/v1/settings/steam/diagnostics',
+        headers: { authorization: `Bearer ${adminToken}` },
+      });
+
+      expect(resAnon.statusCode).toBe(200);
+      settingsRow = dbInstance.db
+        .select()
+        .from(steamSettings)
+        .where(eq(steamSettings.id, 'default'))
+        .get();
+      expect(settingsRow?.sessionStatus).toBe('UNAUTHENTICATED');
+      expect(broadcastSpy).not.toHaveBeenCalledWith('steam.auth.status', {
+        status: 'AUTHENTICATED',
+      });
     });
   });
 });
