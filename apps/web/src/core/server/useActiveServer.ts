@@ -1,9 +1,11 @@
 import { useEffect, useMemo } from 'react';
 
 import { useQuery } from '@tanstack/react-query';
-import { useNavigate, useSearch } from '@tanstack/react-router';
+import { useLocation, useNavigate, useSearch } from '@tanstack/react-router';
 
 import type { ServerSummaryDto } from '@aegis/api-contracts';
+
+import { isApplianceRoute } from '../navigation';
 
 import { serverQueries } from './server.queries';
 
@@ -27,6 +29,10 @@ export function useActiveServer(): UseActiveServerResult {
     searchServerId = undefined;
   }
 
+  const location = useLocation();
+  const pathname = location?.pathname ?? '';
+  const isAppliance = isApplianceRoute(pathname);
+
   const navigate = useNavigate();
 
   const activeServer = useMemo(() => {
@@ -41,6 +47,20 @@ export function useActiveServer(): UseActiveServerResult {
   // Synchronize URL search params when servers change or if serverId is invalid/missing
   useEffect(() => {
     if (isLoading) return;
+
+    if (isAppliance) {
+      if (searchServerId) {
+        navigate({
+          search: ((prev: Record<string, unknown>) => {
+            const next = { ...prev };
+            delete next.serverId;
+            return next;
+          }) as never,
+          replace: true,
+        });
+      }
+      return;
+    }
 
     if (activeServer && searchServerId !== activeServer.id) {
       navigate({
@@ -60,7 +80,7 @@ export function useActiveServer(): UseActiveServerResult {
         replace: true,
       });
     }
-  }, [isLoading, activeServer, searchServerId, navigate]);
+  }, [isLoading, isAppliance, activeServer, searchServerId, navigate]);
 
   const setActiveServerId = (id: string) => {
     navigate({

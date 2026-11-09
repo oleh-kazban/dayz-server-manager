@@ -2,7 +2,16 @@ import { describe, expect, it } from 'vitest';
 
 import { createAppRouter } from '../../router';
 
-import { type AppRoutePath, NAVIGATION_SECTIONS, ROUTE_BREADCRUMBS } from './navigation.config';
+import {
+  APPLIANCE_NAVIGATION_SECTIONS,
+  type AppRoutePath,
+  getNavigationScope,
+  getNavigationSections,
+  isApplianceRoute,
+  NAVIGATION_SECTIONS,
+  ROUTE_BREADCRUMBS,
+  SERVER_NAVIGATION_SECTIONS,
+} from './navigation.config';
 
 interface InspectableRouteNode {
   id?: string;
@@ -72,5 +81,42 @@ describe('Navigation & Breadcrumb Manifest (ARCH-01 Zero Drift)', () => {
     }
 
     expect(manifestPaths).not.toContain('/logs/crash');
+  });
+
+  it('correctly classifies appliance routes and navigation scope', () => {
+    expect(isApplianceRoute('/settings/steam')).toBe(true);
+    expect(isApplianceRoute('/settings/app')).toBe(true);
+    expect(isApplianceRoute('/settings/operators')).toBe(true);
+    expect(isApplianceRoute('/audit')).toBe(true);
+    expect(isApplianceRoute('/audit/details')).toBe(true);
+
+    expect(isApplianceRoute('/dashboard')).toBe(false);
+    expect(isApplianceRoute('/settings/server')).toBe(false);
+    expect(isApplianceRoute('/settings/discord')).toBe(false);
+    expect(isApplianceRoute('/players')).toBe(false);
+
+    expect(getNavigationScope('/settings/steam')).toBe('appliance');
+    expect(getNavigationScope('/dashboard')).toBe('server');
+
+    expect(getNavigationSections('appliance')).toBe(APPLIANCE_NAVIGATION_SECTIONS);
+    expect(getNavigationSections('server')).toBe(SERVER_NAVIGATION_SECTIONS);
+  });
+
+  it('ensures every item in APPLIANCE_NAVIGATION_SECTIONS references a valid ROUTE_BREADCRUMBS key with matching label', () => {
+    const seenSectionIds = new Set<string>();
+    const seenPaths = new Set<string>();
+
+    for (const section of APPLIANCE_NAVIGATION_SECTIONS) {
+      expect(seenSectionIds.has(section.id)).toBe(false);
+      seenSectionIds.add(section.id);
+      expect(section.items.length).toBeGreaterThan(0);
+
+      for (const item of section.items) {
+        expect(seenPaths.has(item.to)).toBe(false);
+        seenPaths.add(item.to);
+        expect(item.to in ROUTE_BREADCRUMBS).toBe(true);
+        expect(item.label).toBe(ROUTE_BREADCRUMBS[item.to]);
+      }
+    }
   });
 });

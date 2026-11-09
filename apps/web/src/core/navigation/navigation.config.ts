@@ -42,6 +42,25 @@ export type AppRoutePath =
   | '/settings/automation'
   | '/settings/backups';
 
+export type NavigationScope = 'server' | 'appliance';
+
+export const APPLIANCE_ROUTE_PREFIXES: AppRoutePath[] = [
+  '/settings/steam',
+  '/settings/app',
+  '/settings/operators',
+  '/audit',
+];
+
+export function isApplianceRoute(pathname: string): boolean {
+  return APPLIANCE_ROUTE_PREFIXES.some(
+    route => pathname === route || pathname.startsWith(`${route}/`),
+  );
+}
+
+export function getNavigationScope(pathname: string): NavigationScope {
+  return isApplianceRoute(pathname) ? 'appliance' : 'server';
+}
+
 export interface RouteBreadcrumbMeta {
   breadcrumb: string;
 }
@@ -86,7 +105,7 @@ export interface NavigationSectionConfig {
   items: NavigationItemConfig[];
 }
 
-export const NAVIGATION_SECTIONS: NavigationSectionConfig[] = [
+export const SERVER_NAVIGATION_SECTIONS: NavigationSectionConfig[] = [
   {
     id: 'overview',
     title: 'Overview',
@@ -133,11 +152,6 @@ export const NAVIGATION_SECTIONS: NavigationSectionConfig[] = [
     ariaLabel: 'Observability Navigation',
     items: [
       {
-        to: '/audit',
-        label: ROUTE_BREADCRUMBS['/audit'],
-        icon: ShieldCheck,
-      },
-      {
         to: '/logs/rpt',
         label: ROUTE_BREADCRUMBS['/logs/rpt'],
         icon: Terminal,
@@ -179,17 +193,34 @@ export const NAVIGATION_SECTIONS: NavigationSectionConfig[] = [
         icon: Sliders,
       },
       {
-        to: '/settings/steam',
-        label: ROUTE_BREADCRUMBS['/settings/steam'],
-        icon: CloudDownload,
-        requiredRole: 'admin',
-      },
-      {
         to: '/settings/discord',
         label: ROUTE_BREADCRUMBS['/settings/discord'],
         icon: Bell,
         featureFlag: 'discordNotifications',
       },
+    ],
+  },
+];
+
+export const APPLIANCE_NAVIGATION_SECTIONS: NavigationSectionConfig[] = [
+  {
+    id: 'infrastructure',
+    title: 'Infrastructure',
+    ariaLabel: 'Infrastructure Navigation',
+    items: [
+      {
+        to: '/settings/steam',
+        label: ROUTE_BREADCRUMBS['/settings/steam'],
+        icon: CloudDownload,
+        requiredRole: 'admin',
+      },
+    ],
+  },
+  {
+    id: 'appliance',
+    title: 'Appliance',
+    ariaLabel: 'Appliance Navigation',
+    items: [
       {
         to: '/settings/app',
         label: ROUTE_BREADCRUMBS['/settings/app'],
@@ -201,6 +232,17 @@ export const NAVIGATION_SECTIONS: NavigationSectionConfig[] = [
         icon: UserCheck,
         requiredRole: 'admin',
       },
+      {
+        to: '/audit',
+        label: ROUTE_BREADCRUMBS['/audit'],
+        icon: ShieldCheck,
+      },
     ],
   },
 ];
+
+export const NAVIGATION_SECTIONS = SERVER_NAVIGATION_SECTIONS;
+
+export function getNavigationSections(scope: NavigationScope): NavigationSectionConfig[] {
+  return scope === 'appliance' ? APPLIANCE_NAVIGATION_SECTIONS : SERVER_NAVIGATION_SECTIONS;
+}
