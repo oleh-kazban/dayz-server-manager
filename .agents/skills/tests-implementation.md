@@ -141,7 +141,7 @@ it('should display tooltip after hover delay', async () => {
 Mock API endpoints at the typed client or hook boundary per test:
 
 ```typescript
-import { apiClient } from '@dsm/api-client';
+import { apiClient } from '@aegis/api-client';
 
 it('should render error alert when server status fails', async () => {
   vi.spyOn(apiClient, 'getServerStatus').mockRejectedValueOnce(

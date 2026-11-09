@@ -137,7 +137,7 @@ describe('Pre-Bootstrap Animated Splash Screen (DSM-00101 & DSM-00102)', () => {
     it('contains an accessible screen-reader announcer span', () => {
       const announcer = splashElement?.querySelector('.sr-only');
       expect(announcer).not.toBeNull();
-      expect(announcer?.textContent?.trim()).toBe('Loading Outlive DayZ Server Manager...');
+      expect(announcer?.textContent?.trim()).toBe('Loading Aegis Console...');
     });
   });
 

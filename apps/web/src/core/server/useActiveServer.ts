@@ -3,7 +3,7 @@ import { useEffect, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useNavigate, useSearch } from '@tanstack/react-router';
 
-import type { ServerSummaryDto } from '@dsm/api-contracts';
+import type { ServerSummaryDto } from '@aegis/api-contracts';
 
 import { serverQueries } from './server.queries';
 

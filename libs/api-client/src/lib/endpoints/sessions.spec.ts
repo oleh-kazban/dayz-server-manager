@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import { revokeOthersResponseSchema, sessionListResponseSchema } from '@dsm/api-contracts';
+import { revokeOthersResponseSchema, sessionListResponseSchema } from '@aegis/api-contracts';
 
 import type { HttpClient } from '../http-client';
 

@@ -1,6 +1,6 @@
 import { type FastifyInstance } from 'fastify';
 
-import { type HealthResponseDto } from '@dsm/api-contracts';
+import { type HealthResponseDto } from '@aegis/api-contracts';
 
 export async function registerHealthRoutes(fastify: FastifyInstance): Promise<void> {
   fastify.get(

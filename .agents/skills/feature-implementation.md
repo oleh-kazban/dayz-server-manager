@@ -20,7 +20,7 @@ apps/
 libs/
   api-contracts/           # Pure TypeScript + Zod schemas (Single source of truth)
   api-client/              # Typed HTTP client wrapping fetch with Zod runtime validation
-  ui/                      # @dsm/ui reusable component kit (Canonical 36px, Storybook)
+  ui/                      # @aegis/ui reusable component kit (Canonical 36px, Storybook)
   database/                # SQLite + Drizzle ORM schema, WAL mode, migrations
   platform/                # OS ProcessManager (Win32 Job Objects / POSIX process groups)
   dayz-server/             # DayZ server lifecycle, launch params, BattlEye RCON shutdown
@@ -138,7 +138,7 @@ export const queryKeys = {
 
 ## 3. UI Kit Component Standards (`libs/ui`)
 
-When building or updating components in `@dsm/ui`, adhere to the architectural rules defined in `UI_COMPONENTS_SPEC.md`:
+When building or updating components in `@aegis/ui`, adhere to the architectural rules defined in `UI_COMPONENTS_SPEC.md`:
 
 ### 3.1. Standard Component File Structure
 

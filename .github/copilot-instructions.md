@@ -10,7 +10,7 @@ These instructions apply repository-wide for GitHub Copilot in the web interface
 
 - **Monorepo:** Nx monorepo with `pnpm` workspaces. Strict compilation boundaries enforced via `@nx/enforce-module-boundaries`.
 - **Frontend (`apps/web`):** React 19, Vite, TanStack Router (Zod search parameters), TanStack Query v5, and Tailwind CSS.
-- **UI Kit (`libs/ui`):** Reusable `@dsm/ui` component kit, Outlive light pastel design system, canonical 36px control standard (`h-9`), Storybook CSF3.
+- **UI Kit (`libs/ui`):** Reusable `@aegis/ui` component kit, Aegis light pastel design system, canonical 36px control standard (`h-9`), Storybook CSF3.
 - **Backend (`apps/server`):** Node.js + Fastify modular monolith hosting a versioned REST API (`/api/v1`) and real-time Server-Sent Events (SSE) dispatcher (`/api/v1/realtime/sse`).
 - **Contracts (`libs/api-contracts`):** Pure TypeScript + Zod schemas (Single source of truth for all DTOs and runtime validation).
 - **Client Data Access (`libs/api-client`):** Typed HTTP client wrapping `fetch` with Zod validation.
@@ -93,7 +93,7 @@ When assisting with code generation, reviews, or refactoring in this repository:
 - **Compound Components:** Multi-part components must use compound subcomponents (e.g. `HeroBanner.Title`, `KpiCard.Sparkline`).
 - **Canonical 36px Single-Size Standard:** Interactive buttons and form inputs share a uniform 36px baseline (`h-9`). The `size` prop is retired.
 - **Wrapped Form Controls:** Always expose `containerClassName?: string` on root wrappers.
-- **Zero Hardcoded Colors:** Consume semantic Outlive CSS variables (`var(--color-primary)`, `var(--color-surface)`, `var(--color-border)`).
+- **Zero Hardcoded Colors:** Consume semantic Aegis CSS variables (`var(--color-primary)`, `var(--color-surface)`, `var(--color-border)`).
 - **Derived State:** Calculate derived values during render; never sync state via `useEffect`.
 
 ### 3.3. TypeScript & Type Hygiene

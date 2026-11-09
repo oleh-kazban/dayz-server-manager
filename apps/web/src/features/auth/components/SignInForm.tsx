@@ -4,8 +4,8 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useNavigate, useRouter, useSearch } from '@tanstack/react-router';
 import { ArrowRight, UserRound } from 'lucide-react';
 
-import { Button, Checkbox, Input, PasswordInput } from '@dsm/ui';
-import { notifyApiError, resolveApiErrorMessage } from '@dsm/web/core';
+import { Button, Checkbox, Input, PasswordInput } from '@aegis/ui';
+import { notifyApiError, resolveApiErrorMessage } from '@aegis/web/core';
 
 import { useAuth } from '../auth.context';
 import { type SignInFormValues, signInSchema } from '../signIn.schema';

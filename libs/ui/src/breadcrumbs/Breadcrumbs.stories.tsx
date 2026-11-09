@@ -15,7 +15,7 @@ import { type BreadcrumbItemData } from './Breadcrumbs.types';
 const DAYZ_ECONOMY_PATH: BreadcrumbItemData[] = [
   { id: 'home', label: 'Dashboard', href: '#dashboard', icon: <Home className="w-3.5 h-3.5" /> },
   { id: 'servers', label: 'Servers', href: '#servers', icon: <Server className="w-3.5 h-3.5" /> },
-  { id: 'server', label: 'Outlive Chernarus Plus (EU-01)', href: '#servers/eu-01' },
+  { id: 'server', label: 'Aegis Chernarus Plus (EU-01)', href: '#servers/eu-01' },
   {
     id: 'economy',
     label: 'Central Economy',
@@ -54,7 +54,7 @@ export const CompoundAPI: Story = {
         </BreadcrumbItem>
         <BreadcrumbSeparator />
         <BreadcrumbItem>
-          <BreadcrumbLink href="#servers/eu-01">Outlive Chernarus Plus</BreadcrumbLink>
+          <BreadcrumbLink href="#servers/eu-01">Aegis Chernarus Plus</BreadcrumbLink>
         </BreadcrumbItem>
         <BreadcrumbSeparator />
         <BreadcrumbItem>

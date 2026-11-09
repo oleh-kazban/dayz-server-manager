@@ -2,7 +2,7 @@ import { useState } from 'react';
 
 import { KeyRound, ShieldAlert } from 'lucide-react';
 
-import { Button, Card, Notice, PasswordInput, showToast } from '@dsm/ui';
+import { Button, Card, Notice, PasswordInput, showToast } from '@aegis/ui';
 
 import { useChangePasswordMutation } from '../api/profile.mutations';
 

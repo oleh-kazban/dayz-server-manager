@@ -1,6 +1,6 @@
 import { queryOptions } from '@tanstack/react-query';
 
-import { apiClient } from '@dsm/api-client';
+import { apiClient } from '@aegis/api-client';
 
 export const serverQueryKeys = {
   all: ['servers'] as const,

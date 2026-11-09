@@ -7,7 +7,7 @@ import type {
   ApiErrorResponseDto,
   ApiFieldError,
   ApiFieldErrorsMap,
-} from '@dsm/api-contracts';
+} from '@aegis/api-contracts';
 
 const HTTP_STATUS_PHRASES: Record<number, string> = {
   400: 'Bad Request',

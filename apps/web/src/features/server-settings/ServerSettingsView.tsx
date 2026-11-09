@@ -4,13 +4,13 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from '@tanstack/react-router';
 import { AlertTriangle, Plus, Save, Trash2 } from 'lucide-react';
 
-import { apiClient } from '@dsm/api-client';
+import { apiClient } from '@aegis/api-client';
 import {
   isServerActiveStatus,
   type ServerDetailDto,
   type ServerSummaryDto,
   type UpdateServerDto,
-} from '@dsm/api-contracts';
+} from '@aegis/api-contracts';
 import {
   Button,
   Card,
@@ -20,8 +20,8 @@ import {
   PasswordInput,
   StatusTag,
   Toggle,
-} from '@dsm/ui';
-import { EmptyServersState, PageContainer } from '@dsm/web/components';
+} from '@aegis/ui';
+import { EmptyServersState, PageContainer } from '@aegis/web/components';
 import {
   extractApiFieldErrors,
   getServerStatusPresentation,
@@ -31,7 +31,7 @@ import {
   serverQueries,
   serverQueryKeys,
   useActiveServer,
-} from '@dsm/web/core';
+} from '@aegis/web/core';
 
 import { CreateServerModal } from './CreateServerModal';
 

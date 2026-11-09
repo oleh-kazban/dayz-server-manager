@@ -1,5 +1,5 @@
-import { isServerActiveStatus, type ServerStatus } from '@dsm/api-contracts';
-import type { StatusTagStatus } from '@dsm/ui';
+import { isServerActiveStatus, type ServerStatus } from '@aegis/api-contracts';
+import type { StatusTagStatus } from '@aegis/ui';
 
 import { i18n } from '../i18n';
 

@@ -1,12 +1,12 @@
 import type { ReactNode } from 'react';
 
-import { act, fireEvent, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { FeatureFlagsProvider, useLayoutStore } from '@dsm/web/core';
-import { AuthProvider } from '@dsm/web/features/auth';
-import { authStorage } from '@dsm/web/features/auth/auth.storage';
-import type { AuthUser } from '@dsm/web/features/auth/auth.types';
+import { FeatureFlagsProvider, useLayoutStore } from '@aegis/web/core';
+import { AuthProvider } from '@aegis/web/features/auth';
+import { authStorage } from '@aegis/web/features/auth/auth.storage';
+import type { AuthUser } from '@aegis/web/features/auth/auth.types';
 
 import { Sidebar } from './Sidebar';
 
@@ -77,7 +77,8 @@ describe('Sidebar', () => {
     );
 
     expect(screen.getByRole('complementary', { name: 'Primary Navigation' })).toBeInTheDocument();
-    expect(screen.getByText('OUTLIVE')).toBeInTheDocument();
+    expect(screen.getByText('AEGIS')).toBeInTheDocument();
+    expect(screen.getByText('CONSOLE')).toBeInTheDocument();
     expect(screen.getByText('dayz (local)')).toBeInTheDocument();
 
     // Sections
@@ -88,7 +89,14 @@ describe('Sidebar', () => {
     expect(screen.getByText('Configuration')).toBeInTheDocument();
 
     // Links
-    expect(screen.getByRole('link', { name: /dashboard/i })).toHaveAttribute('href', '/dashboard');
+    expect(screen.getByRole('link', { name: /^dashboard$/i })).toHaveAttribute(
+      'href',
+      '/dashboard',
+    );
+    expect(screen.getByRole('link', { name: 'Aegis Console Dashboard' })).toHaveAttribute(
+      'href',
+      '/dashboard',
+    );
     expect(screen.getByRole('link', { name: /system telemetry/i })).toHaveAttribute(
       'href',
       '/system',
@@ -341,5 +349,62 @@ describe('Sidebar', () => {
 
       expect(useLayoutStore.getState().isMobileSidebarOpen).toBe(false);
     });
+
+    it('renders brand header as a link navigating to /dashboard and closes mobile drawer on click', () => {
+      const { container } = render(
+        <AuthProvider>
+          <FeatureFlagsProvider>
+            <Sidebar />
+          </FeatureFlagsProvider>
+        </AuthProvider>,
+      );
+
+      act(() => {
+        useLayoutStore.getState().openMobileSidebar();
+      });
+
+      const mobileDrawer = container.querySelector('#mobile-sidebar');
+      expect(mobileDrawer).toBeInTheDocument();
+
+      const brandLink = within(mobileDrawer as HTMLElement).getByRole('link', {
+        name: 'Aegis Console Dashboard',
+      });
+      expect(brandLink).toBeInTheDocument();
+      expect(brandLink).toHaveAttribute('href', '/dashboard');
+      expect(brandLink).toHaveClass('cursor-pointer');
+
+      const logoSvg = brandLink.querySelector('svg.aegis-logo');
+      expect(logoSvg).toBeInTheDocument();
+      expect(logoSvg).toHaveClass('animate-on-hover');
+      expect(logoSvg).not.toHaveClass('is-loading');
+
+      fireEvent.click(brandLink);
+      expect(useLayoutStore.getState().isMobileSidebarOpen).toBe(false);
+    });
+  });
+
+  it('renders brand header as a link navigating to /dashboard with animate-on-hover logo in desktop sidebar', () => {
+    const { container } = render(
+      <AuthProvider>
+        <FeatureFlagsProvider>
+          <Sidebar />
+        </FeatureFlagsProvider>
+      </AuthProvider>,
+    );
+
+    const desktopSidebar = container.querySelector('#app-sidebar');
+    expect(desktopSidebar).toBeInTheDocument();
+
+    const brandLink = within(desktopSidebar as HTMLElement).getByRole('link', {
+      name: 'Aegis Console Dashboard',
+    });
+    expect(brandLink).toBeInTheDocument();
+    expect(brandLink).toHaveAttribute('href', '/dashboard');
+    expect(brandLink).toHaveClass('cursor-pointer');
+
+    const logoSvg = brandLink.querySelector('svg.aegis-logo');
+    expect(logoSvg).toBeInTheDocument();
+    expect(logoSvg).toHaveClass('animate-on-hover');
+    expect(logoSvg).not.toHaveClass('is-loading');
   });
 });

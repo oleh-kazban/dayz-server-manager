@@ -1,5 +1,5 @@
-import type { ApiErrorParams } from '@dsm/api-contracts';
-import { showToast } from '@dsm/ui';
+import type { ApiErrorParams } from '@aegis/api-contracts';
+import { showToast } from '@aegis/ui';
 
 import { type NotificationCode, resolveApiErrorMessage, resolveNotificationMessage } from '../i18n';
 

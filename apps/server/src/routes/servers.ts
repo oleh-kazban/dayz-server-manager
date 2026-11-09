@@ -15,8 +15,8 @@ import {
   serverSummarySchema,
   type UpdateServerDto,
   updateServerSchema,
-} from '@dsm/api-contracts';
-import { type Server, servers } from '@dsm/database';
+} from '@aegis/api-contracts';
+import { type Server, servers } from '@aegis/database';
 
 import { formatZodFieldErrors, sendApiError } from '../utils/api-error';
 

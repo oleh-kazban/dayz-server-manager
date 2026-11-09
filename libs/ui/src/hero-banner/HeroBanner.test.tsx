@@ -56,7 +56,7 @@ describe('HeroBanner Component', () => {
             <HeroBanner.Eyebrow data-testid="hero-eyebrow">DAYZ / DEDICATED</HeroBanner.Eyebrow>
             <HeroBanner.Title data-testid="hero-title">Chernarus Survival</HeroBanner.Title>
             <HeroBanner.Description data-testid="hero-desc">
-              Outlive Project · 1PP
+              Aegis Console · 1PP
             </HeroBanner.Description>
           </HeroBanner.Header>
           <HeroBanner.Aside data-testid="hero-aside">Frankfurt, DE</HeroBanner.Aside>
@@ -74,7 +74,7 @@ describe('HeroBanner Component', () => {
     expect(screen.getByTestId('hero-header')).toBeInTheDocument();
     expect(screen.getByTestId('hero-eyebrow')).toHaveTextContent('DAYZ / DEDICATED');
     expect(screen.getByTestId('hero-title')).toHaveTextContent('Chernarus Survival');
-    expect(screen.getByTestId('hero-desc')).toHaveTextContent('Outlive Project · 1PP');
+    expect(screen.getByTestId('hero-desc')).toHaveTextContent('Aegis Console · 1PP');
     expect(screen.getByTestId('hero-aside')).toHaveTextContent('Frankfurt, DE');
     expect(screen.getByTestId('hero-bottom')).toBeInTheDocument();
     expect(screen.getByTestId('hero-meta')).toHaveTextContent('185.38.151.42:2302');

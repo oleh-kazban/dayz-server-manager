@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import { changePasswordResponseSchema, userProfileSchema } from '@dsm/api-contracts';
+import { changePasswordResponseSchema, userProfileSchema } from '@aegis/api-contracts';
 
 import type { HttpClient } from '../http-client';
 

@@ -17,7 +17,7 @@ export interface HeroBannerProps {
 
   /**
    * Optional custom scrim classes or gradient override.
-   * If not provided, defaults to the canonical Outlive dark atmospheric gradient.
+   * If not provided, defaults to the canonical Aegis dark atmospheric gradient.
    */
   scrimClassName?: string;
 

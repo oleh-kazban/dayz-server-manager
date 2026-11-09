@@ -1,6 +1,6 @@
 import { type ReactNode, useEffect, useMemo, useState } from 'react';
 
-import { apiClient } from '@dsm/api-client';
+import { apiClient } from '@aegis/api-client';
 
 import { AuthContext } from './auth.context';
 import { authStorage } from './auth.storage';

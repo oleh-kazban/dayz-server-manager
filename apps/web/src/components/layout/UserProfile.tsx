@@ -1,7 +1,7 @@
 import { Link, useNavigate, useRouter } from '@tanstack/react-router';
 import { LogOut } from 'lucide-react';
 
-import { useAuth, type UserRole } from '@dsm/web/features/auth';
+import { useAuth, type UserRole } from '@aegis/web/features/auth';
 
 const ROLE_LABELS: Record<UserRole, string> = {
   admin: 'Administrator',

@@ -1,7 +1,7 @@
 import { and, desc, eq, gt, ne } from 'drizzle-orm';
 import type { FastifyPluginAsync } from 'fastify';
 
-import { sessions } from '@dsm/database';
+import { sessions } from '@aegis/database';
 
 import { sendApiError } from '../utils/api-error';
 import { parseUserAgent } from '../utils/user-agent';

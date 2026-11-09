@@ -1,8 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { ApiError } from '@dsm/api-client';
-import { apiErrorCodeSchema } from '@dsm/api-contracts';
-import { showToast } from '@dsm/ui';
+import { ApiError } from '@aegis/api-client';
+import { apiErrorCodeSchema } from '@aegis/api-contracts';
+import { showToast } from '@aegis/ui';
 
 import { notifyApiError, notifySuccess } from '../notifications';
 
@@ -14,8 +14,8 @@ import {
   resolveNotificationMessage,
 } from './index';
 
-vi.mock('@dsm/ui', async importOriginal => {
-  const actual = await importOriginal<typeof import('@dsm/ui')>();
+vi.mock('@aegis/ui', async importOriginal => {
+  const actual = await importOriginal<typeof import('@aegis/ui')>();
   return {
     ...actual,
     showToast: {

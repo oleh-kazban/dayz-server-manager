@@ -3,18 +3,18 @@ import type { ReactNode } from 'react';
 import { fireEvent, render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import type { ServerSummaryDto } from '@dsm/api-contracts';
-import { useActiveServer } from '@dsm/web/core';
-import { useAuth } from '@dsm/web/features/auth';
+import type { ServerSummaryDto } from '@aegis/api-contracts';
+import { useActiveServer } from '@aegis/web/core';
+import { useAuth } from '@aegis/web/features/auth';
 
 import { ServerSelector } from './ServerSelector';
 
-vi.mock('@dsm/web/core', async importOriginal => ({
-  ...(await importOriginal<typeof import('@dsm/web/core')>()),
+vi.mock('@aegis/web/core', async importOriginal => ({
+  ...(await importOriginal<typeof import('@aegis/web/core')>()),
   useActiveServer: vi.fn(),
 }));
 
-vi.mock('@dsm/web/features/auth', () => ({
+vi.mock('@aegis/web/features/auth', () => ({
   useAuth: vi.fn(),
 }));
 

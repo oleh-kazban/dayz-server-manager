@@ -2,8 +2,8 @@ import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { apiClient, ApiError } from '@dsm/api-client';
-import { showToast } from '@dsm/ui';
+import { apiClient, ApiError } from '@aegis/api-client';
+import { showToast } from '@aegis/ui';
 
 import { AuthProvider } from './AuthProvider';
 import { SignIn } from './SignIn';

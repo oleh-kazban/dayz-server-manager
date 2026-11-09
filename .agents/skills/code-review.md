@@ -52,12 +52,12 @@ Any pull request or code change that violates any of the following guardrails **
 
 ## 3. Frontend & React 19 Review Criteria
 
-### 3.1. Design System & Component Kit Standards (`@dsm/ui`)
+### 3.1. Design System & Component Kit Standards (`@aegis/ui`)
 
 - **Canonical 36px Standard (`h-9`):** All interactive buttons and form controls (`Button`, `Input`, `PasswordInput`, `DatePicker`, `Autosuggest`, `Toggle`) must adhere to the single canonical 36px baseline (`h-9`). Reject any attempt to introduce `size="sm"` (30px) or `size="lg"` (48px) props.
 - **Input Geometric Uniformity:** Every input-driven component must match `Button` geometry: `h-9 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] px-3.5 text-xs`.
 - **Wrapped Control Contract (`containerClassName`):** Composite form controls with labels, helper text, or prefix icons must expose `containerClassName?: string` on the root wrapper to allow grid/layout positioning without leaking into input internals.
-- **Token Compliance:** Reject hardcoded color hex values (e.g., `#2b2d42`, `#e63946`). All styling must consume Outlive CSS variables (`var(--color-primary)`, `var(--color-surface)`, `var(--color-border)`, `var(--radius-card)`, `var(--radius-banner)`).
+- **Token Compliance:** Reject hardcoded color hex values (e.g., `#2b2d42`, `#e63946`). All styling must consume Aegis CSS variables (`var(--color-primary)`, `var(--color-surface)`, `var(--color-border)`, `var(--radius-card)`, `var(--radius-banner)`).
 - **Slot-Based Compound Architecture:** Complex composite components (`HeroBanner`, `KpiCard`, `EmptyState`) must expose composable subcomponents (e.g. `<HeroBanner.Title>`, `<KpiCard.Sparkline>`, `<EmptyState.Actions>`).
 
 ### 3.2. React 19 & Fast Refresh Compliance

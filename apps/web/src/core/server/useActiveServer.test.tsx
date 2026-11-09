@@ -5,12 +5,12 @@ import { useNavigate, useSearch } from '@tanstack/react-router';
 import { renderHook } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { apiClient } from '@dsm/api-client';
-import type { ServerSummaryDto } from '@dsm/api-contracts';
+import { apiClient } from '@aegis/api-client';
+import type { ServerSummaryDto } from '@aegis/api-contracts';
 
 import { useActiveServer } from './useActiveServer';
 
-vi.mock('@dsm/api-client', () => ({
+vi.mock('@aegis/api-client', () => ({
   apiClient: {
     servers: {
       list: vi.fn(),

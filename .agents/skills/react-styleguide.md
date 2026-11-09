@@ -87,7 +87,7 @@ KpiCard.Footer = function KpiCardFooter({ children }: { children: ReactNode }) {
 
 ---
 
-## 3. UI Kit Geometric Standards & Layout Contract (`@dsm/ui`)
+## 3. UI Kit Geometric Standards & Layout Contract (`@aegis/ui`)
 
 ### 3.1. The Canonical 36px Standard (`h-9`)
 
@@ -113,7 +113,7 @@ export interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
 
 ### 3.4. CSS Variable Design Tokens
 
-Never hardcode raw hex codes or ad-hoc border radii. Always use semantic Outlive design system tokens:
+Never hardcode raw hex codes or ad-hoc border radii. Always use semantic Aegis design system tokens:
 
 - **Surfaces:** `bg-[var(--color-surface)]`, `bg-[var(--color-surface-sunken)]`, `bg-[var(--color-surface-elevated)]`
 - **Borders:** `border-[var(--color-border)]`, `border-[var(--color-border-subtle)]`

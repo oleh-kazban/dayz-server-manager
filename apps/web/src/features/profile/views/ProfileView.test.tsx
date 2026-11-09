@@ -2,7 +2,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import type { UserProfileDto } from '@dsm/api-contracts';
+import type { UserProfileDto } from '@aegis/api-contracts';
 
 import { ThemeProvider } from '../../theme';
 import * as queriesModule from '../api/profile.queries';

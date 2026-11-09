@@ -1,6 +1,6 @@
 import { Plus, Server } from 'lucide-react';
 
-import { Button } from '@dsm/ui';
+import { Button } from '@aegis/ui';
 
 export interface EmptyServersStateProps {
   onAddServer: () => void;

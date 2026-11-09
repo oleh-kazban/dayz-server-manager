@@ -8,12 +8,12 @@ import {
   FeatureFlagsProvider,
   queryClient,
   ROUTE_BREADCRUMBS,
-} from '@dsm/web/core';
-import { AuthProvider } from '@dsm/web/features/auth';
-import { authStorage } from '@dsm/web/features/auth/auth.storage';
-import type { AuthContextValue } from '@dsm/web/features/auth/auth.types';
-import { ThemeProvider } from '@dsm/web/features/theme';
-import { createAppRouter } from '@dsm/web/router';
+} from '@aegis/web/core';
+import { AuthProvider } from '@aegis/web/features/auth';
+import { authStorage } from '@aegis/web/features/auth/auth.storage';
+import type { AuthContextValue } from '@aegis/web/features/auth/auth.types';
+import { ThemeProvider } from '@aegis/web/features/theme';
+import { createAppRouter } from '@aegis/web/router';
 
 const mockAdminAuth: AuthContextValue = {
   user: {

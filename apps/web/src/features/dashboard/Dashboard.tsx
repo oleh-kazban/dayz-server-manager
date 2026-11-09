@@ -2,10 +2,10 @@ import { useEffect, useState } from 'react';
 
 import { Plus, Server, ShieldCheck } from 'lucide-react';
 
-import { apiClient } from '@dsm/api-client';
-import type { HealthResponseDto } from '@dsm/api-contracts';
-import { Button, EmptyServersState, PageContainer } from '@dsm/web/components';
-import { useActiveServer } from '@dsm/web/core';
+import { apiClient } from '@aegis/api-client';
+import type { HealthResponseDto } from '@aegis/api-contracts';
+import { Button, EmptyServersState, PageContainer } from '@aegis/web/components';
+import { useActiveServer } from '@aegis/web/core';
 
 import { useAuth } from '../auth';
 import { CreateServerModal } from '../server-settings';

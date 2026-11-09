@@ -55,7 +55,7 @@ export const ServerHero: Story = {
               </HeroBanner.Eyebrow>
               <HeroBanner.Title>Chernarus Survival</HeroBanner.Title>
               <HeroBanner.Description>
-                Outlive Project · 1PP · Vanilla+ · No safe zones
+                Aegis Console · 1PP · Vanilla+ · No safe zones
               </HeroBanner.Description>
             </HeroBanner.Header>
 

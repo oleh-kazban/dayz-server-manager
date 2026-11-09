@@ -2,8 +2,8 @@ import { eq } from 'drizzle-orm';
 import type { FastifyInstance } from 'fastify';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
-import { apiErrorResponseSchema } from '@dsm/api-contracts';
-import { type DatabaseInstance, initDatabase, sessions } from '@dsm/database';
+import { apiErrorResponseSchema } from '@aegis/api-contracts';
+import { type DatabaseInstance, initDatabase, sessions } from '@aegis/database';
 
 import { buildApp } from '../app/app';
 import { loadEnv } from '../config/env';

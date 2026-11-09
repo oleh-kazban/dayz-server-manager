@@ -72,7 +72,7 @@ export interface TableRowProps extends HTMLAttributes<HTMLTableRowElement> {
 
   /**
    * Whether the row is selected.
-   * Applies the Outlive primary tint background.
+   * Applies the Aegis primary tint background.
    */
   isSelected?: boolean;
 

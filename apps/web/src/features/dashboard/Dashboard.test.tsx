@@ -3,15 +3,15 @@ import type { ReactNode } from 'react';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { apiClient } from '@dsm/api-client';
-import type { ServerSummaryDto } from '@dsm/api-contracts';
-import { useActiveServer } from '@dsm/web/core';
+import { apiClient } from '@aegis/api-client';
+import type { ServerSummaryDto } from '@aegis/api-contracts';
+import { useActiveServer } from '@aegis/web/core';
 
 import { AuthContext } from '../auth/auth.context';
 
 import { Dashboard } from './Dashboard';
 
-vi.mock('@dsm/api-client', () => ({
+vi.mock('@aegis/api-client', () => ({
   apiClient: {
     health: {
       get: vi.fn(),
@@ -19,8 +19,8 @@ vi.mock('@dsm/api-client', () => ({
   },
 }));
 
-vi.mock('@dsm/web/core', async importOriginal => {
-  const actual = await importOriginal<typeof import('@dsm/web/core')>();
+vi.mock('@aegis/web/core', async importOriginal => {
+  const actual = await importOriginal<typeof import('@aegis/web/core')>();
   return {
     ...actual,
     useActiveServer: vi.fn(),

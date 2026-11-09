@@ -18,7 +18,7 @@ DayZ uses the following default ports:
 Always issue #shutdown in BattlEye RCON before terminating the server process.
 `;
 
-  it('renders formatted markdown elements with Outlive typography', () => {
+  it('renders formatted markdown elements with Aegis typography', () => {
     render(<MarkdownViewer content={sampleMarkdown} />);
 
     expect(screen.getByText('DayZ Server Operator Cheatsheet')).toBeInTheDocument();

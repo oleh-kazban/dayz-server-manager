@@ -1,6 +1,6 @@
 import { Check, Moon, Sun } from 'lucide-react';
 
-import { Card, Tag } from '@dsm/ui';
+import { Card, Tag } from '@aegis/ui';
 
 import {
   DARK_THEMES,

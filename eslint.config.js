@@ -120,8 +120,8 @@ export default tseslint.config(
         {
           groups: [
             ['^react'],
-            ['^(?!@dsm|@dayz-server-manager)@?\\w'],
-            ['^@dsm(/.*|$)', '^@dayz-server-manager(/.*|$)', '^@/'],
+            ['^(?!@aegis|@dayz-server-manager)@?\\w'],
+            ['^@aegis(/.*|$)', '^@dayz-server-manager(/.*|$)', '^@/'],
             ['^\\.\\.(?!/?$)', '^\\.\\./?$'],
             ['^\\./(?=.*/)(?!/?$)', '^\\.(?!/?$)', '^\\./?$'],
             ['^.+\\.s?css$'],

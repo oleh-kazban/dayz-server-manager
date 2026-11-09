@@ -8,7 +8,7 @@ import {
   apiFieldErrorsMapSchema,
 } from './error.contract';
 
-describe('Error Contracts (@dsm/api-contracts)', () => {
+describe('Error Contracts (@aegis/api-contracts)', () => {
   describe('apiErrorCodeSchema', () => {
     it.each(apiErrorCodeSchema.options)('accepts canonical error code %s', code => {
       const parsed = apiErrorCodeSchema.safeParse(code);

@@ -2,8 +2,8 @@ import { useState } from 'react';
 
 import { Laptop, LogOut, Smartphone } from 'lucide-react';
 
-import type { SessionDto } from '@dsm/api-contracts';
-import { Button, Card, Confirmation, Loader, showToast, Tag } from '@dsm/ui';
+import type { SessionDto } from '@aegis/api-contracts';
+import { Button, Card, Confirmation, Loader, showToast, Tag } from '@aegis/ui';
 
 import { useRevokeOtherSessionsMutation, useRevokeSessionMutation } from '../api/profile.mutations';
 import { useSessionsQuery } from '../api/profile.queries';

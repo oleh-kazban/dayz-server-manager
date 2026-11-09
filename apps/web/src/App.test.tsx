@@ -1,9 +1,9 @@
 import { act, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it } from 'vitest';
 
-import { showToast } from '@dsm/ui';
-import { App, AppErrorBoundary } from '@dsm/web/App';
-import { authStorage } from '@dsm/web/features/auth/auth.storage';
+import { showToast } from '@aegis/ui';
+import { App, AppErrorBoundary } from '@aegis/web/App';
+import { authStorage } from '@aegis/web/features/auth/auth.storage';
 
 describe('App Root Component', () => {
   beforeEach(() => {

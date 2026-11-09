@@ -1,6 +1,6 @@
 /* ==========================================================================
    Design Tokens & Color Themes
-   Default: Light Theme (Outlive Specification)
+   Default: Light Theme (Aegis Console Specification)
    Extensible: Supports [data-theme="dark"] and alternate palettes
    ========================================================================== */
 :root,
@@ -27,7 +27,7 @@
   --color-text-muted: #7a8aa0;
   --color-text-inverse: #ffffff;
 
-  /* Primary Brand (Outlive Royal Blue) */
+  /* Primary Brand (Aegis Royal Blue) */
   --color-primary: #4279e8;
   --color-primary-hover: #3567d1;
   --color-primary-light: #edf3ff;

@@ -21,7 +21,7 @@ const config: StorybookConfig = {
     config.resolve = config.resolve || {};
     config.resolve.alias = {
       ...(config.resolve.alias || {}),
-      '@dsm/ui': path.resolve(process.cwd(), 'libs/ui/src'),
+      '@aegis/ui': path.resolve(process.cwd(), 'libs/ui/src'),
     };
 
     return config;

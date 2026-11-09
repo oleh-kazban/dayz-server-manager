@@ -1,5 +1,5 @@
 {
-  "name": "@dsm/ui",
+  "name": "@aegis/ui",
   "version": "0.1.0",
   "type": "module",
   "main": "./src/index.ts",

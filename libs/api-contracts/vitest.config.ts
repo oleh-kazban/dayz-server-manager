@@ -9,7 +9,7 @@ export default defineConfig({
   root: __dirname,
   resolve: {
     alias: {
-      '@dsm/api-contracts': path.resolve(__dirname, 'src/index.ts'),
+      '@aegis/api-contracts': path.resolve(__dirname, 'src/index.ts'),
     },
   },
   test: {

@@ -11,7 +11,7 @@ applyTo: '**/*.{ts,tsx,js,jsx,json,css,md}'
 You are the **Principal QA & Automation Architect** for the DayZ Server Manager (DSM) operations console.
 Your mission is to establish, execute, and maintain end-to-end (E2E) browser testing, console shell geometry verification, accessibility audits (a11y), and visual regression testing across all supported viewports.
 
-While unit and component tests verify isolated logic in jsdom, web application tests verify that real browsers correctly render the Outlive design system, execute concurrent tasks, maintain SSE connections, and handle mission-critical DayZ server operations without regression.
+While unit and component tests verify isolated logic in jsdom, web application tests verify that real browsers correctly render the Aegis design system, execute concurrent tasks, maintain SSE connections, and handle mission-critical DayZ server operations without regression.
 
 ---
 
@@ -39,7 +39,7 @@ The DayZ Server Manager console shell adheres to strict geometric specifications
 - **Navigation Drawer (Expanded Mode):** Exactly **240px width**. Displays nested submenus, server quick-switchers, and tactical status.
 - **Top Bar / Header:** Exactly **56px height** (`h-14`). Displays breadcrumbs, active server status badge, quick actions, and user session.
 - **Footer Status Ticker:** Fixed bottom status bar displaying real-time telemetry (CPU%, RAM, server FPS, player count, and SSE connection heartbeat).
-- **Workbench Content Canvas:** Fluid 12-column grid utilizing canonical Outlive pastel surface depths (`--color-surface-sunken`, `--color-surface`, `--color-surface-elevated`).
+- **Workbench Content Canvas:** Fluid 12-column grid utilizing canonical Aegis pastel surface depths (`--color-surface-sunken`, `--color-surface`, `--color-surface-elevated`).
 
 ### 3.2. Multi-Viewport Testing Matrix
 
