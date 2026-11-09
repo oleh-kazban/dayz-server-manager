@@ -616,9 +616,16 @@ export function SteamSettingsView() {
 
   const diagMutation = useMutation({
     mutationFn: () => apiClient.steam.runDiagnostics(),
+    onMutate: () => {
+      setDiagResult(null);
+      setIsDiagOpen(true);
+      notifyInfo(
+        'Diagnostics Initiated',
+        'Validating SteamCMD binary, storage volumes, and probing Valve network latency...',
+      );
+    },
     onSuccess: result => {
       setDiagResult(result);
-      setIsDiagOpen(true);
       notifySuccess('STEAM_DIAGNOSTICS_COMPLETED');
     },
     onError: (err: Error) => {
