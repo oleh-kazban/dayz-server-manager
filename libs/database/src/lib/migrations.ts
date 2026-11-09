@@ -118,6 +118,12 @@ export const migrations: DsmMigration[] = [
           created_at INTEGER NOT NULL,
           updated_at INTEGER NOT NULL
         );
+
+        -- Self-heal any legacy millisecond timestamps inserted by earlier builds
+        UPDATE steam_settings
+        SET created_at = CAST(created_at / 1000 AS INTEGER),
+            updated_at = CAST(updated_at / 1000 AS INTEGER)
+        WHERE created_at > 10000000000;
       `);
 
       const existing = sqlite.prepare('SELECT id FROM steam_settings WHERE id = ?').get('default');

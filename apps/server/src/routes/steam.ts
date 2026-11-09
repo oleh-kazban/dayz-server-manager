@@ -35,6 +35,13 @@ function ensureAdminRole(
   return true;
 }
 
+function toSafeIsoDate(date: Date): string {
+  if (date.getFullYear() > 9999) {
+    return new Date(Math.floor(date.getTime() / 1000)).toISOString();
+  }
+  return date.toISOString();
+}
+
 function mapSteamSettingsDetail(row: SteamSettings): SteamSettingsDto {
   return steamSettingsSchema.parse({
     id: row.id,
@@ -49,8 +56,8 @@ function mapSteamSettingsDetail(row: SteamSettings): SteamSettingsDto {
     branch: row.branch,
     hasBranchPassword: Boolean(row.branchPasswordEncrypted),
     sessionStatus: row.sessionStatus,
-    createdAt: row.createdAt.toISOString(),
-    updatedAt: row.updatedAt.toISOString(),
+    createdAt: toSafeIsoDate(row.createdAt),
+    updatedAt: toSafeIsoDate(row.updatedAt),
   });
 }
 
