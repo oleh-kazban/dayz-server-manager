@@ -323,6 +323,37 @@ describe('SteamSettingsView (REQ-01, REQ-02, REQ-03, REQ-04, REQ-07)', () => {
       expect(screen.getByText('Diagnostics Passed')).toBeInTheDocument();
       expect(screen.getByText('[INFO] Probe test log entry')).toBeInTheDocument();
     });
+
+    expect(showToast.success).toHaveBeenCalled();
+    expect(showToast.error).not.toHaveBeenCalled();
+  });
+
+  it('fires error toast with "Diagnostics Issues Detected" and no success toast when diagnostics fails (REQ-10 Refinement)', async () => {
+    vi.mocked(apiClient.steam.runDiagnostics).mockResolvedValue({
+      ...mockDiagnosticsResult,
+      success: false,
+      connectionSuccess: false,
+      logs: ['[ERROR] Network probe failed'],
+    });
+
+    renderView();
+
+    await waitFor(() => {
+      expect(screen.getByText('Run Diagnostics')).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Run Diagnostics' }));
+
+    await waitFor(() => {
+      expect(screen.getByText('Issues Detected')).toBeInTheDocument();
+    });
+
+    expect(showToast.error).toHaveBeenCalledWith(
+      'Diagnostics Issues Detected',
+      'Diagnostics completed with issues. Review individual checks and execution logs below.',
+      undefined,
+    );
+    expect(showToast.success).not.toHaveBeenCalled();
   });
 
   it('triggers login session mutation when clicking Authenticate Session button (REQ-08)', async () => {

@@ -626,7 +626,16 @@ export function SteamSettingsView() {
     },
     onSuccess: result => {
       setDiagResult(result);
-      notifySuccess('STEAM_DIAGNOSTICS_COMPLETED');
+      if (result.success) {
+        notifySuccess('STEAM_DIAGNOSTICS_COMPLETED');
+      } else {
+        notifyApiError(
+          new Error(
+            'Diagnostics completed with issues. Review individual checks and execution logs below.',
+          ),
+          'Diagnostics Issues Detected',
+        );
+      }
     },
     onError: (err: Error) => {
       notifyApiError(err, 'Failed to Run SteamCMD Diagnostics');

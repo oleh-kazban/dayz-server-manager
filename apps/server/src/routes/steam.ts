@@ -20,7 +20,10 @@ import {
 } from '@aegis/database';
 
 import { steamPathService } from '../services/steam/steam-path.service';
-import { steamRunnerService } from '../services/steam/steam-runner.service';
+import {
+  steamRunnerService,
+  type SteamSessionStatusType,
+} from '../services/steam/steam-runner.service';
 import { formatZodFieldErrors, sendApiError } from '../utils/api-error';
 
 function ensureAdminRole(
@@ -470,9 +473,18 @@ export const registerSteamRoutes: FastifyPluginAsync = async fastify => {
       const vaultKey = resolveVaultKey();
 
       try {
+        const onStatusChange = (status: SteamSessionStatusType) => {
+          fastify.db
+            .update(steamSettings)
+            .set({ sessionStatus: status, updatedAt: new Date() })
+            .where(eq(steamSettings.id, 'default'))
+            .run();
+        };
+
         const result: SteamDiagnosticsResultDto = await steamRunnerService.runDiagnostics(
           current,
           vaultKey,
+          onStatusChange,
         );
 
         if (result.connectionSuccess && current.authMode === 'account') {

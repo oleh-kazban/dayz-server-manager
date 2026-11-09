@@ -5,10 +5,11 @@ import path from 'node:path';
 import { PassThrough } from 'node:stream';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import type { SteamSettings } from '@aegis/database';
+import { encryptVaultSecret, type SteamSettings } from '@aegis/database';
 
 import type { SseHub } from '../realtime/sse-hub';
 
+import type { SteamPathService } from './steam-path.service';
 import { SteamRunnerService } from './steam-runner.service';
 
 interface MockChildProcess extends EventEmitter {
@@ -29,7 +30,6 @@ function createMockChildProcess(): MockChildProcess {
   proc.killed = false;
   proc.kill = vi.fn().mockImplementation(() => {
     proc.killed = true;
-    proc.emit('close', 0);
     return true;
   });
   return proc;
@@ -62,7 +62,16 @@ describe('SteamRunnerService (apps/server/src/services/steam)', () => {
     mockProc = createMockChildProcess();
     mockSpawn.mockReturnValue(mockProc);
 
-    runner = new SteamRunnerService(mockHub);
+    const mockPathService = {
+      validateSteamCmdPath: vi.fn().mockReturnValue({ valid: true }),
+      validateStoragePath: vi
+        .fn()
+        .mockReturnValue({ valid: true, freeBytes: 100 * 1024 * 1024 * 1024 }),
+      getAvailableDiskSpace: vi.fn().mockReturnValue(100 * 1024 * 1024 * 1024),
+      validateLexicalPath: vi.fn().mockReturnValue({ valid: true }),
+    } as unknown as SteamPathService;
+
+    runner = new SteamRunnerService(mockHub, mockPathService);
   });
 
   describe('Session Token Purge (REQ-04)', () => {
@@ -293,6 +302,222 @@ describe('SteamRunnerService (apps/server/src/services/steam)', () => {
 
       mockProc.emit('close', 0);
       await firstRun;
+    });
+  });
+
+  describe('Diagnostics Probe Execution & Session Ticket Prioritization (REQ-07, REQ-12)', () => {
+    let tempMetaDir: string;
+    const testVaultKey = Buffer.alloc(32, 2);
+    const fakeSettingsWithPassword: SteamSettings = {
+      id: 'default',
+      steamCmdPath:
+        process.platform === 'win32' ? 'C:\\steamcmd\\steamcmd.exe' : '/usr/games/steamcmd',
+      steamWorkshopPath: os.tmpdir(),
+      steamMetaPath: os.tmpdir(),
+      authMode: 'account',
+      steamUsername: 'dayz_operator',
+      steamPasswordEncrypted: null,
+      gameServerAppId: 223350,
+      workshopAppId: 221100,
+      branch: 'public',
+      branchPasswordEncrypted: null,
+      sessionStatus: 'UNAUTHENTICATED',
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+
+    beforeEach(() => {
+      tempMetaDir = fs.mkdtempSync(path.join(os.tmpdir(), 'dsm-steam-probe-'));
+    });
+
+    afterEach(() => {
+      if (fs.existsSync(tempMetaDir)) {
+        fs.rmSync(tempMetaDir, { recursive: true, force: true });
+      }
+    });
+
+    it('buildProbeArgs omits raw password argument when session tickets (ssfn*) or sessionStatus === AUTHENTICATED are present (REQ-12)', () => {
+      const encryptedPassword = encryptVaultSecret('VaultPasswordSecret!', testVaultKey);
+
+      // Subcase 1: sessionStatus is AUTHENTICATED -> omits password
+      const authenticatedSettings: SteamSettings = {
+        ...fakeSettingsWithPassword,
+        steamMetaPath: tempMetaDir,
+        steamPasswordEncrypted: encryptedPassword,
+        sessionStatus: 'AUTHENTICATED',
+      };
+      const logsAuth: string[] = [];
+      const argsAuth = (
+        runner as unknown as {
+          buildProbeArgs: (s: SteamSettings, k: Buffer, l: string[]) => string[];
+        }
+      ).buildProbeArgs(authenticatedSettings, testVaultKey, logsAuth);
+
+      expect(argsAuth).toEqual([
+        '+@ShutdownOnFailedCommand',
+        '1',
+        '+@NoPromptForPassword',
+        '1',
+        '+login',
+        'dayz_operator',
+        '+quit',
+      ]);
+      expect(argsAuth).not.toContain('VaultPasswordSecret!');
+      expect(logsAuth.some(l => l.includes('Prioritizing cached session tickets'))).toBe(true);
+
+      // Subcase 2: sessionStatus is UNAUTHENTICATED but ssfn ticket file exists in metaPath -> omits password
+      fs.writeFileSync(path.join(tempMetaDir, 'ssfn784628461984'), 'mock-ssfn-ticket');
+      const unauthWithSsfn: SteamSettings = {
+        ...fakeSettingsWithPassword,
+        steamMetaPath: tempMetaDir,
+        steamPasswordEncrypted: encryptedPassword,
+        sessionStatus: 'UNAUTHENTICATED',
+      };
+      const logsSsfn: string[] = [];
+      const argsSsfn = (
+        runner as unknown as {
+          buildProbeArgs: (s: SteamSettings, k: Buffer, l: string[]) => string[];
+        }
+      ).buildProbeArgs(unauthWithSsfn, testVaultKey, logsSsfn);
+
+      expect(argsSsfn).toEqual([
+        '+@ShutdownOnFailedCommand',
+        '1',
+        '+@NoPromptForPassword',
+        '1',
+        '+login',
+        'dayz_operator',
+        '+quit',
+      ]);
+      expect(argsSsfn).not.toContain('VaultPasswordSecret!');
+      expect(logsSsfn.some(l => l.includes('Prioritizing cached session tickets'))).toBe(true);
+
+      // Subcase 3: No ssfn file and sessionStatus UNAUTHENTICATED -> includes decrypted password
+      const emptyMetaDir = fs.mkdtempSync(path.join(os.tmpdir(), 'dsm-steam-empty-'));
+      try {
+        const unauthNoSsfn: SteamSettings = {
+          ...fakeSettingsWithPassword,
+          steamMetaPath: emptyMetaDir,
+          steamPasswordEncrypted: encryptedPassword,
+          sessionStatus: 'UNAUTHENTICATED',
+        };
+        const logsNoTicket: string[] = [];
+        const argsNoTicket = (
+          runner as unknown as {
+            buildProbeArgs: (s: SteamSettings, k: Buffer, l: string[]) => string[];
+          }
+        ).buildProbeArgs(unauthNoSsfn, testVaultKey, logsNoTicket);
+
+        expect(argsNoTicket).toEqual([
+          '+@ShutdownOnFailedCommand',
+          '1',
+          '+@NoPromptForPassword',
+          '1',
+          '+login',
+          'dayz_operator',
+          'VaultPasswordSecret!',
+          '+quit',
+        ]);
+      } finally {
+        fs.rmSync(emptyMetaDir, { recursive: true, force: true });
+      }
+    });
+
+    it('executeChildProbe detects 2FA challenge, broadcasts SSE event, extends timeout to 90s, and handles OTP submission (REQ-12)', async () => {
+      vi.useFakeTimers();
+      try {
+        const onStatusChangeSpy = vi.fn();
+        const diagPromise = runner.runDiagnostics(
+          {
+            ...fakeSettingsWithPassword,
+            steamMetaPath: tempMetaDir,
+          },
+          testVaultKey,
+          onStatusChangeSpy,
+        );
+
+        // 1. Emit OTP challenge prompt from child stdout
+        mockProc.stdout.emit(
+          'data',
+          Buffer.from('Logging in user dayz_operator...\nEnter your Steam Guard code: '),
+        );
+
+        // 2. Verify challenge detected, status change triggered, and SSE events broadcasted
+        expect(onStatusChangeSpy).toHaveBeenCalledWith('CHALLENGE_REQUIRED');
+        expect(mockHub.broadcast).toHaveBeenCalledWith('steam.auth.status', {
+          status: 'CHALLENGE_REQUIRED',
+        });
+        expect(mockHub.broadcast).toHaveBeenCalledWith(
+          'steam.auth.challenge',
+          expect.objectContaining({
+            type: 'OTP_CODE',
+            timeoutSeconds: 90,
+          }),
+        );
+
+        // 3. Verify timeout extension: Advance past initial 30s timeout (to 45s) -> should NOT time out
+        await vi.advanceTimersByTimeAsync(45_000);
+        expect(mockProc.killed).toBe(false);
+        expect(mockProc.kill).not.toHaveBeenCalled();
+
+        // 4. Handle OTP submission via pipeline
+        const challengeCall = vi
+          .mocked(mockHub.broadcast)
+          .mock.calls.find(call => call[0] === 'steam.auth.challenge');
+        expect(challengeCall).toBeDefined();
+        const challengeId = (challengeCall![1] as { challengeId: string }).challengeId;
+
+        let pipedData = '';
+        mockProc.stdin.on('data', chunk => {
+          pipedData += chunk.toString();
+        });
+
+        runner.submitChallengeOtp(challengeId, '6F3P1');
+        expect(pipedData).toBe('6F3P1\n');
+
+        // 5. Simulate login confirmation and process close
+        mockProc.stdout.emit(
+          'data',
+          Buffer.from('Waiting for user info...OK\nLogged in OK\nSteamCMD version 1730000000\n'),
+        );
+        expect(onStatusChangeSpy).toHaveBeenCalledWith('AUTHENTICATED');
+        expect(mockHub.broadcast).toHaveBeenCalledWith('steam.auth.status', {
+          status: 'AUTHENTICATED',
+        });
+
+        mockProc.emit('close', 0);
+        const result = await diagPromise;
+
+        expect(result.success).toBe(true);
+        expect(result.connectionSuccess).toBe(true);
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    it('executeChildProbe times out after 90 seconds if extended challenge is not resolved (REQ-12)', async () => {
+      vi.useFakeTimers();
+      try {
+        const diagPromise = runner.runDiagnostics(
+          {
+            ...fakeSettingsWithPassword,
+            steamMetaPath: tempMetaDir,
+          },
+          testVaultKey,
+        );
+
+        mockProc.stdout.emit('data', Buffer.from('Enter your Steam Guard code: '));
+
+        await vi.advanceTimersByTimeAsync(91_000);
+
+        const result = await diagPromise;
+        expect(result.success).toBe(false);
+        expect(result.connectionSuccess).toBe(false);
+        expect(result.logs.some(l => l.includes('timed out after 90 seconds'))).toBe(true);
+        expect(mockProc.kill).toHaveBeenCalledWith('SIGTERM');
+      } finally {
+        vi.useRealTimers();
+      }
     });
   });
 });

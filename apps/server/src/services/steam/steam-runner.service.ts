@@ -13,6 +13,11 @@ import { type SteamPathService, steamPathService } from './steam-path.service';
 export type SteamSessionStatusType =
   'UNAUTHENTICATED' | 'AUTHENTICATED' | 'CHALLENGE_REQUIRED' | 'EXPIRED';
 
+const OTP_PROMPT_REGEX = /(?:Enter your Steam Guard code|Steam Guard code):/i;
+const MOBILE_PUSH_REGEX =
+  /(?:Waiting for confirmation in your Steam Mobile App|Steam Mobile Confirmation)/i;
+const SUCCESS_LOGIN_REGEX = /(?:Logged in OK|Waiting for user info\.\.\.OK)/i;
+
 export interface ActiveChallenge {
   challengeId: string;
   type: SteamChallengeType;
@@ -20,6 +25,14 @@ export interface ActiveChallenge {
   timeoutTimer: NodeJS.Timeout;
   createdAt: number;
   timeoutSeconds: number;
+}
+
+interface ChildProbeOptions {
+  binaryPath: string;
+  args: string[];
+  cwd?: string;
+  logs: string[];
+  onStatusChange?: (status: SteamSessionStatusType) => void;
 }
 
 export class SteamRunnerService {
@@ -87,6 +100,47 @@ export class SteamRunnerService {
     };
   }
 
+  private hasCachedSessionTicket(metaPath: string, sessionStatus: string): boolean {
+    if (sessionStatus === 'AUTHENTICATED') {
+      return true;
+    }
+    if (!metaPath || !fs.existsSync(metaPath)) {
+      return false;
+    }
+    try {
+      const files = fs.readdirSync(metaPath);
+      return files.some(file => file.startsWith('ssfn'));
+    } catch {
+      return false;
+    }
+  }
+
+  private checkChallengePrompt(text: string): SteamChallengeType | null {
+    if (OTP_PROMPT_REGEX.test(text)) {
+      return 'OTP_CODE';
+    }
+    if (MOBILE_PUSH_REGEX.test(text)) {
+      return 'MOBILE_PUSH';
+    }
+    return null;
+  }
+
+  private resolveAccountProbePassword(
+    settings: SteamSettings,
+    vaultKey: Buffer | undefined,
+    logs: string[],
+  ): string {
+    if (!settings.steamPasswordEncrypted || !vaultKey) {
+      return '';
+    }
+    try {
+      return decryptVaultSecret(settings.steamPasswordEncrypted, vaultKey);
+    } catch {
+      logs.push(`[${new Date().toISOString()}] Warning: Failed to decrypt Steam credentials.`);
+      return '';
+    }
+  }
+
   private buildProbeArgs(
     settings: SteamSettings,
     vaultKey: Buffer | undefined,
@@ -97,35 +151,54 @@ export class SteamRunnerService {
       args.push('+@ShutdownOnFailedCommand', '1', '+@NoPromptForPassword', '1');
     }
 
-    if (settings.authMode === 'account' && settings.steamUsername) {
-      let password = '';
-      if (settings.steamPasswordEncrypted && vaultKey) {
-        try {
-          password = decryptVaultSecret(settings.steamPasswordEncrypted, vaultKey);
-        } catch {
-          logs.push(`[${new Date().toISOString()}] Warning: Failed to decrypt Steam credentials.`);
-        }
-      }
-      if (password) {
-        args.push('+login', settings.steamUsername, password);
-      } else {
-        args.push('+login', settings.steamUsername);
-      }
-    } else {
-      args.push('+login', 'anonymous');
+    if (settings.authMode !== 'account' || !settings.steamUsername) {
+      args.push('+login', 'anonymous', '+quit');
+      return args;
     }
 
-    args.push('+quit');
+    if (this.hasCachedSessionTicket(settings.steamMetaPath, settings.sessionStatus)) {
+      logs.push(
+        `[${new Date().toISOString()}] Prioritizing cached session tickets for '${settings.steamUsername}'`,
+      );
+      args.push('+login', settings.steamUsername, '+quit');
+      return args;
+    }
+
+    const password = this.resolveAccountProbePassword(settings, vaultKey, logs);
+    if (password) {
+      args.push('+login', settings.steamUsername, password, '+quit');
+    } else {
+      args.push('+login', settings.steamUsername, '+quit');
+    }
+
     return args;
   }
 
+  private handleProbeStdoutChunk(
+    text: string,
+    state: { challengeId: string; challengeActive: boolean; extendTimeout: () => void },
+    child: ChildProcess,
+    onStatusChange: ((status: SteamSessionStatusType) => void) | undefined,
+  ) {
+    if (SUCCESS_LOGIN_REGEX.test(text)) {
+      onStatusChange?.('AUTHENTICATED');
+      this.hub.broadcast('steam.auth.status', { status: 'AUTHENTICATED' });
+      this.cleanupChallenge(state.challengeId);
+    }
+
+    const challengeType = this.checkChallengePrompt(text);
+    if (challengeType && !state.challengeActive) {
+      state.challengeActive = true;
+      state.extendTimeout();
+      this.handleChallengeDetected(state.challengeId, challengeType, child, onStatusChange);
+    }
+  }
+
   private async executeChildProbe(
-    binaryPath: string,
-    args: string[],
-    cwd: string | undefined,
-    logs: string[],
+    options: ChildProbeOptions,
   ): Promise<{ code: number | null; output: string }> {
     return new Promise<{ code: number | null; output: string }>((resolve, reject) => {
+      const { binaryPath, args, cwd, logs, onStatusChange } = options;
       const child = spawn(binaryPath, args, {
         windowsHide: true,
         stdio: ['pipe', 'pipe', 'pipe'],
@@ -136,19 +209,7 @@ export class SteamRunnerService {
       let stdoutAcc = '';
       let stderrAcc = '';
 
-      child.stdout.on('data', chunk => {
-        const text = chunk.toString();
-        stdoutAcc += text;
-        logs.push(`[STDOUT] ${text.trimEnd()}`);
-      });
-
-      child.stderr.on('data', chunk => {
-        const text = chunk.toString();
-        stderrAcc += text;
-        logs.push(`[STDERR] ${text.trimEnd()}`);
-      });
-
-      const timer = setTimeout(() => {
+      let timer = setTimeout(() => {
         try {
           child.kill('SIGTERM');
         } catch {
@@ -157,13 +218,46 @@ export class SteamRunnerService {
         reject(new Error('SteamCMD diagnostics timed out after 30 seconds'));
       }, 30_000);
 
+      const extendTimeout = () => {
+        clearTimeout(timer);
+        timer = setTimeout(() => {
+          try {
+            child.kill('SIGTERM');
+          } catch {
+            // Ignore
+          }
+          reject(new Error('SteamCMD diagnostics timed out after 90 seconds'));
+        }, 90_000);
+      };
+
+      const state = {
+        challengeId: crypto.randomUUID(),
+        challengeActive: false,
+        extendTimeout,
+      };
+
+      child.stdout.on('data', chunk => {
+        const text = chunk.toString();
+        stdoutAcc += text;
+        logs.push(`[STDOUT] ${text.trimEnd()}`);
+        this.handleProbeStdoutChunk(text, state, child, onStatusChange);
+      });
+
+      child.stderr.on('data', chunk => {
+        const text = chunk.toString();
+        stderrAcc += text;
+        logs.push(`[STDERR] ${text.trimEnd()}`);
+      });
+
       child.on('error', err => {
         clearTimeout(timer);
+        this.cleanupChallenge(state.challengeId);
         reject(err);
       });
 
       child.on('close', code => {
         clearTimeout(timer);
+        this.cleanupChallenge(state.challengeId);
         resolve({ code, output: `${stdoutAcc}\n${stderrAcc}` });
       });
     });
@@ -175,6 +269,7 @@ export class SteamRunnerService {
   public async runDiagnostics(
     settings: SteamSettings,
     vaultKey?: Buffer,
+    onStatusChange?: (status: SteamSessionStatusType) => void,
   ): Promise<SteamDiagnosticsResultDto> {
     if (this.isBusy()) {
       const error = new Error('Another Steam task or diagnostic run is currently in progress.');
@@ -216,7 +311,13 @@ export class SteamRunnerService {
     const startTime = Date.now();
     try {
       const cwd = fs.existsSync(settings.steamMetaPath) ? settings.steamMetaPath : undefined;
-      const execResult = await this.executeChildProbe(binaryPath, args, cwd, logs);
+      const execResult = await this.executeChildProbe({
+        binaryPath,
+        args,
+        cwd,
+        logs,
+        onStatusChange,
+      });
 
       latencyMs = Date.now() - startTime;
       logs.push(
@@ -296,11 +397,6 @@ export class SteamRunnerService {
 
     const challengeId = crypto.randomUUID();
 
-    const OTP_PROMPT_REGEX = /(?:Enter your Steam Guard code|Steam Guard code):/i;
-    const MOBILE_PUSH_REGEX =
-      /(?:Waiting for confirmation in your Steam Mobile App|Steam Mobile Confirmation)/i;
-    const SUCCESS_LOGIN_REGEX = /(?:Logged in OK|Waiting for user info\.\.\.OK)/i;
-
     child.stdout.on('data', chunk => {
       const text = chunk.toString();
 
@@ -310,10 +406,9 @@ export class SteamRunnerService {
         this.cleanupChallenge(challengeId);
       }
 
-      if (OTP_PROMPT_REGEX.test(text)) {
-        this.handleChallengeDetected(challengeId, 'OTP_CODE', child, onStatusChange);
-      } else if (MOBILE_PUSH_REGEX.test(text)) {
-        this.handleChallengeDetected(challengeId, 'MOBILE_PUSH', child, onStatusChange);
+      const challengeType = this.checkChallengePrompt(text);
+      if (challengeType) {
+        this.handleChallengeDetected(challengeId, challengeType, child, onStatusChange);
       }
     });
 
