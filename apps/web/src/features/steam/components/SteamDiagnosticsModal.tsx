@@ -72,9 +72,9 @@ function StorageMetricCard({
 function DiagnosticLogsViewer({ logs }: { logs: string[] }) {
   return (
     <div className="space-y-1">
-      <label className="text-xs font-semibold text-[var(--color-text-muted)] uppercase tracking-wider">
+      <span className="block text-xs font-semibold text-[var(--color-text-muted)] uppercase tracking-wider">
         SteamCMD Execution Log
-      </label>
+      </span>
       <div className="h-48 overflow-y-auto rounded-xl border border-[var(--color-border)] bg-black/80 p-3 font-mono text-xs text-zinc-300 space-y-1">
         {logs.length === 0 ? (
           <p className="text-zinc-500 italic">No output logged.</p>
