@@ -4,6 +4,28 @@ This document records all completed product backlog items and operational featur
 
 ---
 
+## [DSM-00126] Steam Integration Workbench, Interactive Authentication, and Credential Vault
+
+- **Type**: `Story`
+- **Priority**: `P0 (Critical)`
+- **Status**: `DONE`
+- **Dependencies**: `DSM-00104, DSM-00105, DSM-00107, DSM-00108`
+
+### Summary
+
+Deliver the dedicated Steam integration workbench at `/settings/steam` in `apps/web` alongside backend SteamCMD process orchestration, encrypted credential storage, and reactive Steam Guard handling. Enable operators to configure SteamCMD binary paths (`steamCmdPath`), high-capacity workshop storage directories (`steamWorkshopPath`), metadata caches (`steamMetaPath`), and DayZ Steam application IDs (vanilla server `223350`, experimental server `1042420`, workshop content `221100`). Manage authenticated Steam sessions securely by storing passwords with AES-256-GCM encryption in SQLite (`steam_settings` table) and caching SteamCMD session tickets (`ssfn` / `config.vdf`) to prevent plaintext exposure. Reactively handle Steam Guard 2FA by monitoring child process stdout for both 5-character OTP prompts and Steam Mobile App push confirmations, dispatching info toast notifications and presenting an interactive challenge modal to complete verification.
+
+### Delivered Capabilities
+
+- Dedicated route `/settings/steam` with grouped configuration cards: Account & Authentication, Storage Paths & SteamCMD Runtime, Application IDs & Branch Selection.
+- Headless SteamCMD runner (`apps/server/src/services/steam/steam-runner.service.ts`) with interactive `stdin` piping for Steam Guard OTP and Mobile Push prompts.
+- Real-time Server-Sent Events (`/api/v1/realtime/sse`) broadcasting Steam challenge events directly to the browser.
+- Encrypted credential vault using AES-256-GCM in SQLite (`steam_settings` table) with hybrid master key resolution (`STEAM_VAULT_KEY` / `.vault.key`).
+- Dual-Scope Navigation (`server` vs. `appliance`) with a single polymorphic `Sidebar`, contextual top switcher (`<ServerSelector />` vs. `[ ← Server Name ]`), appliance breadcrumbs, and search query parameter isolation.
+- Defensive timestamp self-healing in migration `0004_steam_settings` and `toSafeIsoDate` route guard.
+
+---
+
 ## [DSM-00121] Static Documentation Pipeline, FAQ Modal, and Release History Integration
 
 - **Type**: `Story`

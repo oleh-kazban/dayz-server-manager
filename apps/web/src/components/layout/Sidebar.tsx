@@ -1,9 +1,15 @@
 import { useEffect } from 'react';
 
 import { Link, useLocation } from '@tanstack/react-router';
-import { type LucideIcon, RadioTower, X } from 'lucide-react';
+import { ArrowLeft, type LucideIcon, RadioTower, X } from 'lucide-react';
 
-import { NAVIGATION_SECTIONS, useFeatureFlags, useLayoutStore } from '@aegis/web/core';
+import {
+  type NavigationScope,
+  useActiveServer,
+  useFeatureFlags,
+  useLayoutStore,
+  useNavigationContext,
+} from '@aegis/web/core';
 import { useAuth } from '@aegis/web/features/auth';
 
 import { Logo } from './Logo';
@@ -14,7 +20,7 @@ import { UserProfile } from './UserProfile';
 PRIMARY NAVIGATION (SIDEBAR)
 Architectural Note:
 - Responsive: Drawer off-canvas on mobile, fixed rail on desktop.
-- Type-Safe: Driven by declarative NAVIGATION_SECTIONS manifest.
+- Context-Aware: Single polymorphic shell driven by useNavigationContext().
 - Modular: Dynamically prunes disabled subsystems based on feature flags and RBAC.
 ==================================================================== */
 interface SidebarSectionItem {
@@ -31,6 +37,8 @@ interface SidebarSection {
 }
 
 interface SidebarContentProps {
+  scope: NavigationScope;
+  activeServer: { id: string; name: string } | null;
   visibleSections: SidebarSection[];
   linkBaseClasses: string;
   linkActiveClasses: string;
@@ -39,17 +47,52 @@ interface SidebarContentProps {
 }
 
 function SidebarContent({
+  scope,
+  activeServer,
   visibleSections,
   linkBaseClasses,
   linkActiveClasses,
   linkInactiveClasses,
   onNavigate,
 }: SidebarContentProps) {
+  const isAppliance = scope === 'appliance';
+
+  const resolveItemSearch = () => {
+    if (isAppliance) {
+      return () => ({});
+    }
+    if (activeServer) {
+      return { serverId: activeServer.id };
+    }
+    return undefined;
+  };
+  const itemSearch = resolveItemSearch();
+
   return (
     <>
       <div className="space-y-5">
-        {/* Node Selector */}
-        <ServerSelector />
+        {/* Top Control: Node Selector (Server Scope) vs. Back to Server Button (Appliance Scope) */}
+        {isAppliance ? (
+          <Link
+            to="/dashboard"
+            search={activeServer ? { serverId: activeServer.id } : undefined}
+            onClick={onNavigate}
+            aria-label="Back to server console"
+            className="group flex items-center gap-2.5 px-3 py-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-subtle)] text-xs text-[var(--color-text-secondary)] hover:text-[var(--color-text-main)] hover:bg-[var(--color-surface-hover)] transition-all cursor-pointer select-none"
+          >
+            <ArrowLeft className="w-4 h-4 shrink-0 text-[var(--color-primary)] transition-transform group-hover:-translate-x-0.5" />
+            <div className="flex flex-col min-w-0">
+              <span className="text-[9px] font-semibold tracking-wider text-[var(--color-text-muted)] uppercase">
+                Console Scope
+              </span>
+              <span className="font-semibold text-[var(--color-text-main)] truncate text-xs">
+                {activeServer ? activeServer.name : 'Server Console'}
+              </span>
+            </div>
+          </Link>
+        ) : (
+          <ServerSelector />
+        )}
 
         {/* Navigation Sections */}
         <div className="space-y-4">
@@ -64,6 +107,7 @@ function SidebarContent({
                   <Link
                     key={item.to}
                     to={item.to}
+                    search={itemSearch}
                     activeProps={{ className: linkActiveClasses }}
                     inactiveProps={{ className: linkInactiveClasses }}
                     className={linkBaseClasses}
@@ -103,6 +147,8 @@ export function Sidebar() {
   const { user } = useAuth();
   const { isEnabled } = useFeatureFlags();
   const { isMobileSidebarOpen, closeMobileSidebar } = useLayoutStore();
+  const { activeServer } = useActiveServer();
+  const { scope, sections } = useNavigationContext();
 
   const location = useLocation();
   const pathname = location?.pathname;
@@ -147,30 +193,32 @@ export function Sidebar() {
   const linkBaseClasses =
     'flex items-center gap-3 px-3 py-2 rounded-lg text-xs transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)] focus-visible:ring-offset-1 focus-visible:ring-offset-[var(--color-sidebar)]';
 
-  const visibleSections = NAVIGATION_SECTIONS.map(section => {
-    if (section.featureFlag && !isEnabled(section.featureFlag)) {
-      return null;
-    }
-
-    const visibleItems = section.items.filter(item => {
-      if (item.featureFlag && !isEnabled(item.featureFlag)) {
-        return false;
+  const visibleSections = sections
+    .map(section => {
+      if (section.featureFlag && !isEnabled(section.featureFlag)) {
+        return null;
       }
-      if (item.requiredRole && user?.role !== item.requiredRole) {
-        return false;
+
+      const visibleItems = section.items.filter(item => {
+        if (item.featureFlag && !isEnabled(item.featureFlag)) {
+          return false;
+        }
+        if (item.requiredRole && user?.role !== item.requiredRole) {
+          return false;
+        }
+        return true;
+      });
+
+      if (visibleItems.length === 0) {
+        return null;
       }
-      return true;
-    });
 
-    if (visibleItems.length === 0) {
-      return null;
-    }
-
-    return {
-      ...section,
-      items: visibleItems,
-    };
-  }).filter((section): section is NonNullable<typeof section> => section !== null);
+      return {
+        ...section,
+        items: visibleItems,
+      };
+    })
+    .filter((section): section is NonNullable<typeof section> => section !== null);
 
   return (
     <>
@@ -220,6 +268,8 @@ export function Sidebar() {
             </div>
 
             <SidebarContent
+              scope={scope}
+              activeServer={activeServer}
               visibleSections={visibleSections}
               linkBaseClasses={linkBaseClasses}
               linkActiveClasses={linkActiveClasses}
@@ -253,6 +303,8 @@ export function Sidebar() {
         </Link>
 
         <SidebarContent
+          scope={scope}
+          activeServer={activeServer}
           visibleSections={visibleSections}
           linkBaseClasses={linkBaseClasses}
           linkActiveClasses={linkActiveClasses}
