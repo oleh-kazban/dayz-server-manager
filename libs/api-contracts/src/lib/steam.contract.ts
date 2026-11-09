@@ -21,6 +21,18 @@ export const STEAM_SESSION_STATUSES = [
 export const steamSessionStatusSchema = z.enum(STEAM_SESSION_STATUSES);
 export type SteamSessionStatus = z.infer<typeof steamSessionStatusSchema>;
 
+export const storageCapacitySchema = z.object({
+  totalBytes: z.number().nonnegative(),
+  freeBytes: z.number().nonnegative(),
+});
+export type StorageCapacity = z.infer<typeof storageCapacitySchema>;
+
+export const storageStatsSchema = z.object({
+  workshop: storageCapacitySchema.optional(),
+  meta: storageCapacitySchema.optional(),
+});
+export type StorageStats = z.infer<typeof storageStatsSchema>;
+
 export const steamSettingsSchema = z.object({
   id: z.string(),
   steamCmdPath: safePathSchema,
@@ -34,6 +46,7 @@ export const steamSettingsSchema = z.object({
   branch: z.string().regex(/^[a-zA-Z0-9._-]+$/, 'Branch name contains invalid characters'),
   hasBranchPassword: z.boolean(),
   sessionStatus: steamSessionStatusSchema,
+  storageStats: storageStatsSchema.optional(),
   createdAt: z.string().datetime().or(z.date()),
   updatedAt: z.string().datetime().or(z.date()),
 });

@@ -10,6 +10,8 @@ import {
   steamDiagnosticsResultSchema,
   steamSessionStatusSchema,
   steamSettingsSchema,
+  storageCapacitySchema,
+  storageStatsSchema,
   updateSteamSettingsSchema,
 } from './steam.contract';
 
@@ -67,6 +69,27 @@ describe('Steam Contracts (libs/api-contracts)', () => {
       expect(parsed.gameServerAppId).toBe(223350);
       expect(parsed.workshopAppId).toBe(221100);
       expect(parsed.hasPassword).toBe(false);
+      expect(parsed.storageStats).toBeUndefined();
+    });
+
+    it('validates steamSettingsSchema with optional storageStats (REQ-13)', () => {
+      const withStats = {
+        ...validSettings,
+        storageStats: {
+          workshop: {
+            totalBytes: 200 * 1024 * 1024 * 1024,
+            freeBytes: 85 * 1024 * 1024 * 1024,
+          },
+          meta: {
+            totalBytes: 200 * 1024 * 1024 * 1024,
+            freeBytes: 120 * 1024 * 1024 * 1024,
+          },
+        },
+      };
+
+      const parsed = steamSettingsSchema.parse(withStats);
+      expect(parsed.storageStats?.workshop?.freeBytes).toBe(85 * 1024 * 1024 * 1024);
+      expect(parsed.storageStats?.meta?.totalBytes).toBe(200 * 1024 * 1024 * 1024);
     });
 
     it('accepts valid POSIX absolute paths for steam paths', () => {
@@ -316,6 +339,45 @@ describe('Steam Contracts (libs/api-contracts)', () => {
           steamCmdValid: true,
         }),
       ).toThrow();
+    });
+  });
+
+  describe('storageCapacitySchema & storageStatsSchema (REQ-13)', () => {
+    it('parses valid non-negative byte quantities', () => {
+      const valid = storageCapacitySchema.parse({
+        totalBytes: 500000000000,
+        freeBytes: 120000000000,
+      });
+      expect(valid.totalBytes).toBe(500000000000);
+      expect(valid.freeBytes).toBe(120000000000);
+    });
+
+    it('rejects negative totalBytes or freeBytes', () => {
+      expect(() =>
+        storageCapacitySchema.parse({
+          totalBytes: -1,
+          freeBytes: 100,
+        }),
+      ).toThrow();
+
+      expect(() =>
+        storageCapacitySchema.parse({
+          totalBytes: 100,
+          freeBytes: -50,
+        }),
+      ).toThrow();
+    });
+
+    it('validates storageStatsSchema with optional workshop and meta partitions', () => {
+      const empty = storageStatsSchema.parse({});
+      expect(empty.workshop).toBeUndefined();
+      expect(empty.meta).toBeUndefined();
+
+      const populated = storageStatsSchema.parse({
+        workshop: { totalBytes: 1000, freeBytes: 500 },
+      });
+      expect(populated.workshop?.totalBytes).toBe(1000);
+      expect(populated.meta).toBeUndefined();
     });
   });
 });

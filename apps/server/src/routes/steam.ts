@@ -8,6 +8,7 @@ import {
   type SteamDiagnosticsResultDto,
   type SteamSettingsDto,
   steamSettingsSchema,
+  type StorageStats,
   type UpdateSteamSettingsDto,
   updateSteamSettingsSchema,
 } from '@aegis/api-contracts';
@@ -45,7 +46,7 @@ function toSafeIsoDate(date: Date): string {
   return date.toISOString();
 }
 
-function mapSteamSettingsDetail(row: SteamSettings): SteamSettingsDto {
+function mapSteamSettingsDetail(row: SteamSettings, storageStats?: StorageStats): SteamSettingsDto {
   return steamSettingsSchema.parse({
     id: row.id,
     steamCmdPath: row.steamCmdPath,
@@ -59,6 +60,7 @@ function mapSteamSettingsDetail(row: SteamSettings): SteamSettingsDto {
     branch: row.branch,
     hasBranchPassword: Boolean(row.branchPasswordEncrypted),
     sessionStatus: row.sessionStatus,
+    storageStats,
     createdAt: toSafeIsoDate(row.createdAt),
     updatedAt: toSafeIsoDate(row.updatedAt),
   });
@@ -224,7 +226,14 @@ export const registerSteamRoutes: FastifyPluginAsync = async fastify => {
       }
 
       const settings = getOrCreateDefaultSettings(fastify);
-      return reply.send(mapSteamSettingsDetail(settings));
+      const workshopCapacity = steamPathService.getVolumeCapacity(settings.steamWorkshopPath);
+      const metaCapacity = steamPathService.getVolumeCapacity(settings.steamMetaPath);
+      const storageStats: StorageStats = {
+        workshop: workshopCapacity ?? undefined,
+        meta: metaCapacity ?? undefined,
+      };
+
+      return reply.send(mapSteamSettingsDetail(settings, storageStats));
     },
   );
 
@@ -294,7 +303,14 @@ export const registerSteamRoutes: FastifyPluginAsync = async fastify => {
         .run();
 
       const updated = getOrCreateDefaultSettings(fastify);
-      return reply.send(mapSteamSettingsDetail(updated));
+      const workshopCapacity = steamPathService.getVolumeCapacity(updated.steamWorkshopPath);
+      const metaCapacity = steamPathService.getVolumeCapacity(updated.steamMetaPath);
+      const storageStats: StorageStats = {
+        workshop: workshopCapacity ?? undefined,
+        meta: metaCapacity ?? undefined,
+      };
+
+      return reply.send(mapSteamSettingsDetail(updated, storageStats));
     },
   );
 

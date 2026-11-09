@@ -185,6 +185,31 @@ export class SteamPathService {
     // Default 100 GB fallback if statfs is unavailable in platform/test environment
     return 100 * 1024 * 1024 * 1024;
   }
+
+  /**
+   * Queries volume capacity (total and free bytes) on the partition containing the target directory.
+   */
+  public getVolumeCapacity(targetPath: string): { totalBytes: number; freeBytes: number } | null {
+    if (!targetPath) return null;
+    let probeDir = path.resolve(targetPath);
+    while (!fs.existsSync(probeDir)) {
+      const parent = path.dirname(probeDir);
+      if (parent === probeDir) break;
+      probeDir = parent;
+    }
+
+    try {
+      if (typeof fs.statfsSync === 'function') {
+        const stats = fs.statfsSync(probeDir);
+        const totalBytes = Number(stats.blocks) * Number(stats.bsize);
+        const freeBytes = Number(stats.bavail) * Number(stats.bsize);
+        return { totalBytes, freeBytes };
+      }
+    } catch {
+      // Return null if statfs fails
+    }
+    return null;
+  }
 }
 
 export const steamPathService = new SteamPathService();

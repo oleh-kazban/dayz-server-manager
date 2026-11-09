@@ -113,8 +113,12 @@ describe('SteamSettingsView (REQ-01, REQ-02, REQ-03, REQ-04, REQ-07)', () => {
     expect(screen.getByText('Filesystem & Workshop Storage Paths')).toBeInTheDocument();
     expect(screen.getByText('DayZ Steam App IDs & Branch Targets')).toBeInTheDocument();
 
-    // 20GB Warning Threshold tag
-    expect(screen.getByText('20GB Free Warning Threshold')).toBeInTheDocument();
+    // 20GB Warning Threshold tag is removed (REQ-13)
+    expect(screen.queryByText('20GB Free Warning Threshold')).not.toBeInTheDocument();
+    // Default fallback when storageStats is absent
+    expect(
+      screen.getByText('Volume capacity unknown until path is created and verified'),
+    ).toBeInTheDocument();
   });
 
   it('toggles between anonymous and account authentication modes', async () => {
@@ -404,5 +408,105 @@ describe('SteamSettingsView (REQ-01, REQ-02, REQ-03, REQ-04, REQ-07)', () => {
     });
 
     expect(showToast.success).toHaveBeenCalled();
+  });
+
+  describe('Dynamic Workshop Storage Capacity Progress Bar (REQ-13)', () => {
+    it('renders healthy storage progress bar (>20GB free) with success styling and free space label', async () => {
+      vi.mocked(apiClient.steam.getSettings).mockResolvedValue({
+        ...mockDefaultSettings,
+        storageStats: {
+          workshop: {
+            totalBytes: 100 * 1024 ** 3,
+            freeBytes: 50 * 1024 ** 3,
+          },
+        },
+      });
+
+      renderView();
+
+      await waitFor(() => {
+        expect(screen.getByText('50.0 GB free of 100.0 GB')).toBeInTheDocument();
+      });
+
+      const progressBar = screen.getByRole('progressbar', {
+        name: 'Workshop storage partition capacity',
+      });
+      expect(progressBar).toBeInTheDocument();
+      expect(progressBar).toHaveAttribute('aria-valuenow', '50');
+
+      const innerBar = progressBar.querySelector('div');
+      expect(innerBar).toHaveClass('bg-[var(--color-status-success)]');
+    });
+
+    it('renders warning storage progress bar (10-20GB free) with warning styling', async () => {
+      vi.mocked(apiClient.steam.getSettings).mockResolvedValue({
+        ...mockDefaultSettings,
+        storageStats: {
+          workshop: {
+            totalBytes: 100 * 1024 ** 3,
+            freeBytes: 15 * 1024 ** 3,
+          },
+        },
+      });
+
+      renderView();
+
+      await waitFor(() => {
+        expect(screen.getByText('15.0 GB free of 100.0 GB')).toBeInTheDocument();
+      });
+
+      const progressBar = screen.getByRole('progressbar', {
+        name: 'Workshop storage partition capacity',
+      });
+      expect(progressBar).toBeInTheDocument();
+      expect(progressBar).toHaveAttribute('aria-valuenow', '85');
+
+      const innerBar = progressBar.querySelector('div');
+      expect(innerBar).toHaveClass('bg-[var(--color-status-warning)]');
+    });
+
+    it('renders danger storage progress bar (<10GB free) with danger styling', async () => {
+      vi.mocked(apiClient.steam.getSettings).mockResolvedValue({
+        ...mockDefaultSettings,
+        storageStats: {
+          workshop: {
+            totalBytes: 100 * 1024 ** 3,
+            freeBytes: 5 * 1024 ** 3,
+          },
+        },
+      });
+
+      renderView();
+
+      await waitFor(() => {
+        expect(screen.getByText('5.0 GB free of 100.0 GB')).toBeInTheDocument();
+      });
+
+      const progressBar = screen.getByRole('progressbar', {
+        name: 'Workshop storage partition capacity',
+      });
+      expect(progressBar).toBeInTheDocument();
+      expect(progressBar).toHaveAttribute('aria-valuenow', '95');
+
+      const innerBar = progressBar.querySelector('div');
+      expect(innerBar).toHaveClass('bg-[var(--color-status-danger)]');
+    });
+
+    it('renders fallback notice without progressbar when storageStats is absent or totalBytes <= 0', async () => {
+      vi.mocked(apiClient.steam.getSettings).mockResolvedValue({
+        ...mockDefaultSettings,
+        storageStats: undefined,
+      });
+
+      renderView();
+
+      await waitFor(() => {
+        expect(
+          screen.getByText('Volume capacity unknown until path is created and verified'),
+        ).toBeInTheDocument();
+      });
+
+      expect(screen.queryByRole('progressbar')).not.toBeInTheDocument();
+    });
   });
 });

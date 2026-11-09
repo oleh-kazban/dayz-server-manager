@@ -125,6 +125,34 @@ describe('Steam Routes (/api/v1/settings/steam)', () => {
       expect(body).not.toHaveProperty('steamPassword');
       expect(body).not.toHaveProperty('steamPasswordEncrypted');
       expect(body).not.toHaveProperty('branchPasswordEncrypted');
+      expect(body).toHaveProperty('storageStats');
+    });
+
+    it('includes storageStats with workshop and meta partition metrics (REQ-13)', async () => {
+      vi.spyOn(steamPathService, 'getVolumeCapacity').mockImplementation((targetPath: string) => {
+        if (targetPath.includes('workshop')) {
+          return { totalBytes: 500_000_000_000, freeBytes: 150_000_000_000 };
+        }
+        return { totalBytes: 250_000_000_000, freeBytes: 80_000_000_000 };
+      });
+
+      const res = await app.inject({
+        method: 'GET',
+        url: '/api/v1/settings/steam',
+        headers: { authorization: `Bearer ${adminToken}` },
+      });
+
+      expect(res.statusCode).toBe(200);
+      const body = res.json();
+      expect(body.storageStats).toBeDefined();
+      expect(body.storageStats.workshop).toEqual({
+        totalBytes: 500_000_000_000,
+        freeBytes: 150_000_000_000,
+      });
+      expect(body.storageStats.meta).toEqual({
+        totalBytes: 250_000_000_000,
+        freeBytes: 80_000_000_000,
+      });
     });
   });
 
@@ -158,6 +186,7 @@ describe('Steam Routes (/api/v1/settings/steam)', () => {
       expect(body.branch).toBe('experimental');
       expect(body.hasPassword).toBe(true);
       expect(body.hasBranchPassword).toBe(true);
+      expect(body.storageStats).toBeDefined();
 
       // Verify AES-256-GCM encryption in database at rest (ARCH-01)
       const row = dbInstance.db

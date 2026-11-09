@@ -14,6 +14,8 @@ import {
   Card,
   Input,
   PasswordInput,
+  ProgressBar,
+  type ProgressBarVariant,
   Select,
   type SelectOption,
   StatusTag,
@@ -106,6 +108,47 @@ function resolveSteamPassword(
     return steamPassword.trim();
   }
   return undefined;
+}
+
+function resolveStorageVariant(freeGb: number): ProgressBarVariant {
+  if (freeGb < 10) {
+    return 'danger';
+  }
+  if (freeGb <= 20) {
+    return 'warning';
+  }
+  return 'success';
+}
+
+function renderWorkshopCapacityBar(storage?: { totalBytes: number; freeBytes: number }) {
+  if (!storage || storage.totalBytes <= 0) {
+    return (
+      <p className="mt-1 text-xs text-[var(--color-text-muted)]">
+        Volume capacity unknown until path is created and verified
+      </p>
+    );
+  }
+
+  const freeGb = storage.freeBytes / 1024 ** 3;
+  const totalGb = storage.totalBytes / 1024 ** 3;
+  const usedPercent = Math.min(
+    100,
+    Math.max(0, ((storage.totalBytes - storage.freeBytes) / storage.totalBytes) * 100),
+  );
+  const variant = resolveStorageVariant(freeGb);
+
+  return (
+    <div className="mt-2">
+      <ProgressBar
+        value={usedPercent}
+        variant={variant}
+        size="sm"
+        showValue
+        valueLabel={`${freeGb.toFixed(1)} GB free of ${totalGb.toFixed(1)} GB`}
+        aria-label="Workshop storage partition capacity"
+      />
+    </div>
+  );
 }
 
 interface SteamSettingsFormProps {
@@ -424,15 +467,8 @@ function SteamSettingsForm({
             </div>
 
             <div className="space-y-1">
-              <div className="flex items-center justify-between">
-                <label className="text-xs font-semibold text-[var(--color-text-muted)]">
-                  Workshop Staging Path
-                </label>
-                <Tag variant="subtle" color="warning">
-                  20GB Free Warning Threshold
-                </Tag>
-              </div>
               <Input
+                label="Workshop Staging Path"
                 placeholder="e.g. D:\DayZServer\steamapps\workshop"
                 value={steamWorkshopPath}
                 error={fieldErrors.steamWorkshopPath}
@@ -444,6 +480,7 @@ function SteamSettingsForm({
               <p className="text-xs text-[var(--color-text-muted)]">
                 Directory where DayZ mods are downloaded. Needs capacity for 50GB–200GB+.
               </p>
+              {renderWorkshopCapacityBar(settings.storageStats?.workshop)}
             </div>
 
             <div className="space-y-1">
