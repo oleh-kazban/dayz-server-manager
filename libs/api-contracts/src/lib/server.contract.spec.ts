@@ -16,7 +16,7 @@ import {
   updateServerSchema,
 } from './server.contract';
 
-describe('Server Contracts (@dsm/api-contracts)', () => {
+describe('Server Contracts (@aegis/api-contracts)', () => {
   describe('SERVER_STATUS and SERVER_STATUS_VALUES', () => {
     it('defines canonical server statuses', () => {
       expect(SERVER_STATUS).toEqual({

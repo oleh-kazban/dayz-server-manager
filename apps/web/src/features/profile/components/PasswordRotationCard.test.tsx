@@ -1,14 +1,14 @@
 import { act, fireEvent, render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { showToast } from '@dsm/ui';
+import { showToast } from '@aegis/ui';
 
 import * as mutationsModule from '../api/profile.mutations';
 
 import { PasswordRotationCard } from './PasswordRotationCard';
 
-vi.mock('@dsm/ui', async () => {
-  const actual = await vi.importActual<typeof import('@dsm/ui')>('@dsm/ui');
+vi.mock('@aegis/ui', async () => {
+  const actual = await vi.importActual<typeof import('@aegis/ui')>('@aegis/ui');
   return {
     ...actual,
     showToast: {

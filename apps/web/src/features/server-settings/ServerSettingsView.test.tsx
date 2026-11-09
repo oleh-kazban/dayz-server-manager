@@ -4,9 +4,9 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { apiClient, ApiError } from '@dsm/api-client';
-import type { ServerDetailDto, ServerSummaryDto } from '@dsm/api-contracts';
-import { showToast } from '@dsm/ui';
+import { apiClient, ApiError } from '@aegis/api-client';
+import type { ServerDetailDto, ServerSummaryDto } from '@aegis/api-contracts';
+import { showToast } from '@aegis/ui';
 
 import { ServerSettingsView } from './ServerSettingsView';
 
@@ -51,8 +51,8 @@ let mockServers: ServerSummaryDto[] = [mockDefaultServerSummary, mockActiveServe
 let currentActiveSummary: ServerSummaryDto | null = mockActiveServerSummary;
 let currentDetail: ServerDetailDto | null = mockServerDetail;
 
-vi.mock('@dsm/web/core', async importOriginal => {
-  const actual = await importOriginal<typeof import('@dsm/web/core')>();
+vi.mock('@aegis/web/core', async importOriginal => {
+  const actual = await importOriginal<typeof import('@aegis/web/core')>();
   return {
     ...actual,
     useActiveServer: () => ({
@@ -75,8 +75,8 @@ vi.mock('@tanstack/react-router', () => ({
   ),
 }));
 
-vi.mock('@dsm/api-client', async importOriginal => {
-  const actual = await importOriginal<typeof import('@dsm/api-client')>();
+vi.mock('@aegis/api-client', async importOriginal => {
+  const actual = await importOriginal<typeof import('@aegis/api-client')>();
   return {
     ...actual,
     apiClient: {

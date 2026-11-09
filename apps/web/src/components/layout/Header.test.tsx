@@ -4,9 +4,9 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { fireEvent, render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { useLayoutStore } from '@dsm/web/core';
-import { useFaqStore } from '@dsm/web/features';
-import { ThemeProvider } from '@dsm/web/features/theme';
+import { useLayoutStore } from '@aegis/web/core';
+import { useFaqStore } from '@aegis/web/features';
+import { ThemeProvider } from '@aegis/web/features/theme';
 
 import { Header } from './Header';
 
@@ -31,8 +31,8 @@ const renderHeader = () => {
   );
 };
 
-vi.mock('@dsm/web/core', async () => {
-  const actual = await vi.importActual<typeof import('@dsm/web/core')>('@dsm/web/core');
+vi.mock('@aegis/web/core', async () => {
+  const actual = await vi.importActual<typeof import('@aegis/web/core')>('@aegis/web/core');
   return {
     ...actual,
     useActiveServer: () => mockUseActiveServer(),

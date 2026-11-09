@@ -2,15 +2,15 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { apiClient, ApiError } from '@dsm/api-client';
-import { showToast } from '@dsm/ui';
+import { apiClient, ApiError } from '@aegis/api-client';
+import { showToast } from '@aegis/ui';
 
 import { CreateServerModal } from './CreateServerModal';
 
 const mockSetActiveServerId = vi.fn();
 
-vi.mock('@dsm/web/core', async importOriginal => {
-  const actual = await importOriginal<typeof import('@dsm/web/core')>();
+vi.mock('@aegis/web/core', async importOriginal => {
+  const actual = await importOriginal<typeof import('@aegis/web/core')>();
   return {
     ...actual,
     useActiveServer: () => ({
@@ -24,8 +24,8 @@ vi.mock('@dsm/web/core', async importOriginal => {
   };
 });
 
-vi.mock('@dsm/api-client', async importOriginal => {
-  const actual = await importOriginal<typeof import('@dsm/api-client')>();
+vi.mock('@aegis/api-client', async importOriginal => {
+  const actual = await importOriginal<typeof import('@aegis/api-client')>();
   return {
     ...actual,
     apiClient: {

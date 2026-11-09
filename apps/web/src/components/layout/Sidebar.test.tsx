@@ -3,10 +3,10 @@ import type { ReactNode } from 'react';
 import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { FeatureFlagsProvider, useLayoutStore } from '@dsm/web/core';
-import { AuthProvider } from '@dsm/web/features/auth';
-import { authStorage } from '@dsm/web/features/auth/auth.storage';
-import type { AuthUser } from '@dsm/web/features/auth/auth.types';
+import { FeatureFlagsProvider, useLayoutStore } from '@aegis/web/core';
+import { AuthProvider } from '@aegis/web/features/auth';
+import { authStorage } from '@aegis/web/features/auth/auth.storage';
+import type { AuthUser } from '@aegis/web/features/auth/auth.types';
 
 import { Sidebar } from './Sidebar';
 
@@ -77,7 +77,8 @@ describe('Sidebar', () => {
     );
 
     expect(screen.getByRole('complementary', { name: 'Primary Navigation' })).toBeInTheDocument();
-    expect(screen.getByText('OUTLIVE')).toBeInTheDocument();
+    expect(screen.getByText('AEGIS')).toBeInTheDocument();
+    expect(screen.getByText('CONSOLE')).toBeInTheDocument();
     expect(screen.getByText('dayz (local)')).toBeInTheDocument();
 
     // Sections
@@ -92,7 +93,7 @@ describe('Sidebar', () => {
       'href',
       '/dashboard',
     );
-    expect(screen.getByRole('link', { name: 'Outlive Project Dashboard' })).toHaveAttribute(
+    expect(screen.getByRole('link', { name: 'Aegis Console Dashboard' })).toHaveAttribute(
       'href',
       '/dashboard',
     );
@@ -366,7 +367,7 @@ describe('Sidebar', () => {
       expect(mobileDrawer).toBeInTheDocument();
 
       const brandLink = within(mobileDrawer as HTMLElement).getByRole('link', {
-        name: 'Outlive Project Dashboard',
+        name: 'Aegis Console Dashboard',
       });
       expect(brandLink).toBeInTheDocument();
       expect(brandLink).toHaveAttribute('href', '/dashboard');
@@ -395,7 +396,7 @@ describe('Sidebar', () => {
     expect(desktopSidebar).toBeInTheDocument();
 
     const brandLink = within(desktopSidebar as HTMLElement).getByRole('link', {
-      name: 'Outlive Project Dashboard',
+      name: 'Aegis Console Dashboard',
     });
     expect(brandLink).toBeInTheDocument();
     expect(brandLink).toHaveAttribute('href', '/dashboard');

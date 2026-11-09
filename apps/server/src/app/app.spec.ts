@@ -1,4 +1,4 @@
-import { apiErrorResponseSchema, healthResponseSchema } from '@dsm/api-contracts';
+import { apiErrorResponseSchema, healthResponseSchema } from '@aegis/api-contracts';
 
 import { loadEnv } from '../config/env';
 

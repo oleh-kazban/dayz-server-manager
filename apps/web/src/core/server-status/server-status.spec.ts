@@ -6,7 +6,7 @@ import {
   SERVER_STATUS_VALUES,
   type ServerStatus,
   serverStatusSchema,
-} from '@dsm/api-contracts';
+} from '@aegis/api-contracts';
 
 import { enUSTranslations } from '../i18n';
 

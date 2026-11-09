@@ -1,7 +1,7 @@
 import { act, render, renderHook, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { apiClient } from '@dsm/api-client';
+import { apiClient } from '@aegis/api-client';
 
 import { useAuth } from './auth.context';
 import { authStorage } from './auth.storage';

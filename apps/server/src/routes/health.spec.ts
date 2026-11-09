@@ -1,8 +1,8 @@
 import type { FastifyInstance } from 'fastify';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
-import { healthResponseSchema } from '@dsm/api-contracts';
-import { type DatabaseInstance, initDatabase } from '@dsm/database';
+import { healthResponseSchema } from '@aegis/api-contracts';
+import { type DatabaseInstance, initDatabase } from '@aegis/database';
 
 import { buildApp } from '../app/app';
 import { loadEnv } from '../config/env';

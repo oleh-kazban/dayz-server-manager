@@ -7,7 +7,7 @@ import {
   serverIdParamSchema,
   serverSummarySchema,
   updateServerSchema,
-} from '@dsm/api-contracts';
+} from '@aegis/api-contracts';
 
 describe('Server Contracts', () => {
   const validUuid = '123e4567-e89b-12d3-a456-426614174000';
