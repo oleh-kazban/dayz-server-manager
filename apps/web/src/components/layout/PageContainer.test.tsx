@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest';
 import { PageContainer, type PageContainerMaxWidth } from './PageContainer';
 
 describe('PageContainer', () => {
-  it('renders default container with children, footer, and wide max-width (max-w-[1440px])', () => {
+  it('renders default container with children, footer, and full max-width (w-full)', () => {
     render(
       <PageContainer>
         <div data-testid="page-content">Server Dashboard</div>
@@ -17,7 +17,7 @@ describe('PageContainer', () => {
     expect(screen.getByText('v0.1.0')).toBeInTheDocument();
 
     const contentWrapper = screen.getByTestId('page-content').parentElement;
-    expect(contentWrapper).toHaveClass('max-w-[1440px]');
+    expect(contentWrapper).toHaveClass('w-full');
   });
 
   it.each([
@@ -27,7 +27,7 @@ describe('PageContainer', () => {
     { maxWidth: 'wide' as PageContainerMaxWidth, expectedClass: 'max-w-[1440px]' },
     {
       maxWidth: 'unrecognized' as unknown as PageContainerMaxWidth,
-      expectedClass: 'max-w-[1440px]',
+      expectedClass: 'w-full',
     },
   ])(
     'applies resolved class $expectedClass for maxWidth="$maxWidth"',

@@ -21,7 +21,7 @@ const maxWidthClassMap: Record<PageContainerMaxWidth, string> = {
 export function PageContainer({
   children,
   fullBleed = false,
-  maxWidth = 'wide',
+  maxWidth = 'full',
   className = '',
   ...props
 }: PageContainerProps) {
@@ -33,7 +33,7 @@ export function PageContainer({
     );
   }
 
-  const resolvedMaxWidthClass = maxWidthClassMap[maxWidth] ?? maxWidthClassMap.wide;
+  const resolvedMaxWidthClass = maxWidthClassMap[maxWidth] ?? maxWidthClassMap.full;
 
   return (
     <main
