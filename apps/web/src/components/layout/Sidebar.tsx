@@ -70,7 +70,8 @@ function SidebarContent({
 
   return (
     <>
-      <div className="space-y-5">
+      {/* Navigation Sections */}
+      <div className="space-y-5 flex-1">
         {/* Top Control: Node Selector (Server Scope) vs. Back to Server Button (Appliance & User Scope) */}
         {!isServer ? (
           <Link
@@ -124,7 +125,7 @@ function SidebarContent({
       </div>
 
       {/* Sidebar Bottom: Support Card & Admin Profile */}
-      <div className="space-y-4 pt-6">
+      <div className="space-y-4 pt-6 mt-auto">
         <div className="p-3.5 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-subtle)] space-y-2">
           <RadioTower className="w-5 h-5 text-[var(--color-primary)]" />
           <div className="space-y-1">
@@ -237,7 +238,7 @@ export function Sidebar() {
             aria-modal="true"
             aria-label="Mobile Navigation"
             data-testid="mobile-sidebar-drawer"
-            className="fixed inset-y-0 left-0 z-50 w-[260px] max-w-[85vw] bg-[var(--color-sidebar)] border-r border-[var(--color-border)] shadow-2xl lg:hidden flex flex-col justify-between p-4 select-none overflow-y-auto"
+            className="fixed inset-y-0 left-0 z-50 w-[260px] max-w-[85vw] bg-[var(--color-sidebar)] border-r border-[var(--color-border)] shadow-2xl lg:hidden flex flex-col p-4 select-none overflow-y-auto"
           >
             {/* Header with Logo and Close Button */}
             <div className="flex items-center justify-between px-1 py-1 mb-5">
@@ -284,7 +285,7 @@ export function Sidebar() {
       <aside
         id="app-sidebar"
         aria-label="Primary Navigation"
-        className="hidden lg:flex w-[228px] min-w-[228px] max-w-[228px] flex-col justify-between border-r border-[var(--color-border)] bg-[var(--color-sidebar)] h-screen sticky top-0 shrink-0 p-4 transition-all duration-300 z-30 select-none overflow-y-auto"
+        className="hidden lg:flex w-[228px] min-w-[228px] max-w-[228px] flex-col border-r border-[var(--color-border)] bg-[var(--color-sidebar)] h-screen sticky top-0 shrink-0 p-4 transition-all duration-300 z-30 select-none overflow-y-auto"
       >
         <Link
           to="/dashboard"
