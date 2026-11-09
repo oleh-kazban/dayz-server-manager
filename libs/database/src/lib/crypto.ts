@@ -77,37 +77,59 @@ export function verifyVaultKey(secretKey: string | Buffer): boolean {
   }
 }
 
+function resolveEnvVaultKey(): Buffer | null {
+  const steamKey = process.env.STEAM_VAULT_KEY?.trim();
+  if (steamKey) return normalizeKey(steamKey);
+  const dsmKey = process.env.DSM_VAULT_KEY?.trim();
+  if (dsmKey) return normalizeKey(dsmKey);
+  return null;
+}
+
+function readExistingKeyFile(keyPath: string): Buffer | null {
+  try {
+    const content = fs.readFileSync(keyPath, 'utf8').trim();
+    if (content.length > 0) {
+      return normalizeKey(content);
+    }
+  } catch {
+    // Key file not present or unreadable
+  }
+  return null;
+}
+
+function isNodeErrorWithCode(err: unknown, code: string): boolean {
+  return (
+    typeof err === 'object' &&
+    err !== null &&
+    'code' in err &&
+    (err as { code: string }).code === code
+  );
+}
+
 export function resolveVaultKey(customKeyDir?: string): Buffer {
-  if (process.env.STEAM_VAULT_KEY && process.env.STEAM_VAULT_KEY.trim() !== '') {
-    return normalizeKey(process.env.STEAM_VAULT_KEY.trim());
-  }
-  if (process.env.DSM_VAULT_KEY && process.env.DSM_VAULT_KEY.trim() !== '') {
-    return normalizeKey(process.env.DSM_VAULT_KEY.trim());
-  }
+  const envKey = resolveEnvVaultKey();
+  if (envKey) return envKey;
 
   const dir = customKeyDir ?? path.resolve(process.cwd(), 'manager-data');
   const keyPath = path.join(dir, '.vault.key');
 
-  if (fs.existsSync(keyPath)) {
-    try {
-      const content = fs.readFileSync(keyPath, 'utf8').trim();
-      if (content.length > 0) {
-        return normalizeKey(content);
-      }
-    } catch {
-      // Fall through to regeneration if corrupt or unreadable
-    }
+  const existing = readExistingKeyFile(keyPath);
+  if (existing) return existing;
+
+  try {
+    fs.mkdirSync(dir, { recursive: true });
+  } catch {
+    // Directory may already exist
   }
 
-  // Generate new 32-byte key
   const newKey = crypto.randomBytes(32);
   try {
-    if (!fs.existsSync(dir)) {
-      fs.mkdirSync(dir, { recursive: true });
+    fs.writeFileSync(keyPath, newKey.toString('hex'), { mode: 0o600, flag: 'wx' });
+    return newKey;
+  } catch (err: unknown) {
+    if (isNodeErrorWithCode(err, 'EEXIST')) {
+      return readExistingKeyFile(keyPath) ?? newKey;
     }
-    fs.writeFileSync(keyPath, newKey.toString('hex'), { mode: 0o600 });
-  } catch {
-    // If filesystem write fails, still return generated in-memory key
   }
   return newKey;
 }

@@ -37,7 +37,8 @@ export class SteamPathService {
     if (/[<>"|?*]/.test(trimmed)) {
       return { valid: false, message: 'Path contains invalid filesystem characters.' };
     }
-    if (!path.isAbsolute(trimmed)) {
+    const isAbsolute = path.win32.isAbsolute(trimmed) || path.posix.isAbsolute(trimmed);
+    if (!isAbsolute) {
       return { valid: false, message: 'Path must be an absolute filesystem path.' };
     }
     return { valid: true };

@@ -216,4 +216,55 @@ describe('resolveVaultKey (File & Env Fallback)', () => {
     const key2 = resolveVaultKey(testDir);
     expect(key2.equals(key1)).toBe(true);
   });
+
+  it('writes key file with mode 0o600 and flag wx to prevent race condition clobbering (GUARD-03)', () => {
+    const writeSpy = vi.spyOn(fs, 'writeFileSync');
+    const key = resolveVaultKey(testDir);
+    expect(key).toHaveLength(32);
+
+    const keyFilePath = path.join(testDir, '.vault.key');
+    expect(writeSpy).toHaveBeenCalledWith(keyFilePath, key.toString('hex'), {
+      mode: 0o600,
+      flag: 'wx',
+    });
+  });
+
+  it('recovers and reads existing key file when EEXIST is encountered during concurrent creation (GUARD-03)', () => {
+    const existingKeyHex = '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef';
+
+    let writeAttempts = 0;
+    vi.spyOn(fs, 'writeFileSync').mockImplementation(() => {
+      writeAttempts++;
+      const err = new Error('file already exists');
+      (err as unknown as { code: string }).code = 'EEXIST';
+      throw err;
+    });
+
+    let readCount = 0;
+    vi.spyOn(fs, 'readFileSync').mockImplementation(() => {
+      readCount++;
+      if (readCount === 1) {
+        const err = new Error('no such file or directory');
+        (err as unknown as { code: string }).code = 'ENOENT';
+        throw err;
+      }
+      return existingKeyHex;
+    });
+
+    const key = resolveVaultKey(testDir);
+    expect(writeAttempts).toBe(1);
+    expect(readCount).toBe(2);
+    expect(key).toEqual(Buffer.from(existingKeyHex, 'hex'));
+  });
+
+  it('returns generated in-memory key if EEXIST occurs but key file cannot be read (GUARD-03)', () => {
+    vi.spyOn(fs, 'writeFileSync').mockImplementation(() => {
+      const err = new Error('file already exists');
+      (err as unknown as { code: string }).code = 'EEXIST';
+      throw err;
+    });
+
+    const key = resolveVaultKey(testDir);
+    expect(key).toHaveLength(32);
+  });
 });
