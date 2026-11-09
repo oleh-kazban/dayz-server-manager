@@ -164,15 +164,22 @@ describe('SteamSettingsView (REQ-01, REQ-02, REQ-03, REQ-04, REQ-07)', () => {
     expect(screen.getByText('Password Stored & Encrypted')).toBeInTheDocument();
   });
 
-  it('submits updated settings when clicking Save Changes', async () => {
+  it('submits updated settings when clicking Save Changes with custom branch enabled', async () => {
     renderView();
 
     await waitFor(() => {
       expect(screen.getByText('Steam CMD & Workshop')).toBeInTheDocument();
     });
 
-    // Change branch
-    const branchInput = screen.getByLabelText('Branch');
+    // Branch input is initially hidden behind the toggle
+    expect(screen.queryByLabelText('Branch')).not.toBeInTheDocument();
+
+    // Enable custom branch toggle
+    const branchToggle = screen.getByLabelText(/Custom \/ Pre-release Branch/i);
+    fireEvent.click(branchToggle);
+
+    // Branch input becomes visible
+    const branchInput = await screen.findByLabelText('Branch');
     fireEvent.change(branchInput, { target: { value: 'experimental' } });
 
     // Click Save Changes
@@ -184,6 +191,44 @@ describe('SteamSettingsView (REQ-01, REQ-02, REQ-03, REQ-04, REQ-07)', () => {
         expect.objectContaining({
           branch: 'experimental',
           authMode: 'anonymous',
+        }),
+      );
+    });
+
+    expect(showToast.success).toHaveBeenCalled();
+  });
+
+  it('submits newly entered password for dedicated Steam account when hasPassword is false', async () => {
+    vi.mocked(apiClient.steam.getSettings).mockResolvedValue({
+      ...mockDefaultSettings,
+      authMode: 'account',
+      steamUsername: 'dayz_operator',
+      hasPassword: false,
+    });
+
+    renderView();
+
+    await waitFor(() => {
+      expect(screen.getByText('Account Password Vault')).toBeInTheDocument();
+    });
+
+    // Verify "No Password Stored" tag is rendered
+    expect(screen.getByText('No Password Stored')).toBeInTheDocument();
+
+    // Directly fill password input
+    const passwordInput = screen.getByLabelText('Steam Account Password');
+    fireEvent.change(passwordInput, { target: { value: 'SuperSecret123!' } });
+
+    // Save
+    const saveButton = screen.getByRole('button', { name: 'Save Changes' });
+    fireEvent.click(saveButton);
+
+    await waitFor(() => {
+      expect(apiClient.steam.updateSettings).toHaveBeenCalledWith(
+        expect.objectContaining({
+          authMode: 'account',
+          steamUsername: 'dayz_operator',
+          steamPassword: 'SuperSecret123!',
         }),
       );
     });

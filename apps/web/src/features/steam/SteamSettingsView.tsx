@@ -18,6 +18,7 @@ import {
   type SelectOption,
   StatusTag,
   Tag,
+  Toggle,
 } from '@aegis/ui';
 import { PageContainer } from '@aegis/web/components';
 
@@ -56,6 +57,56 @@ function getSessionBadge(status: string) {
   }
 }
 
+function resolveAccountErrors(
+  authMode: 'anonymous' | 'account',
+  username: string,
+  password: string,
+  hasPassword: boolean,
+): Record<string, string> {
+  if (authMode !== 'account') return {};
+  const errors: Record<string, string> = {};
+  if (!username.trim()) {
+    errors.steamUsername = 'Steam username is required for dedicated account mode';
+  }
+  if (!hasPassword && !password.trim()) {
+    errors.steamPassword = 'Password is required when configuring a dedicated Steam account';
+  }
+  return errors;
+}
+
+function resolveBranchPassword(
+  useCustomBranch: boolean,
+  hasBranchPassword: boolean,
+  isChangingBranchPassword: boolean,
+  branchPassword: string,
+): string | null | undefined {
+  if (!useCustomBranch) {
+    return hasBranchPassword ? null : undefined;
+  }
+  if (!hasBranchPassword || isChangingBranchPassword) {
+    if (branchPassword.trim()) {
+      return branchPassword.trim();
+    }
+    if (isChangingBranchPassword && hasBranchPassword) {
+      return null;
+    }
+  }
+  return undefined;
+}
+
+function resolveSteamPassword(
+  authMode: 'anonymous' | 'account',
+  hasPassword: boolean,
+  isChangingPassword: boolean,
+  steamPassword: string,
+): string | undefined {
+  if (authMode !== 'account') return undefined;
+  if ((isChangingPassword || !hasPassword) && steamPassword.trim()) {
+    return steamPassword.trim();
+  }
+  return undefined;
+}
+
 interface SteamSettingsFormProps {
   settings: SteamSettingsDto;
   onClearSession: () => void;
@@ -84,6 +135,9 @@ function SteamSettingsForm({
 
   const [gameServerAppId, setGameServerAppId] = useState(settings.gameServerAppId);
   const [workshopAppId, setWorkshopAppId] = useState(settings.workshopAppId);
+  const [useCustomBranch, setUseCustomBranch] = useState(
+    settings.branch !== 'public' || settings.hasBranchPassword,
+  );
   const [branch, setBranch] = useState(settings.branch);
   const [branchPassword, setBranchPassword] = useState('');
   const [isChangingBranchPassword, setIsChangingBranchPassword] = useState(false);
@@ -121,6 +175,30 @@ function SteamSettingsForm({
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
 
+    const clientErrors = resolveAccountErrors(
+      authMode,
+      steamUsername,
+      steamPassword,
+      settings.hasPassword,
+    );
+    if (Object.keys(clientErrors).length > 0) {
+      setFieldErrors(clientErrors);
+      return;
+    }
+
+    const branchPasswordValue = resolveBranchPassword(
+      useCustomBranch,
+      settings.hasBranchPassword,
+      isChangingBranchPassword,
+      branchPassword,
+    );
+    const steamPasswordValue = resolveSteamPassword(
+      authMode,
+      settings.hasPassword,
+      isChangingPassword,
+      steamPassword,
+    );
+
     const dto: UpdateSteamSettingsDto = {
       authMode,
       steamCmdPath: steamCmdPath.trim(),
@@ -128,21 +206,11 @@ function SteamSettingsForm({
       steamMetaPath: steamMetaPath.trim(),
       gameServerAppId,
       workshopAppId,
-      branch: branch.trim(),
+      branch: useCustomBranch ? branch.trim() || 'public' : 'public',
+      steamUsername: authMode === 'account' ? steamUsername.trim() : null,
+      ...(steamPasswordValue !== undefined && { steamPassword: steamPasswordValue }),
+      ...(branchPasswordValue !== undefined && { branchPassword: branchPasswordValue }),
     };
-
-    if (authMode === 'account') {
-      dto.steamUsername = steamUsername.trim();
-      if (isChangingPassword && steamPassword) {
-        dto.steamPassword = steamPassword;
-      }
-    } else {
-      dto.steamUsername = null;
-    }
-
-    if (isChangingBranchPassword) {
-      dto.branchPassword = branchPassword ? branchPassword : null;
-    }
 
     updateMutation.mutate(dto);
   };
@@ -399,58 +467,81 @@ function SteamSettingsForm({
               />
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <Input
-                label="Branch"
-                placeholder="public"
-                value={branch}
-                error={fieldErrors.branch}
+            <div className="pt-2 border-t border-[var(--color-border)]">
+              <Toggle
+                label="Custom / Pre-release Branch"
+                description="Enable only to target a non-public DayZ branch or private password-protected beta."
+                checked={useCustomBranch}
                 onChange={e => {
-                  setBranch(e.target.value);
-                  clearFieldError('branch');
+                  const checked = e.target.checked;
+                  setUseCustomBranch(checked);
+                  if (!checked) {
+                    setBranch('public');
+                    setBranchPassword('');
+                    setIsChangingBranchPassword(false);
+                    clearFieldError('branch');
+                    clearFieldError('branchPassword');
+                  }
                 }}
               />
-
-              {settings.hasBranchPassword && !isChangingBranchPassword ? (
-                <div className="p-3 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-hover)] flex items-center justify-between">
-                  <div>
-                    <div className="text-xs font-semibold text-[var(--color-text-muted)]">
-                      Branch Password
-                    </div>
-                    <div className="text-xs font-mono text-[var(--color-text-main)]">••••••••</div>
-                  </div>
-                  <Button variant="ghost" onClick={() => setIsChangingBranchPassword(true)}>
-                    Change
-                  </Button>
-                </div>
-              ) : (
-                <div className="space-y-1">
-                  <PasswordInput
-                    label="Branch Password (Optional)"
-                    placeholder="Leave empty for public branch"
-                    value={branchPassword}
-                    error={fieldErrors.branchPassword}
-                    onChange={e => {
-                      setBranchPassword(e.target.value);
-                      clearFieldError('branchPassword');
-                    }}
-                  />
-                  {settings.hasBranchPassword && (
-                    <div className="flex justify-end">
-                      <Button
-                        variant="ghost"
-                        onClick={() => {
-                          setIsChangingBranchPassword(false);
-                          setBranchPassword('');
-                        }}
-                      >
-                        Keep Existing
-                      </Button>
-                    </div>
-                  )}
-                </div>
-              )}
             </div>
+
+            {useCustomBranch && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
+                <Input
+                  label="Branch"
+                  placeholder="public"
+                  value={branch}
+                  error={fieldErrors.branch}
+                  onChange={e => {
+                    setBranch(e.target.value);
+                    clearFieldError('branch');
+                  }}
+                />
+
+                {settings.hasBranchPassword && !isChangingBranchPassword ? (
+                  <div className="p-3 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-hover)] flex items-center justify-between">
+                    <div>
+                      <div className="text-xs font-semibold text-[var(--color-text-muted)]">
+                        Branch Password
+                      </div>
+                      <div className="text-xs font-mono text-[var(--color-text-main)]">
+                        ••••••••
+                      </div>
+                    </div>
+                    <Button variant="ghost" onClick={() => setIsChangingBranchPassword(true)}>
+                      Change
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="space-y-1">
+                    <PasswordInput
+                      label="Branch Password (Optional)"
+                      placeholder="Leave empty for public branch"
+                      value={branchPassword}
+                      error={fieldErrors.branchPassword}
+                      onChange={e => {
+                        setBranchPassword(e.target.value);
+                        clearFieldError('branchPassword');
+                      }}
+                    />
+                    {settings.hasBranchPassword && (
+                      <div className="flex justify-end">
+                        <Button
+                          variant="ghost"
+                          onClick={() => {
+                            setIsChangingBranchPassword(false);
+                            setBranchPassword('');
+                          }}
+                        >
+                          Keep Existing
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </Card>
       </form>
