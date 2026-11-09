@@ -57,3 +57,29 @@ export const servers = sqliteTable('servers', {
 
 export type Server = typeof servers.$inferSelect;
 export type NewServer = typeof servers.$inferInsert;
+
+export const steamSettings = sqliteTable('steam_settings', {
+  id: text('id').primaryKey(),
+  steamCmdPath: text('steam_cmd_path').notNull(),
+  steamWorkshopPath: text('steam_workshop_path').notNull(),
+  steamMetaPath: text('steam_meta_path').notNull(),
+  authMode: text('auth_mode', { enum: ['anonymous', 'account'] })
+    .notNull()
+    .default('anonymous'),
+  steamUsername: text('steam_username'),
+  steamPasswordEncrypted: text('steam_password_encrypted'),
+  gameServerAppId: integer('game_server_app_id').notNull().default(223350),
+  workshopAppId: integer('workshop_app_id').notNull().default(221100),
+  branch: text('branch').notNull().default('public'),
+  branchPasswordEncrypted: text('branch_password_encrypted'),
+  sessionStatus: text('session_status', {
+    enum: ['UNAUTHENTICATED', 'AUTHENTICATED', 'CHALLENGE_REQUIRED', 'EXPIRED'],
+  })
+    .notNull()
+    .default('UNAUTHENTICATED'),
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
+});
+
+export type SteamSettings = typeof steamSettings.$inferSelect;
+export type NewSteamSettings = typeof steamSettings.$inferInsert;

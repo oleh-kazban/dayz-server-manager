@@ -97,6 +97,76 @@ export const migrations: DsmMigration[] = [
       `);
     },
   },
+  {
+    id: '0004_steam_settings',
+    name: 'Create steam_settings singleton table and default row',
+    up: (sqlite: Database.Database) => {
+      sqlite.exec(`
+        CREATE TABLE IF NOT EXISTS steam_settings (
+          id TEXT PRIMARY KEY,
+          steam_cmd_path TEXT NOT NULL,
+          steam_workshop_path TEXT NOT NULL,
+          steam_meta_path TEXT NOT NULL,
+          auth_mode TEXT NOT NULL DEFAULT 'anonymous',
+          steam_username TEXT,
+          steam_password_encrypted TEXT,
+          game_server_app_id INTEGER NOT NULL DEFAULT 223350,
+          workshop_app_id INTEGER NOT NULL DEFAULT 221100,
+          branch TEXT NOT NULL DEFAULT 'public',
+          branch_password_encrypted TEXT,
+          session_status TEXT NOT NULL DEFAULT 'UNAUTHENTICATED',
+          created_at INTEGER NOT NULL,
+          updated_at INTEGER NOT NULL
+        );
+      `);
+
+      const existing = sqlite.prepare('SELECT id FROM steam_settings WHERE id = ?').get('default');
+
+      if (!existing) {
+        const now = Math.floor(Date.now() / 1000);
+        const defaultCmd =
+          process.platform === 'win32' ? 'C:\\steamcmd\\steamcmd.exe' : '/usr/games/steamcmd';
+        const defaultWorkshop =
+          process.platform === 'win32'
+            ? 'C:\\DayZServer\\steamapps\\workshop'
+            : '/var/dayz/workshop';
+        const defaultMeta =
+          process.platform === 'win32' ? 'C:\\DayZServer\\steamapps' : '/var/dayz/steamapps';
+
+        sqlite
+          .prepare(
+            `
+            INSERT INTO steam_settings (
+              id,
+              steam_cmd_path,
+              steam_workshop_path,
+              steam_meta_path,
+              auth_mode,
+              game_server_app_id,
+              workshop_app_id,
+              branch,
+              session_status,
+              created_at,
+              updated_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          `,
+          )
+          .run(
+            'default',
+            defaultCmd,
+            defaultWorkshop,
+            defaultMeta,
+            'anonymous',
+            223350,
+            221100,
+            'public',
+            'UNAUTHENTICATED',
+            now,
+            now,
+          );
+      }
+    },
+  },
 ];
 
 export function runMigrations(sqlite: Database.Database): void {
