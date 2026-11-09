@@ -16,8 +16,11 @@ import { type EnvConfig } from '../config/env';
 import { registerAuthRoutes } from '../routes/auth';
 import { registerHealthRoutes } from '../routes/health';
 import { registerProfileRoutes } from '../routes/profile';
+import { registerRealtimeRoutes } from '../routes/realtime';
 import { registerServersRoutes } from '../routes/servers';
 import { registerSessionsRoutes } from '../routes/sessions';
+import { registerSteamRoutes } from '../routes/steam';
+import { sseHub } from '../services/realtime/sse-hub';
 import { sendApiError } from '../utils/api-error';
 
 export interface BuildAppOptions {
@@ -38,6 +41,7 @@ export function buildApp(options: BuildAppOptions): FastifyInstance {
   app.decorate('db', dbInstance.db);
   app.decorate('sqlite', dbInstance.sqlite);
   app.decorate('closeDb', () => dbInstance.close());
+  app.decorate('sseHub', sseHub);
 
   // Allow empty bodies when Content-Type: application/json is sent on DELETE/GET requests
   app.addContentTypeParser('application/json', { parseAs: 'string' }, (_req, body, defaultDone) => {
@@ -142,6 +146,8 @@ export function buildApp(options: BuildAppOptions): FastifyInstance {
   app.register(registerProfileRoutes, { prefix: '/api/v1/auth/profile' });
   app.register(registerSessionsRoutes, { prefix: '/api/v1/auth/sessions' });
   app.register(registerServersRoutes, { prefix: '/api/v1/servers' });
+  app.register(registerRealtimeRoutes, { prefix: '/api/v1/realtime' });
+  app.register(registerSteamRoutes, { prefix: '/api/v1/settings/steam' });
 
   return app;
 }

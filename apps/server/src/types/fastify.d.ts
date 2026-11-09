@@ -2,12 +2,15 @@ import type { FastifyReply, FastifyRequest } from 'fastify';
 
 import type { DatabaseInstance, DsmDatabase } from '@aegis/database';
 
+import type { SseHub } from '../services/realtime/sse-hub';
+
 declare module 'fastify' {
   interface FastifyInstance {
     authenticate: (request: FastifyRequest, reply: FastifyReply) => Promise<void>;
     db: DsmDatabase;
     sqlite: DatabaseInstance['sqlite'];
     closeDb: () => void;
+    sseHub: SseHub;
   }
 }
 
