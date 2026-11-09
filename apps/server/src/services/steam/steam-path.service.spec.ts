@@ -115,7 +115,12 @@ describe('SteamPathService (apps/server/src/services/steam)', () => {
       const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'dsm-file-cmd-'));
       const exeFile = path.join(tempDir, 'steamcmd.exe');
       try {
-        fs.writeFileSync(exeFile, 'mock-binary');
+        fs.writeFileSync(exeFile, 'mock-binary', { mode: 0o700 });
+        try {
+          fs.chmodSync(exeFile, 0o700);
+        } catch {
+          // Ignored on platforms without POSIX chmod
+        }
         const res = service.validateSteamCmdPath(exeFile);
         expect(res.valid).toBe(true);
       } finally {
