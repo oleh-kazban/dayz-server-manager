@@ -28,8 +28,8 @@ function CopyableFlagRow({
   };
 
   return (
-    <div className="space-y-1.5">
-      <div className="flex items-center justify-between gap-2">
+    <div className="min-w-0 flex flex-col space-y-1.5">
+      <div className="flex min-h-9 items-center justify-between gap-2">
         <span className="text-xs font-semibold text-[var(--color-text-secondary)]">{label}</span>
         {value && (
           <Button
@@ -43,7 +43,7 @@ function CopyableFlagRow({
           </Button>
         )}
       </div>
-      <pre className="w-full overflow-x-auto rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-subtle)] px-3.5 py-2.5 font-mono text-xs text-[var(--color-text-main)]">
+      <pre className="flex-1 w-full overflow-x-auto rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-subtle)] px-3.5 py-2.5 font-mono text-xs text-[var(--color-text-main)]">
         {value || emptyLabel}
       </pre>
     </div>
@@ -79,7 +79,7 @@ export function LaunchParamsPreviewCard({ launchPreview }: LaunchParamsPreviewCa
         ) : undefined
       }
     >
-      <div className="p-6 space-y-4">
+      <div className="space-y-4">
         {launchPreview.missingFolderCount > 0 && (
           <Notice variant="warning" title="Mods Missing @Folder Name">
             {launchPreview.missingFolderCount} enabled mod(s) do not have a configured{' '}

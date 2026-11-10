@@ -66,4 +66,27 @@ describe('LaunchParamsPreviewCard', () => {
     expect(screen.getByText('No enabled server-only mods with a @folderName')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /Copy/i })).not.toBeInTheDocument();
   });
+
+  it('keeps flag header rows min-h-9 aligned when serverModFlag is empty and avoids duplicate p-6 wrapper', () => {
+    const { container } = render(
+      <LaunchParamsPreviewCard
+        launchPreview={{
+          modFlag: '-mod=@CF',
+          serverModFlag: '',
+          combinedArgs: ['-mod=@CF'],
+          missingFolderCount: 0,
+        }}
+      />,
+    );
+
+    const modHeaderRow = screen.getByText('Client & Server Mods (-mod=)').parentElement!;
+    const serverModHeaderRow = screen.getByText('Server-Only Mods (-serverMod=)').parentElement!;
+
+    expect(modHeaderRow).toHaveClass('min-h-9');
+    expect(serverModHeaderRow).toHaveClass('min-h-9');
+
+    const innerContent = container.querySelector('.space-y-4');
+    expect(innerContent).not.toBeNull();
+    expect(innerContent).not.toHaveClass('p-6');
+  });
 });

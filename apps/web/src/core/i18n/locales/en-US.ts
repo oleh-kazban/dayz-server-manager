@@ -16,7 +16,9 @@ export type NotificationCode =
   | 'MOD_DELETED'
   | 'MODS_REORDERED'
   | 'MOD_UPDATES_CHECKED'
-  | 'MOD_MARKED_SYNCED';
+  | 'MOD_MARKED_SYNCED'
+  | 'MOD_ENABLED'
+  | 'MOD_DISABLED';
 
 export interface ToastTranslationEntry {
   title: string;
@@ -277,6 +279,14 @@ export const enUSTranslations: TranslationCatalog = {
     MOD_MARKED_SYNCED: {
       title: 'Marked as Synced',
       description: '"{{name}}" is now marked as up to date.',
+    },
+    MOD_ENABLED: {
+      title: 'Mod Enabled',
+      description: '"{{name}}" is now enabled for server launch.',
+    },
+    MOD_DISABLED: {
+      title: 'Mod Disabled',
+      description: '"{{name}}" has been disabled.',
     },
   },
   serverStatus: {

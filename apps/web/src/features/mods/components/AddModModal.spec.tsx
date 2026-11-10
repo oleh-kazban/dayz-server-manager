@@ -309,10 +309,10 @@ describe('AddModModal', () => {
       fireEvent.click(screen.getByRole('button', { name: 'Search' }));
 
       await waitFor(() => {
-        expect(screen.getByText('Page 1 of 2 (15 total)')).toBeInTheDocument();
+        expect(screen.getByText('Showing 1 to 10 of 15 items')).toBeInTheDocument();
       });
 
-      fireEvent.click(screen.getByRole('button', { name: 'Next' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Go to next page' }));
       await waitFor(() => {
         expect(apiClient.mods.searchWorkshop).toHaveBeenLastCalledWith({
           q: '',

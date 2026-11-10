@@ -20,6 +20,7 @@ import {
   Checkbox,
   Input,
   Notice,
+  Pagination,
   Select,
   type SelectOption,
   TabContent,
@@ -476,29 +477,16 @@ function WorkshopSearchTab({
                 onToggleItem={toggleItem}
               />
 
-              <div className="flex items-center justify-between text-xs text-[var(--color-text-muted)]">
-                <span>
-                  Page {page} of {totalPages} ({searchResult.total} total)
-                </span>
-                <div className="flex items-center gap-2">
-                  <Button
-                    variant="ghost"
-                    type="button"
-                    disabled={page <= 1 || searchMutation.isPending}
-                    onClick={() => handleSearch(page - 1)}
-                  >
-                    Previous
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    type="button"
-                    disabled={page >= totalPages || searchMutation.isPending}
-                    onClick={() => handleSearch(page + 1)}
-                  >
-                    Next
-                  </Button>
-                </div>
-              </div>
+              <Pagination
+                page={page}
+                totalPages={totalPages}
+                totalItems={searchResult.total}
+                pageSize={pageSize}
+                siblingCount={1}
+                disabled={searchMutation.isPending}
+                onPageChange={nextPage => handleSearch(nextPage)}
+                className="flex-wrap gap-y-2"
+              />
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
                 <Select

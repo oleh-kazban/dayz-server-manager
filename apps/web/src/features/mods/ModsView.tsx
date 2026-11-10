@@ -533,8 +533,9 @@ export function ModsView() {
   const toggleMutation = useMutation({
     mutationFn: ({ modId, enabled }: { modId: string; enabled: boolean }) =>
       apiClient.mods.update(serverId, modId, { enabled }),
-    onSuccess: () => {
+    onSuccess: updated => {
       queryClient.invalidateQueries({ queryKey: modsQueryKeys.list(serverId) });
+      notifySuccess(updated.enabled ? 'MOD_ENABLED' : 'MOD_DISABLED', { name: updated.name });
     },
     onError: (err: Error) => notifyApiError(err, 'Failed to Toggle Mod'),
   });
@@ -611,6 +612,7 @@ export function ModsView() {
       getId: mod => mod.id,
       disabled: !canReorder,
       onReorder: reordered => {
+        if (reordered.every((m, idx) => m.id === mods[idx]?.id)) return;
         reorderMutation.mutate(reordered.map(m => m.id));
       },
     });

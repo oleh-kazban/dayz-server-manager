@@ -325,10 +325,33 @@ describe('ModsView', () => {
       expect(screen.getByText('CF')).toBeInTheDocument();
     });
 
-    // Toggle enabled
+    // Toggle disabled -> fires MOD_DISABLED toast and refetches disabled state
+    vi.mocked(apiClient.mods.update).mockResolvedValueOnce({ ...modCF, enabled: false });
+    vi.mocked(apiClient.mods.list).mockResolvedValueOnce({
+      ...sampleListResponse,
+      mods: [{ ...modCF, enabled: false }, modCOT, modLocal, modNotSynced],
+    });
     fireEvent.click(screen.getByLabelText('Enable CF'));
     await waitFor(() => {
       expect(apiClient.mods.update).toHaveBeenCalledWith(SERVER_ID, modCF.id, { enabled: false });
+      expect(showToast.success).toHaveBeenCalledWith(
+        'Mod Disabled',
+        '"CF" has been disabled.',
+        undefined,
+      );
+      expect(screen.getByLabelText('Enable CF')).not.toBeChecked();
+    });
+
+    // Toggle enabled -> fires MOD_ENABLED toast
+    vi.mocked(apiClient.mods.update).mockResolvedValueOnce({ ...modCF, enabled: true });
+    fireEvent.click(screen.getByLabelText('Enable CF'));
+    await waitFor(() => {
+      expect(apiClient.mods.update).toHaveBeenCalledWith(SERVER_ID, modCF.id, { enabled: true });
+      expect(showToast.success).toHaveBeenCalledWith(
+        'Mod Enabled',
+        '"CF" is now enabled for server launch.',
+        undefined,
+      );
     });
 
     // Keyboard ArrowDown reorder on CF handle -> moves CF after COT
@@ -365,6 +388,47 @@ describe('ModsView', () => {
     await waitFor(() => {
       expect(apiClient.mods.delete).toHaveBeenCalledWith(SERVER_ID, modCF.id);
     });
+  });
+
+  it('does not call reorder or trigger Load Order Saved toast on adjacent no-op drag-and-drop', async () => {
+    renderView();
+
+    await waitFor(() => {
+      expect(screen.getByText('CF')).toBeInTheDocument();
+    });
+
+    const cfRow = screen.getByText('CF').closest('tr')!;
+    const cotRow = screen.getByText('Community Online Tools').closest('tr')!;
+
+    vi.spyOn(cfRow, 'getBoundingClientRect').mockReturnValue({
+      top: 100,
+      height: 40,
+      bottom: 140,
+      left: 0,
+      right: 500,
+      width: 500,
+      x: 0,
+      y: 100,
+      toJSON: () => {},
+    });
+
+    const dataTransfer = {
+      setData: vi.fn(),
+      getData: vi.fn(),
+      effectAllowed: 'none',
+      dropEffect: 'none',
+    };
+
+    fireEvent.dragStart(cotRow, { dataTransfer });
+    fireEvent.dragOver(cfRow, { clientY: 130, dataTransfer });
+    fireEvent.drop(cfRow, { dataTransfer });
+
+    expect(apiClient.mods.reorder).not.toHaveBeenCalled();
+    expect(showToast.success).not.toHaveBeenCalledWith(
+      'Load Order Saved',
+      expect.anything(),
+      expect.anything(),
+    );
   });
 
   it('hides admin actions and disables toggles for viewer role', async () => {
