@@ -17,6 +17,7 @@ const HTTP_STATUS_PHRASES: Record<number, string> = {
   409: 'Conflict',
   429: 'Too Many Requests',
   500: 'Internal Server Error',
+  502: 'Bad Gateway',
   503: 'Service Unavailable',
 };
 
