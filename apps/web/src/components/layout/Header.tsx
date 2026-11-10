@@ -4,7 +4,8 @@ import { Link, useLocation, useMatches } from '@tanstack/react-router';
 import { Bell, ChevronRight, HelpCircle, Menu, Search, Settings } from 'lucide-react';
 
 import { useActiveServer, useLayoutStore, useNavigationContext } from '@aegis/web/core';
-import { FaqModal, ThemeToggleButton, useFaqStore } from '@aegis/web/features';
+import { FaqModal, useFaqStore } from '@aegis/web/features/faq';
+import { ThemeToggleButton } from '@aegis/web/features/theme';
 
 interface BreadcrumbTrailProps {
   isLoading: boolean;

@@ -29,7 +29,7 @@
     "lint:client": "nx run api-client:lint",
     "lint:contracts": "nx run api-contracts:lint",
     "lint:staged": "lint-staged",
-    "check:cycles": "madge --circular --extensions ts,tsx apps/ libs/",
+    "check:cycles": "madge --circular --ts-config tsconfig.base.json --extensions ts,tsx apps/ libs/",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "test": "nx run-many -t test",
