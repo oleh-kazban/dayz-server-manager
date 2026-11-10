@@ -268,4 +268,55 @@ describe('useSortableList', () => {
     });
     expect(onReorder).not.toHaveBeenCalled();
   });
+
+  it('skips onReorder and resets drag state when dropping onto an adjacent no-op half', () => {
+    const onReorder = vi.fn();
+    const { result } = renderHook(() =>
+      useSortableList({
+        items: mockItems,
+        getId: item => item.id,
+        onReorder,
+      }),
+    );
+
+    const item1Props = result.current.getItemProps('item-1');
+    const item2Props = result.current.getItemProps('item-2');
+    const item3Props = result.current.getItemProps('item-3');
+
+    // Case 1: item-3 (index 2) dropped 'below' item-2 (index 1) -> effective targetIndex 2 === sourceIndex 2
+    act(() => {
+      item3Props.onDragStart?.(createMockDragEvent());
+    });
+    act(() => {
+      item2Props.onDragOver?.(createMockDragEvent({ clientY: 130 }));
+    });
+    expect(result.current.dragOverId).toBe('item-2');
+    expect(result.current.dragOverPosition).toBe('below');
+
+    act(() => {
+      item2Props.onDrop?.(createMockDragEvent());
+    });
+
+    expect(onReorder).not.toHaveBeenCalled();
+    expect(result.current.draggedId).toBeNull();
+    expect(result.current.dragOverId).toBeNull();
+
+    // Case 2: item-1 (index 0) dropped 'above' item-2 (index 1) -> effective targetIndex 0 === sourceIndex 0
+    act(() => {
+      item1Props.onDragStart?.(createMockDragEvent());
+    });
+    act(() => {
+      item2Props.onDragOver?.(createMockDragEvent({ clientY: 105 }));
+    });
+    expect(result.current.dragOverId).toBe('item-2');
+    expect(result.current.dragOverPosition).toBe('above');
+
+    act(() => {
+      item2Props.onDrop?.(createMockDragEvent());
+    });
+
+    expect(onReorder).not.toHaveBeenCalled();
+    expect(result.current.draggedId).toBeNull();
+    expect(result.current.dragOverId).toBeNull();
+  });
 });
