@@ -360,6 +360,24 @@ describe('AddModModal', () => {
         expect(mockOnClose).toHaveBeenCalled();
       });
     });
+
+    it('clamps Pagination totalPages to WORKSHOP_SEARCH_MAX_PAGE (1000) when total exceeds 10000 items', async () => {
+      vi.mocked(apiClient.mods.searchWorkshop).mockResolvedValueOnce({
+        items: [itemCF],
+        total: 25000,
+        page: 1,
+        pageSize: 10,
+      });
+
+      renderModal();
+      fireEvent.click(screen.getByRole('tab', { name: /Search Workshop/i }));
+      fireEvent.click(screen.getByRole('button', { name: 'Search' }));
+
+      await waitFor(() => {
+        expect(screen.getByRole('button', { name: 'Page 1000' })).toBeInTheDocument();
+      });
+      expect(screen.queryByRole('button', { name: 'Page 2500' })).not.toBeInTheDocument();
+    });
   });
 
   describe('Tab 3: Local Mod', () => {

@@ -11,6 +11,7 @@ import {
   MOD_LOAD_TARGET,
   MOD_SOURCE_TYPE,
   type ModLoadTarget,
+  WORKSHOP_SEARCH_MAX_PAGE,
   type WorkshopLookupResponseDto,
   type WorkshopResolvedItemDto,
   type WorkshopSearchResponseDto,
@@ -428,7 +429,9 @@ function WorkshopSearchTab({
       item => selectedIds.has(item.workshopId) && !installedWorkshopIds.has(item.workshopId),
     ) ?? [];
 
-  const totalPages = searchResult ? Math.max(1, Math.ceil(searchResult.total / pageSize)) : 1;
+  const totalPages = searchResult
+    ? Math.min(WORKSHOP_SEARCH_MAX_PAGE, Math.max(1, Math.ceil(searchResult.total / pageSize)))
+    : 1;
 
   return (
     <div className="space-y-4">

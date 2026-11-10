@@ -201,9 +201,11 @@ export const workshopLookupResponseSchema = z.object({
 });
 export type WorkshopLookupResponseDto = z.infer<typeof workshopLookupResponseSchema>;
 
+export const WORKSHOP_SEARCH_MAX_PAGE = 1000;
+
 export const workshopSearchQuerySchema = z.object({
   q: z.string().trim().max(200).default(''),
-  page: z.coerce.number().int().min(1).max(100).default(1),
+  page: z.coerce.number().int().min(1).max(WORKSHOP_SEARCH_MAX_PAGE).default(1),
   pageSize: z.coerce.number().int().min(1).max(50).default(20),
 });
 export type WorkshopSearchQueryDto = z.input<typeof workshopSearchQuerySchema>;

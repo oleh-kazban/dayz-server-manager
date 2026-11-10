@@ -17,6 +17,7 @@ import {
   serverModSchema,
   serverModsListResponseSchema,
   updateServerModSchema,
+  WORKSHOP_SEARCH_MAX_PAGE,
   workshopIdSchema,
   workshopLookupRequestSchema,
   workshopLookupResponseSchema,
@@ -222,8 +223,14 @@ describe('Mod Contracts (libs/api-contracts)', () => {
           pageSize: 50,
         },
       );
+      expect(workshopSearchQuerySchema.parse({ page: 491 }).page).toBe(491);
+      expect(workshopSearchQuerySchema.parse({ page: WORKSHOP_SEARCH_MAX_PAGE }).page).toBe(
+        WORKSHOP_SEARCH_MAX_PAGE,
+      );
       expect(() => workshopSearchQuerySchema.parse({ page: 0 })).toThrow();
-      expect(() => workshopSearchQuerySchema.parse({ page: 101 })).toThrow();
+      expect(() =>
+        workshopSearchQuerySchema.parse({ page: WORKSHOP_SEARCH_MAX_PAGE + 1 }),
+      ).toThrow();
       expect(() => workshopSearchQuerySchema.parse({ pageSize: 51 })).toThrow();
       expect(() => workshopSearchQuerySchema.parse({ q: 'a'.repeat(201) })).toThrow();
     });
