@@ -17,12 +17,14 @@ Deliver the dedicated Steam integration workbench at `/settings/steam` in `apps/
 
 ### Delivered Capabilities
 
-- Dedicated route `/settings/steam` with grouped configuration cards: Account & Authentication, Storage Paths & SteamCMD Runtime, Application IDs & Branch Selection.
-- Headless SteamCMD runner (`apps/server/src/services/steam/steam-runner.service.ts`) with interactive `stdin` piping for Steam Guard OTP and Mobile Push prompts.
-- Real-time Server-Sent Events (`/api/v1/realtime/sse`) broadcasting Steam challenge events directly to the browser.
-- Encrypted credential vault using AES-256-GCM in SQLite (`steam_settings` table) with hybrid master key resolution (`STEAM_VAULT_KEY` / `.vault.key`).
+- Dedicated route `/settings/steam` with grouped configuration cards (Account & Authentication, Storage Paths & SteamCMD Runtime, Application IDs & Branch Selection), `Fingerprint` session banner/actions, and dynamic Workshop storage partition capacity `ProgressBar`.
 - Dual-Scope Navigation (`server` vs. `appliance`) with a single polymorphic `Sidebar`, contextual top switcher (`<ServerSelector />` vs. `[ ← Server Name ]`), appliance breadcrumbs, and search query parameter isolation.
+- Zod API contracts and DTO schemas in `libs/api-contracts` (`SteamSettingsDto`, `UpdateSteamSettingsDto`, `SteamChallengeEventDto`, `SteamChallengeResponseDto`, `SteamChallengeAbortDto`, `SteamDiagnosticsResultDto`, `StorageStats`).
+- Encrypted credential vault using AES-256-GCM in SQLite (`steam_settings` singleton table in `libs/database`) with hybrid master key resolution (`STEAM_VAULT_KEY` / `DSM_VAULT_KEY` / `.vault.key`) and atomic TOCTOU-safe key generation (`flag: 'wx'`).
 - Defensive timestamp self-healing in migration `0004_steam_settings` and `toSafeIsoDate` route guard.
+- Fastify REST controllers in `apps/server` (`GET /api/v1/settings/steam`, `PATCH /api/v1/settings/steam`, `POST /api/v1/settings/steam/session/login`, `POST /api/v1/settings/steam/session/clear`, `POST /api/v1/settings/steam/challenge/respond`, `POST /api/v1/settings/steam/challenge/abort`, `POST /api/v1/settings/steam/diagnostics`).
+- Headless SteamCMD runner (`apps/server/src/services/steam/steam-runner.service.ts`) with cached session ticket prioritization, bidirectional `stdin`/`stdout` streams, timeout guards (90s challenge extension), process tree termination, and dual Steam Guard detection (5-character OTP vs Mobile App push).
+- Real-time Server-Sent Events (`/api/v1/realtime/sse`) broadcasting Steam challenge and session status events to the reactive Steam Guard modal and diagnostics/toast notifications in `apps/web`.
 
 ---
 
