@@ -79,6 +79,67 @@ function parseRequirements(body: string): string | undefined {
   return rawReq.trim().replace(/\r?\n\s*/g, ' ');
 }
 
+function extractContinuationLines(
+  lines: string[],
+  startIndex: number,
+  fieldIndent: number,
+): string[] {
+  const collected: string[] = [];
+  for (let i = startIndex; i < lines.length; i += 1) {
+    const line = lines[i];
+    if (line.trim() === '') {
+      collected.push('');
+      continue;
+    }
+    const indent = line.search(/\S/);
+    if (
+      indent <= fieldIndent ||
+      /^\s*(?:---+|#{1,6}\s|-\s+\*\*(?:Included|Excluded \/ Deferred)\*\*:)/.test(line)
+    ) {
+      break;
+    }
+    collected.push(line);
+  }
+  while (collected.length > 0 && collected[0] === '') {
+    collected.shift();
+  }
+  while (collected.length > 0 && collected[collected.length - 1] === '') {
+    collected.pop();
+  }
+  return collected;
+}
+
+function dedentBlockLines(lines: string[]): string {
+  const nonEmptyIndents = lines.filter(line => line !== '').map(line => line.search(/\S/));
+  const minIndent = nonEmptyIndents.length > 0 ? Math.min(...nonEmptyIndents) : 0;
+  return lines.map(line => (line === '' ? '' : line.slice(minIndent))).join('\n');
+}
+
+function parseScopeField(body: string, fieldLabel: string): string | undefined {
+  const lines = body.split(/\r?\n/);
+  const escapedLabel = fieldLabel.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const fieldPattern = new RegExp(`^(\\s*)-\\s+\\*\\*${escapedLabel}\\*\\*:\\s*(.*)$`);
+
+  for (let i = 0; i < lines.length; i += 1) {
+    const match = lines[i].match(fieldPattern);
+    if (!match) {
+      continue;
+    }
+    const fieldIndent = match[1].length;
+    const inlineContent = match[2].trim();
+    const continuationLines = extractContinuationLines(lines, i + 1, fieldIndent);
+
+    if (continuationLines.length === 0) {
+      return inlineContent || undefined;
+    }
+
+    const block = dedentBlockLines(continuationLines);
+    return inlineContent ? `${inlineContent}\n${block}` : block;
+  }
+
+  return undefined;
+}
+
 function parseBacklogSection(section: string): BacklogItem | null {
   const headerEnd = section.indexOf(']');
   if (headerEnd === -1) {
@@ -105,8 +166,6 @@ function parseBacklogSection(section: string): BacklogItem | null {
   const priorityMatch = body.match(/-\s+\*\*Priority\*\*:\s*([^\r\n]+)/);
   const typeMatch = body.match(/-\s+\*\*Type\*\*:\s*([^\r\n]+)/);
   const dependsOnMatch = body.match(/-\s+\*\*Depends On\*\*:\s*([^\r\n]+)/);
-  const incMatch = body.match(/-\s+\*\*Included\*\*:\s*([^\r\n]+)/);
-  const excMatch = body.match(/-\s+\*\*Excluded \/ Deferred\*\*:\s*([^\r\n]+)/);
 
   return {
     id,
@@ -116,8 +175,8 @@ function parseBacklogSection(section: string): BacklogItem | null {
     status,
     dependsOn: cleanField(dependsOnMatch?.[1]) || undefined,
     requirements: parseRequirements(body),
-    scopeIncluded: incMatch ? incMatch[1].trim() : undefined,
-    scopeExcluded: excMatch ? excMatch[1].trim() : undefined,
+    scopeIncluded: parseScopeField(body, 'Included'),
+    scopeExcluded: parseScopeField(body, 'Excluded / Deferred'),
   };
 }
 
@@ -153,7 +212,10 @@ export function generateReleaseHistory(backlogSource: string, destination: strin
   let md = '# Release History & Changelog\n\n';
   md +=
     'This document records all completed product backlog items and operational features deployed to the DayZ Server Manager (DSM) platform.\n\n';
-  md += '---\n\n';
+
+  if (doneItems.length > 0) {
+    md += '---\n\n';
+  }
 
   for (const item of doneItems) {
     md += `## [${item.id}] ${item.title}\n\n`;
@@ -176,7 +238,8 @@ export function generateReleaseHistory(backlogSource: string, destination: strin
     md += '---\n\n';
   }
 
-  fs.writeFileSync(destination, md, 'utf-8');
+  const normalizedMd = `${md.replace(/\r\n/g, '\n').trimEnd()}\n`;
+  fs.writeFileSync(destination, normalizedMd, 'utf-8');
 }
 
 export function runSync(options?: { workspaceRoot?: string }): void {

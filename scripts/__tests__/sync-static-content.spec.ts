@@ -198,6 +198,130 @@ describe('sync-static-content pipeline', () => {
       );
       expect(dsm110?.scopeIncluded).toBe('Commands execution, player kick, shutdown commands.');
     });
+
+    it('extracts multi-line 4-space indented Included and Excluded / Deferred bullet lists (REQ-01)', () => {
+      const multilineBacklog = `
+### [DSM-00126] Steam Integration Workbench
+- **Type**: \`Feature\`
+- **Priority**: \`High\`
+- **Status**: \`DONE\`
+- **High-Level Requirements**:
+  Manage SteamCMD paths and credentials.
+- **Scope Boundaries**:
+  - **Included**:
+    - AES-256-GCM credential vault
+    - Dual-scope navigation (server vs appliance)
+    - SteamCMD diagnostic runner
+  - **Excluded / Deferred**:
+    - Automated mod conflict resolution
+    - Scheduled workshop polling
+---
+`;
+      const items = parseDoneBacklogItems(multilineBacklog);
+      expect(items).toHaveLength(1);
+      expect(items[0].scopeIncluded).toBe(
+        [
+          '- AES-256-GCM credential vault',
+          '- Dual-scope navigation (server vs appliance)',
+          '- SteamCMD diagnostic runner',
+        ].join('\n'),
+      );
+      expect(items[0].scopeExcluded).toBe(
+        ['- Automated mod conflict resolution', '- Scheduled workshop polling'].join('\n'),
+      );
+    });
+
+    it('preserves relative indentation for 6-space nested sub-bullets and internal blank lines (REQ-01)', () => {
+      const nestedBacklog = `
+### [DSM-00126] Steam Integration
+- **Status**: \`DONE\`
+- **Scope Boundaries**:
+  - **Included**:
+    - Primary capability
+
+      - Sub-capability alpha
+      - Sub-capability beta
+    - Secondary capability
+
+  - **Excluded / Deferred**:
+    - Deferred item
+`;
+      const items = parseDoneBacklogItems(nestedBacklog);
+      expect(items).toHaveLength(1);
+      expect(items[0].scopeIncluded).toBe(
+        [
+          '- Primary capability',
+          '',
+          '  - Sub-capability alpha',
+          '  - Sub-capability beta',
+          '- Secondary capability',
+        ].join('\n'),
+      );
+      expect(items[0].scopeExcluded).toBe('- Deferred item');
+    });
+
+    it('parses CRLF line endings and inline + continuation hybrid blocks accurately (REQ-01)', () => {
+      const crlfHybridBacklog = [
+        '# Backlog',
+        '',
+        '### [DSM-00126] Hybrid Scope',
+        '- **Status**: `DONE`',
+        '- **Scope Boundaries**:',
+        '  - **Included**: Core SteamCMD integration:',
+        '    - Diagnostic probe',
+        '    - Interactive 2FA challenge',
+        '  - **Excluded / Deferred**: Legacy FTP',
+        '    - WebDAV sync',
+        '---',
+      ].join('\r\n');
+
+      const items = parseDoneBacklogItems(crlfHybridBacklog);
+      expect(items).toHaveLength(1);
+      expect(items[0].scopeIncluded).toBe(
+        'Core SteamCMD integration:\n- Diagnostic probe\n- Interactive 2FA challenge',
+      );
+      expect(items[0].scopeExcluded).toBe('Legacy FTP\n- WebDAV sync');
+    });
+
+    it('returns undefined when Included has only trailing whitespace before sibling field or separator (REQ-01 refusal)', () => {
+      const emptyIncludedBeforeSibling = `
+### [DSM-00130] Empty Scope Before Sibling
+- **Status**: \`DONE\`
+- **Scope Boundaries**:
+  - **Included**:   
+  - **Excluded / Deferred**: Everything deferred.
+`;
+      const emptyIncludedBeforeRule = `
+### [DSM-00131] Empty Scope Before Rule
+- **Status**: \`DONE\`
+- **Scope Boundaries**:
+  - **Included**:\t  
+---
+`;
+      const items = parseDoneBacklogItems(
+        `${emptyIncludedBeforeSibling}\n${emptyIncludedBeforeRule}`,
+      );
+      expect(items).toHaveLength(2);
+      expect(items.find(it => it.id === 'DSM-00130')?.scopeIncluded).toBeUndefined();
+      expect(items.find(it => it.id === 'DSM-00130')?.scopeExcluded).toBe('Everything deferred.');
+      expect(items.find(it => it.id === 'DSM-00131')?.scopeIncluded).toBeUndefined();
+    });
+
+    it('preserves legacy single-line Included prose verbatim without splitting or bulletizing (REQ-03)', () => {
+      const legacyBacklog = `
+### [DSM-00121] Legacy Single-Line Entry
+- **Status**: \`DONE\`
+- **High-Level Requirements**: Support legacy RCON bindings.
+- **Scope Boundaries**:
+  - **Included**: Process lifecycle, RCON console, server health polling.
+  - **Excluded / Deferred**: Multi-node failover.
+`;
+      const items = parseDoneBacklogItems(legacyBacklog);
+      expect(items).toHaveLength(1);
+      expect(items[0].scopeIncluded).toBe(
+        'Process lifecycle, RCON console, server health polling.',
+      );
+    });
   });
 
   describe('generateReleaseHistory', () => {
@@ -229,6 +353,113 @@ describe('sync-static-content pipeline', () => {
       expect(content).toContain('- **Status**: `DONE`');
       expect(content).toContain('### Summary\n\nSupervise DayZ dedicated server instances.');
       expect(content).toContain('### Delivered Capabilities\n\nProcess spawn and supervision.');
+    });
+
+    it('emits LF-only markdown ending with a single trailing newline and renders multi-line capabilities (REQ-01, REQ-02, REQ-03)', () => {
+      const backlogPath = path.join(tempDir, 'BACKLOG.md');
+      const historyDest = path.join(tempDir, 'history.md');
+
+      const backlogContent = [
+        '# Backlog',
+        '',
+        '### [DSM-00126] Steam Integration',
+        '- **Type**: `Feature`',
+        '- **Priority**: `High`',
+        '- **Status**: `DONE`',
+        '- **High-Level Requirements**:',
+        '  SteamCMD integration.',
+        '- **Scope Boundaries**:',
+        '  - **Included**:',
+        '    - AES-256-GCM vault',
+        '      - Hybrid .vault.key resolution',
+        '    - Dynamic storage ProgressBar',
+        '  - **Excluded / Deferred**:',
+        '    - Workshop scheduling',
+        '',
+        '### [DSM-00101] Legacy Entry',
+        '- **Type**: `Core`',
+        '- **Priority**: `Normal`',
+        '- **Status**: `DONE`',
+        '- **High-Level Requirements**:',
+        '  Core setup.',
+        '- **Scope Boundaries**:',
+        '  - **Included**: Single-line legacy prose.',
+        '',
+        '### [DSM-00127] Planned Entry',
+        '- **Status**: `BACKLOG`',
+        '- **Scope Boundaries**:',
+        '  - **Included**:',
+        '    - Should not be emitted',
+      ].join('\r\n');
+
+      fs.writeFileSync(backlogPath, backlogContent, 'utf-8');
+      generateReleaseHistory(backlogPath, historyDest);
+
+      const content = fs.readFileSync(historyDest, 'utf-8');
+
+      // REQ-02: LF-only and exact single trailing newline after final ---
+      expect(/\r\n/.test(content)).toBe(false);
+      expect(content.endsWith('---\n')).toBe(true);
+      expect(content.endsWith('\n\n')).toBe(false);
+
+      // REQ-01 & REQ-03: Multi-line bullets preserved + legacy prose preserved
+      expect(content).toContain(
+        '### Delivered Capabilities\n\n- AES-256-GCM vault\n  - Hybrid .vault.key resolution\n- Dynamic storage ProgressBar',
+      );
+      expect(content).toContain('### Delivered Capabilities\n\nSingle-line legacy prose.');
+
+      // REQ-04 refusal path: non-DONE items are omitted
+      expect(content).not.toContain('DSM-00127');
+      expect(content).not.toContain('Should not be emitted');
+    });
+
+    it('omits Delivered Capabilities section when Included block is empty (REQ-01 refusal)', () => {
+      const backlogPath = path.join(tempDir, 'BACKLOG.md');
+      const historyDest = path.join(tempDir, 'history.md');
+
+      const backlogContent = `
+# Backlog
+
+### [DSM-00130] Empty Scope Item
+- **Type**: \`Chore\`
+- **Priority**: \`Low\`
+- **Status**: \`DONE\`
+- **High-Level Requirements**:
+  Internal cleanup.
+- **Scope Boundaries**:
+  - **Included**:   
+  - **Excluded / Deferred**: None.
+`;
+      fs.writeFileSync(backlogPath, backlogContent, 'utf-8');
+      generateReleaseHistory(backlogPath, historyDest);
+
+      const content = fs.readFileSync(historyDest, 'utf-8');
+      expect(content).toContain('## [DSM-00130] Empty Scope Item');
+      expect(content).toContain('### Summary\n\nInternal cleanup.');
+      expect(content).not.toContain('### Delivered Capabilities');
+      expect(content.endsWith('---\n')).toBe(true);
+    });
+
+    it('emits header and intro ending with single newline and no dangling separator when zero DONE items exist (REQ-02 refusal)', () => {
+      const backlogPath = path.join(tempDir, 'BACKLOG.md');
+      const historyDest = path.join(tempDir, 'history.md');
+
+      const backlogContent = `
+# Backlog
+
+### [DSM-00200] Upcoming Feature
+- **Status**: \`BACKLOG\`
+- **High-Level Requirements**: Future work.
+`;
+      fs.writeFileSync(backlogPath, backlogContent, 'utf-8');
+      generateReleaseHistory(backlogPath, historyDest);
+
+      const content = fs.readFileSync(historyDest, 'utf-8');
+      expect(content).toContain('# Release History & Changelog');
+      expect(content).toContain('This document records all completed product backlog items');
+      expect(content).not.toContain('---');
+      expect(content.endsWith('\n')).toBe(true);
+      expect(content.endsWith('\n\n')).toBe(false);
     });
   });
 
@@ -305,6 +536,42 @@ describe('sync-static-content pipeline', () => {
       expect(fs.readFileSync(assetHistory, 'utf-8')).toBe(
         '# Committed History\n\n## [DSM-00100] Setup\n',
       );
+    });
+
+    it('idempotency: consecutive runSync executions produce byte-identical output with multi-line scopes (ARCH-01, REQ-02)', () => {
+      const faqPath = path.join(tempDir, 'faq.md');
+      const backlogDir = path.join(tempDir, '.agents');
+      const backlogPath = path.join(backlogDir, 'BACKLOG.md');
+
+      fs.mkdirSync(backlogDir, { recursive: true });
+      fs.writeFileSync(faqPath, '# FAQ\n', 'utf-8');
+      fs.writeFileSync(
+        backlogPath,
+        `# Backlog\n\n### [DSM-00126] Multi-Line Sync\n- **Status**: \`DONE\`\n- **Type**: \`Feature\`\n- **Priority**: \`High\`\n- **High-Level Requirements**: Sync multi-line scopes.\n- **Scope Boundaries**:\n  - **Included**:\n    - Capability one\n    - Capability two\n  - **Excluded / Deferred**: None.\n`,
+        'utf-8',
+      );
+
+      runSync({ workspaceRoot: tempDir });
+      const firstRoot = fs.readFileSync(path.join(tempDir, 'history.md'), 'utf-8');
+      const firstAsset = fs.readFileSync(
+        path.join(tempDir, 'apps/web/public/assets/content/history.md'),
+        'utf-8',
+      );
+
+      runSync({ workspaceRoot: tempDir });
+      const secondRoot = fs.readFileSync(path.join(tempDir, 'history.md'), 'utf-8');
+      const secondAsset = fs.readFileSync(
+        path.join(tempDir, 'apps/web/public/assets/content/history.md'),
+        'utf-8',
+      );
+
+      expect(secondRoot).toBe(firstRoot);
+      expect(secondAsset).toBe(firstAsset);
+      expect(firstRoot).toContain(
+        '### Delivered Capabilities\n\n- Capability one\n- Capability two',
+      );
+      expect(firstRoot.endsWith('---\n')).toBe(true);
+      expect(firstRoot.endsWith('\n\n')).toBe(false);
     });
   });
 });
