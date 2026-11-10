@@ -202,7 +202,13 @@ ${packageBreakdown}
 
     const existingDescRaw = nextSectionMatch ? rest.slice(0, nextSectionMatch.index) : rest;
     const afterDesc = nextSectionMatch ? rest.slice(nextSectionMatch.index) : '';
-    const existingAuthorNotes = existingDescRaw.replace(/<!--[\s\S]*?-->/g, '').trim();
+    let existingAuthorNotes = existingDescRaw;
+    let previousAuthorNotes;
+    do {
+      previousAuthorNotes = existingAuthorNotes;
+      existingAuthorNotes = existingAuthorNotes.replace(/<!--[\s\S]*?-->/g, '');
+    } while (existingAuthorNotes !== previousAuthorNotes);
+    existingAuthorNotes = existingAuthorNotes.trim();
 
     const combinedDesc = existingAuthorNotes
       ? `${existingAuthorNotes}\n\n${wrappedSummary}`
