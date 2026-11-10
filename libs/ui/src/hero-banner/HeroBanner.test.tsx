@@ -38,7 +38,7 @@ describe('HeroBanner Component', () => {
 
     const bgElement = screen.getByTestId('hero-banner-bg');
     expect(bgElement).toBeInTheDocument();
-    expect(bgElement).toHaveStyle({ backgroundImage: `url('${bgUrl}')` });
+    expect(bgElement.style.backgroundImage).toBe(`url("${bgUrl}")`);
   });
 
   it('applies custom scrimClassName when provided', () => {
