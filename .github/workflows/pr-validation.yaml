@@ -15,22 +15,10 @@ env:
   BASE_REF: ${{ github.base_ref }}
 
 jobs:
-  format:
-    name: Format (Prettier)
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-
-      - name: Setup workspace
-        uses: ./.github/actions/setup-workspace
-
-      - name: Verify Code Formatting
-        run: pnpm format:check
-
   static-checks:
-    name: Cycles, Lint & Typecheck
+    name: Format, Cycles, Lint & Typecheck
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -39,6 +27,9 @@ jobs:
 
       - name: Setup workspace
         uses: ./.github/actions/setup-workspace
+
+      - name: Verify Code Formatting
+        run: pnpm format:check
 
       - name: Verify Architectural Cycles
         run: pnpm check:cycles
@@ -54,6 +45,7 @@ jobs:
   test-web:
     name: Tests (Web & UI)
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -67,7 +59,7 @@ jobs:
         run: >
           pnpm nx affected
           -t test
-          --exclude="server,database,api-contracts"
+          --exclude="*,!web,!ui,!api-client"
           --base="origin/$BASE_REF"
           --head=HEAD
           --parallel=3
@@ -75,6 +67,7 @@ jobs:
   test-server:
     name: Tests (Server & DB)
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -96,6 +89,7 @@ jobs:
   build:
     name: Build (Web & Server)
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
