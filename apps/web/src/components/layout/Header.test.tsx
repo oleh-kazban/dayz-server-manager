@@ -5,7 +5,7 @@ import { fireEvent, render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { useLayoutStore } from '@aegis/web/core';
-import { useFaqStore } from '@aegis/web/features';
+import { useFaqStore } from '@aegis/web/features/faq';
 import { ThemeProvider } from '@aegis/web/features/theme';
 
 import { Header } from './Header';

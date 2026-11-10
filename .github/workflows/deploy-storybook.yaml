@@ -3,6 +3,14 @@ name: Deploy Storybook to GitHub Pages
 on:
   push:
     branches: [main, master]
+    paths:
+      - 'libs/ui/**'
+      - 'apps/web/public/**'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+      - 'tsconfig.base.json'
+      - '.github/workflows/deploy-storybook.yaml'
+      - '.github/actions/setup-workspace/**'
   workflow_dispatch:
 
 permissions:
@@ -16,22 +24,14 @@ jobs:
   build:
     name: Build Storybook
     runs-on: ubuntu-latest
-    if: github.ref_name == github.event.repository.default_branch
+    timeout-minutes: 15
+    if: github.event_name == 'workflow_dispatch' || github.ref_name == github.event.repository.default_branch
     steps:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - name: Setup pnpm
-        uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
-
-      - name: Setup Node.js
-        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
-        with:
-          node-version: '24'
-          cache: 'pnpm'
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+      - name: Setup workspace
+        uses: ./.github/actions/setup-workspace
 
       - name: Build Storybook Static Bundle
         run: pnpm build-storybook
@@ -45,7 +45,8 @@ jobs:
     name: Deploy Storybook
     needs: build
     runs-on: ubuntu-latest
-    if: github.ref_name == github.event.repository.default_branch
+    timeout-minutes: 10
+    if: github.event_name == 'workflow_dispatch' || github.ref_name == github.event.repository.default_branch
     permissions:
       pages: write
       id-token: write

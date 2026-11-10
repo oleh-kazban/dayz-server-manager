@@ -67,38 +67,41 @@ module.exports = async function generatePrSummary({ github, context }) {
     .map(f => `${f.status}: ${f.filename} (+${f.additions}/-${f.deletions})`)
     .join('\n');
 
+  const prompt = [
+    'You are a Principal Software Architect generating a PR summary for DayZ Server Manager based on .github/copilot-instructions.md.',
+    `PR Title: ${prTitle}`,
+    'Commits:',
+    commitMessages,
+    'Changed Files:',
+    fileList,
+    '',
+    'Generate a PR summary following strictly this markdown template:',
+    '### Architectural Intent & Overview',
+    '(1-2 concise paragraphs explaining the rationale and specs)',
+    '',
+    '### Key Changes by Package',
+    '(Grouped by package)',
+    '',
+    '### Safety, Contracts & Boundary Compliance',
+    '(Analyze touched packages: module boundaries, process safety, file integrity, UI kit geometry; note that compliance is subject to CI verification)',
+    '',
+    '### Testing & Verification',
+    '(Report test files added/modified in the diff; note coverage and quality gates as pending CI pipeline execution)',
+    '',
+    '### Breaking Changes & Migrations',
+    '(List breaking changes or "None")',
+  ].join('\n');
+
   if (process.env.GEMINI_API_KEY) {
     try {
-      const prompt = [
-        'You are a Principal Software Architect generating a PR summary for DayZ Server Manager based on .github/copilot-instructions.md.',
-        `PR Title: ${prTitle}`,
-        'Commits:',
-        commitMessages,
-        'Changed Files:',
-        fileList,
-        '',
-        'Generate a PR summary following strictly this markdown template:',
-        '### Architectural Intent & Overview',
-        '(1-2 concise paragraphs explaining the rationale and specs)',
-        '',
-        '### Key Changes by Package',
-        '(Grouped by package)',
-        '',
-        '### Safety, Contracts & Boundary Compliance',
-        '(Analyze touched packages: module boundaries, process safety, file integrity, UI kit geometry; note that compliance is subject to CI verification)',
-        '',
-        '### Testing & Verification',
-        '(Report test files added/modified in the diff; note coverage and quality gates as pending CI pipeline execution)',
-        '',
-        '### Breaking Changes & Migrations',
-        '(List breaking changes or "None")',
-      ].join('\n');
-
       const res = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${process.env.GEMINI_API_KEY}`,
+        'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent',
         {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Content-Type': 'application/json',
+            'x-goog-api-key': process.env.GEMINI_API_KEY,
+          },
           body: JSON.stringify({
             contents: [{ parts: [{ text: prompt }] }],
             generationConfig: { temperature: 0.2 },
@@ -108,38 +111,17 @@ module.exports = async function generatePrSummary({ github, context }) {
 
       if (res.ok) {
         const data = await res.json();
-        generatedSummary = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
+        generatedSummary = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || '';
+      } else {
+        console.warn(`Gemini API returned HTTP ${res.status}; attempting next provider.`);
       }
     } catch (err) {
-      console.log('Gemini API call failed, attempting fallback:', err);
+      console.warn('Gemini API call failed, attempting next provider:', err);
     }
-  } else if (process.env.OPENAI_API_KEY) {
-    try {
-      const prompt = [
-        'You are a Principal Software Architect generating a PR summary for DayZ Server Manager based on .github/copilot-instructions.md.',
-        `PR Title: ${prTitle}`,
-        'Commits:',
-        commitMessages,
-        'Changed Files:',
-        fileList,
-        '',
-        'Generate a PR summary following strictly this markdown template:',
-        '### Architectural Intent & Overview',
-        '(1-2 concise paragraphs explaining the rationale and specs)',
-        '',
-        '### Key Changes by Package',
-        '(Grouped by package)',
-        '',
-        '### Safety, Contracts & Boundary Compliance',
-        '(Analyze touched packages: module boundaries, process safety, file integrity, UI kit geometry; note that compliance is subject to CI verification)',
-        '',
-        '### Testing & Verification',
-        '(Report test files added/modified in the diff; note coverage and quality gates as pending CI pipeline execution)',
-        '',
-        '### Breaking Changes & Migrations',
-        '(List breaking changes or "None")',
-      ].join('\n');
+  }
 
+  if (!generatedSummary && process.env.OPENAI_API_KEY) {
+    try {
       const res = await fetch('https://api.openai.com/v1/chat/completions', {
         method: 'POST',
         headers: {
@@ -155,10 +137,14 @@ module.exports = async function generatePrSummary({ github, context }) {
 
       if (res.ok) {
         const data = await res.json();
-        generatedSummary = data.choices[0]?.message?.content?.trim();
+        generatedSummary = data.choices?.[0]?.message?.content?.trim() || '';
+      } else {
+        console.warn(
+          `OpenAI API returned HTTP ${res.status}; falling back to deterministic template.`,
+        );
       }
     } catch (err) {
-      console.log('OpenAI API call failed, falling back to deterministic template:', err);
+      console.warn('OpenAI API call failed, falling back to deterministic template:', err);
     }
   }
 
@@ -197,21 +183,44 @@ ${packageBreakdown}
 - None.`;
   }
 
-  // 5. Construct updated PR description preserving template sections
-  let updatedBody = '';
-  if (currentBody.includes('## Description')) {
-    const parts = currentBody.split('## Description');
-    const rest = parts[1] || '';
-    const nextSectionIndex = rest.search(/##\s+/);
+  // 5. Construct updated PR description preserving template sections and user-authored notes
+  const SUMMARY_START = '<!-- dsm-auto-summary:start -->';
+  const SUMMARY_END = '<!-- dsm-auto-summary:end -->';
+  const wrappedSummary = `${SUMMARY_START}\n${generatedSummary}\n${SUMMARY_END}`;
+  const summaryBlockRegex = /<!-- dsm-auto-summary:start -->[\s\S]*?<!-- dsm-auto-summary:end -->/;
 
-    if (nextSectionIndex !== -1) {
-      const afterDesc = rest.substring(nextSectionIndex);
-      updatedBody = `## Description\n\n${generatedSummary}\n\n${afterDesc}`;
-    } else {
-      updatedBody = `## Description\n\n${generatedSummary}`;
-    }
+  let updatedBody = '';
+  const descHeadingRegex = /^##\s+Description\b[^\n]*\n?/m;
+  const descMatch = descHeadingRegex.exec(currentBody);
+
+  if (summaryBlockRegex.test(currentBody)) {
+    updatedBody = currentBody.replace(summaryBlockRegex, wrappedSummary);
+  } else if (descMatch) {
+    const beforeDesc = currentBody.slice(0, descMatch.index);
+    const rest = currentBody.slice(descMatch.index + descMatch[0].length);
+    const nextSectionMatch = /^##\s+/m.exec(rest);
+
+    const existingDescRaw = nextSectionMatch ? rest.slice(0, nextSectionMatch.index) : rest;
+    const afterDesc = nextSectionMatch ? rest.slice(nextSectionMatch.index) : '';
+    let existingAuthorNotes = existingDescRaw;
+    let previousAuthorNotes;
+    do {
+      previousAuthorNotes = existingAuthorNotes;
+      existingAuthorNotes = existingAuthorNotes.replace(/<!--[\s\S]*?-->/g, '');
+    } while (existingAuthorNotes !== previousAuthorNotes);
+    existingAuthorNotes = existingAuthorNotes.trim();
+
+    const combinedDesc = existingAuthorNotes
+      ? `${existingAuthorNotes}\n\n${wrappedSummary}`
+      : wrappedSummary;
+
+    updatedBody = afterDesc
+      ? `${beforeDesc}## Description\n\n${combinedDesc}\n\n${afterDesc}`
+      : `${beforeDesc}## Description\n\n${combinedDesc}`;
   } else {
-    updatedBody = `## Description\n\n${generatedSummary}\n\n${currentBody}`;
+    updatedBody = currentBody.trim()
+      ? `## Description\n\n${wrappedSummary}\n\n${currentBody}`
+      : `## Description\n\n${wrappedSummary}`;
   }
 
   // 6. Update the pull request

@@ -11,30 +11,22 @@ concurrency:
   group: pr-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
+env:
+  BASE_REF: ${{ github.base_ref }}
+
 jobs:
-  validate:
-    name: Validate PR (Format, Cycles, Lint, Typecheck, Test, Build)
+  static-checks:
+    name: Format, Cycles, Lint & Typecheck
     runs-on: ubuntu-latest
-    env:
-      BASE_REF: ${{ github.base_ref }}
-      IS_FORK_PR: ${{ github.event.pull_request.head.repo.fork }}
+    timeout-minutes: 15
     steps:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
 
-      - name: Setup pnpm
-        uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
-
-      - name: Setup Node.js
-        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
-        with:
-          node-version: '24'
-          cache: 'pnpm'
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+      - name: Setup workspace
+        uses: ./.github/actions/setup-workspace
 
       - name: Verify Code Formatting
         run: pnpm format:check
@@ -42,26 +34,75 @@ jobs:
       - name: Verify Architectural Cycles
         run: pnpm check:cycles
 
-      - name: Nx Affected (Lint, Typecheck, Test, Build)
+      - name: Nx Affected (Lint, Typecheck)
         run: >
           pnpm nx affected
-          -t lint typecheck test build
+          -t lint typecheck
           --base="origin/$BASE_REF"
           --head=HEAD
           --parallel=3
 
-      - name: Generate fork PR coverage
-        if: env.IS_FORK_PR == 'true'
-        run: pnpm test:coverage
-
-      - name: Upload fork PR inputs for Sonar
-        if: env.IS_FORK_PR == 'true'
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+  test-web:
+    name: Tests (Web & UI)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          name: sonar-fork-inputs
-          path: |
-            apps/
-            libs/
-            coverage/
-          if-no-files-found: error
-          retention-days: 1
+          fetch-depth: 0
+
+      - name: Setup workspace
+        uses: ./.github/actions/setup-workspace
+
+      - name: Nx Affected (Web & UI Tests)
+        run: >
+          pnpm nx affected
+          -t test
+          --exclude="*,!web,!ui,!api-client"
+          --base="origin/$BASE_REF"
+          --head=HEAD
+          --parallel=3
+
+  test-server:
+    name: Tests (Server & DB)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+
+      - name: Setup workspace
+        uses: ./.github/actions/setup-workspace
+
+      - name: Nx Affected (Server & DB Tests)
+        run: >
+          pnpm nx affected
+          -t test
+          --exclude="web,ui,api-client"
+          --base="origin/$BASE_REF"
+          --head=HEAD
+          --parallel=3
+
+  build:
+    name: Build (Web & Server)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+
+      - name: Setup workspace
+        uses: ./.github/actions/setup-workspace
+
+      - name: Nx Affected (Build)
+        run: >
+          pnpm nx affected
+          -t build
+          --base="origin/$BASE_REF"
+          --head=HEAD
+          --parallel=3

@@ -11,9 +11,11 @@ const path = require('path');
 
 function normalizeLcov(coverageDir) {
   if (!fs.existsSync(coverageDir)) {
-    console.warn(`Coverage directory not found: ${coverageDir}`);
-    return;
+    console.error(`Coverage directory not found: ${coverageDir}`);
+    process.exit(1);
   }
+
+  let processedCount = 0;
 
   function walk(currentDir) {
     const entries = fs.readdirSync(currentDir, { withFileTypes: true });
@@ -23,6 +25,7 @@ function normalizeLcov(coverageDir) {
         walk(fullPath);
       } else if (entry.isFile() && entry.name === 'lcov.info') {
         processLcov(fullPath);
+        processedCount++;
       }
     }
   }
@@ -35,13 +38,18 @@ function normalizeLcov(coverageDir) {
     content = content.replace(/\\/g, '/');
 
     // Replace SF:src/ with SF:<projectDir>/src/
-    content = content.replace(/^SF:src\//gm, `SF:${projectDir}/src/`);
+    content = content.replace(/^SF:(?:\.\/)?src\//gm, `SF:${projectDir}/src/`);
 
     fs.writeFileSync(filePath, content, 'utf8');
     console.log(`Normalized ${filePath} -> project prefix '${projectDir}'`);
   }
 
   walk(coverageDir);
+
+  if (processedCount === 0) {
+    console.error(`No lcov.info files found under: ${coverageDir}`);
+    process.exit(1);
+  }
 }
 
 const targetDir = process.argv[2]
