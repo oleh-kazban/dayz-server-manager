@@ -17,6 +17,7 @@ import {
 
 import { type AuthContextValue, SignIn } from './features/auth';
 import { Dashboard } from './features/dashboard';
+import { ModsView } from './features/mods';
 import { ProfileView } from './features/profile';
 import { ServerSettingsView } from './features/server-settings';
 import { SteamSettingsView } from './features/steam';
@@ -160,12 +161,7 @@ const modsRoute = createRoute({
       throw redirect({ to: '/dashboard' });
     }
   },
-  component: () => (
-    <PlaceholderView
-      title="Mods Management"
-      description="Steam Workshop mod synchronization, load order sequencing, and automatic .bikey public key distribution."
-    />
-  ),
+  component: ModsView,
 });
 
 const maintenanceRoute = createRoute({

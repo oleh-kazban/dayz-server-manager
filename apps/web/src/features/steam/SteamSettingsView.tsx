@@ -1,7 +1,7 @@
 import { useState } from 'react';
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Fingerprint, KeyRound, Save, Terminal, Trash2 } from 'lucide-react';
+import { ExternalLink, Fingerprint, KeyRound, Save, Terminal, Trash2 } from 'lucide-react';
 
 import { apiClient } from '@aegis/api-client';
 import type {
@@ -110,6 +110,130 @@ function resolveSteamPassword(
   return undefined;
 }
 
+function resolveSteamWebApiKeyPayload(
+  clearApiKeyOnSave: boolean,
+  steamWebApiKey: string,
+): string | null | undefined {
+  if (clearApiKeyOnSave) {
+    return null;
+  }
+  const trimmed = steamWebApiKey.trim();
+  return trimmed ? trimmed : undefined;
+}
+
+interface SteamWebApiKeyVaultSectionProps {
+  hasSteamWebApiKey: boolean;
+  isUpdatingApiKey: boolean;
+  clearApiKeyOnSave: boolean;
+  steamWebApiKey: string;
+  error?: string;
+  onStartUpdate: () => void;
+  onCancelUpdate: () => void;
+  onMarkClear: () => void;
+  onUndoClear: () => void;
+  onChangeKey: (val: string) => void;
+}
+
+function SteamWebApiKeyVaultSection({
+  hasSteamWebApiKey,
+  isUpdatingApiKey,
+  clearApiKeyOnSave,
+  steamWebApiKey,
+  error,
+  onStartUpdate,
+  onCancelUpdate,
+  onMarkClear,
+  onUndoClear,
+  onChangeKey,
+}: SteamWebApiKeyVaultSectionProps) {
+  let bodyContent: React.ReactNode;
+
+  if (hasSteamWebApiKey && !isUpdatingApiKey && !clearApiKeyOnSave) {
+    bodyContent = (
+      <div className="flex items-center justify-between pt-1">
+        <span className="text-xs text-[var(--color-text-muted)] font-mono">••••••••••••••••</span>
+        <div className="flex items-center gap-2">
+          <Button variant="ghost" onClick={onStartUpdate}>
+            Change Key
+          </Button>
+          <Button variant="ghost" destructive onClick={onMarkClear}>
+            Clear Key
+          </Button>
+        </div>
+      </div>
+    );
+  } else if (clearApiKeyOnSave) {
+    bodyContent = (
+      <div className="flex items-center justify-between pt-1">
+        <span className="text-xs text-[var(--color-status-warning)]">
+          Stored Steam Web API key will be removed when you save changes.
+        </span>
+        <Button variant="ghost" onClick={onUndoClear}>
+          Keep Existing Key
+        </Button>
+      </div>
+    );
+  } else {
+    bodyContent = (
+      <div className="space-y-2">
+        <PasswordInput
+          label="Steam Web API Key"
+          placeholder="Paste Steam Web API key"
+          value={steamWebApiKey}
+          error={error}
+          onChange={e => onChangeKey(e.target.value)}
+        />
+        {hasSteamWebApiKey && (
+          <div className="flex justify-end">
+            <Button variant="ghost" onClick={onCancelUpdate}>
+              Keep Existing Key
+            </Button>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <div className="p-4 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-hover)] space-y-3">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="flex items-center gap-2">
+          <KeyRound className="w-4 h-4 text-[var(--color-text-muted)]" />
+          <span className="text-sm font-medium text-[var(--color-text-main)]">
+            Steam Web API Key (Workshop Search)
+          </span>
+        </div>
+        {hasSteamWebApiKey && !clearApiKeyOnSave ? (
+          <Tag variant="subtle" color="success">
+            API Key Stored & Encrypted
+          </Tag>
+        ) : (
+          <Tag variant="subtle" color="default">
+            {clearApiKeyOnSave ? 'Will Clear on Save' : 'Not Configured'}
+          </Tag>
+        )}
+      </div>
+
+      <p className="text-xs text-[var(--color-text-muted)]">
+        Optional key used strictly server-side to query Steam Workshop keyword search. Generate a
+        key at{' '}
+        <a
+          href="https://steamcommunity.com/dev/apikey"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-1 text-[var(--color-primary)] hover:underline font-medium"
+        >
+          steamcommunity.com/dev/apikey
+          <ExternalLink className="w-3 h-3" />
+        </a>
+        .
+      </p>
+
+      {bodyContent}
+    </div>
+  );
+}
+
 function resolveStorageVariant(freeGb: number): ProgressBarVariant {
   if (freeGb < 10) {
     return 'danger';
@@ -190,6 +314,10 @@ function SteamSettingsForm({
   const [branchPassword, setBranchPassword] = useState('');
   const [isChangingBranchPassword, setIsChangingBranchPassword] = useState(false);
 
+  const [steamWebApiKey, setSteamWebApiKey] = useState('');
+  const [isUpdatingApiKey, setIsUpdatingApiKey] = useState(false);
+  const [clearApiKeyOnSave, setClearApiKeyOnSave] = useState(false);
+
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
   const updateMutation = useMutation({
@@ -199,8 +327,11 @@ function SteamSettingsForm({
       notifySuccess('STEAM_SETTINGS_UPDATED');
       setIsChangingPassword(false);
       setIsChangingBranchPassword(false);
+      setIsUpdatingApiKey(false);
+      setClearApiKeyOnSave(false);
       setSteamPassword('');
       setBranchPassword('');
+      setSteamWebApiKey('');
       setFieldErrors({});
     },
     onError: (err: Error) => {
@@ -247,6 +378,8 @@ function SteamSettingsForm({
       steamPassword,
     );
 
+    const steamWebApiKeyValue = resolveSteamWebApiKeyPayload(clearApiKeyOnSave, steamWebApiKey);
+
     const dto: UpdateSteamSettingsDto = {
       authMode,
       steamCmdPath: steamCmdPath.trim(),
@@ -258,6 +391,7 @@ function SteamSettingsForm({
       steamUsername: authMode === 'account' ? steamUsername.trim() : null,
       ...(steamPasswordValue !== undefined && { steamPassword: steamPasswordValue }),
       ...(branchPasswordValue !== undefined && { branchPassword: branchPasswordValue }),
+      ...(steamWebApiKeyValue !== undefined && { steamWebApiKey: steamWebApiKeyValue }),
     };
 
     updateMutation.mutate(dto);
@@ -441,6 +575,28 @@ function SteamSettingsForm({
                 )}
               </div>
             )}
+
+            <SteamWebApiKeyVaultSection
+              hasSteamWebApiKey={settings.hasSteamWebApiKey}
+              isUpdatingApiKey={isUpdatingApiKey}
+              clearApiKeyOnSave={clearApiKeyOnSave}
+              steamWebApiKey={steamWebApiKey}
+              error={fieldErrors.steamWebApiKey}
+              onStartUpdate={() => setIsUpdatingApiKey(true)}
+              onCancelUpdate={() => {
+                setIsUpdatingApiKey(false);
+                setSteamWebApiKey('');
+              }}
+              onMarkClear={() => {
+                setClearApiKeyOnSave(true);
+                setSteamWebApiKey('');
+              }}
+              onUndoClear={() => setClearApiKeyOnSave(false)}
+              onChangeKey={val => {
+                setSteamWebApiKey(val);
+                clearFieldError('steamWebApiKey');
+              }}
+            />
           </div>
         </Card>
 
