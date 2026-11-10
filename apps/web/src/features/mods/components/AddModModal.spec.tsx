@@ -127,6 +127,34 @@ describe('AddModModal', () => {
     expect(container).toBeEmptyDOMElement();
   });
 
+  it('derives modal heading dynamically from active tab and selected Load Target', async () => {
+    renderModal();
+
+    // Tab 1 (URL / ID / Collection) defaults to client_server
+    expect(screen.getByRole('heading', { name: 'Add Client & Server Mod' })).toBeInTheDocument();
+
+    // Tab 3 (Local Mod) defaults to server_only
+    fireEvent.click(screen.getByRole('tab', { name: /Local Mod/i }));
+    expect(screen.getByRole('heading', { name: 'Add Server-Only Mod' })).toBeInTheDocument();
+
+    // Changing Load Target in Tab 3 updates heading dynamically
+    fireEvent.click(screen.getByLabelText('Load Target'));
+    fireEvent.click(await screen.findByRole('option', { name: /Client & Server/i }));
+    expect(screen.getByRole('heading', { name: 'Add Client & Server Mod' })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByLabelText('Load Target'));
+    fireEvent.click(await screen.findByRole('option', { name: /Server Only/i }));
+    expect(screen.getByRole('heading', { name: 'Add Server-Only Mod' })).toBeInTheDocument();
+
+    // Switching back to Tab 2 (Search Workshop) reflects its client_server default
+    fireEvent.click(screen.getByRole('tab', { name: /Search Workshop/i }));
+    expect(screen.getByRole('heading', { name: 'Add Client & Server Mod' })).toBeInTheDocument();
+
+    // Switching back to Tab 3 preserves Tab 3's selected server_only target
+    fireEvent.click(screen.getByRole('tab', { name: /Local Mod/i }));
+    expect(screen.getByRole('heading', { name: 'Add Server-Only Mod' })).toBeInTheDocument();
+  });
+
   describe('Tab 1: URL / ID / Collection', () => {
     it('validates empty input and surfaces STEAM_WORKSHOP_INVALID_INPUT inline', async () => {
       renderModal();

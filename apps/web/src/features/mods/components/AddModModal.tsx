@@ -49,6 +49,14 @@ const LOAD_TARGET_OPTIONS: SelectOption<ModLoadTarget>[] = [
   { value: MOD_LOAD_TARGET.SERVER_ONLY, label: 'Server Only (-serverMod=)' },
 ];
 
+type AddModTab = 'url' | 'search' | 'local';
+
+const MODAL_TITLE_BY_TARGET: Record<ModLoadTarget, string> = {
+  [MOD_LOAD_TARGET.CLIENT_SERVER]: 'Add Client & Server Mod',
+  [MOD_LOAD_TARGET.SERVER_ONLY]: 'Add Server-Only Mod',
+  [MOD_LOAD_TARGET.CLIENT_OPTIONAL]: 'Add Client-Optional Mod',
+};
+
 const MODAL_TAB_ITEMS = [
   { id: 'url', label: 'URL / ID / Collection', icon: <Link2 className="w-3.5 h-3.5" /> },
   { id: 'search', label: 'Search Workshop', icon: <Search className="w-3.5 h-3.5" /> },
@@ -144,10 +152,14 @@ function ResolvedWorkshopItemList({
 function UrlLookupTab({
   serverId,
   installedWorkshopIds,
+  loadTarget,
+  onLoadTargetChange,
   onClose,
 }: {
   serverId: string;
   installedWorkshopIds: Set<string>;
+  loadTarget: ModLoadTarget;
+  onLoadTargetChange: (target: ModLoadTarget) => void;
   onClose: () => void;
 }) {
   const queryClient = useQueryClient();
@@ -155,7 +167,6 @@ function UrlLookupTab({
   const [inputError, setInputError] = useState<string | undefined>();
   const [lookupResult, setLookupResult] = useState<WorkshopLookupResponseDto | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
-  const [loadTarget, setLoadTarget] = useState<ModLoadTarget>(MOD_LOAD_TARGET.CLIENT_SERVER);
   const [markAsInstalled, setMarkAsInstalled] = useState(false);
 
   const lookupMutation = useMutation({
@@ -314,7 +325,7 @@ function UrlLookupTab({
                   options={LOAD_TARGET_OPTIONS}
                   value={loadTarget}
                   onChange={val => {
-                    if (val) setLoadTarget(val);
+                    if (val) onLoadTargetChange(val);
                   }}
                 />
                 <div className="flex items-end pb-1">
@@ -352,10 +363,14 @@ function UrlLookupTab({
 function WorkshopSearchTab({
   serverId,
   installedWorkshopIds,
+  loadTarget,
+  onLoadTargetChange,
   onClose,
 }: {
   serverId: string;
   installedWorkshopIds: Set<string>;
+  loadTarget: ModLoadTarget;
+  onLoadTargetChange: (target: ModLoadTarget) => void;
   onClose: () => void;
 }) {
   const queryClient = useQueryClient();
@@ -364,7 +379,6 @@ function WorkshopSearchTab({
   const [searchResult, setSearchResult] = useState<WorkshopSearchResponseDto | null>(null);
   const [missingApiKey, setMissingApiKey] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
-  const [loadTarget, setLoadTarget] = useState<ModLoadTarget>(MOD_LOAD_TARGET.CLIENT_SERVER);
   const [markAsInstalled, setMarkAsInstalled] = useState(false);
 
   const pageSize = 10;
@@ -494,7 +508,7 @@ function WorkshopSearchTab({
                   options={LOAD_TARGET_OPTIONS}
                   value={loadTarget}
                   onChange={val => {
-                    if (val) setLoadTarget(val);
+                    if (val) onLoadTargetChange(val);
                   }}
                 />
                 <div className="flex items-end pb-1">
@@ -543,11 +557,20 @@ function WorkshopSearchTab({
   );
 }
 
-function LocalModTab({ serverId, onClose }: { serverId: string; onClose: () => void }) {
+function LocalModTab({
+  serverId,
+  loadTarget,
+  onLoadTargetChange,
+  onClose,
+}: {
+  serverId: string;
+  loadTarget: ModLoadTarget;
+  onLoadTargetChange: (target: ModLoadTarget) => void;
+  onClose: () => void;
+}) {
   const queryClient = useQueryClient();
   const [name, setName] = useState('');
   const [folderName, setFolderName] = useState('');
-  const [loadTarget, setLoadTarget] = useState<ModLoadTarget>(MOD_LOAD_TARGET.SERVER_ONLY);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
   const clearFieldError = (key: string) => {
@@ -629,7 +652,7 @@ function LocalModTab({ serverId, onClose }: { serverId: string; onClose: () => v
         options={LOAD_TARGET_OPTIONS}
         value={loadTarget}
         onChange={val => {
-          if (val) setLoadTarget(val);
+          if (val) onLoadTargetChange(val);
         }}
       />
 
@@ -646,9 +669,20 @@ function LocalModTab({ serverId, onClose }: { serverId: string; onClose: () => v
 }
 
 export function AddModModal({ isOpen, serverId, installedWorkshopIds, onClose }: AddModModalProps) {
-  const [activeTab, setActiveTab] = useState('url');
+  const [activeTab, setActiveTab] = useState<AddModTab>('url');
+  const [loadTargetByTab, setLoadTargetByTab] = useState<Record<AddModTab, ModLoadTarget>>({
+    url: MOD_LOAD_TARGET.CLIENT_SERVER,
+    search: MOD_LOAD_TARGET.CLIENT_SERVER,
+    local: MOD_LOAD_TARGET.SERVER_ONLY,
+  });
 
   if (!isOpen) return null;
+
+  const updateTabLoadTarget = (tab: AddModTab, target: ModLoadTarget) => {
+    setLoadTargetByTab(prev => ({ ...prev, [tab]: target }));
+  };
+
+  const modalTitle = MODAL_TITLE_BY_TARGET[loadTargetByTab[activeTab]];
 
   return (
     <div
@@ -668,7 +702,7 @@ export function AddModModal({ isOpen, serverId, installedWorkshopIds, onClose }:
                 id="add-mod-title"
                 className="text-lg font-semibold text-[var(--color-text-main)]"
               >
-                Add Server Mod
+                {modalTitle}
               </h2>
               <p className="text-xs text-[var(--color-text-muted)]">
                 Resolve a Steam Workshop item or collection, search Workshop, or register a local
@@ -687,7 +721,7 @@ export function AddModModal({ isOpen, serverId, installedWorkshopIds, onClose }:
 
         <Tabs
           value={activeTab}
-          onChange={setActiveTab}
+          onChange={val => setActiveTab(val as AddModTab)}
           items={MODAL_TAB_ITEMS}
           aria-label="Add mod source"
         >
@@ -695,6 +729,8 @@ export function AddModModal({ isOpen, serverId, installedWorkshopIds, onClose }:
             <UrlLookupTab
               serverId={serverId}
               installedWorkshopIds={installedWorkshopIds}
+              loadTarget={loadTargetByTab.url}
+              onLoadTargetChange={target => updateTabLoadTarget('url', target)}
               onClose={onClose}
             />
           </TabContent>
@@ -702,11 +738,18 @@ export function AddModModal({ isOpen, serverId, installedWorkshopIds, onClose }:
             <WorkshopSearchTab
               serverId={serverId}
               installedWorkshopIds={installedWorkshopIds}
+              loadTarget={loadTargetByTab.search}
+              onLoadTargetChange={target => updateTabLoadTarget('search', target)}
               onClose={onClose}
             />
           </TabContent>
           <TabContent value="local">
-            <LocalModTab serverId={serverId} onClose={onClose} />
+            <LocalModTab
+              serverId={serverId}
+              loadTarget={loadTargetByTab.local}
+              onLoadTargetChange={target => updateTabLoadTarget('local', target)}
+              onClose={onClose}
+            />
           </TabContent>
         </Tabs>
       </div>
