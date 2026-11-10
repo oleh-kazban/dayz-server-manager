@@ -45,6 +45,7 @@ export const steamSettingsSchema = z.object({
   workshopAppId: z.number().int().positive('Workshop App ID must be a positive integer'),
   branch: z.string().regex(/^[a-zA-Z0-9._-]+$/, 'Branch name contains invalid characters'),
   hasBranchPassword: z.boolean(),
+  hasSteamWebApiKey: z.boolean(),
   sessionStatus: steamSessionStatusSchema,
   storageStats: storageStatsSchema.optional(),
   createdAt: z.string().datetime().or(z.date()),
@@ -70,6 +71,7 @@ export const updateSteamSettingsSchema = z.object({
     .regex(/^[a-zA-Z0-9._-]+$/, 'Branch name contains invalid characters')
     .optional(),
   branchPassword: z.string().nullable().optional(),
+  steamWebApiKey: z.string().max(128).nullable().optional(),
 });
 export type UpdateSteamSettingsDto = z.infer<typeof updateSteamSettingsSchema>;
 

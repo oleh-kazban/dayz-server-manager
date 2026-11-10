@@ -58,6 +58,7 @@ describe('Steam Contracts (libs/api-contracts)', () => {
       workshopAppId: 221100,
       branch: 'public',
       hasBranchPassword: false,
+      hasSteamWebApiKey: false,
       sessionStatus: 'UNAUTHENTICATED' as const,
       createdAt: '2026-11-09T18:00:00.000Z',
       updatedAt: '2026-11-09T18:00:00.000Z',
@@ -218,6 +219,14 @@ describe('Steam Contracts (libs/api-contracts)', () => {
           workshopAppId: -1,
         }),
       ).toThrow();
+    });
+
+    it('accepts nullable steamWebApiKey up to 128 chars and rejects longer keys', () => {
+      expect(
+        updateSteamSettingsSchema.parse({ steamWebApiKey: 'A'.repeat(128) }).steamWebApiKey,
+      ).toBe('A'.repeat(128));
+      expect(updateSteamSettingsSchema.parse({ steamWebApiKey: null }).steamWebApiKey).toBeNull();
+      expect(() => updateSteamSettingsSchema.parse({ steamWebApiKey: 'A'.repeat(129) })).toThrow();
     });
   });
 
