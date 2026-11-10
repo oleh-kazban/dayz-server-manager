@@ -398,7 +398,7 @@ function ModTableRow({
           >
             <GripVertical className="w-4 h-4" />
           </button>
-          <span className="font-mono text-xs text-[var(--color-text-muted)]">
+          <span className="font-mono text-xs whitespace-nowrap text-[var(--color-text-muted)]">
             #{mod.loadOrder + 1}
           </span>
         </div>
@@ -421,10 +421,10 @@ function ModTableRow({
               href={mod.workshopUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-1 text-[11px] font-mono text-[var(--color-primary)] hover:underline"
+              className="inline-flex items-center gap-1 whitespace-nowrap text-[11px] font-mono text-[var(--color-primary)] hover:underline"
             >
               Workshop #{mod.workshopId}
-              <ExternalLink className="w-3 h-3" />
+              <ExternalLink className="w-3 h-3 shrink-0" />
             </a>
           ) : (
             <span className="text-[11px] text-[var(--color-text-muted)]">Local directory mod</span>
@@ -447,7 +447,7 @@ function ModTableRow({
       </TableCell>
 
       <TableCell>
-        <span className="font-mono text-xs text-[var(--color-text-secondary)]">
+        <span className="font-mono text-xs whitespace-nowrap text-[var(--color-text-secondary)]">
           {formatByteSize(mod.sizeBytes)}
         </span>
       </TableCell>
