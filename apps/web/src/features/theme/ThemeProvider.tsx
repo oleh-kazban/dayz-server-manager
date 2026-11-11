@@ -1,4 +1,4 @@
-import { type ReactNode, useCallback, useEffect, useMemo, useState } from 'react';
+import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { localStorageDriver } from '@aegis/web/core/storage';
 
@@ -30,10 +30,36 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   const [settings, setSettings] = useState<ThemeSettings>(getInitialSettings);
   const activeThemeId =
     settings.mode === 'light' ? settings.preferredLight : settings.preferredDark;
+  const prevThemeRef = useRef(activeThemeId);
 
   useEffect(() => {
-    document.documentElement.setAttribute('data-theme', activeThemeId);
+    const root = document.documentElement;
+    const isThemeSwitch = prevThemeRef.current !== activeThemeId;
+    prevThemeRef.current = activeThemeId;
+
+    let rafId1 = 0;
+    let rafId2 = 0;
+
+    if (isThemeSwitch) {
+      root.classList.add('theme-switching');
+    }
+
+    root.setAttribute('data-theme', activeThemeId);
     localStorageDriver.set(THEME_STORAGE_KEY, settings);
+
+    if (isThemeSwitch) {
+      rafId1 = window.requestAnimationFrame(() => {
+        rafId2 = window.requestAnimationFrame(() => {
+          root.classList.remove('theme-switching');
+        });
+      });
+    }
+
+    return () => {
+      if (rafId1) window.cancelAnimationFrame(rafId1);
+      if (rafId2) window.cancelAnimationFrame(rafId2);
+      root.classList.remove('theme-switching');
+    };
   }, [activeThemeId, settings]);
 
   const toggleTheme = useCallback(() => {

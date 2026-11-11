@@ -78,7 +78,7 @@ export function CustomToast({
         t.visible ? 'translate-y-0 opacity-100' : '-translate-y-2 opacity-0'
       } pointer-events-auto w-full max-w-sm transform overflow-hidden rounded-2xl border ${
         styles.border
-      } bg-[var(--color-surface)] text-[var(--color-text-main)] shadow-[var(--shadow-card)] transition-all duration-200 ${customClassName}`.trim()}
+      } bg-[var(--color-surface)] text-[var(--color-text-main)] shadow-[var(--shadow-card)] transition-[transform,opacity] duration-200 ${customClassName}`.trim()}
     >
       <div className={`flex w-full items-start gap-3 p-3.5 ${styles.tint}`}>
         <ToastIcon type={type} />

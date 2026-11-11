@@ -99,3 +99,10 @@ input:-webkit-autofill:active {
   caret-color: var(--color-text-main);
   transition: background-color 5000s ease-in-out 0s;
 }
+
+/* Prevent staggered color-smearing across components during runtime theme switches */
+.theme-switching *,
+.theme-switching *::before,
+.theme-switching *::after {
+  transition: none !important;
+}

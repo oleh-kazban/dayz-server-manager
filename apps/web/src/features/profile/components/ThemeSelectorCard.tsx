@@ -39,7 +39,7 @@ function ThemePaletteGrid<T extends GenericThemeOption>({
             type="button"
             aria-pressed={isSelected}
             onClick={() => onSelect(theme)}
-            className={`relative flex flex-col text-left p-3.5 rounded-xl border-2 transition-all cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)] ${
+            className={`relative flex flex-col text-left p-3.5 rounded-xl border-2 transition-colors cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)] ${
               isSelected
                 ? 'border-[var(--color-primary)] bg-[var(--color-surface-hover)] shadow-sm'
                 : 'border-[var(--color-border-subtle)] bg-[var(--color-surface)] hover:border-[var(--color-border-hover)]'
@@ -144,7 +144,7 @@ export function ThemeSelectorCard() {
             <button
               type="button"
               onClick={() => themePref.setMode?.('light')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all cursor-pointer ${
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors cursor-pointer ${
                 mode === 'light'
                   ? 'bg-[var(--color-primary)] text-[var(--color-primary-fg,#ffffff)] shadow-sm'
                   : 'text-[var(--color-text-secondary)] hover:text-[var(--color-text-main)] hover:bg-[var(--color-surface-hover)]'
@@ -156,7 +156,7 @@ export function ThemeSelectorCard() {
             <button
               type="button"
               onClick={() => themePref.setMode?.('dark')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all cursor-pointer ${
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors cursor-pointer ${
                 mode === 'dark'
                   ? 'bg-[var(--color-primary)] text-[var(--color-primary-fg,#ffffff)] shadow-sm'
                   : 'text-[var(--color-text-secondary)] hover:text-[var(--color-text-main)] hover:bg-[var(--color-surface-hover)]'

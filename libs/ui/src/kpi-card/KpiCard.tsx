@@ -163,7 +163,7 @@ export function KpiCard({
       data-testid={dataTestId}
       aria-label={ariaLabel}
       aria-labelledby={ariaLabelledBy}
-      className={`p-4 flex flex-col justify-between min-h-[114px] rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-[var(--shadow-card)] transition-all ${className}`.trim()}
+      className={`p-4 flex flex-col justify-between min-h-[114px] rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-[var(--shadow-card)] transition-[color,background-color,border-color,box-shadow] ${className}`.trim()}
     >
       {isLoading ? (
         <div data-testid="kpi-skeleton" className="animate-pulse space-y-3">

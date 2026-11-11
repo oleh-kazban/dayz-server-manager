@@ -69,7 +69,7 @@ export function PasswordStrengthBar({ password = '', className = '' }: PasswordS
           return (
             <div
               key={index}
-              className={`h-full rounded-full transition-all duration-200 ${
+              className={`h-full rounded-full transition-colors duration-200 ${
                 isFilled ? barColorClass : 'bg-[var(--color-border-subtle)]'
               }`}
             />

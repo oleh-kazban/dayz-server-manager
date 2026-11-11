@@ -101,7 +101,7 @@ function NotificationItemRow({
 
   return (
     <div
-      className={`group relative flex items-start gap-2.5 px-2.5 py-2 rounded-xl transition-all ${
+      className={`group relative flex items-start gap-2.5 px-2.5 py-2 rounded-xl transition-colors ${
         isUnread
           ? 'bg-[var(--color-surface-subtle)] border border-[var(--color-border)] shadow-2xs hover:border-[var(--color-border-hover)]'
           : 'bg-transparent border border-transparent hover:bg-[var(--color-surface-subtle)]'
@@ -205,7 +205,7 @@ function NotificationItemRow({
           type="button"
           aria-label={`Dismiss notification: ${item.title}`}
           onClick={() => onDismissItem(item.id)}
-          className="opacity-0 group-hover:opacity-100 focus:opacity-100 p-1 rounded-md text-[var(--color-text-muted)] hover:text-[var(--color-text-main)] hover:bg-[var(--color-surface-hover)] transition-all cursor-pointer shrink-0"
+          className="opacity-0 group-hover:opacity-100 focus:opacity-100 p-1 rounded-md text-[var(--color-text-muted)] hover:text-[var(--color-text-main)] hover:bg-[var(--color-surface-hover)] transition-[opacity,color,background-color] cursor-pointer shrink-0"
         >
           <X className="w-3.5 h-3.5" />
         </button>

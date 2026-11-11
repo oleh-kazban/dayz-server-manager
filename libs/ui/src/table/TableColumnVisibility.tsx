@@ -98,7 +98,7 @@ function ColumnItemRow({
   return (
     <div
       {...itemProps}
-      className={`flex items-center justify-between px-2 py-1.5 rounded-lg hover:bg-[var(--color-surface-subtle)]/70 transition-all group ${dropIndicatorClass} ${draggingClass}`}
+      className={`flex items-center justify-between px-2 py-1.5 rounded-lg hover:bg-[var(--color-surface-subtle)]/70 transition-[opacity,background-color] group ${dropIndicatorClass} ${draggingClass}`}
     >
       <div className="flex items-center gap-2 min-w-0 flex-1">
         <Checkbox
@@ -273,7 +273,7 @@ export function TableColumnVisibility({
                 value={searchQuery}
                 onChange={e => setSearchQuery(e.target.value)}
                 placeholder={searchPlaceholder}
-                className="w-full pl-8 pr-7 py-1 text-xs rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-subtle)]/50 text-[var(--color-text-main)] placeholder:text-[var(--color-text-muted)] focus:outline-none focus:ring-1 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)] transition-all"
+                className="w-full pl-8 pr-7 py-1 text-xs rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-subtle)]/50 text-[var(--color-text-main)] placeholder:text-[var(--color-text-muted)] focus:outline-none focus:ring-1 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)] transition-colors"
               />
               {searchQuery && (
                 <button
