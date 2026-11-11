@@ -12,6 +12,7 @@ import type {
 } from '@aegis/api-contracts';
 import { showToast } from '@aegis/ui';
 
+import { formatModTimestamp, MOD_COLUMNS_STORAGE_KEY } from './mods.columns';
 import { ModsView } from './ModsView';
 
 const SERVER_ID = '11111111-1111-4111-a111-111111111111';
@@ -195,6 +196,7 @@ describe('ModsView', () => {
   let queryClient: QueryClient;
 
   beforeEach(() => {
+    window.localStorage.clear();
     vi.clearAllMocks();
     vi.spyOn(showToast, 'success').mockReturnValue('toast-ok');
     vi.spyOn(showToast, 'error').mockReturnValue('toast-err');
@@ -444,5 +446,199 @@ describe('ModsView', () => {
     expect(screen.queryByRole('button', { name: 'Actions for CF' })).not.toBeInTheDocument();
     expect(screen.getByLabelText('Enable CF')).toBeDisabled();
     expect(screen.getByRole('button', { name: 'Reorder CF' })).toBeDisabled();
+
+    const table = screen.getByRole('table', { name: 'Server mods inventory' });
+    const headers = within(table)
+      .getAllByRole('columnheader')
+      .map(th => th.textContent?.trim());
+    expect(headers).toEqual([
+      'Order',
+      'Mod',
+      '@Folder',
+      'Target',
+      'Size',
+      'Sync Status',
+      'Enabled',
+    ]);
+
+    fireEvent.click(screen.getByRole('button', { name: /Columns/i }));
+    const dialog = await screen.findByRole('dialog', { name: 'Toggle column visibility' });
+    expect(within(dialog).queryByRole('checkbox', { name: 'Actions' })).not.toBeInTheDocument();
+  });
+
+  it('renders default column order with compact Enabled width and hidden date columns, and supports toggling Workshop Updated with persistence', async () => {
+    renderView();
+
+    await waitFor(() => {
+      expect(screen.getByText('CF')).toBeInTheDocument();
+    });
+
+    const table = screen.getByRole('table', { name: 'Server mods inventory' });
+    const getHeaderTexts = () =>
+      within(table)
+        .getAllByRole('columnheader')
+        .map(th => th.textContent?.trim());
+
+    expect(getHeaderTexts()).toEqual([
+      'Order',
+      'Mod',
+      '@Folder',
+      'Target',
+      'Size',
+      'Sync Status',
+      'Enabled',
+      'Actions',
+    ]);
+    expect(getHeaderTexts().slice(-3)).toEqual(['Sync Status', 'Enabled', 'Actions']);
+
+    const enabledHeader = within(table).getByRole('columnheader', { name: 'Enabled' });
+    expect(enabledHeader.className).toContain('w-20');
+
+    expect(
+      within(table).queryByRole('columnheader', { name: 'Workshop Updated' }),
+    ).not.toBeInTheDocument();
+    expect(
+      within(table).queryByRole('columnheader', { name: 'Last Synced' }),
+    ).not.toBeInTheDocument();
+    expect(within(table).queryByRole('columnheader', { name: 'Added' })).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: /Columns/i }));
+    const dialog = await screen.findByRole('dialog', { name: 'Toggle column visibility' });
+
+    for (const lockedLabel of ['Order', 'Mod', 'Enabled', 'Actions']) {
+      expect(within(dialog).getByRole('checkbox', { name: lockedLabel })).toBeDisabled();
+    }
+    for (const toggleableLabel of [
+      '@Folder',
+      'Target',
+      'Size',
+      'Sync Status',
+      'Workshop Updated',
+      'Last Synced',
+      'Added',
+    ]) {
+      expect(within(dialog).getByRole('checkbox', { name: toggleableLabel })).not.toBeDisabled();
+    }
+
+    fireEvent.click(within(dialog).getByRole('checkbox', { name: 'Workshop Updated' }));
+
+    const updatedHeaders = getHeaderTexts();
+    const workshopIdx = updatedHeaders.indexOf('Workshop Updated');
+    const enabledIdx = updatedHeaders.indexOf('Enabled');
+    expect(workshopIdx).toBeGreaterThan(-1);
+    expect(workshopIdx).toBeLessThan(enabledIdx);
+
+    const cfRow = within(table).getByText('CF').closest('tr')!;
+    const localRow = within(table).getByText('Server Scripts').closest('tr')!;
+    expect(within(cfRow).getAllByRole('cell')[workshopIdx]).toHaveTextContent(
+      formatModTimestamp(modCF.remoteUpdatedAt),
+    );
+    expect(within(localRow).getAllByRole('cell')[workshopIdx]).toHaveTextContent('—');
+
+    const persisted = JSON.parse(window.localStorage.getItem(MOD_COLUMNS_STORAGE_KEY) ?? '[]') as {
+      id: string;
+      isVisible: boolean;
+    }[];
+    expect(persisted.find(c => c.id === 'remoteUpdatedAt')?.isVisible).toBe(true);
+
+    // Reorder Size column up via keyboard handle -> moves Size before Target
+    fireEvent.keyDown(within(dialog).getByRole('button', { name: 'Reorder Size column' }), {
+      key: 'ArrowUp',
+    });
+    const reorderedHeaders = getHeaderTexts();
+    expect(reorderedHeaders.indexOf('Size')).toBeLessThan(reorderedHeaders.indexOf('Target'));
+
+    // Show all makes Last Synced and Added visible as well
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Show all' }));
+    expect(within(table).getByRole('columnheader', { name: 'Last Synced' })).toBeInTheDocument();
+    expect(within(table).getByRole('columnheader', { name: 'Added' })).toBeInTheDocument();
+
+    // Reset to default restores hidden date columns and default order
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Reset to default' }));
+    expect(getHeaderTexts()).toEqual([
+      'Order',
+      'Mod',
+      '@Folder',
+      'Target',
+      'Size',
+      'Sync Status',
+      'Enabled',
+      'Actions',
+    ]);
+  });
+
+  it('sorts rows by Size (asc -> desc), locks reorder handle, and restores Load Order via Reset to Load Order', async () => {
+    renderView();
+
+    await waitFor(() => {
+      expect(screen.getByText('CF')).toBeInTheDocument();
+    });
+
+    const table = screen.getByRole('table', { name: 'Server mods inventory' });
+    const getRowModNames = () => {
+      const rows = within(table).getAllByRole('row').slice(1);
+      return rows.map(row => within(row).getAllByRole('cell')[1]?.textContent ?? '');
+    };
+
+    expect(getRowModNames().map(t => t.startsWith('CF'))).toEqual([true, false, false, false]);
+    expect(screen.getByRole('button', { name: 'Reorder CF' })).not.toBeDisabled();
+    expect(screen.queryByRole('button', { name: 'Reset to Load Order' })).not.toBeInTheDocument();
+
+    const sizeHeader = within(table).getByRole('columnheader', { name: 'Size' });
+
+    // Click 1: Size ascending (2MB Dabs -> 5MB CF -> 12MB COT -> null Server Scripts)
+    fireEvent.click(sizeHeader);
+    expect(sizeHeader).toHaveAttribute('aria-sort', 'ascending');
+    expect(getRowModNames()).toEqual([
+      expect.stringContaining('Dabs Framework'),
+      expect.stringContaining('CF'),
+      expect.stringContaining('Community Online Tools'),
+      expect.stringContaining('Server Scripts'),
+    ]);
+    expect(screen.getByRole('button', { name: 'Reorder CF' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Reset to Load Order' })).toBeInTheDocument();
+
+    // Combining filter + custom sort displays combined paused message
+    fireEvent.change(screen.getByLabelText('Filter mods'), { target: { value: 'CF' } });
+    expect(
+      screen.getByText(/disabled while search, status filters, or custom sorting are active/i),
+    ).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText('Filter mods'), { target: { value: '' } });
+
+    // Click 2: Size descending (12MB COT -> 5MB CF -> 2MB Dabs -> null Server Scripts)
+    fireEvent.click(sizeHeader);
+    expect(sizeHeader).toHaveAttribute('aria-sort', 'descending');
+    expect(getRowModNames()).toEqual([
+      expect.stringContaining('Community Online Tools'),
+      expect.stringContaining('CF'),
+      expect.stringContaining('Dabs Framework'),
+      expect.stringContaining('Server Scripts'),
+    ]);
+    expect(screen.getByRole('button', { name: 'Reorder CF' })).toBeDisabled();
+
+    // Reset to Load Order restores default order ascending and re-enables drag handle
+    fireEvent.click(screen.getByRole('button', { name: 'Reset to Load Order' }));
+    const orderHeader = within(table).getByRole('columnheader', { name: 'Order' });
+    expect(orderHeader).toHaveAttribute('aria-sort', 'ascending');
+    expect(getRowModNames()).toEqual([
+      expect.stringContaining('CF'),
+      expect.stringContaining('Community Online Tools'),
+      expect.stringContaining('Server Scripts'),
+      expect.stringContaining('Dabs Framework'),
+    ]);
+    expect(screen.getByRole('button', { name: 'Reorder CF' })).not.toBeDisabled();
+    expect(screen.queryByRole('button', { name: 'Reset to Load Order' })).not.toBeInTheDocument();
+
+    // Clicking Order header toggles Order descending and locks drag reorder
+    fireEvent.click(orderHeader);
+    expect(orderHeader).toHaveAttribute('aria-sort', 'descending');
+    expect(getRowModNames()).toEqual([
+      expect.stringContaining('Dabs Framework'),
+      expect.stringContaining('Server Scripts'),
+      expect.stringContaining('Community Online Tools'),
+      expect.stringContaining('CF'),
+    ]);
+    expect(screen.getByRole('button', { name: 'Reorder CF' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Reset to Load Order' })).toBeInTheDocument();
   });
 });

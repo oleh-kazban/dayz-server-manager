@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { type ReactNode, useMemo, useState } from 'react';
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
@@ -18,9 +18,7 @@ import {
 import { apiClient } from '@aegis/api-client';
 import {
   isServerActiveStatus,
-  MOD_LOAD_TARGET,
   MOD_SOURCE_TYPE,
-  type ModLoadTarget,
   type ModSyncStatus,
   type ServerModDto,
   type ServerModsListResponseDto,
@@ -36,14 +34,17 @@ import {
   Select,
   type SelectOption,
   StatusTag,
-  type StatusTagStatus,
   Table,
+  type TableAlign,
   TableBody,
   TableCell,
+  type TableColumnItem,
+  TableColumnVisibility,
   TableEmpty,
   TableHead,
   TableHeader,
   TableRow,
+  type TableSortDirection,
   Tag,
   Toggle,
   useSortableList,
@@ -51,9 +52,11 @@ import {
 import { EmptyServersState, PageContainer } from '@aegis/web/components';
 import {
   getServerStatusPresentation,
+  localStorageDriver,
   notifyApiError,
   notifySuccess,
   useActiveServer,
+  useStorage,
 } from '@aegis/web/core';
 
 import { useAuth } from '../auth';
@@ -62,6 +65,21 @@ import { CreateServerModal } from '../server-settings';
 import { AddModModal } from './components/AddModModal';
 import { EditModModal } from './components/EditModModal';
 import { LaunchParamsPreviewCard } from './components/LaunchParamsPreviewCard';
+import {
+  compareModsByKey,
+  DEFAULT_MOD_COLUMNS,
+  DEFAULT_SORT_STATE,
+  formatModTimestamp,
+  getNextSortState,
+  getSyncBadgeProps,
+  getTargetLabel,
+  LOCKED_MOD_COLUMN_IDS,
+  MOD_COLUMNS_STORAGE_KEY,
+  type ModColumnId,
+  type ModSortKey,
+  type ModSortState,
+  reconcileModColumns,
+} from './mods.columns';
 import { modsQueries, modsQueryKeys } from './mods.queries';
 
 type StatusFilter = 'all' | ModSyncStatus;
@@ -80,36 +98,6 @@ const TARGET_FILTER_OPTIONS: SelectOption<TargetFilter>[] = [
   { value: 'client_server', label: 'Client & Server (-mod=)' },
   { value: 'server_only', label: 'Server Only (-serverMod=)' },
 ];
-
-function getSyncBadgeProps(syncStatus: ModSyncStatus): {
-  status: StatusTagStatus;
-  label: string;
-} {
-  switch (syncStatus) {
-    case 'up_to_date':
-      return { status: 'success', label: 'Up to date' };
-    case 'update_available':
-      return { status: 'warning', label: 'Update available' };
-    case 'not_synced':
-      return { status: 'neutral', label: 'Not synced' };
-    case 'local':
-    default:
-      return { status: 'info', label: 'Local' };
-  }
-}
-
-function getTargetLabel(target: ModLoadTarget): {
-  label: string;
-  color: 'primary' | 'info' | 'default';
-} {
-  if (target === MOD_LOAD_TARGET.CLIENT_SERVER) {
-    return { label: 'Client & Server', color: 'primary' };
-  }
-  if (target === MOD_LOAD_TARGET.SERVER_ONLY) {
-    return { label: 'Server Only', color: 'info' };
-  }
-  return { label: 'Client Optional', color: 'default' };
-}
 
 function formatByteSize(bytes: number | null): string {
   if (bytes === null || bytes <= 0) return '—';
@@ -251,14 +239,32 @@ function ModsStatusBanners({
   isServerLocked,
   updateAvailableCount,
   isFiltered,
+  isCustomSorted,
   isAdmin,
+  onResetSort,
 }: {
   serverStatus: ServerStatus;
   isServerLocked: boolean;
   updateAvailableCount: number;
   isFiltered: boolean;
+  isCustomSorted: boolean;
   isAdmin: boolean;
+  onResetSort: () => void;
 }) {
+  const showReorderPaused = (isFiltered || isCustomSorted) && isAdmin && !isServerLocked;
+
+  let reorderPausedText = '';
+  if (isFiltered && isCustomSorted) {
+    reorderPausedText =
+      'Load order drag-and-drop and move controls are disabled while search, status filters, or custom sorting are active.';
+  } else if (isFiltered) {
+    reorderPausedText =
+      'Load order drag-and-drop and move controls are disabled while search or status filters are active.';
+  } else if (isCustomSorted) {
+    reorderPausedText =
+      'Load order drag-and-drop and move controls are disabled while custom sorting is active.';
+  }
+
   return (
     <>
       {isServerLocked && (
@@ -276,22 +282,28 @@ function ModsStatusBanners({
         </Notice>
       )}
 
-      {isFiltered && isAdmin && !isServerLocked && (
-        <p className="text-xs text-[var(--color-text-muted)]">
-          Load order drag-and-drop and move controls are disabled while search or status filters are
-          active.
-        </p>
+      {(showReorderPaused || isCustomSorted) && (
+        <div className="flex flex-wrap items-center gap-2 text-xs text-[var(--color-text-muted)]">
+          {showReorderPaused && <span>{reorderPausedText}</span>}
+          {isCustomSorted && (
+            <Button variant="text" onClick={onResetSort}>
+              Reset to Load Order
+            </Button>
+          )}
+        </div>
       )}
     </>
   );
 }
 
 function ModsEmptyRow({
+  colSpan,
   hasAnyMods,
   isAdmin,
   isServerLocked,
   onOpenAddModal,
 }: {
+  colSpan: number;
   hasAnyMods: boolean;
   isAdmin: boolean;
   isServerLocked: boolean;
@@ -299,7 +311,7 @@ function ModsEmptyRow({
 }) {
   return (
     <TableEmpty
-      colSpan={isAdmin ? 8 : 7}
+      colSpan={colSpan}
       icon={<Box className="w-5 h-5" />}
       title={hasAnyMods ? 'No matching mods' : 'No mods configured'}
       description={
@@ -329,25 +341,26 @@ function getDropBorderClass(dropIndicator: 'above' | 'below' | null): string {
   return '';
 }
 
-interface ModTableRowProps {
+type SortableItemProps = ReturnType<typeof useSortableList<ServerModDto>>['getItemProps'] extends (
+  id: string,
+) => infer R
+  ? R
+  : never;
+
+type SortableHandleProps = ReturnType<
+  typeof useSortableList<ServerModDto>
+>['getHandleProps'] extends (id: string) => infer R
+  ? R
+  : never;
+
+interface ModCellContext {
   mod: ServerModDto;
   index: number;
   totalMods: number;
   isAdmin: boolean;
   isServerLocked: boolean;
   canReorder: boolean;
-  isDragging: boolean;
-  dropIndicator: 'above' | 'below' | null;
-  itemProps: ReturnType<typeof useSortableList<ServerModDto>>['getItemProps'] extends (
-    id: string,
-  ) => infer R
-    ? R
-    : never;
-  handleProps: ReturnType<typeof useSortableList<ServerModDto>>['getHandleProps'] extends (
-    id: string,
-  ) => infer R
-    ? R
-    : never;
+  handleProps: SortableHandleProps;
   onToggleEnabled: (enabled: boolean) => void;
   onEdit: () => void;
   onMarkSynced: () => void;
@@ -356,7 +369,185 @@ interface ModTableRowProps {
   onDelete: () => void;
 }
 
+interface ModColumnDefinition {
+  label: string;
+  sortKey?: ModSortKey;
+  align?: TableAlign;
+  headClassName?: string;
+  cellClassName?: string;
+  renderCell: (ctx: ModCellContext) => ReactNode;
+}
+
+const MOD_COLUMN_REGISTRY: Record<ModColumnId, ModColumnDefinition> = {
+  order: {
+    label: 'Order',
+    sortKey: 'order',
+    renderCell: ({ mod, canReorder, handleProps }) => (
+      <div className="flex items-center gap-2">
+        <button
+          type="button"
+          aria-label={`Reorder ${mod.name}`}
+          disabled={!canReorder}
+          {...handleProps}
+          className={`p-1 rounded text-[var(--color-text-muted)] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--color-primary)] ${
+            canReorder
+              ? 'cursor-grab hover:text-[var(--color-text-main)]'
+              : 'cursor-not-allowed opacity-40'
+          }`}
+        >
+          <GripVertical className="w-4 h-4" />
+        </button>
+        <span className="font-mono text-xs whitespace-nowrap text-[var(--color-text-muted)]">
+          #{mod.loadOrder + 1}
+        </span>
+      </div>
+    ),
+  },
+  mod: {
+    label: 'Mod',
+    sortKey: 'name',
+    renderCell: ({ mod }) => (
+      <div className="space-y-0.5">
+        <div className="font-semibold text-[var(--color-text-main)]">{mod.name}</div>
+        {mod.workshopUrl && mod.workshopId ? (
+          <a
+            href={mod.workshopUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1 whitespace-nowrap text-[11px] font-mono text-[var(--color-primary)] hover:underline"
+          >
+            Workshop #{mod.workshopId}
+            <ExternalLink className="w-3 h-3 shrink-0" />
+          </a>
+        ) : (
+          <span className="text-[11px] text-[var(--color-text-muted)]">Local directory mod</span>
+        )}
+      </div>
+    ),
+  },
+  folderName: {
+    label: '@Folder',
+    renderCell: ({ mod }) =>
+      mod.folderName ? (
+        <code className="font-mono text-xs text-[var(--color-text-main)]">{mod.folderName}</code>
+      ) : (
+        <span className="text-xs italic text-[var(--color-status-warning)]">Missing @folder</span>
+      ),
+  },
+  loadTarget: {
+    label: 'Target',
+    sortKey: 'loadTarget',
+    renderCell: ({ mod }) => {
+      const targetTag = getTargetLabel(mod.loadTarget);
+      return (
+        <Tag variant="subtle" color={targetTag.color}>
+          {targetTag.label}
+        </Tag>
+      );
+    },
+  },
+  sizeBytes: {
+    label: 'Size',
+    sortKey: 'sizeBytes',
+    renderCell: ({ mod }) => (
+      <span className="font-mono text-xs whitespace-nowrap text-[var(--color-text-secondary)]">
+        {formatByteSize(mod.sizeBytes)}
+      </span>
+    ),
+  },
+  syncStatus: {
+    label: 'Sync Status',
+    sortKey: 'syncStatus',
+    renderCell: ({ mod }) => {
+      const badge = getSyncBadgeProps(mod.syncStatus);
+      return <StatusTag status={badge.status} label={badge.label} />;
+    },
+  },
+  remoteUpdatedAt: {
+    label: 'Workshop Updated',
+    sortKey: 'remoteUpdatedAt',
+    renderCell: ({ mod }) => (
+      <span className="font-mono text-xs whitespace-nowrap text-[var(--color-text-secondary)]">
+        {formatModTimestamp(mod.remoteUpdatedAt)}
+      </span>
+    ),
+  },
+  lastSyncedAt: {
+    label: 'Last Synced',
+    sortKey: 'lastSyncedAt',
+    renderCell: ({ mod }) => (
+      <span className="font-mono text-xs whitespace-nowrap text-[var(--color-text-secondary)]">
+        {formatModTimestamp(mod.lastSyncedAt)}
+      </span>
+    ),
+  },
+  createdAt: {
+    label: 'Added',
+    sortKey: 'createdAt',
+    renderCell: ({ mod }) => (
+      <span className="font-mono text-xs whitespace-nowrap text-[var(--color-text-secondary)]">
+        {formatModTimestamp(mod.createdAt)}
+      </span>
+    ),
+  },
+  enabled: {
+    label: 'Enabled',
+    sortKey: 'enabled',
+    align: 'center',
+    headClassName: 'w-20 whitespace-nowrap',
+    cellClassName: 'w-20 whitespace-nowrap',
+    renderCell: ({ mod, isAdmin, isServerLocked, onToggleEnabled }) => (
+      <Toggle
+        checked={mod.enabled}
+        disabled={!isAdmin || isServerLocked}
+        aria-label={`Enable ${mod.name}`}
+        onChange={e => onToggleEnabled(e.target.checked)}
+      />
+    ),
+  },
+  actions: {
+    label: 'Actions',
+    align: 'right',
+    renderCell: ({
+      mod,
+      index,
+      totalMods,
+      isServerLocked,
+      canReorder,
+      onEdit,
+      onMarkSynced,
+      onMoveUp,
+      onMoveDown,
+      onDelete,
+    }) => (
+      <DotsFloatingMenu
+        ariaLabel={`Actions for ${mod.name}`}
+        options={buildModRowMenuOptions({
+          mod,
+          index,
+          totalMods,
+          isServerLocked,
+          canReorder,
+          onEdit,
+          onMarkSynced,
+          onMoveUp,
+          onMoveDown,
+          onDelete,
+        })}
+      />
+    ),
+  },
+};
+
+interface ModTableRowProps extends ModCellContext {
+  visibleColumns: TableColumnItem[];
+  isDragging: boolean;
+  dropIndicator: 'above' | 'below' | null;
+  itemProps: SortableItemProps;
+}
+
 function ModTableRow({
+  visibleColumns,
   mod,
   index,
   totalMods,
@@ -374,107 +565,36 @@ function ModTableRow({
   onMoveDown,
   onDelete,
 }: ModTableRowProps) {
-  const badge = getSyncBadgeProps(mod.syncStatus);
-  const targetTag = getTargetLabel(mod.loadTarget);
   const dropBorderClass = getDropBorderClass(dropIndicator);
+  const cellContext: ModCellContext = {
+    mod,
+    index,
+    totalMods,
+    isAdmin,
+    isServerLocked,
+    canReorder,
+    handleProps,
+    onToggleEnabled,
+    onEdit,
+    onMarkSynced,
+    onMoveUp,
+    onMoveDown,
+    onDelete,
+  };
 
   return (
     <TableRow
       {...itemProps}
       className={`${isDragging ? 'opacity-50' : ''} ${dropBorderClass}`.trim()}
     >
-      <TableCell>
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            aria-label={`Reorder ${mod.name}`}
-            disabled={!canReorder}
-            {...handleProps}
-            className={`p-1 rounded text-[var(--color-text-muted)] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--color-primary)] ${
-              canReorder
-                ? 'cursor-grab hover:text-[var(--color-text-main)]'
-                : 'cursor-not-allowed opacity-40'
-            }`}
-          >
-            <GripVertical className="w-4 h-4" />
-          </button>
-          <span className="font-mono text-xs whitespace-nowrap text-[var(--color-text-muted)]">
-            #{mod.loadOrder + 1}
-          </span>
-        </div>
-      </TableCell>
-
-      <TableCell>
-        <Toggle
-          checked={mod.enabled}
-          disabled={!isAdmin || isServerLocked}
-          aria-label={`Enable ${mod.name}`}
-          onChange={e => onToggleEnabled(e.target.checked)}
-        />
-      </TableCell>
-
-      <TableCell>
-        <div className="space-y-0.5">
-          <div className="font-semibold text-[var(--color-text-main)]">{mod.name}</div>
-          {mod.workshopUrl && mod.workshopId ? (
-            <a
-              href={mod.workshopUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-1 whitespace-nowrap text-[11px] font-mono text-[var(--color-primary)] hover:underline"
-            >
-              Workshop #{mod.workshopId}
-              <ExternalLink className="w-3 h-3 shrink-0" />
-            </a>
-          ) : (
-            <span className="text-[11px] text-[var(--color-text-muted)]">Local directory mod</span>
-          )}
-        </div>
-      </TableCell>
-
-      <TableCell>
-        {mod.folderName ? (
-          <code className="font-mono text-xs text-[var(--color-text-main)]">{mod.folderName}</code>
-        ) : (
-          <span className="text-xs italic text-[var(--color-status-warning)]">Missing @folder</span>
-        )}
-      </TableCell>
-
-      <TableCell>
-        <Tag variant="subtle" color={targetTag.color}>
-          {targetTag.label}
-        </Tag>
-      </TableCell>
-
-      <TableCell>
-        <span className="font-mono text-xs whitespace-nowrap text-[var(--color-text-secondary)]">
-          {formatByteSize(mod.sizeBytes)}
-        </span>
-      </TableCell>
-
-      <TableCell>
-        <StatusTag status={badge.status} label={badge.label} />
-      </TableCell>
-
-      {isAdmin && (
-        <TableCell align="right">
-          <DotsFloatingMenu
-            ariaLabel={`Actions for ${mod.name}`}
-            options={buildModRowMenuOptions({
-              mod,
-              index,
-              totalMods,
-              isServerLocked,
-              canReorder,
-              onEdit,
-              onMarkSynced,
-              onMoveUp,
-              onMoveDown,
-              onDelete,
-            })}
-          />
-        </TableCell>
-      )}
+      {visibleColumns.map(col => {
+        const def = MOD_COLUMN_REGISTRY[col.id as ModColumnId];
+        return (
+          <TableCell key={col.id} align={def.align} className={def.cellClassName}>
+            {def.renderCell(cellContext)}
+          </TableCell>
+        );
+      })}
     </TableRow>
   );
 }
@@ -492,9 +612,49 @@ export function ModsView() {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
   const [targetFilter, setTargetFilter] = useState<TargetFilter>('all');
+  const [sortState, setSortState] = useState<ModSortState>(DEFAULT_SORT_STATE);
+
+  const [storedColumns, setStoredColumns] = useStorage<TableColumnItem[]>(
+    MOD_COLUMNS_STORAGE_KEY,
+    DEFAULT_MOD_COLUMNS,
+    localStorageDriver,
+  );
 
   const isAdmin = user?.role === 'admin';
   const serverId = activeServerId ?? '';
+
+  const columns = useMemo(
+    () => reconcileModColumns(storedColumns, isAdmin),
+    [storedColumns, isAdmin],
+  );
+  const visibleColumns = useMemo(() => columns.filter(col => col.isVisible), [columns]);
+
+  const handleColumnVisibilityChange = (columnId: string, isVisible: boolean) => {
+    if (LOCKED_MOD_COLUMN_IDS.has(columnId)) return;
+    setStoredColumns(prev =>
+      reconcileModColumns(prev, true).map(col =>
+        col.id === columnId ? { ...col, isVisible } : col,
+      ),
+    );
+  };
+
+  const handleColumnsReorder = (reordered: TableColumnItem[]) => {
+    setStoredColumns(reconcileModColumns(reordered, true));
+  };
+
+  const handleResetColumns = () => {
+    setStoredColumns(DEFAULT_MOD_COLUMNS);
+  };
+
+  const handleShowAllColumns = () => {
+    setStoredColumns(prev =>
+      reconcileModColumns(prev, true).map(col => ({ ...col, isVisible: true })),
+    );
+  };
+
+  const handleSort = (clickedKey: ModSortKey) => {
+    setSortState(prev => getNextSortState(prev, clickedKey));
+  };
 
   const {
     data: modsResponse,
@@ -526,9 +686,19 @@ export function ModsView() {
     });
   }, [mods, searchQuery, statusFilter, targetFilter]);
 
+  const sortedMods = useMemo(() => {
+    const dir = sortState.direction === 'asc' ? 1 : -1;
+    return [...filteredMods].sort((a, b) => {
+      const cmp = compareModsByKey(a, b, sortState.key, dir);
+      return cmp !== 0 ? cmp : a.loadOrder - b.loadOrder;
+    });
+  }, [filteredMods, sortState]);
+
   const isFiltered = searchQuery.trim() !== '' || statusFilter !== 'all' || targetFilter !== 'all';
+  const isCustomSorted = sortState.key !== 'order' || sortState.direction !== 'asc';
   const isServerLocked = activeServer ? isServerActiveStatus(activeServer.status) : false;
-  const canReorder = isAdmin && !isServerLocked && !isFiltered && mods.length > 1;
+  const canReorder =
+    isAdmin && !isServerLocked && !isFiltered && !isCustomSorted && mods.length > 1;
 
   const toggleMutation = useMutation({
     mutationFn: ({ modId, enabled }: { modId: string; enabled: boolean }) =>
@@ -671,7 +841,9 @@ export function ModsView() {
           isServerLocked={isServerLocked}
           updateAvailableCount={modsResponse.updateAvailableCount}
           isFiltered={isFiltered}
+          isCustomSorted={isCustomSorted}
           isAdmin={isAdmin}
+          onResetSort={() => setSortState(DEFAULT_SORT_STATE)}
         />
 
         <div className="flex flex-col md:flex-row items-stretch md:items-end gap-3">
@@ -700,33 +872,56 @@ export function ModsView() {
               onChange={val => setTargetFilter(val ?? 'all')}
             />
           </div>
+          <div className="shrink-0 self-end md:self-auto">
+            <TableColumnVisibility
+              columns={columns}
+              onColumnVisibilityChange={handleColumnVisibilityChange}
+              onColumnsReorder={handleColumnsReorder}
+              onReset={handleResetColumns}
+              onShowAll={handleShowAllColumns}
+            />
+          </div>
         </div>
 
         <Table aria-label="Server mods inventory">
           <TableHeader>
             <TableRow>
-              <TableHead>Order</TableHead>
-              <TableHead>Enabled</TableHead>
-              <TableHead>Mod</TableHead>
-              <TableHead>@Folder</TableHead>
-              <TableHead>Target</TableHead>
-              <TableHead>Size</TableHead>
-              <TableHead>Sync Status</TableHead>
-              {isAdmin && <TableHead align="right">Actions</TableHead>}
+              {visibleColumns.map(col => {
+                const def = MOD_COLUMN_REGISTRY[col.id as ModColumnId];
+                const { sortKey } = def;
+                let sortDirection: TableSortDirection | undefined;
+                if (sortKey) {
+                  sortDirection = sortState.key === sortKey ? sortState.direction : false;
+                }
+
+                return (
+                  <TableHead
+                    key={col.id}
+                    align={def.align}
+                    className={def.headClassName}
+                    sortDirection={sortDirection}
+                    onSort={sortKey ? () => handleSort(sortKey) : undefined}
+                  >
+                    {def.label}
+                  </TableHead>
+                );
+              })}
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filteredMods.length === 0 ? (
+            {sortedMods.length === 0 ? (
               <ModsEmptyRow
+                colSpan={visibleColumns.length}
                 hasAnyMods={mods.length > 0}
                 isAdmin={isAdmin}
                 isServerLocked={isServerLocked}
                 onOpenAddModal={() => setIsAddModOpen(true)}
               />
             ) : (
-              filteredMods.map((mod, idx) => (
+              sortedMods.map((mod, idx) => (
                 <ModTableRow
                   key={mod.id}
+                  visibleColumns={visibleColumns}
                   mod={mod}
                   index={idx}
                   totalMods={mods.length}
