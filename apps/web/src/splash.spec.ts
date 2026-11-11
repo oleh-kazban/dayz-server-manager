@@ -64,12 +64,20 @@ describe('Pre-Bootstrap Animated Splash Screen (DSM-00101 & DSM-00102)', () => {
       const css = styleElement?.textContent ?? '';
       const lightThemes = [
         'vanilla',
-        'darcula-light',
-        'graphite-light',
-        'tokyo-light',
-        'catppuccin-latte',
+        'frostline-light',
+        'chernarus-light',
+        'livonia-light',
+        'badlands-light',
+        'krasno-light',
       ];
-      const darkThemes = ['obsidian', 'darcula', 'graphite', 'tokyo', 'catppuccin'];
+      const darkThemes = [
+        'obsidian',
+        'frostline-dark',
+        'chernarus-dark',
+        'livonia-dark',
+        'badlands-dark',
+        'krasno-dark',
+      ];
 
       for (const theme of lightThemes) {
         expect(css).toContain(`[data-theme='${theme}']`);
@@ -174,22 +182,22 @@ describe('Pre-Bootstrap Animated Splash Screen (DSM-00101 & DSM-00102)', () => {
     it('Test B: sets data-theme to dark preferred theme when stored mode is dark', () => {
       window.localStorage.setItem(
         'dsm-theme-settings',
-        JSON.stringify({ mode: 'dark', preferredDark: 'catppuccin' }),
+        JSON.stringify({ mode: 'dark', preferredDark: 'badlands-dark' }),
       );
       runThemeScript();
-      expect(document.documentElement.getAttribute('data-theme')).toBe('catppuccin');
+      expect(document.documentElement.getAttribute('data-theme')).toBe('badlands-dark');
     });
 
     it('Test C: sets data-theme when raw string is stored in dsm-theme-preference or settings', () => {
-      window.localStorage.setItem('dsm-theme-preference', 'graphite');
+      window.localStorage.setItem('dsm-theme-preference', 'chernarus-dark');
       runThemeScript();
-      expect(document.documentElement.getAttribute('data-theme')).toBe('graphite');
+      expect(document.documentElement.getAttribute('data-theme')).toBe('chernarus-dark');
 
       document.documentElement.removeAttribute('data-theme');
       window.localStorage.clear();
-      window.localStorage.setItem('dsm-theme-settings', 'graphite');
+      window.localStorage.setItem('dsm-theme-settings', 'chernarus-dark');
       runThemeScript();
-      expect(document.documentElement.getAttribute('data-theme')).toBe('graphite');
+      expect(document.documentElement.getAttribute('data-theme')).toBe('chernarus-dark');
     });
 
     it('Test D: leaves data-theme unset when localStorage is empty', () => {

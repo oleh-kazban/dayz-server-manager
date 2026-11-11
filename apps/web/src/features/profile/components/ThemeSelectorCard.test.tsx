@@ -40,19 +40,21 @@ describe('ThemeSelectorCard', () => {
     expect(screen.getByText('Preferred Light Theme')).toBeInTheDocument();
     expect(screen.getByText('Preferred Dark Theme')).toBeInTheDocument();
 
-    // Verify all 5 light themes exist
-    expect(screen.getByText('Vanilla Light')).toBeInTheDocument();
-    expect(screen.getByText('Darcula Light')).toBeInTheDocument();
-    expect(screen.getByText('Graphite Light')).toBeInTheDocument();
-    expect(screen.getByText('Tokyo Day')).toBeInTheDocument();
-    expect(screen.getByText('Catppuccin Latte')).toBeInTheDocument();
+    // Verify all 6 light themes exist
+    expect(screen.getByText('Namalsk Day')).toBeInTheDocument();
+    expect(screen.getByText('Frostline Day')).toBeInTheDocument();
+    expect(screen.getByText('Chernarus Overcast')).toBeInTheDocument();
+    expect(screen.getByText('Livonia Clearing')).toBeInTheDocument();
+    expect(screen.getByText('Badlands Sun')).toBeInTheDocument();
+    expect(screen.getByText('Krasno Dawn')).toBeInTheDocument();
 
-    // Verify all 5 dark themes exist
-    expect(screen.getByText('Obsidian Default')).toBeInTheDocument();
-    expect(screen.getByText('Darcula Classic')).toBeInTheDocument();
-    expect(screen.getByText('Graphite Stealth')).toBeInTheDocument();
-    expect(screen.getByText('Tokyo Night')).toBeInTheDocument();
-    expect(screen.getByText('Catppuccin Mocha')).toBeInTheDocument();
+    // Verify all 6 dark themes exist
+    expect(screen.getByText('Namalsk Night')).toBeInTheDocument();
+    expect(screen.getByText('Sakhal Night')).toBeInTheDocument();
+    expect(screen.getByText('Tisy Bunker')).toBeInTheDocument();
+    expect(screen.getByText('Nadbor Pine')).toBeInTheDocument();
+    expect(screen.getByText('Badlands Dusk')).toBeInTheDocument();
+    expect(screen.getByText('Signal Flare')).toBeInTheDocument();
   });
 
   it('renders dark mode banner when active mode is dark', () => {
@@ -93,25 +95,25 @@ describe('ThemeSelectorCard', () => {
   it('selects a preferred light theme and triggers setters', () => {
     render(<ThemeSelectorCard />);
 
-    const tokyoDayBtn = screen.getByText('Tokyo Day').closest('button');
-    expect(tokyoDayBtn).toBeDefined();
+    const frostlineBtn = screen.getByText('Frostline Day').closest('button');
+    expect(frostlineBtn).toBeDefined();
 
-    fireEvent.click(tokyoDayBtn!);
+    fireEvent.click(frostlineBtn!);
 
-    expect(mockSetPreferredLight).toHaveBeenCalledWith('tokyo-light');
-    expect(mockSetTheme).toHaveBeenCalledWith('tokyo-light');
+    expect(mockSetPreferredLight).toHaveBeenCalledWith('frostline-light');
+    expect(mockSetTheme).toHaveBeenCalledWith('frostline-light');
   });
 
   it('selects a preferred dark theme and triggers setters', () => {
     render(<ThemeSelectorCard />);
 
-    const tokyoNightBtn = screen.getByText('Tokyo Night').closest('button');
-    expect(tokyoNightBtn).toBeDefined();
+    const badlandsBtn = screen.getByText('Badlands Dusk').closest('button');
+    expect(badlandsBtn).toBeDefined();
 
-    fireEvent.click(tokyoNightBtn!);
+    fireEvent.click(badlandsBtn!);
 
-    expect(mockSetPreferredDark).toHaveBeenCalledWith('tokyo');
-    expect(mockSetTheme).toHaveBeenCalledWith('tokyo');
+    expect(mockSetPreferredDark).toHaveBeenCalledWith('badlands-dark');
+    expect(mockSetTheme).toHaveBeenCalledWith('badlands-dark');
   });
 
   it('handles empty/undefined theme preference values gracefully', () => {
@@ -134,13 +136,13 @@ describe('ThemeSelectorCard', () => {
 
     expect(screen.getByText('Active Mode: Light Mode')).toBeInTheDocument();
 
-    const vanillaBtn = screen.getByText('Vanilla Light').closest('button');
-    const obsidianBtn = screen.getByText('Obsidian Default').closest('button');
+    const namalskDayBtn = screen.getByText('Namalsk Day').closest('button');
+    const namalskNightBtn = screen.getByText('Namalsk Night').closest('button');
     const darkModeBtn = screen.getByRole('button', { name: 'Dark Mode' });
 
     expect(() => {
-      fireEvent.click(vanillaBtn!);
-      fireEvent.click(obsidianBtn!);
+      fireEvent.click(namalskDayBtn!);
+      fireEvent.click(namalskNightBtn!);
       fireEvent.click(darkModeBtn);
     }).not.toThrow();
   });

@@ -5,17 +5,41 @@ export type ThemeMode = z.infer<typeof themeModeSchema>;
 
 export const lightThemeIdSchema = z.enum([
   'vanilla',
-  'darcula-light',
-  'graphite-light',
-  'tokyo-light',
-  'catppuccin-latte',
+  'frostline-light',
+  'chernarus-light',
+  'livonia-light',
+  'badlands-light',
+  'krasno-light',
 ]);
 export type LightThemeId = z.infer<typeof lightThemeIdSchema>;
 
-export const darkThemeIdSchema = z.enum(['obsidian', 'darcula', 'graphite', 'tokyo', 'catppuccin']);
+export const darkThemeIdSchema = z.enum([
+  'obsidian',
+  'frostline-dark',
+  'chernarus-dark',
+  'livonia-dark',
+  'badlands-dark',
+  'krasno-dark',
+]);
 export type DarkThemeId = z.infer<typeof darkThemeIdSchema>;
 
 export type ThemeId = LightThemeId | DarkThemeId;
+
+const LEGACY_LIGHT_THEME_MAP: Record<string, LightThemeId> = {
+  light: 'vanilla',
+  'darcula-light': 'vanilla',
+  'tokyo-light': 'frostline-light',
+  'graphite-light': 'chernarus-light',
+  'catppuccin-latte': 'livonia-light',
+};
+
+const LEGACY_DARK_THEME_MAP: Record<string, DarkThemeId> = {
+  dark: 'obsidian',
+  darcula: 'obsidian',
+  tokyo: 'frostline-dark',
+  graphite: 'chernarus-dark',
+  catppuccin: 'livonia-dark',
+};
 
 export const themeSettingsSchema = z.preprocess(
   (raw: unknown) => {
@@ -23,10 +47,14 @@ export const themeSettingsSchema = z.preprocess(
     const obj = raw as Record<string, unknown>;
     const rawLight = obj.preferredLight ?? obj.prefferedLight;
     const rawDark = obj.preferredDark ?? obj.prefferedDark;
+    const resolvedLight =
+      typeof rawLight === 'string' ? (LEGACY_LIGHT_THEME_MAP[rawLight] ?? rawLight) : 'vanilla';
+    const resolvedDark =
+      typeof rawDark === 'string' ? (LEGACY_DARK_THEME_MAP[rawDark] ?? rawDark) : 'obsidian';
     return {
       mode: obj.mode ?? 'light',
-      preferredLight: rawLight === 'light' ? 'vanilla' : (rawLight ?? 'vanilla'),
-      preferredDark: rawDark === 'dark' ? 'obsidian' : (rawDark ?? 'obsidian'),
+      preferredLight: resolvedLight,
+      preferredDark: resolvedDark,
     };
   },
   z.object({
