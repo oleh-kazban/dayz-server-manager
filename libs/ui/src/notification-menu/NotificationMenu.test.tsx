@@ -6,6 +6,8 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { describe, expect, it, vi } from 'vitest';
 
+import * as hooks from '../hooks';
+
 import { NotificationMenu } from './NotificationMenu';
 import { type NotificationItem } from './NotificationMenu.types';
 
@@ -408,6 +410,99 @@ describe('NotificationMenu', () => {
       expect(css).toMatch(
         /@media\s*\(prefers-reduced-motion:\s*reduce\)\s*\{\s*\.animate-bell-ring\s*\{\s*animation:\s*none;\s*\}\s*\}/,
       );
+    });
+  });
+
+  describe('popup position gating and action close behavior', () => {
+    it('keeps unpositioned portal off-viewport, hidden, non-animated, and unfocused until popupPosition resolves (REQ-01, GUARD-01)', () => {
+      const close = vi.fn();
+      const toggle = vi.fn();
+      const basePopupReturn = {
+        isOpen: true,
+        open: vi.fn(),
+        close,
+        toggle,
+        popupPosition: null as hooks.PopupPosition | null,
+        containerRef: { current: null },
+        triggerRef: { current: null },
+        popupRef: { current: null as HTMLDivElement | null },
+        updatePosition: vi.fn(),
+      };
+
+      const spy = vi.spyOn(hooks, 'usePopup').mockReturnValue(basePopupReturn);
+
+      try {
+        const { rerender } = render(<NotificationMenu notifications={sampleNotifications} />);
+
+        const unpositionedDialog = screen.getByRole('dialog', { hidden: true });
+        expect(unpositionedDialog).toHaveStyle({
+          top: '-9999px',
+          left: '-9999px',
+          visibility: 'hidden',
+          opacity: '0',
+          pointerEvents: 'none',
+        });
+        expect(unpositionedDialog).not.toHaveClass('animate-in');
+        expect(unpositionedDialog).not.toHaveFocus();
+
+        spy.mockReturnValue({
+          ...basePopupReturn,
+          popupPosition: {
+            top: 48,
+            left: 120,
+            width: 36,
+            maxHeight: 400,
+            maxWidth: 800,
+            placement: 'bottom',
+          },
+        });
+
+        rerender(<NotificationMenu notifications={sampleNotifications} />);
+
+        const positionedDialog = screen.getByRole('dialog', { name: 'Notifications' });
+        expect(positionedDialog).toHaveStyle({
+          top: '48px',
+          left: '120px',
+          visibility: 'visible',
+          opacity: '1',
+          pointerEvents: 'auto',
+        });
+        expect(positionedDialog).toHaveClass('animate-in', 'fade-in', 'zoom-in-95', 'duration-100');
+        expect(positionedDialog).toHaveFocus();
+      } finally {
+        spy.mockRestore();
+      }
+    });
+
+    it('renders action button with self-start, fires item.onAction without onItemClick, and closes popover (REQ-03, REQ-05)', async () => {
+      const user = userEvent.setup();
+      const onItemClick = vi.fn();
+      const onAction = vi.fn();
+      const items: NotificationItem[] = [
+        {
+          id: 'action-item-1',
+          title: 'Greeting Item',
+          description: 'Review FAQ guidance.',
+          timestamp: 'now',
+          actionLabel: 'Open FAQ',
+          onAction,
+        },
+      ];
+
+      render(<NotificationMenu notifications={items} onItemClick={onItemClick} />);
+
+      await user.click(screen.getByRole('button', { name: /Notifications \(1 unread\)/i }));
+      expect(screen.getByRole('dialog', { name: 'Notifications' })).toBeInTheDocument();
+
+      const actionButton = screen.getByRole('button', { name: /Open FAQ/i });
+      expect(actionButton).toHaveClass('self-start');
+
+      await user.click(actionButton);
+
+      expect(onAction).toHaveBeenCalledTimes(1);
+      expect(onAction).toHaveBeenCalledWith(items[0]);
+      expect(onItemClick).not.toHaveBeenCalled();
+      expect(screen.queryByRole('dialog', { name: 'Notifications' })).not.toBeInTheDocument();
     });
   });
 });

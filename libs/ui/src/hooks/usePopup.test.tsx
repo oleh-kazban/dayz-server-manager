@@ -1,6 +1,6 @@
 import { act, fireEvent, render, renderHook, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import { usePopup } from './usePopup';
 
@@ -19,6 +19,9 @@ function TestPopupConsumer() {
       <button type="button" onClick={close}>
         Close
       </button>
+      <span data-testid="position-state" data-positioned={String(popupPosition !== null)}>
+        {popupPosition ? `${popupPosition.top},${popupPosition.left}` : 'null'}
+      </span>
       {isOpen && (
         <div
           ref={popupRef}
@@ -119,5 +122,79 @@ describe('usePopup', () => {
     expect(screen.queryByTestId('popup')).not.toBeInTheDocument();
     expect(input).toHaveFocus();
     expect(button).not.toHaveFocus();
+  });
+
+  it('starts with popupPosition=null, resolves on open, and resets to null across close, toggle, outside pointerdown, and Escape (REQ-01, REQ-02)', async () => {
+    const user = userEvent.setup();
+    render(
+      <div>
+        <TestPopupConsumer />
+        <button type="button">Outside Element</button>
+      </div>,
+    );
+
+    const trigger = screen.getByRole('button', { name: /toggle trigger/i });
+    const openBtn = screen.getByRole('button', { name: /^open$/i });
+    const closeBtn = screen.getByRole('button', { name: /^close$/i });
+    const positionState = screen.getByTestId('position-state');
+
+    let mockRect = {
+      top: 10,
+      bottom: 46,
+      left: 20,
+      right: 120,
+      width: 100,
+      height: 36,
+      x: 20,
+      y: 10,
+      toJSON: () => ({}),
+    };
+    const rectSpy = vi.spyOn(trigger, 'getBoundingClientRect').mockImplementation(() => mockRect);
+
+    expect(positionState).toHaveAttribute('data-positioned', 'false');
+    expect(positionState).toHaveTextContent('null');
+
+    // 1. Open -> resolves position; Close button -> resets to null
+    await user.click(openBtn);
+    expect(positionState).toHaveAttribute('data-positioned', 'true');
+    expect(positionState).toHaveTextContent('54,20');
+
+    await user.click(closeBtn);
+    expect(positionState).toHaveAttribute('data-positioned', 'false');
+    expect(positionState).toHaveTextContent('null');
+
+    // 2. Move trigger and reopen via toggle -> uses fresh coordinates; toggle again -> resets to null
+    mockRect = {
+      ...mockRect,
+      top: 100,
+      bottom: 136,
+      left: 160,
+      right: 260,
+      x: 160,
+      y: 100,
+    };
+    await user.click(trigger);
+    expect(positionState).toHaveAttribute('data-positioned', 'true');
+    expect(positionState).toHaveTextContent('144,160');
+
+    await user.click(trigger);
+    expect(positionState).toHaveAttribute('data-positioned', 'false');
+    expect(positionState).toHaveTextContent('null');
+
+    // 3. Open -> outside pointerdown -> resets to null
+    await user.click(openBtn);
+    expect(positionState).toHaveAttribute('data-positioned', 'true');
+    fireEvent.pointerDown(screen.getByRole('button', { name: /outside element/i }));
+    expect(positionState).toHaveAttribute('data-positioned', 'false');
+    expect(positionState).toHaveTextContent('null');
+
+    // 4. Open -> Escape -> resets to null
+    await user.click(openBtn);
+    expect(positionState).toHaveAttribute('data-positioned', 'true');
+    await user.keyboard('{Escape}');
+    expect(positionState).toHaveAttribute('data-positioned', 'false');
+    expect(positionState).toHaveTextContent('null');
+
+    rectSpy.mockRestore();
   });
 });
