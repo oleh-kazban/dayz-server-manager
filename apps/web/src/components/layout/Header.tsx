@@ -3,7 +3,13 @@ import { useEffect } from 'react';
 import { Link, useLocation, useMatches } from '@tanstack/react-router';
 import { Bell, ChevronRight, HelpCircle, Menu, Search, Settings } from 'lucide-react';
 
-import { useActiveServer, useLayoutStore, useNavigationContext } from '@aegis/web/core';
+import { NotificationMenu } from '@aegis/ui';
+import {
+  useActiveServer,
+  useLayoutStore,
+  useNavigationContext,
+  useNotificationStore,
+} from '@aegis/web/core';
 import { FaqModal, useFaqStore } from '@aegis/web/features/faq';
 import { ThemeToggleButton } from '@aegis/web/features/theme';
 
@@ -162,6 +168,10 @@ export function Header() {
   const { activeServer, isLoading } = useActiveServer();
   const { scope, isAppliance } = useNavigationContext();
   const { isOpen: isFaqOpen, toggleModal: toggleFaqModal } = useFaqStore();
+  const notifications = useNotificationStore(state => state.notifications);
+  const markAsRead = useNotificationStore(state => state.markAsRead);
+  const markAllAsRead = useNotificationStore(state => state.markAllAsRead);
+  const dismissNotification = useNotificationStore(state => state.dismissNotification);
   const location = useLocation();
   const matches = useMatches();
   const pathname = location?.pathname ?? '/dashboard';
@@ -248,14 +258,17 @@ export function Header() {
           </div>
 
           {/* Notification Bell */}
-          <button
-            type="button"
-            aria-label="Notifications"
-            className="relative p-2 rounded-lg text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-hover)] hover:text-[var(--color-text-main)] transition-colors"
-          >
-            <Bell className="w-[19px] h-[19px]" />
-            <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full bg-[var(--color-primary)] ring-2 ring-[var(--color-surface)]" />
-          </button>
+          <NotificationMenu
+            notifications={notifications}
+            onItemClick={item => markAsRead(item.id)}
+            onMarkAllAsRead={markAllAsRead}
+            onDismissItem={dismissNotification}
+            emptyText="No notifications yet"
+            emptyDescription="Server alerts and operation updates will appear here"
+            alignment="end"
+            className="border-0 bg-transparent shadow-none text-[var(--color-text-secondary)] hover:text-[var(--color-text-main)]"
+            triggerIcon={<Bell className="w-[19px] h-[19px] overflow-visible" aria-hidden="true" />}
+          />
 
           {/* Appliance Administration Gear */}
           <Link
