@@ -13,7 +13,7 @@ import {
   X,
 } from 'lucide-react';
 
-import { usePopup } from '../hooks';
+import { type Alignment, type PopupPosition, usePopup } from '../hooks';
 import { formatTimestamp } from '../utils';
 
 import {
@@ -236,6 +236,19 @@ function NotificationEmptyState({
   );
 }
 
+function getPopupTransformOrigin(
+  popupPosition: PopupPosition | null,
+  alignment: Alignment,
+): string | undefined {
+  if (!popupPosition) {
+    return undefined;
+  }
+
+  const vertical = popupPosition.placement === 'top' ? 'bottom' : 'top';
+  const horizontal = alignment === 'end' ? 'right' : 'left';
+  return `${vertical} ${horizontal}`;
+}
+
 export function NotificationMenu({
   ref,
   notifications,
@@ -294,6 +307,7 @@ export function NotificationMenu({
   const computedAriaLabel =
     ariaLabel ??
     (unreadCount > 0 ? `Notifications (${unreadCount} unread)` : 'Notifications (no unread)');
+  const transformOrigin = getPopupTransformOrigin(popupPosition, alignment);
 
   return (
     <div ref={containerRef} className="relative inline-block text-left">
@@ -349,9 +363,10 @@ export function NotificationMenu({
               visibility: isPositioned ? 'visible' : 'hidden',
               opacity: isPositioned ? 1 : 0,
               pointerEvents: isPositioned ? 'auto' : 'none',
+              transformOrigin,
             }}
             className={`w-96 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-[var(--shadow-dropdown)] overflow-hidden font-sans select-none ${
-              isPositioned ? 'animate-in fade-in zoom-in-95 duration-100' : ''
+              isPositioned ? 'animate-popup-enter' : ''
             } flex flex-col focus:outline-none ${popupClassName}`.trim()}
           >
             {/* Header */}

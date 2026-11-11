@@ -61,7 +61,8 @@ export function usePopup<TTrigger extends HTMLElement = HTMLButtonElement>(
     const maxHeight = placement === 'bottom' ? availableBelow : availableAbove;
     const renderedHeight = Math.min(popupHeight, maxHeight);
     const maxWidth = Math.max(0, window.innerWidth - 2 * VIEWPORT_PADDING);
-    const effectivePopupWidth = popupRect.width > 0 ? popupRect.width : triggerRect.width;
+    const measuredPopupWidth = popup.offsetWidth > 0 ? popup.offsetWidth : popupRect.width;
+    const effectivePopupWidth = measuredPopupWidth > 0 ? measuredPopupWidth : triggerRect.width;
     const preferredLeft =
       alignment === 'start' ? triggerRect.left : triggerRect.right - effectivePopupWidth;
     const maxLeft = Math.max(
@@ -74,7 +75,21 @@ export function usePopup<TTrigger extends HTMLElement = HTMLButtonElement>(
         ? triggerRect.bottom + POPUP_GAP
         : triggerRect.top - POPUP_GAP - renderedHeight;
 
-    setPopupPosition({ top, left, width, maxHeight, maxWidth, placement });
+    setPopupPosition(prev => {
+      if (
+        prev &&
+        prev.top === top &&
+        prev.left === left &&
+        prev.width === width &&
+        prev.maxHeight === maxHeight &&
+        prev.maxWidth === maxWidth &&
+        prev.placement === placement
+      ) {
+        return prev;
+      }
+
+      return { top, left, width, maxHeight, maxWidth, placement };
+    });
   }, [alignment]);
 
   useLayoutEffect(() => {

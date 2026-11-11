@@ -103,3 +103,26 @@
     animation: none;
   }
 }
+
+/* Popup Entrance Animation */
+@keyframes popup-enter {
+  0% {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.animate-popup-enter {
+  animation: popup-enter 140ms cubic-bezier(0.215, 0.61, 0.355, 1) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-popup-enter {
+    animation: none;
+  }
+}
