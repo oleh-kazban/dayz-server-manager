@@ -25,8 +25,17 @@ export function usePopup<TTrigger extends HTMLElement = HTMLButtonElement>(
   const popupRef = useRef<HTMLDivElement>(null);
 
   const open = useCallback(() => setIsOpen(true), []);
-  const close = useCallback(() => setIsOpen(false), []);
-  const toggle = useCallback(() => setIsOpen(prev => !prev), []);
+  const close = useCallback(() => {
+    setIsOpen(false);
+    setPopupPosition(null);
+  }, []);
+  const toggle = useCallback(() => {
+    if (isOpen) {
+      close();
+    } else {
+      open();
+    }
+  }, [isOpen, close, open]);
 
   const updatePlacement = useCallback(() => {
     const trigger = triggerRef.current;
@@ -106,13 +115,13 @@ export function usePopup<TTrigger extends HTMLElement = HTMLButtonElement>(
         !containerRef.current?.contains(event.target) &&
         !popupRef.current?.contains(event.target)
       ) {
-        setIsOpen(false);
+        close();
       }
     };
 
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
-        setIsOpen(false);
+        close();
         const target = triggerRef.current;
         if (target) {
           if (typeof target.focus === 'function' && target.tabIndex >= 0) {
@@ -140,14 +149,14 @@ export function usePopup<TTrigger extends HTMLElement = HTMLButtonElement>(
       document.removeEventListener('focusin', handleOutsideInteraction);
       document.removeEventListener('keydown', handleKeyDown);
     };
-  }, [isOpen]);
+  }, [isOpen, close]);
 
   return {
     isOpen,
     open,
     close,
     toggle,
-    popupPosition,
+    popupPosition: isOpen ? popupPosition : null,
     containerRef,
     triggerRef,
     popupRef,

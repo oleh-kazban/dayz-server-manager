@@ -85,9 +85,15 @@ interface NotificationItemRowProps {
   item: NotificationItem;
   onItemClick?: (item: NotificationItem) => void;
   onDismissItem?: (id: string) => void;
+  onActionClose?: () => void;
 }
 
-function NotificationItemRow({ item, onItemClick, onDismissItem }: NotificationItemRowProps) {
+function NotificationItemRow({
+  item,
+  onItemClick,
+  onDismissItem,
+  onActionClose,
+}: NotificationItemRowProps) {
   const severity = item.severity ?? 'info';
   const config = SEVERITY_CONFIG[severity];
   const IconComponent = config.icon;
@@ -181,8 +187,11 @@ function NotificationItemRow({ item, onItemClick, onDismissItem }: NotificationI
         {item.actionLabel && item.onAction && (
           <button
             type="button"
-            onClick={() => item.onAction?.(item)}
-            className="mt-2 inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-[11px] font-semibold bg-[var(--color-primary-light)] text-[var(--color-primary)] hover:bg-[var(--color-primary)] hover:text-white transition-colors cursor-pointer"
+            onClick={() => {
+              item.onAction?.(item);
+              onActionClose?.();
+            }}
+            className="mt-2 self-start inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-[11px] font-semibold bg-[var(--color-primary-light)] text-[var(--color-primary)] hover:bg-[var(--color-primary)] hover:text-white transition-colors cursor-pointer"
           >
             <span>{item.actionLabel}</span>
             <span aria-hidden="true">&rarr;</span>
@@ -249,6 +258,7 @@ export function NotificationMenu({
 
   const { isOpen, close, toggle, popupPosition, containerRef, triggerRef, popupRef } =
     usePopup(alignment);
+  const isPositioned = popupPosition !== null;
 
   const handleTriggerRef = (element: HTMLButtonElement | null) => {
     triggerRef.current = element;
@@ -266,10 +276,10 @@ export function NotificationMenu({
   }, [disabled, isOpen, close]);
 
   useEffect(() => {
-    if (isOpen) {
+    if (isOpen && isPositioned) {
       popupRef.current?.focus();
     }
-  }, [isOpen, popupRef]);
+  }, [isOpen, isPositioned, popupRef]);
 
   const handleKeyDown = (event: ReactKeyboardEvent<HTMLDivElement>) => {
     if (event.key === 'Escape') {
@@ -333,12 +343,16 @@ export function NotificationMenu({
             onKeyDown={handleKeyDown}
             style={{
               position: 'fixed',
-              top: popupPosition ? `${popupPosition.top}px` : '0px',
-              left: popupPosition ? `${popupPosition.left}px` : '0px',
+              top: popupPosition ? `${popupPosition.top}px` : '-9999px',
+              left: popupPosition ? `${popupPosition.left}px` : '-9999px',
               zIndex: 50,
-              visibility: popupPosition ? 'visible' : 'hidden',
+              visibility: isPositioned ? 'visible' : 'hidden',
+              opacity: isPositioned ? 1 : 0,
+              pointerEvents: isPositioned ? 'auto' : 'none',
             }}
-            className={`w-96 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-[var(--shadow-dropdown)] overflow-hidden font-sans select-none animate-in fade-in zoom-in-95 duration-100 flex flex-col focus:outline-none ${popupClassName}`.trim()}
+            className={`w-96 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-[var(--shadow-dropdown)] overflow-hidden font-sans select-none ${
+              isPositioned ? 'animate-in fade-in zoom-in-95 duration-100' : ''
+            } flex flex-col focus:outline-none ${popupClassName}`.trim()}
           >
             {/* Header */}
             <NotificationHeader unreadCount={unreadCount} onMarkAllAsRead={onMarkAllAsRead} />
@@ -354,6 +368,7 @@ export function NotificationMenu({
                     item={item}
                     onItemClick={onItemClick}
                     onDismissItem={onDismissItem}
+                    onActionClose={close}
                   />
                 ))
               )}
