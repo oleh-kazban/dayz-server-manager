@@ -410,6 +410,28 @@ describe('NotificationMenu', () => {
       expect(css).toMatch(
         /@media\s*\(prefers-reduced-motion:\s*reduce\)\s*\{\s*\.animate-bell-ring\s*\{\s*animation:\s*none;\s*\}\s*\}/,
       );
+
+      const popupKeyframesMatch = css.match(/@keyframes\s+popup-enter\s*\{([\s\S]*?)\n\}/);
+      expect(popupKeyframesMatch).not.toBeNull();
+
+      const popupKeyframesBody = popupKeyframesMatch![1];
+      expect(popupKeyframesBody).toMatch(
+        /0%\s*\{\s*opacity:\s*0;\s*transform:\s*scale\(0\.95\);\s*\}/,
+      );
+      expect(popupKeyframesBody).toMatch(
+        /100%\s*\{\s*opacity:\s*1;\s*transform:\s*scale\(1\);\s*\}/,
+      );
+      expect(popupKeyframesBody).not.toMatch(
+        /\b(width|height|top|left|right|bottom|margin|padding)\s*:/,
+      );
+
+      expect(css).toMatch(
+        /\.animate-popup-enter\s*\{[^}]*animation:\s*popup-enter\s+140ms\s+cubic-bezier\(0\.215,\s*0\.61,\s*0\.355,\s*1\)\s+both;/,
+      );
+
+      expect(css).toMatch(
+        /@media\s*\(prefers-reduced-motion:\s*reduce\)\s*\{\s*\.animate-popup-enter\s*\{\s*animation:\s*none;\s*\}\s*\}/,
+      );
     });
   });
 
@@ -442,6 +464,9 @@ describe('NotificationMenu', () => {
           opacity: '0',
           pointerEvents: 'none',
         });
+        expect(unpositionedDialog.style.transformOrigin).toBe('');
+        expect(unpositionedDialog).not.toHaveClass('animate-popup-enter');
+        expect(unpositionedDialog).not.toHaveClass('duration-100');
         expect(unpositionedDialog).not.toHaveClass('animate-in');
         expect(unpositionedDialog).not.toHaveFocus();
 
@@ -457,7 +482,7 @@ describe('NotificationMenu', () => {
           },
         });
 
-        rerender(<NotificationMenu notifications={sampleNotifications} />);
+        rerender(<NotificationMenu notifications={sampleNotifications} alignment="end" />);
 
         const positionedDialog = screen.getByRole('dialog', { name: 'Notifications' });
         expect(positionedDialog).toHaveStyle({
@@ -466,9 +491,30 @@ describe('NotificationMenu', () => {
           visibility: 'visible',
           opacity: '1',
           pointerEvents: 'auto',
+          transformOrigin: 'top right',
         });
-        expect(positionedDialog).toHaveClass('animate-in', 'fade-in', 'zoom-in-95', 'duration-100');
+        expect(positionedDialog).toHaveClass('animate-popup-enter');
+        expect(positionedDialog).not.toHaveClass('duration-100');
+        expect(positionedDialog).not.toHaveClass('animate-in');
         expect(positionedDialog).toHaveFocus();
+
+        spy.mockReturnValue({
+          ...basePopupReturn,
+          popupPosition: {
+            top: 12,
+            left: 24,
+            width: 36,
+            maxHeight: 300,
+            maxWidth: 800,
+            placement: 'top',
+          },
+        });
+
+        rerender(<NotificationMenu notifications={sampleNotifications} alignment="start" />);
+
+        expect(screen.getByRole('dialog', { name: 'Notifications' })).toHaveStyle({
+          transformOrigin: 'bottom left',
+        });
       } finally {
         spy.mockRestore();
       }
