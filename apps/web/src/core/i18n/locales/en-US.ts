@@ -9,7 +9,16 @@ export type NotificationCode =
   | 'STEAM_AUTH_SUCCESS'
   | 'STEAM_CHALLENGE_SUBMITTED'
   | 'STEAM_CHALLENGE_ABORTED'
-  | 'STEAM_DIAGNOSTICS_COMPLETED';
+  | 'STEAM_DIAGNOSTICS_COMPLETED'
+  | 'MOD_ADDED'
+  | 'MODS_BATCH_ADDED'
+  | 'MOD_UPDATED'
+  | 'MOD_DELETED'
+  | 'MODS_REORDERED'
+  | 'MOD_UPDATES_CHECKED'
+  | 'MOD_MARKED_SYNCED'
+  | 'MOD_ENABLED'
+  | 'MOD_DISABLED';
 
 export interface ToastTranslationEntry {
   title: string;
@@ -160,6 +169,34 @@ export const enUSTranslations: TranslationCatalog = {
       title: 'Internal Server Error',
       description: 'An unexpected error occurred on the server. Please try again.',
     },
+    MOD_NOT_FOUND: {
+      title: 'Mod Not Found',
+      description: 'The requested mod could not be found on this server.',
+    },
+    MOD_ALREADY_INSTALLED: {
+      title: 'Mod Already Installed',
+      description: 'Mod "{{identifier}}" is already configured on this server.',
+    },
+    MOD_REORDER_INVALID: {
+      title: 'Invalid Load Order',
+      description: 'The submitted mod load order does not match the current server mod list.',
+    },
+    STEAM_WORKSHOP_INVALID_INPUT: {
+      title: 'Invalid Workshop Input',
+      description: 'Enter a numeric Workshop ID or a valid steamcommunity.com Workshop URL.',
+    },
+    STEAM_WORKSHOP_NOT_FOUND: {
+      title: 'Workshop Item Not Found',
+      description: 'Steam Workshop item "{{workshopId}}" was not found or is private.',
+    },
+    STEAM_WORKSHOP_API_ERROR: {
+      title: 'Steam Workshop Unavailable',
+      description: 'Could not retrieve metadata from the Steam Workshop API. Please try again.',
+    },
+    STEAM_WEB_API_KEY_REQUIRED: {
+      title: 'Steam Web API Key Required',
+      description: 'Configure a Steam Web API Key in Steam Settings to search the Workshop.',
+    },
   },
   validation: {
     REQUIRED: 'This field is required.',
@@ -214,6 +251,42 @@ export const enUSTranslations: TranslationCatalog = {
     STEAM_DIAGNOSTICS_COMPLETED: {
       title: 'Diagnostics Completed',
       description: 'Steam connection and path diagnostics have finished.',
+    },
+    MOD_ADDED: {
+      title: 'Mod Added',
+      description: '"{{name}}" has been added to the server mod list.',
+    },
+    MODS_BATCH_ADDED: {
+      title: 'Mods Imported',
+      description: 'Added {{addedCount}} mod(s) to the server ({{skippedCount}} skipped).',
+    },
+    MOD_UPDATED: {
+      title: 'Mod Updated',
+      description: 'Configuration for "{{name}}" has been saved.',
+    },
+    MOD_DELETED: {
+      title: 'Mod Removed',
+      description: '"{{name}}" has been removed from the server mod list.',
+    },
+    MODS_REORDERED: {
+      title: 'Load Order Saved',
+      description: 'Mod load order has been updated.',
+    },
+    MOD_UPDATES_CHECKED: {
+      title: 'Update Check Complete',
+      description: 'Checked Steam Workshop metadata. {{count}} update(s) available.',
+    },
+    MOD_MARKED_SYNCED: {
+      title: 'Marked as Synced',
+      description: '"{{name}}" is now marked as up to date.',
+    },
+    MOD_ENABLED: {
+      title: 'Mod Enabled',
+      description: '"{{name}}" is now enabled for server launch.',
+    },
+    MOD_DISABLED: {
+      title: 'Mod Disabled',
+      description: '"{{name}}" has been disabled.',
     },
   },
   serverStatus: {

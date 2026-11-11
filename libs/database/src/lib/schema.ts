@@ -1,6 +1,13 @@
 import { integer, sqliteTable, text } from 'drizzle-orm/sqlite-core';
 
-import { SERVER_STATUS, SERVER_STATUS_VALUES } from '@aegis/api-contracts';
+import {
+  MOD_LOAD_TARGET,
+  MOD_LOAD_TARGET_VALUES,
+  MOD_SOURCE_TYPE,
+  MOD_SOURCE_TYPE_VALUES,
+  SERVER_STATUS,
+  SERVER_STATUS_VALUES,
+} from '@aegis/api-contracts';
 
 export const users = sqliteTable('users', {
   id: text('id').primaryKey(),
@@ -72,6 +79,7 @@ export const steamSettings = sqliteTable('steam_settings', {
   workshopAppId: integer('workshop_app_id').notNull().default(221100),
   branch: text('branch').notNull().default('public'),
   branchPasswordEncrypted: text('branch_password_encrypted'),
+  steamWebApiKeyEncrypted: text('steam_web_api_key_encrypted'),
   sessionStatus: text('session_status', {
     enum: ['UNAUTHENTICATED', 'AUTHENTICATED', 'CHALLENGE_REQUIRED', 'EXPIRED'],
   })
@@ -83,3 +91,30 @@ export const steamSettings = sqliteTable('steam_settings', {
 
 export type SteamSettings = typeof steamSettings.$inferSelect;
 export type NewSteamSettings = typeof steamSettings.$inferInsert;
+
+export const serverMods = sqliteTable('server_mods', {
+  id: text('id').primaryKey(),
+  serverId: text('server_id')
+    .notNull()
+    .references(() => servers.id, { onDelete: 'cascade' }),
+  sourceType: text('source_type', { enum: MOD_SOURCE_TYPE_VALUES })
+    .notNull()
+    .default(MOD_SOURCE_TYPE.WORKSHOP),
+  loadTarget: text('load_target', { enum: MOD_LOAD_TARGET_VALUES })
+    .notNull()
+    .default(MOD_LOAD_TARGET.CLIENT_SERVER),
+  workshopId: text('workshop_id'),
+  folderName: text('folder_name').notNull(),
+  name: text('name').notNull(),
+  sizeBytes: integer('size_bytes'),
+  remoteUpdatedAt: integer('remote_updated_at', { mode: 'timestamp' }),
+  syncedWorkshopUpdatedAt: integer('synced_workshop_updated_at', { mode: 'timestamp' }),
+  lastSyncedAt: integer('last_synced_at', { mode: 'timestamp' }),
+  enabled: integer('enabled', { mode: 'boolean' }).notNull().default(true),
+  loadOrder: integer('load_order').notNull().default(0),
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
+});
+
+export type ServerMod = typeof serverMods.$inferSelect;
+export type NewServerMod = typeof serverMods.$inferInsert;

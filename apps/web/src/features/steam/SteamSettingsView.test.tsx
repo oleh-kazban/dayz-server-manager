@@ -20,6 +20,7 @@ const mockDefaultSettings: SteamSettingsDto = {
   workshopAppId: 221100,
   branch: 'public',
   hasBranchPassword: false,
+  hasSteamWebApiKey: false,
   sessionStatus: 'UNAUTHENTICATED',
   createdAt: new Date().toISOString(),
   updatedAt: new Date().toISOString(),
@@ -86,6 +87,10 @@ describe('SteamSettingsView (REQ-01, REQ-02, REQ-03, REQ-04, REQ-07)', () => {
       ...mockDefaultSettings,
       ...dto,
       hasPassword: Boolean(dto.steamPassword ?? mockDefaultSettings.hasPassword),
+      hasSteamWebApiKey:
+        dto.steamWebApiKey === null
+          ? false
+          : Boolean(dto.steamWebApiKey ?? mockDefaultSettings.hasSteamWebApiKey),
       updatedAt: new Date().toISOString(),
     }));
     vi.mocked(apiClient.steam.clearSession).mockResolvedValue({
@@ -507,6 +512,73 @@ describe('SteamSettingsView (REQ-01, REQ-02, REQ-03, REQ-04, REQ-07)', () => {
       });
 
       expect(screen.queryByRole('progressbar')).not.toBeInTheDocument();
+    });
+  });
+
+  describe('Steam Web API Key Vault Controls (REQ-03)', () => {
+    it('renders Not Configured badge, helper link to steamcommunity.com/dev/apikey, and submits entered key', async () => {
+      renderView();
+
+      await waitFor(() => {
+        expect(screen.getByText('Steam Web API Key (Workshop Search)')).toBeInTheDocument();
+      });
+
+      expect(screen.getByText('Not Configured')).toBeInTheDocument();
+      const apiKeyLink = screen.getByRole('link', { name: 'steamcommunity.com/dev/apikey' });
+      expect(apiKeyLink).toHaveAttribute('href', 'https://steamcommunity.com/dev/apikey');
+
+      const keyInput = screen.getByLabelText('Steam Web API Key');
+      fireEvent.change(keyInput, { target: { value: '  MY_API_KEY_123  ' } });
+
+      fireEvent.click(screen.getByRole('button', { name: 'Save Changes' }));
+
+      await waitFor(() => {
+        expect(apiClient.steam.updateSettings).toHaveBeenCalledWith(
+          expect.objectContaining({
+            steamWebApiKey: 'MY_API_KEY_123',
+          }),
+        );
+      });
+    });
+
+    it('supports Change Key, Keep Existing Key, and Clear Key flows when hasSteamWebApiKey is true', async () => {
+      vi.mocked(apiClient.steam.getSettings).mockResolvedValue({
+        ...mockDefaultSettings,
+        hasSteamWebApiKey: true,
+      });
+
+      renderView();
+
+      await waitFor(() => {
+        expect(screen.getByText('API Key Stored & Encrypted')).toBeInTheDocument();
+      });
+
+      // Toggle Change Key -> Keep Existing Key
+      fireEvent.click(screen.getByRole('button', { name: 'Change Key' }));
+      expect(screen.getByLabelText('Steam Web API Key')).toBeInTheDocument();
+      fireEvent.click(screen.getByRole('button', { name: 'Keep Existing Key' }));
+      expect(screen.queryByLabelText('Steam Web API Key')).not.toBeInTheDocument();
+
+      // Mark for clearing -> undo -> mark again and save
+      fireEvent.click(screen.getByRole('button', { name: 'Clear Key' }));
+      expect(screen.getByText('Will Clear on Save')).toBeInTheDocument();
+      expect(
+        screen.getByText(/Stored Steam Web API key will be removed when you save changes/i),
+      ).toBeInTheDocument();
+
+      fireEvent.click(screen.getByRole('button', { name: 'Keep Existing Key' }));
+      expect(screen.getByText('API Key Stored & Encrypted')).toBeInTheDocument();
+
+      fireEvent.click(screen.getByRole('button', { name: 'Clear Key' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Save Changes' }));
+
+      await waitFor(() => {
+        expect(apiClient.steam.updateSettings).toHaveBeenCalledWith(
+          expect.objectContaining({
+            steamWebApiKey: null,
+          }),
+        );
+      });
     });
   });
 });

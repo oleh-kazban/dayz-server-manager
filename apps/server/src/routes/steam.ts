@@ -59,6 +59,7 @@ function mapSteamSettingsDetail(row: SteamSettings, storageStats?: StorageStats)
     workshopAppId: row.workshopAppId,
     branch: row.branch,
     hasBranchPassword: Boolean(row.branchPasswordEncrypted),
+    hasSteamWebApiKey: Boolean(row.steamWebApiKeyEncrypted),
     sessionStatus: row.sessionStatus,
     storageStats,
     createdAt: toSafeIsoDate(row.createdAt),
@@ -137,6 +138,7 @@ interface EncryptionResult {
   success: boolean;
   newSteamPassword?: string | null;
   newBranchPassword?: string | null;
+  newSteamWebApiKey?: string | null;
   errorCode?: ApiErrorCode;
   errorMessage?: string;
   statusCode?: number;
@@ -156,15 +158,37 @@ function encryptField(
   }
 }
 
+function resolveNullableEncryptedSecret(
+  rawValue: string | null | undefined,
+  currentEncrypted: string | null,
+  vaultKey: Buffer,
+  fieldLabel: string,
+): { value?: string | null; error?: string } {
+  if (rawValue === undefined) {
+    return { value: currentEncrypted };
+  }
+  const normalized = rawValue === null ? null : rawValue.trim();
+  const res = encryptField(normalized, vaultKey);
+  if (res.error) {
+    return { error: `Failed to encrypt ${fieldLabel}: ${res.error}` };
+  }
+  return { value: res.encrypted ?? null };
+}
+
 function resolveEncryptionSecrets(
   data: UpdateSteamSettingsDto,
   current: SteamSettings,
 ): EncryptionResult {
-  if (data.steamPassword === undefined && data.branchPassword === undefined) {
+  if (
+    data.steamPassword === undefined &&
+    data.branchPassword === undefined &&
+    data.steamWebApiKey === undefined
+  ) {
     return {
       success: true,
       newSteamPassword: current.steamPasswordEncrypted,
       newBranchPassword: current.branchPasswordEncrypted,
+      newSteamWebApiKey: current.steamWebApiKeyEncrypted,
     };
   }
 
@@ -192,24 +216,41 @@ function resolveEncryptionSecrets(
     newSteamPassword = res.encrypted ?? null;
   }
 
-  let newBranchPassword = current.branchPasswordEncrypted;
-  if (data.branchPassword !== undefined) {
-    const res = encryptField(data.branchPassword, vaultKey);
-    if (res.error) {
-      return {
-        success: false,
-        statusCode: 500,
-        errorCode: 'VAULT_ENCRYPTION_FAILED',
-        errorMessage: `Failed to encrypt branch password: ${res.error}`,
-      };
-    }
-    newBranchPassword = res.encrypted ?? null;
+  const branchResult = resolveNullableEncryptedSecret(
+    data.branchPassword,
+    current.branchPasswordEncrypted,
+    vaultKey,
+    'branch password',
+  );
+  if (branchResult.error) {
+    return {
+      success: false,
+      statusCode: 500,
+      errorCode: 'VAULT_ENCRYPTION_FAILED',
+      errorMessage: branchResult.error,
+    };
+  }
+
+  const apiKeyResult = resolveNullableEncryptedSecret(
+    data.steamWebApiKey,
+    current.steamWebApiKeyEncrypted,
+    vaultKey,
+    'Steam Web API key',
+  );
+  if (apiKeyResult.error) {
+    return {
+      success: false,
+      statusCode: 500,
+      errorCode: 'VAULT_ENCRYPTION_FAILED',
+      errorMessage: apiKeyResult.error,
+    };
   }
 
   return {
     success: true,
     newSteamPassword,
-    newBranchPassword,
+    newBranchPassword: branchResult.value ?? null,
+    newSteamWebApiKey: apiKeyResult.value ?? null,
   };
 }
 
@@ -297,6 +338,7 @@ export const registerSteamRoutes: FastifyPluginAsync = async fastify => {
           workshopAppId: data.workshopAppId ?? current.workshopAppId,
           branch: data.branch ?? current.branch,
           branchPasswordEncrypted: encryption.newBranchPassword,
+          steamWebApiKeyEncrypted: encryption.newSteamWebApiKey,
           updatedAt: new Date(),
         })
         .where(eq(steamSettings.id, 'default'))

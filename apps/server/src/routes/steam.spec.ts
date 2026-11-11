@@ -122,9 +122,12 @@ describe('Steam Routes (/api/v1/settings/steam)', () => {
       expect(parsed.workshopAppId).toBe(221100);
       expect(parsed.branch).toBe('public');
       expect(parsed.hasPassword).toBe(false);
+      expect(parsed.hasSteamWebApiKey).toBe(false);
       expect(body).not.toHaveProperty('steamPassword');
       expect(body).not.toHaveProperty('steamPasswordEncrypted');
       expect(body).not.toHaveProperty('branchPasswordEncrypted');
+      expect(body).not.toHaveProperty('steamWebApiKey');
+      expect(body).not.toHaveProperty('steamWebApiKeyEncrypted');
       expect(body).toHaveProperty('storageStats');
     });
 
@@ -313,6 +316,75 @@ describe('Steam Routes (/api/v1/settings/steam)', () => {
       expect(res.statusCode).toBe(400);
       const body = res.json();
       expect(body.errorCode).toBe('STORAGE_PATH_NOT_WRITABLE');
+    });
+
+    it('encrypts steamWebApiKey at rest, preserves when omitted, and clears when null or empty string', async () => {
+      const saveRes = await app.inject({
+        method: 'PATCH',
+        url: '/api/v1/settings/steam',
+        headers: { authorization: `Bearer ${adminToken}` },
+        payload: {
+          steamWebApiKey: 'STEAM_WEB_API_KEY_SECRET_1234',
+        },
+      });
+      expect(saveRes.statusCode).toBe(200);
+      const savedBody = saveRes.json();
+      expect(savedBody.hasSteamWebApiKey).toBe(true);
+      expect(savedBody).not.toHaveProperty('steamWebApiKey');
+      expect(savedBody).not.toHaveProperty('steamWebApiKeyEncrypted');
+
+      const rowAfterSave = dbInstance.db
+        .select()
+        .from(steamSettings)
+        .where(eq(steamSettings.id, 'default'))
+        .get()!;
+      expect(rowAfterSave.steamWebApiKeyEncrypted).toBeTruthy();
+      expect(rowAfterSave.steamWebApiKeyEncrypted).not.toBe('STEAM_WEB_API_KEY_SECRET_1234');
+      expect(decryptVaultSecret(rowAfterSave.steamWebApiKeyEncrypted!, resolveVaultKey())).toBe(
+        'STEAM_WEB_API_KEY_SECRET_1234',
+      );
+
+      // Omitting steamWebApiKey preserves encrypted value
+      const omitRes = await app.inject({
+        method: 'PATCH',
+        url: '/api/v1/settings/steam',
+        headers: { authorization: `Bearer ${adminToken}` },
+        payload: { branch: 'public' },
+      });
+      expect(omitRes.statusCode).toBe(200);
+      expect(omitRes.json().hasSteamWebApiKey).toBe(true);
+
+      // Sending null clears stored key
+      const clearNullRes = await app.inject({
+        method: 'PATCH',
+        url: '/api/v1/settings/steam',
+        headers: { authorization: `Bearer ${adminToken}` },
+        payload: { steamWebApiKey: null },
+      });
+      expect(clearNullRes.statusCode).toBe(200);
+      expect(clearNullRes.json().hasSteamWebApiKey).toBe(false);
+      const rowAfterClear = dbInstance.db
+        .select()
+        .from(steamSettings)
+        .where(eq(steamSettings.id, 'default'))
+        .get()!;
+      expect(rowAfterClear.steamWebApiKeyEncrypted).toBeNull();
+
+      // Re-save then clear via empty string
+      await app.inject({
+        method: 'PATCH',
+        url: '/api/v1/settings/steam',
+        headers: { authorization: `Bearer ${adminToken}` },
+        payload: { steamWebApiKey: 'TEMP_KEY' },
+      });
+      const clearEmptyRes = await app.inject({
+        method: 'PATCH',
+        url: '/api/v1/settings/steam',
+        headers: { authorization: `Bearer ${adminToken}` },
+        payload: { steamWebApiKey: '   ' },
+      });
+      expect(clearEmptyRes.statusCode).toBe(200);
+      expect(clearEmptyRes.json().hasSteamWebApiKey).toBe(false);
     });
   });
 

@@ -116,7 +116,7 @@ export function useSortableList<T>({
         targetIndex -= 1;
       }
 
-      if (isItemLocked?.(items[targetIndex])) {
+      if (targetIndex === sourceIndex || isItemLocked?.(items[targetIndex])) {
         handleDragEnd();
         return;
       }

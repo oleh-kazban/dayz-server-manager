@@ -1,8 +1,9 @@
 import { QueryClientProvider } from '@tanstack/react-query';
 import { createMemoryHistory, RouterProvider } from '@tanstack/react-router';
 import { render, screen, waitFor } from '@testing-library/react';
-import { beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { apiClient } from '@aegis/api-client';
 import {
   DEFAULT_MODULE_FLAGS,
   FeatureFlagsProvider,
@@ -81,6 +82,12 @@ function renderRoute(initialPath: string, auth = mockAdminAuth, flags = DEFAULT_
 describe('Router Topology & Navigation', () => {
   beforeEach(() => {
     authStorage.clear();
+    queryClient.clear();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+    queryClient.clear();
   });
 
   it('redirects unauthenticated users to /sign-in preserving target in search', async () => {
@@ -117,7 +124,33 @@ describe('Router Topology & Navigation', () => {
     });
   });
 
-  it('renders dummy Mods Management page on /mods when feature is enabled', async () => {
+  it('renders Mods Management page on /mods when feature is enabled', async () => {
+    const serverId = '11111111-1111-4111-a111-111111111111';
+    vi.spyOn(apiClient.servers, 'list').mockResolvedValue([
+      {
+        id: serverId,
+        name: 'DayZ (Local)',
+        description: null,
+        status: 'stopped',
+        gamePort: 2302,
+        queryPort: 27016,
+        rconPort: 2310,
+        isDefault: true,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      },
+    ]);
+    vi.spyOn(apiClient.mods, 'list').mockResolvedValue({
+      mods: [],
+      launchPreview: {
+        modFlag: '',
+        serverModFlag: '',
+        combinedArgs: [],
+        missingFolderCount: 0,
+      },
+      updateAvailableCount: 0,
+    });
+
     renderRoute('/mods', mockAdminAuth);
 
     await waitFor(() => {

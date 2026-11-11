@@ -17,9 +17,11 @@ import { registerAuthRoutes } from '../routes/auth';
 import { registerHealthRoutes } from '../routes/health';
 import { registerProfileRoutes } from '../routes/profile';
 import { registerRealtimeRoutes } from '../routes/realtime';
+import { registerServerModsRoutes } from '../routes/server-mods';
 import { registerServersRoutes } from '../routes/servers';
 import { registerSessionsRoutes } from '../routes/sessions';
 import { registerSteamRoutes } from '../routes/steam';
+import { registerWorkshopRoutes } from '../routes/workshop';
 import { sseHub } from '../services/realtime/sse-hub';
 import { sendApiError } from '../utils/api-error';
 
@@ -146,8 +148,10 @@ export function buildApp(options: BuildAppOptions): FastifyInstance {
   app.register(registerProfileRoutes, { prefix: '/api/v1/auth/profile' });
   app.register(registerSessionsRoutes, { prefix: '/api/v1/auth/sessions' });
   app.register(registerServersRoutes, { prefix: '/api/v1/servers' });
+  app.register(registerServerModsRoutes, { prefix: '/api/v1/servers' });
   app.register(registerRealtimeRoutes, { prefix: '/api/v1/realtime' });
   app.register(registerSteamRoutes, { prefix: '/api/v1/settings/steam' });
+  app.register(registerWorkshopRoutes, { prefix: '/api/v1/workshop' });
 
   return app;
 }

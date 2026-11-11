@@ -173,6 +173,49 @@ export const migrations: DsmMigration[] = [
       }
     },
   },
+  {
+    id: '0005_server_mods_and_steam_api_key',
+    name: 'Add steam_web_api_key_encrypted column and server_mods table',
+    up: (sqlite: Database.Database) => {
+      const steamCols = sqlite.pragma('table_info(steam_settings)') as { name: string }[];
+      const steamColNames = new Set(steamCols.map(c => c.name));
+
+      if (!steamColNames.has('steam_web_api_key_encrypted')) {
+        sqlite.exec('ALTER TABLE steam_settings ADD COLUMN steam_web_api_key_encrypted TEXT;');
+      }
+
+      sqlite.exec(`
+        CREATE TABLE IF NOT EXISTS server_mods (
+          id TEXT PRIMARY KEY,
+          server_id TEXT NOT NULL REFERENCES servers(id) ON DELETE CASCADE,
+          source_type TEXT NOT NULL DEFAULT 'workshop',
+          load_target TEXT NOT NULL DEFAULT 'client_server',
+          workshop_id TEXT,
+          folder_name TEXT NOT NULL,
+          name TEXT NOT NULL,
+          size_bytes INTEGER,
+          remote_updated_at INTEGER,
+          synced_workshop_updated_at INTEGER,
+          last_synced_at INTEGER,
+          enabled INTEGER NOT NULL DEFAULT 1,
+          load_order INTEGER NOT NULL DEFAULT 0,
+          created_at INTEGER NOT NULL,
+          updated_at INTEGER NOT NULL
+        );
+
+        CREATE INDEX IF NOT EXISTS idx_server_mods_server_order
+          ON server_mods(server_id, load_order);
+
+        CREATE UNIQUE INDEX IF NOT EXISTS uq_server_mods_server_workshop
+          ON server_mods(server_id, workshop_id)
+          WHERE workshop_id IS NOT NULL;
+
+        CREATE UNIQUE INDEX IF NOT EXISTS uq_server_mods_server_folder
+          ON server_mods(server_id, lower(folder_name))
+          WHERE folder_name != '';
+      `);
+    },
+  },
 ];
 
 export function runMigrations(sqlite: Database.Database): void {
