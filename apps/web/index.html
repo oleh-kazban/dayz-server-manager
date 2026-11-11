@@ -6,58 +6,27 @@
     <title>Aegis Console — DayZ Server Manager</title>
     <!-- prettier-ignore -->
     <script>
-      (function() {
-        try {
-          var r = localStorage.getItem('dsm-theme-settings') || localStorage.getItem('dsm-theme-preference');
-          if (!r) return;
-          var t = r;
-          try {
-            var p = JSON.parse(r);
-            if (p && typeof p === 'object') t = p.mode === 'dark' ? p.preferredDark || 'obsidian' : p.preferredLight || 'vanilla';
-          } catch (_) {}
-          if (t && typeof t === 'string') document.documentElement.setAttribute('data-theme', t);
-        } catch (_) {}
-      })();
+      (function(){try {var r=localStorage.getItem('dsm-theme-settings')||localStorage.getItem('dsm-theme-preference');if(!r)return;var t=r;try {var p=JSON.parse(r);if(p&&typeof p==='object')t=p.mode==='dark'?p.preferredDark||'obsidian':p.preferredLight||'vanilla';}catch(_){}if(t&&typeof t==='string')document.documentElement.setAttribute('data-theme',t);}catch(_){}})();
     </script>
     <!-- prettier-ignore -->
     <style>
-      :root { --splash-bg: #f0f4f8; --splash-fg-main: #1a2a46; --splash-fg-secondary: #273962; }
-      @media (prefers-color-scheme: dark) {
-        :root { --splash-bg: #090d12; --splash-fg-main: #f1f5f9; --splash-fg-secondary: #94a3b8; }
-      }
-      [data-theme='vanilla'], [data-theme='light'], [data-theme='darcula-light'], [data-theme='graphite-light'], [data-theme='tokyo-light'], [data-theme='catppuccin-latte'] {
-        --splash-bg: #f0f4f8; --splash-fg-main: #1a2a46; --splash-fg-secondary: #273962;
-      }
-      [data-theme='obsidian'], [data-theme='dark'], [data-theme='darcula'], [data-theme='graphite'], [data-theme='tokyo'], [data-theme='catppuccin'] {
-        --splash-bg: #090d12; --splash-fg-main: #f1f5f9; --splash-fg-secondary: #94a3b8;
-      }
-      html, body { margin: 0; padding: 0; }
-      #dsm-splash {
-        display: flex; align-items: center; justify-content: center; position: fixed; inset: 0;
-        min-height: 100vh; background-color: var(--splash-bg);
-      }
-      #dsm-splash .aegis-logo__leg--left, #dsm-splash .aegis-logo__bridge { fill: var(--splash-fg-main); }
-      #dsm-splash .aegis-logo__leg--right { fill: var(--splash-fg-secondary); }
-      .aegis-logo { display: block; overflow: visible; perspective: 900px; perspective-origin: 50% 50%; }
-      .aegis-logo__tent, .aegis-logo__bridge {
-        transform-box: fill-box; transform-style: preserve-3d; transform-origin: center center; will-change: transform;
-      }
-      .aegis-logo.is-loading .aegis-logo__tent { animation: aegis-tent-loading 8s infinite; }
-      .aegis-logo.is-loading .aegis-logo__bridge { animation: aegis-bridge-loading 8s infinite; }
-      @keyframes aegis-tent-loading {
-        0% { transform: rotateY(0deg); animation-timing-function: ease-in-out; }
-        37.5%, 100% { transform: rotateY(360deg); }
-      }
-      @keyframes aegis-bridge-loading {
-        0% { transform: rotateY(0deg) rotateX(0deg); animation-timing-function: ease-in-out; }
-        37.5% { transform: rotateY(-1080deg) rotateX(0deg); animation-timing-function: ease-in-out; }
-        75%, 100% { transform: rotateY(-1080deg) rotateX(1080deg); }
-      }
-      @media (prefers-reduced-motion: reduce) {
-        .aegis-logo.is-loading .aegis-logo__tent,
-        .aegis-logo.is-loading .aegis-logo__bridge { animation: none; }
-      }
-      .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border-width: 0; }
+      :root{--splash-bg:#f0f4f8;--splash-fg-main:#1d3048;--splash-fg-secondary:#53677f}
+      @media (prefers-color-scheme: dark){:root{--splash-bg: #090d12;--splash-fg-main:#f1f5f9;--splash-fg-secondary:#94a3b8}}
+      [data-theme='vanilla'],[data-theme='light'],[data-theme='darcula-light'],[data-theme='graphite-light'],[data-theme='tokyo-light'],[data-theme='catppuccin-latte']{--splash-bg:#f0f4f8;--splash-fg-main:#1d3048;--splash-fg-secondary:#53677f}
+      [data-theme='obsidian'],[data-theme='dark'],[data-theme='darcula'],[data-theme='graphite'],[data-theme='tokyo'],[data-theme='catppuccin']{--splash-bg:#090d12;--splash-fg-main:#f1f5f9;--splash-fg-secondary:#94a3b8}
+      [data-theme='darcula-light']{--splash-bg:#ebedf0}[data-theme='graphite-light']{--splash-bg:#ededef}[data-theme='tokyo-light']{--splash-bg:#dfe1eb}[data-theme='catppuccin-latte']{--splash-bg:#e6e9ef}[data-theme='darcula']{--splash-bg:#1e1f22}[data-theme='graphite']{--splash-bg:#101012}[data-theme='tokyo']{--splash-bg:#13141c}[data-theme='catppuccin']{--splash-bg:#11111b}
+      html,body{margin:0;padding:0}
+      #dsm-splash{display: flex;align-items: center;justify-content: center;position: fixed;inset:0;min-height:100vh;background-color:var(--splash-bg)}
+      #dsm-splash .aegis-logo__leg--left,#dsm-splash .aegis-logo__bridge{fill:var(--splash-fg-main)}
+      #dsm-splash .aegis-logo__leg--right{fill:var(--splash-fg-secondary)}
+      .aegis-logo{display:block;overflow:visible;perspective: 900px;perspective-origin:50% 50%}
+      .aegis-logo__tent,.aegis-logo__bridge{transform-box:fill-box;transform-style: preserve-3d;transform-origin:center center;will-change:transform}
+      .aegis-logo.is-loading .aegis-logo__tent{animation: aegis-tent-loading 8s infinite}
+      .aegis-logo.is-loading .aegis-logo__bridge{animation: aegis-bridge-loading 8s infinite}
+      @keyframes aegis-tent-loading{0%{transform:rotateY(0deg);animation-timing-function:ease-in-out}37.5%,100%{transform:rotateY(360deg)}}
+      @keyframes aegis-bridge-loading{0%{transform:rotateY(0deg) rotateX(0deg);animation-timing-function:ease-in-out}37.5%{transform:rotateY(-1080deg) rotateX(0deg);animation-timing-function:ease-in-out}75%,100%{transform:rotateY(-1080deg) rotateX(1080deg)}}
+      @media (prefers-reduced-motion: reduce){.aegis-logo.is-loading .aegis-logo__tent,.aegis-logo.is-loading .aegis-logo__bridge{animation: none}}
+      .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border-width:0}
     </style>
   </head>
   <body

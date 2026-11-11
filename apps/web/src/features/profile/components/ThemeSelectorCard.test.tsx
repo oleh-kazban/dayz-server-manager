@@ -52,7 +52,7 @@ describe('ThemeSelectorCard', () => {
     expect(screen.getByText('Darcula Classic')).toBeInTheDocument();
     expect(screen.getByText('Graphite Stealth')).toBeInTheDocument();
     expect(screen.getByText('Tokyo Night')).toBeInTheDocument();
-    expect(screen.getByText('Catppuccin Macchiato')).toBeInTheDocument();
+    expect(screen.getByText('Catppuccin Mocha')).toBeInTheDocument();
   });
 
   it('renders dark mode banner when active mode is dark', () => {
