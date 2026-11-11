@@ -524,7 +524,7 @@ describe('SteamSettingsView (REQ-01, REQ-02, REQ-03, REQ-04, REQ-07)', () => {
       });
 
       expect(screen.getByText('Not Configured')).toBeInTheDocument();
-      const apiKeyLink = screen.getByRole('link', { name: /steamcommunity\.com\/dev\/apikey/i });
+      const apiKeyLink = screen.getByRole('link', { name: 'steamcommunity.com/dev/apikey' });
       expect(apiKeyLink).toHaveAttribute('href', 'https://steamcommunity.com/dev/apikey');
 
       const keyInput = screen.getByLabelText('Steam Web API Key');
