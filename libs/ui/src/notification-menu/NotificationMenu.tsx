@@ -280,6 +280,7 @@ export function NotificationMenu({
   };
 
   const unreadCount = notifications.filter(n => !n.read).length;
+  const shouldAnimateBell = unreadCount > 0 && !isOpen && !disabled;
   const computedAriaLabel =
     ariaLabel ??
     (unreadCount > 0 ? `Notifications (${unreadCount} unread)` : 'Notifications (no unread)');
@@ -300,9 +301,16 @@ export function NotificationMenu({
           isOpen ? 'bg-[var(--color-surface-hover)] border-[var(--color-border-hover)]' : ''
         } ${className}`.trim()}
       >
-        {triggerIcon ?? (
-          <Bell className="w-4 h-4 text-[var(--color-text-main)]" aria-hidden="true" />
-        )}
+        <span
+          className={`inline-flex items-center justify-center ${shouldAnimateBell ? 'animate-bell-ring' : ''}`.trim()}
+        >
+          {triggerIcon ?? (
+            <Bell
+              className="w-4 h-4 overflow-visible text-[var(--color-text-main)]"
+              aria-hidden="true"
+            />
+          )}
+        </span>
 
         {unreadCount > 0 && (
           <span
