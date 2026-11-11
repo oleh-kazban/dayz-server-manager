@@ -114,6 +114,14 @@ export const AllRead: StoryObj<typeof NotificationMenu> = {
   ),
 };
 
+export const DisabledWithUnread: StoryObj<typeof NotificationMenu> = {
+  render: () => (
+    <div className="flex items-center justify-center p-12">
+      <NotificationMenu notifications={INITIAL_NOTIFICATIONS} disabled />
+    </div>
+  ),
+};
+
 export const InHeaderNavbarShowcase: StoryObj<typeof NotificationMenu> = {
   render: () => {
     const [notifications, setNotifications] = useState(INITIAL_NOTIFICATIONS);

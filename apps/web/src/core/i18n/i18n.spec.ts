@@ -4,7 +4,7 @@ import { ApiError } from '@aegis/api-client';
 import { apiErrorCodeSchema } from '@aegis/api-contracts';
 import { showToast } from '@aegis/ui';
 
-import { notifyApiError, notifySuccess } from '../notifications';
+import { notifyApiError, notifySuccess, useNotificationStore } from '../notifications';
 
 import {
   enUSTranslations,
@@ -29,6 +29,7 @@ vi.mock('@aegis/ui', async importOriginal => {
 describe('i18n Error & Notification Resolution', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    useNotificationStore.setState({ notifications: [] });
   });
 
   describe('Boundary Contract Drift Guard', () => {

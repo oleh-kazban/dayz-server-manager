@@ -13,7 +13,7 @@ import {
   X,
 } from 'lucide-react';
 
-import { usePopup } from '../hooks';
+import { type Alignment, type PopupPosition, usePopup } from '../hooks';
 import { formatTimestamp } from '../utils';
 
 import {
@@ -85,9 +85,15 @@ interface NotificationItemRowProps {
   item: NotificationItem;
   onItemClick?: (item: NotificationItem) => void;
   onDismissItem?: (id: string) => void;
+  onActionClose?: () => void;
 }
 
-function NotificationItemRow({ item, onItemClick, onDismissItem }: NotificationItemRowProps) {
+function NotificationItemRow({
+  item,
+  onItemClick,
+  onDismissItem,
+  onActionClose,
+}: NotificationItemRowProps) {
   const severity = item.severity ?? 'info';
   const config = SEVERITY_CONFIG[severity];
   const IconComponent = config.icon;
@@ -181,8 +187,11 @@ function NotificationItemRow({ item, onItemClick, onDismissItem }: NotificationI
         {item.actionLabel && item.onAction && (
           <button
             type="button"
-            onClick={() => item.onAction?.(item)}
-            className="mt-2 inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-[11px] font-semibold bg-[var(--color-primary-light)] text-[var(--color-primary)] hover:bg-[var(--color-primary)] hover:text-white transition-colors cursor-pointer"
+            onClick={() => {
+              item.onAction?.(item);
+              onActionClose?.();
+            }}
+            className="mt-2 self-start inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-[11px] font-semibold bg-[var(--color-primary-light)] text-[var(--color-primary)] hover:bg-[var(--color-primary)] hover:text-white transition-colors cursor-pointer"
           >
             <span>{item.actionLabel}</span>
             <span aria-hidden="true">&rarr;</span>
@@ -227,6 +236,19 @@ function NotificationEmptyState({
   );
 }
 
+function getPopupTransformOrigin(
+  popupPosition: PopupPosition | null,
+  alignment: Alignment,
+): string | undefined {
+  if (!popupPosition) {
+    return undefined;
+  }
+
+  const vertical = popupPosition.placement === 'top' ? 'bottom' : 'top';
+  const horizontal = alignment === 'end' ? 'right' : 'left';
+  return `${vertical} ${horizontal}`;
+}
+
 export function NotificationMenu({
   ref,
   notifications,
@@ -249,6 +271,7 @@ export function NotificationMenu({
 
   const { isOpen, close, toggle, popupPosition, containerRef, triggerRef, popupRef } =
     usePopup(alignment);
+  const isPositioned = popupPosition !== null;
 
   const handleTriggerRef = (element: HTMLButtonElement | null) => {
     triggerRef.current = element;
@@ -266,10 +289,10 @@ export function NotificationMenu({
   }, [disabled, isOpen, close]);
 
   useEffect(() => {
-    if (isOpen) {
+    if (isOpen && isPositioned) {
       popupRef.current?.focus();
     }
-  }, [isOpen, popupRef]);
+  }, [isOpen, isPositioned, popupRef]);
 
   const handleKeyDown = (event: ReactKeyboardEvent<HTMLDivElement>) => {
     if (event.key === 'Escape') {
@@ -280,9 +303,11 @@ export function NotificationMenu({
   };
 
   const unreadCount = notifications.filter(n => !n.read).length;
+  const shouldAnimateBell = unreadCount > 0 && !isOpen && !disabled;
   const computedAriaLabel =
     ariaLabel ??
     (unreadCount > 0 ? `Notifications (${unreadCount} unread)` : 'Notifications (no unread)');
+  const transformOrigin = getPopupTransformOrigin(popupPosition, alignment);
 
   return (
     <div ref={containerRef} className="relative inline-block text-left">
@@ -300,9 +325,16 @@ export function NotificationMenu({
           isOpen ? 'bg-[var(--color-surface-hover)] border-[var(--color-border-hover)]' : ''
         } ${className}`.trim()}
       >
-        {triggerIcon ?? (
-          <Bell className="w-4 h-4 text-[var(--color-text-main)]" aria-hidden="true" />
-        )}
+        <span
+          className={`inline-flex items-center justify-center ${shouldAnimateBell ? 'animate-bell-ring' : ''}`.trim()}
+        >
+          {triggerIcon ?? (
+            <Bell
+              className="w-4 h-4 overflow-visible text-[var(--color-text-main)]"
+              aria-hidden="true"
+            />
+          )}
+        </span>
 
         {unreadCount > 0 && (
           <span
@@ -325,12 +357,17 @@ export function NotificationMenu({
             onKeyDown={handleKeyDown}
             style={{
               position: 'fixed',
-              top: popupPosition ? `${popupPosition.top}px` : '0px',
-              left: popupPosition ? `${popupPosition.left}px` : '0px',
+              top: popupPosition ? `${popupPosition.top}px` : '-9999px',
+              left: popupPosition ? `${popupPosition.left}px` : '-9999px',
               zIndex: 50,
-              visibility: popupPosition ? 'visible' : 'hidden',
+              visibility: isPositioned ? 'visible' : 'hidden',
+              opacity: isPositioned ? 1 : 0,
+              pointerEvents: isPositioned ? 'auto' : 'none',
+              transformOrigin,
             }}
-            className={`w-96 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-[var(--shadow-dropdown)] overflow-hidden font-sans select-none animate-in fade-in zoom-in-95 duration-100 flex flex-col focus:outline-none ${popupClassName}`.trim()}
+            className={`w-96 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-[var(--shadow-dropdown)] overflow-hidden font-sans select-none ${
+              isPositioned ? 'animate-popup-enter' : ''
+            } flex flex-col focus:outline-none ${popupClassName}`.trim()}
           >
             {/* Header */}
             <NotificationHeader unreadCount={unreadCount} onMarkAllAsRead={onMarkAllAsRead} />
@@ -346,6 +383,7 @@ export function NotificationMenu({
                     item={item}
                     onItemClick={onItemClick}
                     onDismissItem={onDismissItem}
+                    onActionClose={close}
                   />
                 ))
               )}

@@ -4,7 +4,7 @@ import { QueryClientProvider } from '@tanstack/react-query';
 import { render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { FeatureFlagsProvider, queryClient } from '@aegis/web/core';
+import { FeatureFlagsProvider, queryClient, useNotificationStore } from '@aegis/web/core';
 import { AuthProvider } from '@aegis/web/features/auth';
 import { ThemeProvider } from '@aegis/web/features/theme';
 
@@ -40,6 +40,7 @@ vi.mock('@tanstack/react-router', () => ({
 describe('AppShell', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    useNotificationStore.setState({ notifications: [] });
   });
 
   it('renders Sidebar, Header, and page content within the layout frame', () => {

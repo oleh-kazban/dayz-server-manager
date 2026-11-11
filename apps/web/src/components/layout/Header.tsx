@@ -1,9 +1,19 @@
-import { useEffect } from 'react';
+import { useContext, useEffect, useRef } from 'react';
 
 import { Link, useLocation, useMatches } from '@tanstack/react-router';
 import { Bell, ChevronRight, HelpCircle, Menu, Search, Settings } from 'lucide-react';
 
-import { useActiveServer, useLayoutStore, useNavigationContext } from '@aegis/web/core';
+import { NotificationMenu } from '@aegis/ui';
+import {
+  acknowledgeGreeting,
+  getUserGreetingNotificationId,
+  isGreetingAcknowledged,
+  useActiveServer,
+  useLayoutStore,
+  useNavigationContext,
+  useNotificationStore,
+} from '@aegis/web/core';
+import { AuthContext } from '@aegis/web/features/auth';
 import { FaqModal, useFaqStore } from '@aegis/web/features/faq';
 import { ThemeToggleButton } from '@aegis/web/features/theme';
 
@@ -162,6 +172,14 @@ export function Header() {
   const { activeServer, isLoading } = useActiveServer();
   const { scope, isAppliance } = useNavigationContext();
   const { isOpen: isFaqOpen, toggleModal: toggleFaqModal } = useFaqStore();
+  const authContext = useContext(AuthContext);
+  const user = authContext?.user ?? null;
+  const prevUserIdRef = useRef<string | null>(null);
+  const notifications = useNotificationStore(state => state.notifications);
+  const addNotification = useNotificationStore(state => state.addNotification);
+  const markAsRead = useNotificationStore(state => state.markAsRead);
+  const markAllAsRead = useNotificationStore(state => state.markAllAsRead);
+  const dismissNotification = useNotificationStore(state => state.dismissNotification);
   const location = useLocation();
   const matches = useMatches();
   const pathname = location?.pathname ?? '/dashboard';
@@ -171,6 +189,37 @@ export function Header() {
     .find(match => Boolean(match.staticData?.breadcrumb))?.staticData?.breadcrumb;
   const subpageLabel =
     matchedBreadcrumb ?? (pathname.startsWith('/settings') ? 'Settings' : undefined);
+
+  useEffect(() => {
+    const previousUserId = prevUserIdRef.current;
+    const currentUserId = user?.id ?? null;
+
+    if (previousUserId && previousUserId !== currentUserId) {
+      dismissNotification(getUserGreetingNotificationId(previousUserId));
+    }
+
+    prevUserIdRef.current = currentUserId;
+
+    if (!user || isGreetingAcknowledged(user.id)) {
+      return;
+    }
+
+    const displayName = user.displayName?.trim() || user.username.trim() || 'Operator';
+    const operatorId = user.id;
+
+    addNotification({
+      id: getUserGreetingNotificationId(operatorId),
+      title: `Welcome to Aegis Console, ${displayName}`,
+      description: 'Review the operator FAQ for server controls, mod keys, and troubleshooting.',
+      severity: 'info',
+      actionLabel: 'Open FAQ',
+      onAction: item => {
+        markAsRead(item.id);
+        acknowledgeGreeting(operatorId);
+        useFaqStore.getState().openModal('faq');
+      },
+    });
+  }, [user, addNotification, dismissNotification, markAsRead]);
 
   // GUARD-02: Keyboard Shortcut Input Collision Guard
   useEffect(() => {
@@ -248,14 +297,35 @@ export function Header() {
           </div>
 
           {/* Notification Bell */}
-          <button
-            type="button"
-            aria-label="Notifications"
-            className="relative p-2 rounded-lg text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-hover)] hover:text-[var(--color-text-main)] transition-colors"
-          >
-            <Bell className="w-[19px] h-[19px]" />
-            <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full bg-[var(--color-primary)] ring-2 ring-[var(--color-surface)]" />
-          </button>
+          <NotificationMenu
+            notifications={notifications}
+            onItemClick={item => {
+              markAsRead(item.id);
+              if (user && item.id === getUserGreetingNotificationId(user.id)) {
+                acknowledgeGreeting(user.id);
+              }
+            }}
+            onMarkAllAsRead={() => {
+              if (
+                user &&
+                notifications.some(item => item.id === getUserGreetingNotificationId(user.id))
+              ) {
+                acknowledgeGreeting(user.id);
+              }
+              markAllAsRead();
+            }}
+            onDismissItem={id => {
+              if (user && id === getUserGreetingNotificationId(user.id)) {
+                acknowledgeGreeting(user.id);
+              }
+              dismissNotification(id);
+            }}
+            emptyText="No notifications yet"
+            emptyDescription="Server alerts and operation updates will appear here"
+            alignment="end"
+            className="border-0 bg-transparent shadow-none text-[var(--color-text-secondary)] hover:text-[var(--color-text-main)]"
+            triggerIcon={<Bell className="w-[19px] h-[19px] overflow-visible" aria-hidden="true" />}
+          />
 
           {/* Appliance Administration Gear */}
           <Link

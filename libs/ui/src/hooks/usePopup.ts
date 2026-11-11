@@ -25,8 +25,17 @@ export function usePopup<TTrigger extends HTMLElement = HTMLButtonElement>(
   const popupRef = useRef<HTMLDivElement>(null);
 
   const open = useCallback(() => setIsOpen(true), []);
-  const close = useCallback(() => setIsOpen(false), []);
-  const toggle = useCallback(() => setIsOpen(prev => !prev), []);
+  const close = useCallback(() => {
+    setIsOpen(false);
+    setPopupPosition(null);
+  }, []);
+  const toggle = useCallback(() => {
+    if (isOpen) {
+      close();
+    } else {
+      open();
+    }
+  }, [isOpen, close, open]);
 
   const updatePlacement = useCallback(() => {
     const trigger = triggerRef.current;
@@ -52,7 +61,8 @@ export function usePopup<TTrigger extends HTMLElement = HTMLButtonElement>(
     const maxHeight = placement === 'bottom' ? availableBelow : availableAbove;
     const renderedHeight = Math.min(popupHeight, maxHeight);
     const maxWidth = Math.max(0, window.innerWidth - 2 * VIEWPORT_PADDING);
-    const effectivePopupWidth = popupRect.width > 0 ? popupRect.width : triggerRect.width;
+    const measuredPopupWidth = popup.offsetWidth > 0 ? popup.offsetWidth : popupRect.width;
+    const effectivePopupWidth = measuredPopupWidth > 0 ? measuredPopupWidth : triggerRect.width;
     const preferredLeft =
       alignment === 'start' ? triggerRect.left : triggerRect.right - effectivePopupWidth;
     const maxLeft = Math.max(
@@ -65,7 +75,21 @@ export function usePopup<TTrigger extends HTMLElement = HTMLButtonElement>(
         ? triggerRect.bottom + POPUP_GAP
         : triggerRect.top - POPUP_GAP - renderedHeight;
 
-    setPopupPosition({ top, left, width, maxHeight, maxWidth, placement });
+    setPopupPosition(prev => {
+      if (
+        prev &&
+        prev.top === top &&
+        prev.left === left &&
+        prev.width === width &&
+        prev.maxHeight === maxHeight &&
+        prev.maxWidth === maxWidth &&
+        prev.placement === placement
+      ) {
+        return prev;
+      }
+
+      return { top, left, width, maxHeight, maxWidth, placement };
+    });
   }, [alignment]);
 
   useLayoutEffect(() => {
@@ -106,13 +130,13 @@ export function usePopup<TTrigger extends HTMLElement = HTMLButtonElement>(
         !containerRef.current?.contains(event.target) &&
         !popupRef.current?.contains(event.target)
       ) {
-        setIsOpen(false);
+        close();
       }
     };
 
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
-        setIsOpen(false);
+        close();
         const target = triggerRef.current;
         if (target) {
           if (typeof target.focus === 'function' && target.tabIndex >= 0) {
@@ -140,14 +164,14 @@ export function usePopup<TTrigger extends HTMLElement = HTMLButtonElement>(
       document.removeEventListener('focusin', handleOutsideInteraction);
       document.removeEventListener('keydown', handleKeyDown);
     };
-  }, [isOpen]);
+  }, [isOpen, close]);
 
   return {
     isOpen,
     open,
     close,
     toggle,
-    popupPosition,
+    popupPosition: isOpen ? popupPosition : null,
     containerRef,
     triggerRef,
     popupRef,
