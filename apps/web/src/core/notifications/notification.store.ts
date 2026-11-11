@@ -5,6 +5,7 @@ import type { NotificationItem, NotificationSeverity } from '@aegis/ui';
 export const MAX_NOTIFICATIONS = 50;
 
 export interface AddNotificationInput {
+  id?: string;
   title: string;
   description?: string;
   severity?: NotificationSeverity;
@@ -33,7 +34,7 @@ function createNotificationId(): string {
   return `notif-${Date.now()}-${fallbackSequence}`;
 }
 
-export const useNotificationStore = create<NotificationState>(set => ({
+export const useNotificationStore = create<NotificationState>((set, get) => ({
   notifications: [],
 
   addNotification: input => {
@@ -42,9 +43,23 @@ export const useNotificationStore = create<NotificationState>(set => ({
       return null;
     }
 
+    let resolvedId: string;
+    if (input.id !== undefined) {
+      const trimmedId = input.id.trim();
+      if (trimmedId.length === 0) {
+        return null;
+      }
+      if (get().notifications.some(existing => existing.id === trimmedId)) {
+        return null;
+      }
+      resolvedId = trimmedId;
+    } else {
+      resolvedId = createNotificationId();
+    }
+
     const item: NotificationItem = {
       ...input,
-      id: createNotificationId(),
+      id: resolvedId,
       title: trimmedTitle,
       severity: input.severity ?? 'info',
       read: input.read ?? false,
