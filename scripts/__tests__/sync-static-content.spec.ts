@@ -322,6 +322,31 @@ describe('sync-static-content pipeline', () => {
         'Process lifecycle, RCON console, server health polling.',
       );
     });
+
+    it('parses annotated DONE status and parenthetical Included / Excluded scope labels', () => {
+      const annotatedBacklog = `
+### [DSM-00119] Mods Management Workbench
+- **Type**: \`Story\`
+- **Priority**: \`P1 (High)\`
+- **Status**: \`DONE\` (Phase 1 delivered; Phase 2 split)
+- **Depends On**: \`DSM-00105\`
+- **High-Level Requirements**:
+  Manage Steam Workshop mods and load order.
+- **Scope Boundaries**:
+  - **Included (Phase 1 — Delivered)**:
+    - Server-scoped mod inventory
+    - Drag-and-drop load order sequencing
+  - **Excluded / Deferred (Phase 2)**:
+    - Automated SteamCMD binary downloads
+`;
+      const items = parseDoneBacklogItems(annotatedBacklog);
+      expect(items).toHaveLength(1);
+      expect(items[0].status).toBe('DONE');
+      expect(items[0].scopeIncluded).toBe(
+        '- Server-scoped mod inventory\n- Drag-and-drop load order sequencing',
+      );
+      expect(items[0].scopeExcluded).toBe('- Automated SteamCMD binary downloads');
+    });
   });
 
   describe('generateReleaseHistory', () => {

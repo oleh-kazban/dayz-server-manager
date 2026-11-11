@@ -4,6 +4,141 @@ This document records all completed product backlog items and operational featur
 
 ---
 
+## [DSM-00135] DayZ 6-Pair Theme Palette System (Cold, Neutral, Warm) and 3x2 Selector Grid
+
+- **Type**: `Story`
+- **Priority**: `P2 (Medium)`
+- **Status**: `DONE`
+- **Dependencies**: `DSM-00110, DSM-00134`
+
+### Summary
+
+Replace the near-identical cool-blue theme clones with 6 distinct DayZ-inspired light/dark theme pairs organized evenly into 2 Cold (`Namalsk Day`/`Namalsk Night` preserving the `vanilla`/`obsidian` color schemes, `Frostline Day`/`Sakhal Night`), 2 Neutral (`Chernarus Overcast`/`Tisy Bunker`, `Livonia Clearing`/`Nadbor Pine`), and 2 Warm (`Badlands Sun`/`Badlands Dusk`, `Krasno Dawn`/`Signal Flare`) palettes. Preserve pure `#ffffff` card surfaces across light themes while tinting canvas, sidebar, subtle wells, borders, and accents with $\ge 4.5:1$ WCAG AA contrast, and upgrade `ThemeSelectorCard` to a balanced 3x2 (`lg:grid-cols-3`) grid with legacy `localStorage` ID migration.
+
+### Delivered Capabilities
+
+- Complete 12-theme CSS variable definitions in `libs/ui/src/styles/themes.css` and synchronized Storybook toolbar items (`libs/ui/.storybook/preview.tsx`).
+- Updated `lightThemeIdSchema` / `darkThemeIdSchema` and legacy ID preprocessing in `apps/web/src/features/theme/theme.types.ts`.
+- Updated `LIGHT_THEMES` / `DARK_THEMES` metadata (`useThemePreference.ts`), 3x2 `ThemePaletteGrid` (`ThemeSelectorCard.tsx`), and compact per-theme splash backgrounds in `apps/web/index.html` within the 4KB `GUARD-01` budget.
+- Updated unit tests across `ThemeProvider.test.tsx`, `useThemePreference.test.ts`, `ThemeSelectorCard.test.tsx`, and `splash.spec.ts`.
+
+---
+
+## [DSM-00134] Aegis Theme Token Resolution (`@theme inline`), Contrast Hardening, and Transition Freeze
+
+- **Type**: `Bug`
+- **Priority**: `P1 (High)`
+- **Status**: `DONE`
+- **Dependencies**: `DSM-00105, DSM-00106, DSM-00110`
+
+### Summary
+
+Resolve systemic Tailwind v4 `@theme` `:root` scoping leaks, hardcoded `text-white` overrides on dark accents, missing `--color-info*`/`--color-success-fg`/`--color-surface-elevated` tokens, translucent dark toasts, undefined CSS variables (`--color-primary-subtle`, `--color-danger-soft`, `ui-card`), and theme-toggle color smearing identified during live Playwright + semantic redline audits.
+
+### Delivered Capabilities
+
+- `@theme inline` migration in `libs/ui/src/styles/theme.css` and root `data-theme` synchronization in Storybook (`StorybookThemeFrame`).
+- Semantic `*-fg` foreground tokens across `Button`, `Tag`, `StatusTag`, `NotificationMenu`, `Pagination`, `TagSelect`, `DatePicker`, and `RootFallback`, plus opaque base backing on `CustomToast`.
+- Cleanup of undefined tokens, raw Tailwind palette leaks, and chrome emojis across `apps/web` and `libs/ui`.
+- 1-frame `.theme-switching` transition freeze in `ThemeProvider` and replacement of all 17 `transition-all` declarations with explicit compositor/color transitions.
+
+---
+
+## [DSM-00132] Animated Unread Notification Bell, Notification Store, and Popup Positioning
+
+- **Type**: `Story`
+- **Priority**: `P1 (High)`
+- **Status**: `DONE`
+- **Dependencies**: `DSM-00105, DSM-00108, DSM-00121`
+
+### Summary
+
+Replace the static header notification bell with a live `NotificationMenu` backed by a bounded client notification store (`notification.store.ts`) bridged from toast dispatches (`notify.ts`). Add a `prefers-reduced-motion`-safe bell-ring keyframe animation when unread notifications exist, deliver a persisted per-user FAQ greeting notification in `Header`, and eliminate popup coordinate fly-in glitches in `usePopup` via compositor `popup-enter` animation and pre-placement display deferral.
+
+### Delivered Capabilities
+
+- Bounded client notification store (`notification.store.ts`), toast-to-notification bridge (`notify.ts`), and per-user FAQ greeting persistence (`greeting.storage.ts`).
+- Animated unread bell keyframes (`keyframes.css`), `NotificationMenu` unread/action wiring, and `Header` integration.
+- `usePopup` coordinate reset on close, `offsetWidth` placement lock, and compositor `popup-enter` animation with full Vitest test suites.
+
+---
+
+## [DSM-00131] Multi-Agent SKILL.md Presets, UI/UX Design, and Security Audit Workflows
+
+- **Type**: `Task`
+- **Priority**: `P2 (Medium)`
+- **Status**: `DONE`
+- **Dependencies**: `DSM-00104`
+
+### Summary
+
+Migrate workspace agent skills into standardized `.agents/skills/*/SKILL.md` directories, wire `.agents/skills.json` to `sdlc-skills-repo` presets, and introduce DSM-specific `ui-ux-design` and `security-audit` skill specifications synchronized with `.github/copilot-instructions.md`.
+
+### Delivered Capabilities
+
+- Migration of `code-convention`, `code-review`, `feature-implementation`, `react-styleguide`, `tests-implementation`, `typescript-styleguide`, and `webapp-testing` to `SKILL.md` folders.
+- New `.agents/skills/ui-ux-design/SKILL.md` (Aegis `h-9` geometry, dual-theme tokens, 9-pass redline protocol) and `.agents/skills/security-audit/SKILL.md`.
+- Updated `.agents/skills.json` and `.github/copilot-instructions.md`.
+
+---
+
+## [DSM-00130] Multi-Line Release History Sync and Static Content Parser Hardening
+
+- **Type**: `Bug`
+- **Priority**: `P1 (High)`
+- **Status**: `DONE`
+- **Dependencies**: `DSM-00121`
+
+### Summary
+
+Harden `scripts/sync-static-content.ts` so `history.md` generation reliably preserves multi-line nested Markdown bullet lists, blank lines, CRLF normalization, and single trailing EOF newlines across consecutive runs. Ensure `parseDoneBacklogItems` also handles annotated `DONE` status suffixes and parenthetical scope qualifiers (`Included (...)` / `Excluded / Deferred (...)`) without silently dropping merged PBIs.
+
+### Delivered Capabilities
+
+- Multi-line block extraction (`extractContinuationLines`, `dedentBlockLines`), CRLF/LF normalization, and idempotent `history.md` output in `scripts/sync-static-content.ts`.
+- Support for annotated `DONE` statuses and parenthetical `Included (...)` / `Excluded / Deferred (...)` labels in `parseBacklogSection` and `parseScopeField`.
+- Comprehensive Vitest unit coverage in `scripts/__tests__/sync-static-content.spec.ts`.
+
+---
+
+## [DSM-00129] Toolchain Modernization, Parallel CI/PR Workflows, and Automated PR Summary
+
+- **Type**: `Task`
+- **Priority**: `P1 (High)`
+- **Status**: `DONE`
+- **Dependencies**: `DSM-00104`
+
+### Summary
+
+Upgrade critical runtime, security, Storybook 10.x, ESLint, and Vitest dependencies with exact version pinning, split CI and PR validation pipelines into parallel check jobs with job-scoped Nx caching and path filters, fix cycle-check path alias resolution, and modernize the automated PR architectural summary generator script.
+
+### Delivered Capabilities
+
+- Dependency updates across `package.json` and `pnpm-lock.yaml`, plus shared `.github/actions/setup-workspace/action.yml`.
+- Parallelized `.github/workflows/ci.yaml` and `.github/workflows/pr-validation.yaml` pipelines, CodeQL/Sonar/Storybook workflow hardening, and removal of redundant `sonar-fork-pr.yaml`.
+- Updated `.github/scripts/generate-pr-summary.cjs` and `.github/scripts/normalize-lcov.cjs`, plus cycle-check path alias fixes (`Header.tsx`).
+
+---
+
+## [DSM-00128] Aegis Console Rebrand, Namespace Migration (`@aegis/*`), and Brand Header Interaction
+
+- **Type**: `Story`
+- **Priority**: `P1 (High)`
+- **Status**: `DONE`
+- **Dependencies**: `DSM-00101, DSM-00105`
+
+### Summary
+
+Rebrand the workspace and runtime console from `@dsm/*` / Outlive to `@aegis/*` / Aegis Console across `apps/web`, `apps/server`, `libs/*`, TypeScript path mappings, Vite/Vitest/Storybook resolvers, and agent documentation. Clean up the footer layout by removing the duplicate animated logo and elevate the brand header lockup into a `/dashboard` navigation link featuring an SVG-isolated 3D hover animation easter egg.
+
+### Delivered Capabilities
+
+- Full package/import migration from `@dsm/*` to `@aegis/*` across `tsconfig.base.json`, `eslint.config.js`, `libs/ui/package.json`, `apps/web`, `apps/server`, and `libs/*`.
+- Aegis Console branding across `index.html`, `Sidebar`, and `libs/ui` stories.
+- SVG-isolated `.aegis-logo.animate-on-hover:hover` 3D rotation easter egg, clickable `/dashboard` brand header link with mobile drawer close, and duplicate footer logo removal.
+
+---
+
 ## [DSM-00126] Steam Integration Workbench, Interactive Authentication, and Credential Vault
 
 - **Type**: `Story`
@@ -42,6 +177,25 @@ Establish an automated static documentation packaging pipeline and deliver an ac
 ### Delivered Capabilities
 
 Root `faq.md` cheatsheet; `README.md` references to FAQ and version history; `scripts/sync-static-content.ts` asset sync and history generator; pre-build integration in `apps/web`; `useStaticDoc` TanStack Query hook; accessible `FaqModal` with `marked` rendering and search filtering; header `(?)` button integration.
+
+---
+
+## [DSM-00119] Steam Workshop Mod Management, Load Order, and Key Distribution (Phase 1)
+
+- **Type**: `Story`
+- **Priority**: `P1 (High)`
+- **Status**: `DONE`
+- **Dependencies**: `DSM-00105, DSM-00126`
+
+### Summary
+
+Deliver the foundational mod lifecycle workbench at `/mods` alongside Steam Workshop lookup/search APIs and server-scoped mod persistence (`server_mods` SQLite schema & migration `0005`). Provide drag-and-drop and keyboard load order sequencing (`useSortableList`), batch/local/Workshop mod CRUD, encrypted Steam Web API key storage (`steam_settings`), upstream Workshop update detection, sortable columns with column visibility persistence, and a read-only `-mod=` / `-serverMod=` launch parameter preview.
+
+### Delivered Capabilities
+
+- Server-scoped mod inventory (`server_mods` SQLite schema & migration `0005`) and Zod contracts/client endpoints in `libs/api-contracts` and `libs/api-client`.
+- Steam Workshop item/collection lookup, keyword search, and encrypted Steam Web API key storage in `steam_settings`.
+- Interactive `/mods` workbench with single/batch/local mod CRUD (`AddModModal`, `EditModModal`), upstream update detection & sync acknowledgement, drag-and-drop/keyboard load order sequencing (`useSortableList`), sortable columns, column configurator, and read-only `-mod=` / `-serverMod=` launch flag preview.
 
 ---
 
