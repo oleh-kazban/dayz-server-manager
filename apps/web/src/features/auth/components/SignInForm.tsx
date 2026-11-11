@@ -73,7 +73,7 @@ export function SignInForm() {
           {errors.root?.message && (
             <div
               role="alert"
-              className="p-3 text-xs rounded-lg border border-[var(--color-danger)]/30 bg-[var(--color-danger-soft)] text-[var(--color-danger)] font-medium"
+              className="p-3 text-xs rounded-lg border border-[var(--color-status-danger-border)] bg-[var(--color-status-danger-light)] text-[var(--color-status-danger)] font-medium"
             >
               {errors.root.message}
             </div>

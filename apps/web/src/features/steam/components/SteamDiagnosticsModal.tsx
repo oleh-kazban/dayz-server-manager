@@ -75,9 +75,9 @@ function DiagnosticLogsViewer({ logs }: { logs: string[] }) {
       <span className="block text-xs font-semibold text-[var(--color-text-muted)] uppercase tracking-wider">
         SteamCMD Execution Log
       </span>
-      <div className="h-48 overflow-y-auto rounded-xl border border-[var(--color-border)] bg-black/80 p-3 font-mono text-xs text-zinc-300 space-y-1">
+      <div className="h-48 overflow-y-auto rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-subtle)] p-3 font-mono text-xs text-[var(--color-text-main)] space-y-1">
         {logs.length === 0 ? (
-          <p className="text-zinc-500 italic">No output logged.</p>
+          <p className="text-[var(--color-text-muted)] italic">No output logged.</p>
         ) : (
           logs.map((line, idx) => (
             <div key={idx} className="whitespace-pre-wrap break-all">
@@ -108,7 +108,7 @@ export function SteamDiagnosticsModal({
       <div className="w-full max-w-2xl max-h-[90vh] flex flex-col rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-[var(--shadow-card)] p-6 space-y-5 animate-in fade-in zoom-in-95 duration-150">
         <div className="flex items-center justify-between pb-3 border-b border-[var(--color-border)]">
           <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-[var(--color-primary-subtle)] text-[var(--color-primary)]">
+            <div className="p-2 rounded-lg bg-[var(--color-primary-light)] text-[var(--color-primary)]">
               <Terminal className="w-5 h-5" />
             </div>
             <div>

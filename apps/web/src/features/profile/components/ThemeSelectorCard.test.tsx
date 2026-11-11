@@ -35,7 +35,7 @@ describe('ThemeSelectorCard', () => {
 
     expect(screen.getByText('Visual Appearance & Theme')).toBeInTheDocument();
     expect(screen.getByText('Active Mode: Light Mode')).toBeInTheDocument();
-    expect(screen.getByText('☀️ Active')).toBeInTheDocument();
+    expect(screen.getByText('Active')).toBeInTheDocument();
 
     expect(screen.getByText('Preferred Light Theme')).toBeInTheDocument();
     expect(screen.getByText('Preferred Dark Theme')).toBeInTheDocument();
@@ -74,7 +74,7 @@ describe('ThemeSelectorCard', () => {
     render(<ThemeSelectorCard />);
 
     expect(screen.getByText('Active Mode: Dark Mode')).toBeInTheDocument();
-    expect(screen.getByText('🌙 Active')).toBeInTheDocument();
+    expect(screen.getByText('Active')).toBeInTheDocument();
   });
 
   it('switches mode when clicking Light Mode or Dark Mode buttons in banner', () => {

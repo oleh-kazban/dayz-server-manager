@@ -120,9 +120,9 @@ export function ThemeSelectorCard() {
           <div className="flex items-center gap-3">
             <div className="p-2.5 rounded-lg bg-[var(--color-surface)] border border-[var(--color-border)] text-[var(--color-primary)] shrink-0">
               {mode === 'light' ? (
-                <Sun className="w-5 h-5 text-amber-500" />
+                <Sun className="w-5 h-5 text-[var(--color-status-warning)]" />
               ) : (
-                <Moon className="w-5 h-5 text-indigo-400" />
+                <Moon className="w-5 h-5 text-[var(--color-primary)]" />
               )}
             </div>
             <div>
@@ -131,7 +131,7 @@ export function ThemeSelectorCard() {
                   Active Mode: {mode === 'light' ? 'Light Mode' : 'Dark Mode'}
                 </span>
                 <Tag color={mode === 'light' ? 'amber' : 'purple'} variant="subtle">
-                  {mode === 'light' ? '☀️ Active' : '🌙 Active'}
+                  Active
                 </Tag>
               </div>
               <p className="text-xs text-[var(--color-text-muted)] mt-0.5">
@@ -172,7 +172,7 @@ export function ThemeSelectorCard() {
         <div className="space-y-3">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
             <div className="flex items-center gap-2">
-              <Sun className="w-4 h-4 text-amber-500" />
+              <Sun className="w-4 h-4 text-[var(--color-status-warning)]" />
               <h3 className="text-sm font-semibold text-[var(--color-text-main)]">
                 Preferred Light Theme
               </h3>
@@ -200,7 +200,7 @@ export function ThemeSelectorCard() {
         <div className="space-y-3">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
             <div className="flex items-center gap-2">
-              <Moon className="w-4 h-4 text-indigo-400" />
+              <Moon className="w-4 h-4 text-[var(--color-primary)]" />
               <h3 className="text-sm font-semibold text-[var(--color-text-main)]">
                 Preferred Dark Theme
               </h3>

@@ -33,7 +33,7 @@ const RDP_CLASS_NAMES: Partial<ClassNames> = {
     'w-7 h-7 mx-auto flex items-center justify-center rounded-lg text-xs font-normal text-[var(--color-text-main)] hover:bg-[var(--color-surface-hover)] transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--color-primary)] select-none',
   today: '[&>button]:font-semibold [&>button]:text-[var(--color-primary)]',
   selected:
-    '[&>button]:bg-[var(--color-primary)] [&>button]:text-white [&>button]:font-medium [&>button]:hover:bg-[var(--color-primary-hover)]',
+    '[&>button]:bg-[var(--color-primary)] [&>button]:text-[var(--color-primary-fg)] [&>button]:font-medium [&>button]:hover:bg-[var(--color-primary-hover)]',
   outside: '[&>button]:opacity-35 [&>button]:text-[var(--color-text-muted)]',
   disabled: '[&>button]:opacity-25 [&>button]:cursor-not-allowed [&>button]:hover:bg-transparent',
   hidden: 'invisible',

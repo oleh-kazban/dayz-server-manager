@@ -200,7 +200,7 @@ export function EditModModal({
       <div className="w-full max-w-lg max-h-[90vh] overflow-y-auto rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-[var(--shadow-card)] p-6">
         <div className="flex items-center justify-between pb-4 border-b border-[var(--color-border)]">
           <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-[var(--color-primary-subtle)] text-[var(--color-primary)]">
+            <div className="p-2 rounded-lg bg-[var(--color-primary-light)] text-[var(--color-primary)]">
               <Pencil className="w-5 h-5" />
             </div>
             <div>
