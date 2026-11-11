@@ -136,4 +136,34 @@ describe('useNotificationStore', () => {
     markAllAsRead();
     expect(useNotificationStore.getState().notifications).toBe(allReadSnapshot);
   });
+
+  it('deduplicates deterministic id additions, rejects blank explicit ids, and keeps appending when id is omitted (REQ-04, GUARD-01)', () => {
+    const { addNotification } = useNotificationStore.getState();
+
+    // Blank explicit id refused with zero mutation
+    const emptyBefore = useNotificationStore.getState().notifications;
+    expect(addNotification({ id: '   ', title: 'Valid title' })).toBeNull();
+    expect(useNotificationStore.getState().notifications).toBe(emptyBefore);
+
+    // First deterministic id inserts cleanly (trimmed)
+    const first = addNotification({ id: '  user-greeting:u1  ', title: 'Welcome' });
+    expect(first).not.toBeNull();
+    expect(first!.id).toBe('user-greeting:u1');
+
+    const snapshot = useNotificationStore.getState().notifications;
+    expect(snapshot).toHaveLength(1);
+
+    // Duplicate deterministic id returns null with zero mutation
+    const duplicate = addNotification({ id: 'user-greeting:u1', title: 'Welcome again' });
+    expect(duplicate).toBeNull();
+    expect(useNotificationStore.getState().notifications).toBe(snapshot);
+
+    // Omitting id continues appending without deduplication
+    const unnamedA = addNotification({ title: 'Server notice' });
+    const unnamedB = addNotification({ title: 'Server notice' });
+    expect(unnamedA).not.toBeNull();
+    expect(unnamedB).not.toBeNull();
+    expect(unnamedA!.id).not.toBe(unnamedB!.id);
+    expect(useNotificationStore.getState().notifications).toHaveLength(3);
+  });
 });

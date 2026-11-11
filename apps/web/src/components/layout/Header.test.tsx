@@ -5,7 +5,13 @@ import { fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { useLayoutStore, useNotificationStore } from '@aegis/web/core';
+import {
+  ACKNOWLEDGED_GREETINGS_STORAGE_KEY,
+  getUserGreetingNotificationId,
+  useLayoutStore,
+  useNotificationStore,
+} from '@aegis/web/core';
+import { AuthContext, type AuthUser } from '@aegis/web/features/auth';
 import { useFaqStore } from '@aegis/web/features/faq';
 import { ThemeProvider } from '@aegis/web/features/theme';
 
@@ -30,6 +36,38 @@ const renderHeader = () => {
       </ThemeProvider>
     </QueryClientProvider>,
   );
+};
+
+const renderHeaderWithAuth = (user: AuthUser | null) => {
+  const queryClient = new QueryClient({
+    defaultOptions: {
+      queries: {
+        retry: false,
+      },
+    },
+  });
+  const buildElement = (currentUser: AuthUser | null) => (
+    <QueryClientProvider client={queryClient}>
+      <AuthContext.Provider
+        value={{
+          user: currentUser,
+          isAuthenticated: Boolean(currentUser),
+          login: vi.fn(),
+          logout: vi.fn(),
+        }}
+      >
+        <ThemeProvider>
+          <Header />
+        </ThemeProvider>
+      </AuthContext.Provider>
+    </QueryClientProvider>
+  );
+
+  const rendered = render(buildElement(user));
+  return {
+    ...rendered,
+    rerenderWithUser: (nextUser: AuthUser | null) => rendered.rerender(buildElement(nextUser)),
+  };
 };
 
 vi.mock('@aegis/web/core', async () => {
@@ -62,6 +100,7 @@ vi.mock('@tanstack/react-router', () => ({
 describe('Header', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    window.localStorage.clear();
     useLayoutStore.setState({ isMobileSidebarOpen: false });
     useFaqStore.setState({ isOpen: false, activeTab: 'faq', searchQuery: '' });
     useNotificationStore.setState({ notifications: [] });
@@ -527,6 +566,131 @@ describe('Header', () => {
       await user.keyboard('{Escape}');
       expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
       expect(iconWrapper).not.toHaveClass('animate-bell-ring');
+    });
+  });
+
+  describe('Operator Greeting Notification & FAQ Action', () => {
+    const commanderUser: AuthUser = {
+      id: 'user-1',
+      username: 'admin',
+      displayName: 'Commander',
+      email: 'commander@aegis.local',
+      role: 'admin',
+    };
+
+    const userWithoutDisplayName: AuthUser = {
+      id: 'user-2',
+      username: 'scout_ops',
+      displayName: '   ',
+      email: 'scout@aegis.local',
+      role: 'viewer',
+    };
+
+    it('emits no greeting when Header renders standalone or with user=null (REQ-04)', () => {
+      renderHeader();
+      expect(
+        screen.getByRole('button', { name: /Notifications \(no unread\)/i }),
+      ).toBeInTheDocument();
+      expect(useNotificationStore.getState().notifications).toEqual([]);
+
+      const { unmount } = renderHeaderWithAuth(null);
+      expect(useNotificationStore.getState().notifications).toEqual([]);
+      unmount();
+    });
+
+    it('greets authenticated operator by displayName without exclamation marks and falls back to username (REQ-04, ARCH-04)', async () => {
+      const user = userEvent.setup();
+      const { rerenderWithUser } = renderHeaderWithAuth(commanderUser);
+
+      const trigger = screen.getByRole('button', { name: /Notifications \(1 unread\)/i });
+      await user.click(trigger);
+
+      expect(screen.getByText('Welcome to Aegis Console, Commander')).toBeInTheDocument();
+      expect(
+        screen.getByText(
+          'Review the operator FAQ for server controls, mod keys, and troubleshooting.',
+        ),
+      ).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /Open FAQ/i })).toHaveClass('self-start');
+
+      await user.keyboard('{Escape}');
+      rerenderWithUser(userWithoutDisplayName);
+
+      expect(useNotificationStore.getState().notifications).toHaveLength(1);
+      expect(
+        useNotificationStore
+          .getState()
+          .notifications.some(n => n.id === getUserGreetingNotificationId('user-1')),
+      ).toBe(false);
+
+      await user.click(screen.getByRole('button', { name: /Notifications \(1 unread\)/i }));
+      expect(screen.getByText('Welcome to Aegis Console, scout_ops')).toBeInTheDocument();
+    });
+
+    it('Open FAQ marks greeting read, persists acknowledgement, closes notification dialog, and opens FaqModal (REQ-05)', async () => {
+      const user = userEvent.setup();
+      renderHeaderWithAuth(commanderUser);
+
+      await user.click(screen.getByRole('button', { name: /Notifications \(1 unread\)/i }));
+      const openFaqButton = screen.getByRole('button', { name: /Open FAQ/i });
+      await user.click(openFaqButton);
+
+      expect(screen.queryByRole('dialog', { name: 'Notifications' })).not.toBeInTheDocument();
+      expect(
+        screen.getByRole('button', { name: /Notifications \(no unread\)/i }),
+      ).toBeInTheDocument();
+      expect(useFaqStore.getState().isOpen).toBe(true);
+      expect(useFaqStore.getState().activeTab).toBe('faq');
+      expect(
+        JSON.parse(window.localStorage.getItem(ACKNOWLEDGED_GREETINGS_STORAGE_KEY) ?? '[]'),
+      ).toEqual(['user-1']);
+    });
+
+    it('persists acknowledgement on manual row click, Mark all as read, and dismiss X, preventing re-emission on remount (REQ-04, REQ-06, GUARD-02)', async () => {
+      const user = userEvent.setup();
+
+      // 1. Row click acknowledgement
+      const firstMount = renderHeaderWithAuth(commanderUser);
+      await user.click(screen.getByRole('button', { name: /Notifications \(1 unread\)/i }));
+      await user.click(screen.getByText('Welcome to Aegis Console, Commander').closest('button')!);
+      expect(
+        JSON.parse(window.localStorage.getItem(ACKNOWLEDGED_GREETINGS_STORAGE_KEY) ?? '[]'),
+      ).toEqual(['user-1']);
+      firstMount.unmount();
+
+      // Remounting with empty store for acknowledged user-1 does NOT re-emit greeting
+      useNotificationStore.setState({ notifications: [] });
+      const remount = renderHeaderWithAuth(commanderUser);
+      expect(
+        screen.getByRole('button', { name: /Notifications \(no unread\)/i }),
+      ).toBeInTheDocument();
+      expect(useNotificationStore.getState().notifications).toEqual([]);
+      remount.unmount();
+
+      // 2. Mark all as read acknowledgement for user-2
+      window.localStorage.clear();
+      useNotificationStore.setState({ notifications: [] });
+      const secondMount = renderHeaderWithAuth(userWithoutDisplayName);
+      await user.click(screen.getByRole('button', { name: /Notifications \(1 unread\)/i }));
+      await user.click(screen.getByRole('button', { name: /Mark all as read/i }));
+      expect(
+        JSON.parse(window.localStorage.getItem(ACKNOWLEDGED_GREETINGS_STORAGE_KEY) ?? '[]'),
+      ).toEqual(['user-2']);
+      secondMount.unmount();
+
+      // 3. Dismiss X acknowledgement for user-1
+      window.localStorage.clear();
+      useNotificationStore.setState({ notifications: [] });
+      renderHeaderWithAuth(commanderUser);
+      await user.click(screen.getByRole('button', { name: /Notifications \(1 unread\)/i }));
+      await user.click(
+        screen.getByRole('button', {
+          name: 'Dismiss notification: Welcome to Aegis Console, Commander',
+        }),
+      );
+      expect(
+        JSON.parse(window.localStorage.getItem(ACKNOWLEDGED_GREETINGS_STORAGE_KEY) ?? '[]'),
+      ).toEqual(['user-1']);
     });
   });
 });
