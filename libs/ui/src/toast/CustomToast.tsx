@@ -15,24 +15,29 @@ export interface CustomToastProps {
 const TOAST_STYLES: Record<
   ToastType,
   {
-    container: string;
+    border: string;
+    tint: string;
     iconColor: string;
   }
 > = {
   success: {
-    container: 'border-[var(--color-status-success-border)] bg-[var(--color-status-success-light)]',
+    border: 'border-[var(--color-status-success-border)]',
+    tint: 'bg-[var(--color-status-success-light)]',
     iconColor: 'text-[var(--color-status-success)]',
   },
   info: {
-    container: 'border-[var(--color-primary-border)] bg-[var(--color-primary-light)]',
+    border: 'border-[var(--color-primary-border)]',
+    tint: 'bg-[var(--color-primary-light)]',
     iconColor: 'text-[var(--color-primary)]',
   },
   warning: {
-    container: 'border-[var(--color-status-warning-border)] bg-[var(--color-status-warning-light)]',
+    border: 'border-[var(--color-status-warning-border)]',
+    tint: 'bg-[var(--color-status-warning-light)]',
     iconColor: 'text-[var(--color-status-warning)]',
   },
   error: {
-    container: 'border-[var(--color-status-danger-border)] bg-[var(--color-status-danger-light)]',
+    border: 'border-[var(--color-status-danger-border)]',
+    tint: 'bg-[var(--color-status-danger-light)]',
     iconColor: 'text-[var(--color-status-danger)]',
   },
 };
@@ -71,29 +76,31 @@ export function CustomToast({
       aria-live={isError ? 'assertive' : 'polite'}
       className={`${
         t.visible ? 'translate-y-0 opacity-100' : '-translate-y-2 opacity-0'
-      } pointer-events-auto flex w-full max-w-sm transform items-start gap-3 rounded-2xl border ${
-        styles.container
-      } p-3.5 text-[var(--color-text-main)] shadow-[var(--shadow-card)] transition-all duration-200 ${customClassName}`.trim()}
+      } pointer-events-auto w-full max-w-sm transform overflow-hidden rounded-2xl border ${
+        styles.border
+      } bg-[var(--color-surface)] text-[var(--color-text-main)] shadow-[var(--shadow-card)] transition-all duration-200 ${customClassName}`.trim()}
     >
-      <ToastIcon type={type} />
-      <div className="min-w-0 flex-1">
-        <h3 className="text-xs font-semibold leading-tight text-[var(--color-text-main)]">
-          {title}
-        </h3>
-        {description && (
-          <p className="mt-1 text-xs leading-relaxed text-[var(--color-text-secondary)]">
-            {description}
-          </p>
-        )}
+      <div className={`flex w-full items-start gap-3 p-3.5 ${styles.tint}`}>
+        <ToastIcon type={type} />
+        <div className="min-w-0 flex-1">
+          <h3 className="text-xs font-semibold leading-tight text-[var(--color-text-main)]">
+            {title}
+          </h3>
+          {description && (
+            <p className="mt-1 text-xs leading-relaxed text-[var(--color-text-secondary)]">
+              {description}
+            </p>
+          )}
+        </div>
+        <button
+          type="button"
+          aria-label="Dismiss notification"
+          onClick={() => toast.dismiss(t.id)}
+          className="shrink-0 rounded-lg p-1 text-[var(--color-text-muted)] transition-colors hover:bg-[var(--color-surface-hover)] hover:text-[var(--color-text-main)] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--color-primary)] cursor-pointer"
+        >
+          <X className="h-3.5 w-3.5" />
+        </button>
       </div>
-      <button
-        type="button"
-        aria-label="Dismiss notification"
-        onClick={() => toast.dismiss(t.id)}
-        className="shrink-0 rounded-lg p-1 text-[var(--color-text-muted)] transition-colors hover:bg-[var(--color-surface-hover)] hover:text-[var(--color-text-main)] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--color-primary)] cursor-pointer"
-      >
-        <X className="h-3.5 w-3.5" />
-      </button>
     </div>
   );
 }

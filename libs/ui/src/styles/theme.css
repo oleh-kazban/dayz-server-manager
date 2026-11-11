@@ -3,7 +3,7 @@
 @import './keyframes.css';
 @import 'tailwindcss';
 
-@theme {
+@theme inline {
   --font-sans: var(--font-sans);
   --font-mono: var(--font-mono);
 
@@ -32,6 +32,7 @@
   --color-status-success: var(--color-success);
   --color-status-success-light: var(--color-success-light);
   --color-status-success-border: var(--color-success-border);
+  --color-status-success-fg: var(--color-success-fg);
   --color-status-warning: var(--color-warning);
   --color-status-warning-light: var(--color-warning-light);
   --color-status-warning-border: var(--color-warning-border);

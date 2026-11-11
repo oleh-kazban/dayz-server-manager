@@ -45,13 +45,14 @@ const SUBTLE_COLOR_CLASSES: Record<SemanticTagColor, string> = {
 const SOLID_COLOR_CLASSES: Record<SemanticTagColor, string> = {
   default:
     'bg-[var(--color-surface-hover)] text-[var(--color-text-main)] border-[var(--color-border)] shadow-xs',
-  primary: 'bg-[var(--color-primary)] text-white border-transparent shadow-xs',
-  success: 'bg-[var(--color-status-success)] text-white border-transparent shadow-xs',
+  primary: 'bg-[var(--color-primary)] text-[var(--color-primary-fg)] border-transparent shadow-xs',
+  success:
+    'bg-[var(--color-status-success)] text-[var(--color-status-success-fg)] border-transparent shadow-xs',
   warning:
     'bg-[var(--color-status-warning)] text-[var(--color-status-warning-fg)] border-transparent shadow-xs',
   danger:
     'bg-[var(--color-status-danger)] text-[var(--color-status-danger-fg)] border-transparent shadow-xs',
-  info: 'bg-[var(--color-status-info)] text-white border-transparent shadow-xs',
+  info: 'bg-[var(--color-status-info)] text-[var(--color-status-info-fg)] border-transparent shadow-xs',
 };
 
 /* Color mapping for OUTLINE variant (Transparent background, colored border and text) */

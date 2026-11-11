@@ -64,15 +64,16 @@ const SUBTLE_CLASSES: Record<StatusTagSemanticStatus, string> = {
 };
 
 const SOLID_CLASSES: Record<StatusTagSemanticStatus, string> = {
-  success: 'bg-[var(--color-status-success)] text-white border-transparent shadow-xs',
+  success:
+    'bg-[var(--color-status-success)] text-[var(--color-status-success-fg)] border-transparent shadow-xs',
   warning:
     'bg-[var(--color-status-warning)] text-[var(--color-status-warning-fg)] border-transparent shadow-xs',
   danger:
     'bg-[var(--color-status-danger)] text-[var(--color-status-danger-fg)] border-transparent shadow-xs',
-  info: 'bg-[var(--color-status-info)] text-white border-transparent shadow-xs',
+  info: 'bg-[var(--color-status-info)] text-[var(--color-status-info-fg)] border-transparent shadow-xs',
   neutral:
     'bg-[var(--color-surface-hover)] text-[var(--color-text-main)] border-[var(--color-border)] shadow-xs',
-  primary: 'bg-[var(--color-primary)] text-white border-transparent shadow-xs',
+  primary: 'bg-[var(--color-primary)] text-[var(--color-primary-fg)] border-transparent shadow-xs',
 };
 
 const OUTLINE_CLASSES: Record<StatusTagSemanticStatus, string> = {
@@ -87,22 +88,22 @@ const OUTLINE_CLASSES: Record<StatusTagSemanticStatus, string> = {
 const DOT_COLOR_CLASSES: Record<StatusTagSemanticStatus, Record<StatusTagVariant, string>> = {
   success: {
     subtle: 'bg-[var(--color-status-success)]',
-    solid: 'bg-white',
+    solid: 'bg-current',
     outline: 'bg-[var(--color-status-success)]',
   },
   warning: {
     subtle: 'bg-[var(--color-status-warning)]',
-    solid: 'bg-[var(--color-status-warning-fg)]',
+    solid: 'bg-current',
     outline: 'bg-[var(--color-status-warning)]',
   },
   danger: {
     subtle: 'bg-[var(--color-status-danger)]',
-    solid: 'bg-white',
+    solid: 'bg-current',
     outline: 'bg-[var(--color-status-danger)]',
   },
   info: {
     subtle: 'bg-[var(--color-status-info)]',
-    solid: 'bg-white',
+    solid: 'bg-current',
     outline: 'bg-[var(--color-status-info)]',
   },
   neutral: {
@@ -112,7 +113,7 @@ const DOT_COLOR_CLASSES: Record<StatusTagSemanticStatus, Record<StatusTagVariant
   },
   primary: {
     subtle: 'bg-[var(--color-primary)]',
-    solid: 'bg-white',
+    solid: 'bg-current',
     outline: 'bg-[var(--color-primary)]',
   },
 };

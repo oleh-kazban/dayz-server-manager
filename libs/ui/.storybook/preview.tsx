@@ -1,5 +1,7 @@
 import type { Preview } from '@storybook/react';
 
+import { StorybookThemeFrame } from './StorybookThemeFrame';
+
 // Import design system tokens & theme definitions
 import '../src/styles/theme.css';
 
@@ -19,19 +21,19 @@ const preview: Preview = {
     theme: {
       name: 'Theme',
       description: 'Global DSM theme token switcher',
-      defaultValue: 'light',
+      defaultValue: 'vanilla',
       toolbar: {
         icon: 'circlehollow',
         items: [
-          { value: 'light', title: 'Light' },
-          { value: 'dark', title: 'Dark' },
-          { value: 'darcula', title: 'Darcula' },
-          { value: 'graphite', title: 'Graphite' },
-          { value: 'tokyo', title: 'Tokyo' },
-          { value: 'catppuccin', title: 'Catppuccin' },
+          { value: 'vanilla', title: 'Vanilla Light' },
+          { value: 'obsidian', title: 'Obsidian Dark' },
+          { value: 'darcula', title: 'Darcula Classic' },
+          { value: 'graphite', title: 'Graphite Stealth' },
+          { value: 'tokyo', title: 'Tokyo Night' },
+          { value: 'catppuccin', title: 'Catppuccin Mocha' },
           { value: 'darcula-light', title: 'Darcula Light' },
           { value: 'graphite-light', title: 'Graphite Light' },
-          { value: 'tokyo-light', title: 'Tokyo Light' },
+          { value: 'tokyo-light', title: 'Tokyo Day' },
           { value: 'catppuccin-latte', title: 'Catppuccin Latte' },
         ],
         showName: true,
@@ -41,14 +43,11 @@ const preview: Preview = {
   },
   decorators: [
     (Story, context) => {
-      const theme = context.globals.theme || 'light';
+      const theme = String(context.globals.theme || 'vanilla');
       return (
-        <div
-          data-theme={theme}
-          className="min-h-[250px] w-full p-8 bg-[var(--color-canvas)] text-[var(--color-text-main)] font-sans antialiased transition-colors duration-200"
-        >
+        <StorybookThemeFrame theme={theme}>
           <Story />
-        </div>
+        </StorybookThemeFrame>
       );
     },
   ],
