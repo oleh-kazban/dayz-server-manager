@@ -118,12 +118,14 @@ When assisting with code generation, reviews, or refactoring in this repository:
 
 When deeper guidance is needed, consult the specialized files:
 
-- 📋 PR & Code Review: `.agents/skills/code-review.md`
-- 🚀 Feature Implementation: `.agents/skills/feature-implementation.md`
-- 🧪 Testing & Audit Policy: `.agents/skills/tests-implementation.md`
-- 🌐 Webapp & E2E Testing: `.agents/skills/webapp-testing.md`
-- 🧼 Code Conventions & Hygiene: `.agents/skills/code-convention.md`
-- ⚛️ React 19 Style Guide: `.agents/skills/react-styleguide.md`
-- 🔷 TypeScript Style Guide: `.agents/skills/typescript-styleguide.md`
+- 📋 PR & Code Review: `.agents/skills/code-review/SKILL.md`
+- 🚀 Feature Implementation: `.agents/skills/feature-implementation/SKILL.md`
+- 🎨 UI/UX & Aegis Design System Redline: `.agents/skills/ui-ux-design/SKILL.md`
+- 🛡️ Security & Trust Boundary Audit: `.agents/skills/security-audit/SKILL.md`
+- 🧪 Testing & Audit Policy: `.agents/skills/tests-implementation/SKILL.md`
+- 🌐 Webapp & E2E Testing: `.agents/skills/webapp-testing/SKILL.md`
+- 🧼 Code Conventions & Hygiene: `.agents/skills/code-convention/SKILL.md`
+- ⚛️ React 19 Style Guide: `.agents/skills/react-styleguide/SKILL.md`
+- 🔷 TypeScript Style Guide: `.agents/skills/typescript-styleguide/SKILL.md`
 - 🏛️ Master Architecture ADR: `specs/ARCH_SPEC.md`
 - 🧩 UI Kit Architecture: `specs/UI_COMPONENTS_SPEC.md`

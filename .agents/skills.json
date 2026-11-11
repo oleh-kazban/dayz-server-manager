@@ -1,16 +1,18 @@
 {
   "inherits": [
     {
-      "path": "./presets/react-vite-spa.json"
+      "path": "D:/Projects/sdlc-skills-repo/PRESETS/react-vite-spa.json"
+    },
+    {
+      "path": "D:/Projects/sdlc-skills-repo/PRESETS/dayz-minimum.json"
     }
   ],
   "entries": [
-    { "path": "./skills/code-review.md" },
-    { "path": "./skills/feature-implementation.md" },
-    { "path": "./skills/tests-implementation.md" },
-    { "path": "./skills/webapp-testing.md" },
-    { "path": "./skills/code-convention.md" },
-    { "path": "./skills/react-styleguide.md" },
-    { "path": "./skills/typescript-styleguide.md" }
+    { "path": "D:/Projects/sdlc-skills-repo/programming/backend/nodejs" },
+    { "path": "D:/Projects/sdlc-skills-repo/programming/backend/fastify" },
+    { "path": "D:/Projects/sdlc-skills-repo/data/data-access/drizzle" },
+    { "path": "D:/Projects/sdlc-skills-repo/programming/tooling/bundlers/esbuild" },
+    { "path": "D:/Projects/sdlc-skills-repo/infrastructure/docker" },
+    { "path": ".agents/skills" }
   ]
 }
