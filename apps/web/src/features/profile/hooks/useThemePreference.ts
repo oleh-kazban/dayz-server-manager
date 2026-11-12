@@ -24,155 +24,142 @@ export interface ThemeOption<T extends ThemeId = ThemeId> {
 export type LightThemeOption = ThemeOption<LightThemeId>;
 export type DarkThemeOption = ThemeOption<DarkThemeId>;
 
-export const LIGHT_THEMES: LightThemeOption[] = [
-  {
-    id: 'vanilla',
-    name: 'Namalsk Day',
-    mode: 'light',
-    description: 'Crisp sub-arctic slate daylight with Aegis Royal Blue accents.',
-    previewColors: {
-      background: '#f0f4f8',
-      surface: '#ffffff',
-      accent: '#3366d6',
-      text: '#1d3048',
-    },
-  },
-  {
-    id: 'frostline-light',
-    name: 'Frostline Day',
-    mode: 'light',
-    description: 'Glacial ice-mist surfaces with sharp arctic teal-cyan accents.',
-    previewColors: {
-      background: '#e3f0f5',
-      surface: '#ffffff',
-      accent: '#0e7490',
-      text: '#0f2936',
-    },
-  },
-  {
-    id: 'chernarus-light',
-    name: 'Chernarus Overcast',
-    mode: 'light',
-    description: 'Zero-chroma overcast stone palette with crisp carbon ink controls.',
-    previewColors: {
-      background: '#ebebea',
-      surface: '#ffffff',
-      accent: '#27272a',
-      text: '#18181b',
-    },
-  },
-  {
-    id: 'livonia-light',
-    name: 'Livonia Clearing',
-    mode: 'light',
-    description: 'Misty boreal sage surfaces paired with tactical pine-emerald.',
-    previewColors: {
-      background: '#e9ede7',
-      surface: '#ffffff',
-      accent: '#2d6a4f',
-      text: '#1a2920',
-    },
-  },
-  {
-    id: 'badlands-light',
-    name: 'Badlands Sun',
-    mode: 'light',
-    description: 'Sun-baked desert sandstone surfaces with rich burnt ochre accents.',
-    previewColors: {
-      background: '#f3eadc',
-      surface: '#ffffff',
-      accent: '#b45309',
-      text: '#332415',
-    },
-  },
-  {
-    id: 'krasno-light',
-    name: 'Krasno Dawn',
-    mode: 'light',
-    description: 'Warm blush-alabaster backdrop with high-contrast crimson-ruby accents.',
-    previewColors: {
-      background: '#f5e9ec',
-      surface: '#ffffff',
-      accent: '#9d174d',
-      text: '#361822',
-    },
-  },
+type ThemeEntry<T extends ThemeId> = readonly [
+  id: T,
+  name: string,
+  description: string,
+  background: string,
+  surface: string,
+  accent: string,
+  text: string,
 ];
 
-export const DARK_THEMES: DarkThemeOption[] = [
-  {
-    id: 'obsidian',
-    name: 'Namalsk Night',
-    mode: 'dark',
-    description: 'Deep polar obsidian panels paired with tactical cobalt blue accents.',
-    previewColors: {
-      background: '#090d12',
-      surface: '#101620',
-      accent: '#558bf2',
-      text: '#f1f5f9',
-    },
-  },
-  {
-    id: 'frostline-dark',
-    name: 'Sakhal Night',
-    mode: 'dark',
-    description: 'Abyssal glacial sea surfaces lit by crisp frost-teal telemetry.',
-    previewColors: {
-      background: '#081318',
-      surface: '#11242d',
-      accent: '#2dd4bf',
-      text: '#e6f4f8',
-    },
-  },
-  {
-    id: 'chernarus-dark',
-    name: 'Tisy Bunker',
-    mode: 'dark',
-    description: 'Pure monochromatic bunker carbon with high-contrast steel accents.',
-    previewColors: {
-      background: '#111112',
-      surface: '#1d1d20',
-      accent: '#e4e4e7',
-      text: '#f4f4f5',
-    },
-  },
-  {
-    id: 'livonia-dark',
-    name: 'Nadbor Pine',
-    mode: 'dark',
-    description: 'Deep woodland charcoal with forest moss-emerald highlights.',
-    previewColors: {
-      background: '#0f1410',
-      surface: '#1a221c',
-      accent: '#52b788',
-      text: '#e9f2eb',
-    },
-  },
-  {
-    id: 'badlands-dark',
-    name: 'Badlands Dusk',
-    mode: 'dark',
-    description: 'Warm desert espresso surfaces glowing with golden amber highlights.',
-    previewColors: {
-      background: '#16100b',
-      surface: '#251b13',
-      accent: '#f59e0b',
-      text: '#f7ede2',
-    },
-  },
-  {
-    id: 'krasno-dark',
-    name: 'Signal Flare',
-    mode: 'dark',
-    description: 'Dark cinder surfaces illuminated by warm crimson-rose road flares.',
-    previewColors: {
-      background: '#170e12',
-      surface: '#26171d',
-      accent: '#f472b6',
-      text: '#faeef2',
-    },
-  },
-];
+function buildThemes<T extends ThemeId>(
+  mode: ThemeMode,
+  entries: readonly ThemeEntry<T>[],
+): ThemeOption<T>[] {
+  return entries.map(([id, name, description, background, surface, accent, text]) => ({
+    id,
+    name,
+    mode,
+    description,
+    previewColors: { background, surface, accent, text },
+  }));
+}
+
+export const LIGHT_THEMES: LightThemeOption[] = buildThemes('light', [
+  [
+    'vanilla',
+    'Namalsk Day',
+    'Crisp sub-arctic slate daylight with Aegis Royal Blue accents.',
+    '#f0f4f8',
+    '#ffffff',
+    '#3366d6',
+    '#1d3048',
+  ],
+  [
+    'frostline-light',
+    'Frostline Day',
+    'Glacial ice-mist surfaces with sharp arctic teal-cyan accents.',
+    '#e3f0f5',
+    '#ffffff',
+    '#0e7490',
+    '#0f2936',
+  ],
+  [
+    'chernarus-light',
+    'Chernarus Overcast',
+    'Zero-chroma overcast stone palette with crisp carbon ink controls.',
+    '#ebebea',
+    '#ffffff',
+    '#27272a',
+    '#18181b',
+  ],
+  [
+    'livonia-light',
+    'Livonia Clearing',
+    'Misty boreal sage surfaces paired with tactical pine-emerald.',
+    '#e9ede7',
+    '#ffffff',
+    '#2d6a4f',
+    '#1a2920',
+  ],
+  [
+    'badlands-light',
+    'Badlands Sun',
+    'Sun-baked desert sandstone surfaces with rich burnt ochre accents.',
+    '#f3eadc',
+    '#ffffff',
+    '#b45309',
+    '#332415',
+  ],
+  [
+    'krasno-light',
+    'Krasno Dawn',
+    'Warm blush-alabaster backdrop with high-contrast crimson-ruby accents.',
+    '#f5e9ec',
+    '#ffffff',
+    '#9d174d',
+    '#361822',
+  ],
+]);
+
+export const DARK_THEMES: DarkThemeOption[] = buildThemes('dark', [
+  [
+    'obsidian',
+    'Namalsk Night',
+    'Deep polar obsidian panels paired with tactical cobalt blue accents.',
+    '#090d12',
+    '#101620',
+    '#558bf2',
+    '#f1f5f9',
+  ],
+  [
+    'frostline-dark',
+    'Sakhal Night',
+    'Abyssal glacial sea surfaces lit by crisp frost-teal telemetry.',
+    '#081318',
+    '#11242d',
+    '#2dd4bf',
+    '#e6f4f8',
+  ],
+  [
+    'chernarus-dark',
+    'Tisy Bunker',
+    'Pure monochromatic bunker carbon with high-contrast steel accents.',
+    '#111112',
+    '#1d1d20',
+    '#e4e4e7',
+    '#f4f4f5',
+  ],
+  [
+    'livonia-dark',
+    'Nadbor Pine',
+    'Deep woodland charcoal with forest moss-emerald highlights.',
+    '#0f1410',
+    '#1a221c',
+    '#52b788',
+    '#e9f2eb',
+  ],
+  [
+    'badlands-dark',
+    'Badlands Dusk',
+    'Warm desert espresso surfaces glowing with golden amber highlights.',
+    '#16100b',
+    '#251b13',
+    '#f59e0b',
+    '#f7ede2',
+  ],
+  [
+    'krasno-dark',
+    'Signal Flare',
+    'Dark cinder surfaces illuminated by warm crimson-rose road flares.',
+    '#170e12',
+    '#26171d',
+    '#f472b6',
+    '#faeef2',
+  ],
+]);
 
 export const AVAILABLE_THEMES: ThemeOption[] = [...LIGHT_THEMES, ...DARK_THEMES];
 
