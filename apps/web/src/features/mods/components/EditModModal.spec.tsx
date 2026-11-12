@@ -160,4 +160,37 @@ describe('EditModModal', () => {
     expect(saveButtons[saveButtons.length - 1]).toBeDisabled();
     unmount();
   });
+
+  it('closes on Escape key or backdrop click and ignores rapid duplicate submit clicks while in flight (QA-01, QA-02)', async () => {
+    let resolveUpdate!: (val: ServerModDto) => void;
+    vi.mocked(apiClient.mods.update).mockReturnValueOnce(
+      new Promise(resolve => {
+        resolveUpdate = resolve;
+      }),
+    );
+
+    renderModal();
+
+    fireEvent.keyDown(window, { key: 'Escape' });
+    expect(mockOnClose).toHaveBeenCalledTimes(1);
+
+    const dialog = screen.getByRole('dialog');
+    fireEvent.click(dialog);
+    expect(mockOnClose).toHaveBeenCalledTimes(2);
+
+    const saveBtn = screen.getByRole('button', { name: 'Save Changes' });
+    const form = saveBtn.closest('form')!;
+
+    fireEvent.submit(form);
+    fireEvent.submit(form);
+
+    await waitFor(() => {
+      expect(apiClient.mods.update).toHaveBeenCalledTimes(1);
+    });
+
+    resolveUpdate(sampleMod);
+    await waitFor(() => {
+      expect(mockOnClose).toHaveBeenCalledTimes(3);
+    });
+  });
 });

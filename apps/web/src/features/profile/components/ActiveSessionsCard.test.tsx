@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { SessionDto } from '@aegis/api-contracts';
@@ -8,6 +8,14 @@ import * as mutationsModule from '../api/profile.mutations';
 import * as queriesModule from '../api/profile.queries';
 
 import { ActiveSessionsCard } from './ActiveSessionsCard';
+
+const mockRouterInvalidate = vi.fn().mockResolvedValue(undefined);
+const mockNavigate = vi.fn().mockResolvedValue(undefined);
+
+vi.mock('@tanstack/react-router', () => ({
+  useRouter: () => ({ invalidate: mockRouterInvalidate }),
+  useNavigate: () => mockNavigate,
+}));
 
 vi.mock('@aegis/ui', async () => {
   const actual = await vi.importActual<typeof import('@aegis/ui')>('@aegis/ui');
@@ -147,7 +155,7 @@ describe('ActiveSessionsCard', () => {
     expect(showToast.error).toHaveBeenCalledWith('Revocation Failed', 'Failed to revoke session');
   });
 
-  it('opens confirmation modal when clicking sign out on current session', () => {
+  it('opens confirmation modal when clicking sign out on current session', async () => {
     render(<ActiveSessionsCard />);
 
     const signOutBtn = screen.getByRole('button', { name: 'Sign out' });
@@ -167,11 +175,44 @@ describe('ActiveSessionsCard', () => {
     );
 
     const options = mockRevokeSingle.mock.calls[0][1];
-    options.onSuccess();
+    await options.onSuccess();
     expect(showToast.info).toHaveBeenCalledWith(
       'Signed Out',
       'Your current session was terminated.',
     );
+    await waitFor(() => {
+      expect(mockRouterInvalidate).toHaveBeenCalledTimes(1);
+      expect(mockNavigate).toHaveBeenCalledWith({ to: '/sign-in' });
+    });
+  });
+
+  it('guards against rapid duplicate clicks on single session termination, current session revocation, and bulk revocation (QA-01)', () => {
+    render(<ActiveSessionsCard />);
+
+    // 1. Rapid double click on remote session Terminate
+    const terminateBtns = screen.getAllByRole('button', { name: 'Terminate' });
+    fireEvent.click(terminateBtns[0]);
+    fireEvent.click(terminateBtns[0]);
+    expect(mockRevokeSingle).toHaveBeenCalledTimes(1);
+
+    // Settle first call
+    mockRevokeSingle.mock.calls[0][1].onSettled();
+
+    // 2. Rapid double click on current session Sign Out confirmation
+    fireEvent.click(screen.getByRole('button', { name: 'Sign out' }));
+    const confirmCurrentBtn = screen.getByRole('button', { name: 'Sign Out' });
+    fireEvent.click(confirmCurrentBtn);
+    fireEvent.click(confirmCurrentBtn);
+    expect(mockRevokeSingle).toHaveBeenCalledTimes(2);
+    mockRevokeSingle.mock.calls[1][1].onSettled();
+
+    // 3. Rapid double click on bulk revocation confirmation
+    fireEvent.click(screen.getByRole('button', { name: /Terminate All Other Active Sessions/i }));
+    const confirmBulkBtn = screen.getByRole('button', { name: 'Terminate Sessions' });
+    fireEvent.click(confirmBulkBtn);
+    fireEvent.click(confirmBulkBtn);
+    expect(mockRevokeBulk).toHaveBeenCalledTimes(1);
+    mockRevokeBulk.mock.calls[0][1].onSettled();
   });
 
   it('allows canceling current session sign out modal', () => {

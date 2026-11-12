@@ -103,6 +103,45 @@ describe('SteamGuardChallengeModal (REQ-05, REQ-06)', () => {
 
       fireEvent.click(screen.getByLabelText('Close dialog'));
       expect(mockOnAbort).toHaveBeenCalledTimes(2);
+
+      // Escape key and backdrop click also invoke onAbort when not submitting (QA-02)
+      fireEvent.keyDown(window, { key: 'Escape' });
+      expect(mockOnAbort).toHaveBeenCalledTimes(3);
+
+      fireEvent.click(screen.getByRole('dialog'));
+      expect(mockOnAbort).toHaveBeenCalledTimes(4);
+    });
+
+    it('ignores rapid duplicate submit clicks while OTP submission is in flight (QA-01)', async () => {
+      let resolveSubmit!: () => void;
+      mockOnSubmitOtp.mockReturnValueOnce(
+        new Promise<void>(resolve => {
+          resolveSubmit = resolve;
+        }),
+      );
+
+      render(
+        <SteamGuardChallengeModal
+          challenge={otpChallenge}
+          onSubmitOtp={mockOnSubmitOtp}
+          onAbort={mockOnAbort}
+        />,
+      );
+
+      const input = screen.getByLabelText('Steam Guard Code');
+      fireEvent.change(input, { target: { value: '8K9B2' } });
+
+      const submitBtn = screen.getByRole('button', { name: /Submit Code/i });
+      const form = submitBtn.closest('form')!;
+
+      fireEvent.submit(form);
+      fireEvent.submit(form);
+
+      expect(mockOnSubmitOtp).toHaveBeenCalledTimes(1);
+
+      await act(async () => {
+        resolveSubmit();
+      });
     });
   });
 

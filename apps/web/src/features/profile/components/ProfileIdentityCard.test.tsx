@@ -83,17 +83,40 @@ describe('ProfileIdentityCard', () => {
     expect(screen.getByRole('combobox')).toHaveTextContent('Atlantic/Reykjavik');
   });
 
-  it('rejects invalid email client-side without calling mutation', () => {
+  it('rejects invalid email client-side without calling mutation and sets noValidate on form (QA-03)', () => {
     render(<ProfileIdentityCard profile={mockAdminProfile} />);
 
     const emailInput = screen.getByLabelText('Notification Email');
     fireEvent.change(emailInput, { target: { value: 'not-an-email' } });
 
     const submitBtn = screen.getByRole('button', { name: 'Save Preferences' });
-    fireEvent.submit(submitBtn.closest('form')!);
+    const form = submitBtn.closest('form')!;
+    expect(form).toHaveAttribute('noValidate');
+    fireEvent.click(submitBtn);
 
     expect(screen.getByText('Please enter a valid email address')).toBeInTheDocument();
     expect(mockMutate).not.toHaveBeenCalled();
+
+    // Typing clears the custom email error
+    fireEvent.change(emailInput, { target: { value: 'valid@dayz.local' } });
+    expect(screen.queryByText('Please enter a valid email address')).not.toBeInTheDocument();
+  });
+
+  it('ignores rapid duplicate submit clicks while updateProfileMutation is in flight (QA-01)', () => {
+    render(<ProfileIdentityCard profile={mockAdminProfile} />);
+
+    const submitBtn = screen.getByRole('button', { name: 'Save Preferences' });
+    const form = submitBtn.closest('form')!;
+
+    fireEvent.submit(form);
+    fireEvent.submit(form);
+
+    expect(mockMutate).toHaveBeenCalledTimes(1);
+
+    // Settle and verify subsequent submission works
+    mockMutate.mock.calls[0][1].onSettled();
+    fireEvent.submit(form);
+    expect(mockMutate).toHaveBeenCalledTimes(2);
   });
 
   it('submits valid changes and triggers success toast', () => {

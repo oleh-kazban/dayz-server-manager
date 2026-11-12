@@ -15,7 +15,11 @@ export function useSteamAuthChallenge() {
     let eventSource: EventSource | null = null;
 
     try {
-      eventSource = new EventSource('/api/v1/realtime/sse');
+      const token = apiClient.client.getToken();
+      const sseUrl = token
+        ? `/api/v1/realtime/sse?token=${encodeURIComponent(token)}`
+        : '/api/v1/realtime/sse';
+      eventSource = new EventSource(sseUrl);
 
       eventSource.addEventListener('steam.auth.challenge', (e: MessageEvent) => {
         try {

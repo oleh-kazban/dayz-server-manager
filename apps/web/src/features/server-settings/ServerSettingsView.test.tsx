@@ -842,4 +842,68 @@ describe('ServerSettingsView', () => {
       ).toBeInTheDocument();
     });
   });
+
+  it('ignores rapid duplicate save clicks while update mutation is in flight (QA-01)', async () => {
+    let resolveUpdate!: (val: ServerDetailDto) => void;
+    vi.mocked(apiClient.servers.update).mockReturnValueOnce(
+      new Promise(resolve => {
+        resolveUpdate = resolve;
+      }),
+    );
+
+    renderView();
+
+    await waitFor(() => {
+      expect(screen.getByDisplayValue('DayZ Namalsk')).toBeInTheDocument();
+    });
+
+    const saveButton = screen.getByRole('button', { name: /Save changes/i });
+    const form = saveButton.closest('form')!;
+
+    fireEvent.submit(form);
+    fireEvent.submit(form);
+
+    await waitFor(() => {
+      expect(apiClient.servers.update).toHaveBeenCalledTimes(1);
+    });
+
+    resolveUpdate(mockServerDetail);
+    await waitFor(() => {
+      expect(showToast.success).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  it('ignores rapid duplicate delete confirmation clicks while delete mutation is in flight (QA-01)', async () => {
+    let resolveDelete!: (val: { success: boolean }) => void;
+    vi.mocked(apiClient.servers.delete).mockReturnValueOnce(
+      new Promise(resolve => {
+        resolveDelete = resolve;
+      }),
+    );
+
+    renderView();
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /Delete server/i })).not.toBeDisabled();
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: /Delete server/i }));
+    const dialog = screen.getByRole('alertdialog');
+    fireEvent.change(within(dialog).getByRole('textbox'), {
+      target: { value: mockActiveServerSummary.name },
+    });
+
+    const confirmButton = within(dialog).getByRole('button', { name: 'Delete server' });
+    fireEvent.click(confirmButton);
+    fireEvent.click(confirmButton);
+
+    await waitFor(() => {
+      expect(apiClient.servers.delete).toHaveBeenCalledTimes(1);
+    });
+
+    resolveDelete({ success: true });
+    await waitFor(() => {
+      expect(showToast.success).toHaveBeenCalledTimes(1);
+    });
+  });
 });

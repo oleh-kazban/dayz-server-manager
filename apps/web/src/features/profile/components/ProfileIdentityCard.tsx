@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 
 import { Check, Globe, Mail, Shield, User } from 'lucide-react';
 import { z } from 'zod';
@@ -52,6 +52,7 @@ export function ProfileIdentityCard({ profile, isLoading }: ProfileIdentityCardP
   const [emailError, setEmailError] = useState<string | undefined>();
 
   const updateProfileMutation = useUpdateProfileMutation();
+  const inFlightRef = useRef(false);
 
   const timezoneOptions: SelectOption<string>[] = (() => {
     const opts = COMMON_TIMEZONES.map(tz => ({
@@ -66,6 +67,7 @@ export function ProfileIdentityCard({ profile, isLoading }: ProfileIdentityCardP
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (updateProfileMutation.isPending || inFlightRef.current) return;
 
     if (email.trim()) {
       const emailParse = emailSchema.safeParse(email.trim());
@@ -75,6 +77,7 @@ export function ProfileIdentityCard({ profile, isLoading }: ProfileIdentityCardP
       }
     }
     setEmailError(undefined);
+    inFlightRef.current = true;
 
     updateProfileMutation.mutate(
       {
@@ -93,6 +96,9 @@ export function ProfileIdentityCard({ profile, isLoading }: ProfileIdentityCardP
         onError: (err: unknown) => {
           showToast.error('Update failed', extractErrorMessage(err, 'Failed to update profile'));
         },
+        onSettled: () => {
+          inFlightRef.current = false;
+        },
       },
     );
   };
@@ -109,7 +115,7 @@ export function ProfileIdentityCard({ profile, isLoading }: ProfileIdentityCardP
       title="Identity & Regional Settings"
       subtitle="Manage your operator callsign, contact credentials, and localized temporal display."
     >
-      <form onSubmit={handleSubmit} className="space-y-6">
+      <form noValidate onSubmit={handleSubmit} className="space-y-6">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <span className="block text-xs font-semibold text-[var(--color-text-muted)] uppercase tracking-wider mb-2">

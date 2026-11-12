@@ -41,14 +41,42 @@ describe('PasswordRotationCard', () => {
     expect(screen.getByLabelText('Confirm New Password')).toBeInTheDocument();
   });
 
-  it('validates required current password', () => {
+  it('validates required current password and sets noValidate on form (QA-03)', () => {
     render(<PasswordRotationCard />);
 
     const submitBtn = screen.getByRole('button', { name: 'Rotate Credentials' });
-    fireEvent.submit(submitBtn.closest('form')!);
+    const form = submitBtn.closest('form')!;
+    expect(form).toHaveAttribute('noValidate');
+    fireEvent.click(submitBtn);
 
     expect(screen.getByText('Current password is required.')).toBeInTheDocument();
     expect(mockMutate).not.toHaveBeenCalled();
+  });
+
+  it('ignores rapid duplicate submit clicks while changePasswordMutation is in flight (QA-01)', () => {
+    render(<PasswordRotationCard />);
+
+    fireEvent.change(screen.getByLabelText('Current Password'), {
+      target: { value: 'currentPass1!' },
+    });
+    fireEvent.change(screen.getByLabelText('New Password'), {
+      target: { value: 'brandNewPass2@' },
+    });
+    fireEvent.change(screen.getByLabelText('Confirm New Password'), {
+      target: { value: 'brandNewPass2@' },
+    });
+
+    const submitBtn = screen.getByRole('button', { name: 'Rotate Credentials' });
+    const form = submitBtn.closest('form')!;
+
+    fireEvent.submit(form);
+    fireEvent.submit(form);
+
+    expect(mockMutate).toHaveBeenCalledTimes(1);
+
+    mockMutate.mock.calls[0][1].onSettled();
+    fireEvent.submit(form);
+    expect(mockMutate).toHaveBeenCalledTimes(2);
   });
 
   it.each([
