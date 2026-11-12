@@ -43,7 +43,7 @@ describe('useSteamAuthChallenge (QA-04)', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    MockEventSource.instances = [];
+    MockEventSource.instances.length = 0;
     globalThis.EventSource = MockEventSource as unknown as typeof EventSource;
 
     vi.spyOn(showToast, 'success').mockReturnValue('toast-ok');
