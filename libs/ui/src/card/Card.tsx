@@ -22,7 +22,7 @@ export function Card({
     <Component
       ref={ref as Ref<HTMLDivElement>}
       id={id}
-      className={`rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-5 shadow-[var(--shadow-card)] transition-all duration-200 ${className}`}
+      className={`rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-5 shadow-[var(--shadow-card)] transition-[color,background-color,border-color,box-shadow] duration-200 ${className}`}
     >
       {/* Header */}
       {hasHeader && (

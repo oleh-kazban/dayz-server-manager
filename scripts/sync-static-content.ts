@@ -94,7 +94,9 @@ function extractContinuationLines(
     const indent = line.search(/\S/);
     if (
       indent <= fieldIndent ||
-      /^\s*(?:---+|#{1,6}\s|-\s+\*\*(?:Included|Excluded \/ Deferred)\*\*:)/.test(line)
+      /^\s*(?:---+|#{1,6}\s|-\s+\*\*(?:Included|Excluded \/ Deferred)(?:\s*\([^)]*\))?\*\*:)/.test(
+        line,
+      )
     ) {
       break;
     }
@@ -118,7 +120,9 @@ function dedentBlockLines(lines: string[]): string {
 function parseScopeField(body: string, fieldLabel: string): string | undefined {
   const lines = body.split(/\r?\n/);
   const escapedLabel = fieldLabel.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  const fieldPattern = new RegExp(`^(\\s*)-\\s+\\*\\*${escapedLabel}\\*\\*:\\s*(.*)$`);
+  const fieldPattern = new RegExp(
+    `^(\\s*)-\\s+\\*\\*${escapedLabel}(?:\\s*\\([^)]*\\))?\\*\\*:\\s*(.*)$`,
+  );
 
   for (let i = 0; i < lines.length; i += 1) {
     const match = lines[i].match(fieldPattern);
@@ -158,10 +162,11 @@ function parseBacklogSection(section: string): BacklogItem | null {
 
   const cleanField = (raw?: string) => raw?.replace(/`/g, '').trim() ?? '';
   const statusMatch = body.match(/-\s+\*\*Status\*\*:\s*([^\r\n]+)/);
-  const status = cleanField(statusMatch?.[1]);
-  if (status !== 'DONE') {
+  const rawStatus = cleanField(statusMatch?.[1]);
+  if (!/^DONE(?:\b|\s|\()/i.test(rawStatus)) {
     return null;
   }
+  const status = 'DONE';
 
   const priorityMatch = body.match(/-\s+\*\*Priority\*\*:\s*([^\r\n]+)/);
   const typeMatch = body.match(/-\s+\*\*Type\*\*:\s*([^\r\n]+)/);

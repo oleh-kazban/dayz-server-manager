@@ -25,7 +25,7 @@ describe('Tag', () => {
     );
     let badge = screen.getByText('Livonia').parentElement;
     expect(badge?.className).toContain('bg-[var(--color-primary)]');
-    expect(badge?.className).toContain('text-white');
+    expect(badge?.className).toContain('text-[var(--color-primary-fg)]');
 
     rerender(
       <Tag variant="outline" color="danger">

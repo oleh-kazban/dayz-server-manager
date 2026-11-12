@@ -76,7 +76,7 @@ function SteamGuardChallengeDialog({
       <div className="w-full max-w-md rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-[var(--shadow-card)] p-6 space-y-5 animate-in fade-in zoom-in-95 duration-150">
         <div className="flex items-center justify-between pb-3 border-b border-[var(--color-border)]">
           <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-[var(--color-primary-subtle)] text-[var(--color-primary)]">
+            <div className="p-2 rounded-lg bg-[var(--color-primary-light)] text-[var(--color-primary)]">
               {isOtp ? (
                 <KeyRound className="w-5 h-5" />
               ) : (
@@ -154,7 +154,7 @@ function SteamGuardChallengeDialog({
         ) : (
           <div className="space-y-5 text-center py-4">
             <div className="flex justify-center">
-              <div className="relative flex items-center justify-center w-20 h-20 rounded-full bg-[var(--color-primary-subtle)] text-[var(--color-primary)]">
+              <div className="relative flex items-center justify-center w-20 h-20 rounded-full bg-[var(--color-primary-light)] text-[var(--color-primary)]">
                 <Radio className="w-10 h-10 animate-ping absolute opacity-30" />
                 <ShieldAlert className="w-8 h-8 relative z-10" />
               </div>

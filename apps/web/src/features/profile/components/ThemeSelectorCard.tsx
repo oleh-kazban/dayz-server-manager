@@ -28,7 +28,7 @@ function ThemePaletteGrid<T extends GenericThemeOption>({
   onSelect,
 }: ThemePaletteGridProps<T>) {
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3.5">
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5">
       {themes.map(theme => {
         const isSelected =
           selectedThemeId === theme.id || (isCurrentModeActive && currentThemeId === theme.id);
@@ -39,7 +39,7 @@ function ThemePaletteGrid<T extends GenericThemeOption>({
             type="button"
             aria-pressed={isSelected}
             onClick={() => onSelect(theme)}
-            className={`relative flex flex-col text-left p-3.5 rounded-xl border-2 transition-all cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)] ${
+            className={`relative flex flex-col text-left p-3.5 rounded-xl border-2 transition-colors cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)] ${
               isSelected
                 ? 'border-[var(--color-primary)] bg-[var(--color-surface-hover)] shadow-sm'
                 : 'border-[var(--color-border-subtle)] bg-[var(--color-surface)] hover:border-[var(--color-border-hover)]'
@@ -120,9 +120,9 @@ export function ThemeSelectorCard() {
           <div className="flex items-center gap-3">
             <div className="p-2.5 rounded-lg bg-[var(--color-surface)] border border-[var(--color-border)] text-[var(--color-primary)] shrink-0">
               {mode === 'light' ? (
-                <Sun className="w-5 h-5 text-amber-500" />
+                <Sun className="w-5 h-5 text-[var(--color-status-warning)]" />
               ) : (
-                <Moon className="w-5 h-5 text-indigo-400" />
+                <Moon className="w-5 h-5 text-[var(--color-primary)]" />
               )}
             </div>
             <div>
@@ -131,7 +131,7 @@ export function ThemeSelectorCard() {
                   Active Mode: {mode === 'light' ? 'Light Mode' : 'Dark Mode'}
                 </span>
                 <Tag color={mode === 'light' ? 'amber' : 'purple'} variant="subtle">
-                  {mode === 'light' ? '☀️ Active' : '🌙 Active'}
+                  Active
                 </Tag>
               </div>
               <p className="text-xs text-[var(--color-text-muted)] mt-0.5">
@@ -144,7 +144,7 @@ export function ThemeSelectorCard() {
             <button
               type="button"
               onClick={() => themePref.setMode?.('light')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all cursor-pointer ${
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors cursor-pointer ${
                 mode === 'light'
                   ? 'bg-[var(--color-primary)] text-[var(--color-primary-fg,#ffffff)] shadow-sm'
                   : 'text-[var(--color-text-secondary)] hover:text-[var(--color-text-main)] hover:bg-[var(--color-surface-hover)]'
@@ -156,7 +156,7 @@ export function ThemeSelectorCard() {
             <button
               type="button"
               onClick={() => themePref.setMode?.('dark')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all cursor-pointer ${
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors cursor-pointer ${
                 mode === 'dark'
                   ? 'bg-[var(--color-primary)] text-[var(--color-primary-fg,#ffffff)] shadow-sm'
                   : 'text-[var(--color-text-secondary)] hover:text-[var(--color-text-main)] hover:bg-[var(--color-surface-hover)]'
@@ -172,7 +172,7 @@ export function ThemeSelectorCard() {
         <div className="space-y-3">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
             <div className="flex items-center gap-2">
-              <Sun className="w-4 h-4 text-amber-500" />
+              <Sun className="w-4 h-4 text-[var(--color-status-warning)]" />
               <h3 className="text-sm font-semibold text-[var(--color-text-main)]">
                 Preferred Light Theme
               </h3>
@@ -200,7 +200,7 @@ export function ThemeSelectorCard() {
         <div className="space-y-3">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
             <div className="flex items-center gap-2">
-              <Moon className="w-4 h-4 text-indigo-400" />
+              <Moon className="w-4 h-4 text-[var(--color-primary)]" />
               <h3 className="text-sm font-semibold text-[var(--color-text-main)]">
                 Preferred Dark Theme
               </h3>

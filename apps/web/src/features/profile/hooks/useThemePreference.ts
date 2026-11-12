@@ -24,131 +24,142 @@ export interface ThemeOption<T extends ThemeId = ThemeId> {
 export type LightThemeOption = ThemeOption<LightThemeId>;
 export type DarkThemeOption = ThemeOption<DarkThemeId>;
 
-export const LIGHT_THEMES: LightThemeOption[] = [
-  {
-    id: 'vanilla',
-    name: 'Vanilla Light',
-    mode: 'light',
-    description: 'Clean high-contrast daylight palette with crisp neutral surfaces.',
-    previewColors: {
-      background: '#f0f4f8',
-      surface: '#ffffff',
-      accent: '#4279e8',
-      text: '#1d3048',
-    },
-  },
-  {
-    id: 'darcula-light',
-    name: 'Darcula Light',
-    mode: 'light',
-    description: 'Soft neutral surfaces with IntelliJ-inspired slate blue accents.',
-    previewColors: {
-      background: '#f3f4f6',
-      surface: '#ffffff',
-      accent: '#3574c8',
-      text: '#30343b',
-    },
-  },
-  {
-    id: 'graphite-light',
-    name: 'Graphite Light',
-    mode: 'light',
-    description: 'Cool neutral restrained monochrome palette for daylight focus.',
-    previewColors: {
-      background: '#f1f2f3',
-      surface: '#ffffff',
-      accent: '#596b80',
-      text: '#292c30',
-    },
-  },
-  {
-    id: 'tokyo-light',
-    name: 'Tokyo Day',
-    mode: 'light',
-    description: 'Cool lavender-blue daybreak aesthetic with clear accent hierarchy.',
-    previewColors: {
-      background: '#f2f4fa',
-      surface: '#ffffff',
-      accent: '#4b68c8',
-      text: '#24283b',
-    },
-  },
-  {
-    id: 'catppuccin-latte',
-    name: 'Catppuccin Latte',
-    mode: 'light',
-    description: 'Soothing pastel light palette with lavender and teal undertones.',
-    previewColors: {
-      background: '#eff1f5',
-      surface: '#ffffff',
-      accent: '#586fc4',
-      text: '#4c4f69',
-    },
-  },
+type ThemeEntry<T extends ThemeId> = readonly [
+  id: T,
+  name: string,
+  description: string,
+  background: string,
+  surface: string,
+  accent: string,
+  text: string,
 ];
 
-export const DARK_THEMES: DarkThemeOption[] = [
-  {
-    id: 'obsidian',
-    name: 'Obsidian Default',
-    mode: 'dark',
-    description: 'Standard tactical dark theme with deep abyss panels and warm amber accents.',
-    previewColors: {
-      background: '#090d12',
-      surface: '#101620',
-      accent: '#558bf2',
-      text: '#f1f5f9',
-    },
-  },
-  {
-    id: 'darcula',
-    name: 'Darcula Classic',
-    mode: 'dark',
-    description: 'Refined IntelliJ-inspired slate palette with rich graphite undertones.',
-    previewColors: {
-      background: '#232529',
-      surface: '#2b2b2b',
-      accent: '#4d90fe',
-      text: '#a9b7c6',
-    },
-  },
-  {
-    id: 'graphite',
-    name: 'Graphite Stealth',
-    mode: 'dark',
-    description: 'Ultra-low contrast monochromatic carbon aesthetic for low-light command.',
-    previewColors: {
-      background: '#121212',
-      surface: '#1c1c1c',
-      accent: '#6b7a8f',
-      text: '#e0e0e0',
-    },
-  },
-  {
-    id: 'tokyo',
-    name: 'Tokyo Night',
-    mode: 'dark',
-    description: 'Cyberpunk midnight indigo with electric cyan and magenta neon accents.',
-    previewColors: {
-      background: '#16161e',
-      surface: '#1a1b26',
-      accent: '#7aa2f7',
-      text: '#c0caf5',
-    },
-  },
-  {
-    id: 'catppuccin',
-    name: 'Catppuccin Macchiato',
-    mode: 'dark',
-    description: 'Warm soothing pastel tones over dark cocoa surfaces for ergonomic comfort.',
-    previewColors: {
-      background: '#11111b',
-      surface: '#1e1e2e',
-      accent: '#89b4fa',
-      text: '#cdd6f4',
-    },
-  },
-];
+function buildThemes<T extends ThemeId>(
+  mode: ThemeMode,
+  entries: readonly ThemeEntry<T>[],
+): ThemeOption<T>[] {
+  return entries.map(([id, name, description, background, surface, accent, text]) => ({
+    id,
+    name,
+    mode,
+    description,
+    previewColors: { background, surface, accent, text },
+  }));
+}
+
+export const LIGHT_THEMES: LightThemeOption[] = buildThemes('light', [
+  [
+    'vanilla',
+    'Namalsk Day',
+    'Crisp sub-arctic slate daylight with Aegis Royal Blue accents.',
+    '#f0f4f8',
+    '#ffffff',
+    '#3366d6',
+    '#1d3048',
+  ],
+  [
+    'frostline-light',
+    'Frostline Day',
+    'Glacial ice-mist surfaces with sharp arctic teal-cyan accents.',
+    '#e3f0f5',
+    '#ffffff',
+    '#0e7490',
+    '#0f2936',
+  ],
+  [
+    'chernarus-light',
+    'Chernarus Overcast',
+    'Zero-chroma overcast stone palette with crisp carbon ink controls.',
+    '#ebebea',
+    '#ffffff',
+    '#27272a',
+    '#18181b',
+  ],
+  [
+    'livonia-light',
+    'Livonia Clearing',
+    'Misty boreal sage surfaces paired with tactical pine-emerald.',
+    '#e9ede7',
+    '#ffffff',
+    '#2d6a4f',
+    '#1a2920',
+  ],
+  [
+    'badlands-light',
+    'Badlands Sun',
+    'Sun-baked desert sandstone surfaces with rich burnt ochre accents.',
+    '#f3eadc',
+    '#ffffff',
+    '#b45309',
+    '#332415',
+  ],
+  [
+    'krasno-light',
+    'Krasno Dawn',
+    'Warm blush-alabaster backdrop with high-contrast crimson-ruby accents.',
+    '#f5e9ec',
+    '#ffffff',
+    '#9d174d',
+    '#361822',
+  ],
+]);
+
+export const DARK_THEMES: DarkThemeOption[] = buildThemes('dark', [
+  [
+    'obsidian',
+    'Namalsk Night',
+    'Deep polar obsidian panels paired with tactical cobalt blue accents.',
+    '#090d12',
+    '#101620',
+    '#558bf2',
+    '#f1f5f9',
+  ],
+  [
+    'frostline-dark',
+    'Sakhal Night',
+    'Abyssal glacial sea surfaces lit by crisp frost-teal telemetry.',
+    '#081318',
+    '#11242d',
+    '#2dd4bf',
+    '#e6f4f8',
+  ],
+  [
+    'chernarus-dark',
+    'Tisy Bunker',
+    'Pure monochromatic bunker carbon with high-contrast steel accents.',
+    '#111112',
+    '#1d1d20',
+    '#e4e4e7',
+    '#f4f4f5',
+  ],
+  [
+    'livonia-dark',
+    'Nadbor Pine',
+    'Deep woodland charcoal with forest moss-emerald highlights.',
+    '#0f1410',
+    '#1a221c',
+    '#52b788',
+    '#e9f2eb',
+  ],
+  [
+    'badlands-dark',
+    'Badlands Dusk',
+    'Warm desert espresso surfaces glowing with golden amber highlights.',
+    '#16100b',
+    '#251b13',
+    '#f59e0b',
+    '#f7ede2',
+  ],
+  [
+    'krasno-dark',
+    'Signal Flare',
+    'Dark cinder surfaces illuminated by warm crimson-rose road flares.',
+    '#170e12',
+    '#26171d',
+    '#f472b6',
+    '#faeef2',
+  ],
+]);
 
 export const AVAILABLE_THEMES: ThemeOption[] = [...LIGHT_THEMES, ...DARK_THEMES];
 

@@ -69,7 +69,7 @@ function TagSelectOptionItem({
         <div
           className={`w-4 h-4 rounded border flex items-center justify-center shrink-0 transition-colors ${
             isSelected
-              ? 'bg-[var(--color-primary)] border-[var(--color-primary)] text-white'
+              ? 'bg-[var(--color-primary)] border-[var(--color-primary)] text-[var(--color-primary-fg)]'
               : 'border-[var(--color-border)] bg-[var(--color-surface)]'
           }`}
         >

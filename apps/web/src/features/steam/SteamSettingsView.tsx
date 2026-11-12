@@ -445,7 +445,7 @@ function SteamSettingsForm({
       {/* Session Status Banner */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-[var(--shadow-card)]">
         <div className="flex items-center gap-3">
-          <div className="p-2.5 rounded-xl bg-[var(--color-primary-subtle)] text-[var(--color-primary)]">
+          <div className="p-2.5 rounded-xl bg-[var(--color-primary-light)] text-[var(--color-primary)]">
             <Fingerprint className="w-5 h-5" />
           </div>
           <div>

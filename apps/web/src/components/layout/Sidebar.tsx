@@ -79,7 +79,7 @@ function SidebarContent({
             search={activeServer ? { serverId: activeServer.id } : undefined}
             onClick={onNavigate}
             aria-label="Back to server console"
-            className="group flex items-center gap-2.5 px-3 py-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-subtle)] text-xs text-[var(--color-text-secondary)] hover:text-[var(--color-text-main)] hover:bg-[var(--color-surface-hover)] transition-all cursor-pointer select-none"
+            className="group flex items-center gap-2.5 px-3 py-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-subtle)] text-xs text-[var(--color-text-secondary)] hover:text-[var(--color-text-main)] hover:bg-[var(--color-surface-hover)] transition-colors cursor-pointer select-none"
           >
             <ArrowLeft className="w-4 h-4 shrink-0 text-[var(--color-primary)] transition-transform group-hover:-translate-x-0.5" />
             <div className="flex flex-col min-w-0">
@@ -285,7 +285,7 @@ export function Sidebar() {
       <aside
         id="app-sidebar"
         aria-label="Primary Navigation"
-        className="hidden lg:flex w-[228px] min-w-[228px] max-w-[228px] flex-col border-r border-[var(--color-border)] bg-[var(--color-sidebar)] h-screen sticky top-0 shrink-0 p-4 transition-all duration-300 z-30 select-none overflow-y-auto"
+        className="hidden lg:flex w-[228px] min-w-[228px] max-w-[228px] flex-col border-r border-[var(--color-border)] bg-[var(--color-sidebar)] h-screen sticky top-0 shrink-0 p-4 transition-colors duration-300 z-30 select-none overflow-y-auto"
       >
         <Link
           to="/dashboard"

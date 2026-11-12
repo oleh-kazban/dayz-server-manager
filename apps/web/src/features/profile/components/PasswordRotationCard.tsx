@@ -121,7 +121,7 @@ export function PasswordRotationCard() {
         </Notice>
 
         {validationError && (
-          <div className="p-3 rounded-lg border border-[var(--color-danger)] bg-[var(--color-danger-subtle)] text-[var(--color-danger)] text-sm">
+          <div className="p-3 rounded-lg border border-[var(--color-status-danger-border)] bg-[var(--color-status-danger-light)] text-[var(--color-status-danger)] text-sm">
             {validationError}
           </div>
         )}

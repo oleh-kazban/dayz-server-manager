@@ -35,23 +35,23 @@ export function PasswordStrengthBar({ password = '', className = '' }: PasswordS
     if (metCount <= 2) {
       score = 1;
       label = 'Weak';
-      barColorClass = 'bg-[var(--color-danger,#e05252)]';
-      labelColorClass = 'text-[var(--color-danger,#e05252)]';
+      barColorClass = 'bg-[var(--color-status-danger)]';
+      labelColorClass = 'text-[var(--color-status-danger)]';
     } else if (metCount <= 4) {
       score = 2;
       label = 'Fair';
-      barColorClass = 'bg-orange-500';
-      labelColorClass = 'text-orange-500 dark:text-orange-400';
+      barColorClass = 'bg-[var(--color-status-warning)]';
+      labelColorClass = 'text-[var(--color-status-warning)]';
     } else if (metCount === 5) {
       score = 3;
       label = 'Good';
-      barColorClass = 'bg-[var(--color-warning,#bb8a3e)]';
-      labelColorClass = 'text-[var(--color-warning,#bb8a3e)]';
+      barColorClass = 'bg-[var(--color-primary)]';
+      labelColorClass = 'text-[var(--color-primary)]';
     } else {
       score = 4;
       label = 'Strong';
-      barColorClass = 'bg-[var(--color-success,#27a88c)]';
-      labelColorClass = 'text-[var(--color-success,#27a88c)]';
+      barColorClass = 'bg-[var(--color-status-success)]';
+      labelColorClass = 'text-[var(--color-status-success)]';
     }
   }
 
@@ -69,7 +69,7 @@ export function PasswordStrengthBar({ password = '', className = '' }: PasswordS
           return (
             <div
               key={index}
-              className={`h-full rounded-full transition-all duration-200 ${
+              className={`h-full rounded-full transition-colors duration-200 ${
                 isFilled ? barColorClass : 'bg-[var(--color-border-subtle)]'
               }`}
             />

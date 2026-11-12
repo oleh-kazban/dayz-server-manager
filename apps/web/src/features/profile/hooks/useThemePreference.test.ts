@@ -35,9 +35,9 @@ describe('useThemePreference', () => {
   it('provides lightThemes, darkThemes, and combined themes list with expected counts', () => {
     const { result } = renderHook(() => useThemePreference());
 
-    expect(result.current.lightThemes).toHaveLength(5);
-    expect(result.current.darkThemes).toHaveLength(5);
-    expect(result.current.themes).toHaveLength(10);
+    expect(result.current.lightThemes).toHaveLength(6);
+    expect(result.current.darkThemes).toHaveLength(6);
+    expect(result.current.themes).toHaveLength(12);
 
     expect(result.current.lightThemes).toEqual(LIGHT_THEMES);
     expect(result.current.darkThemes).toEqual(DARK_THEMES);
@@ -76,10 +76,10 @@ describe('useThemePreference', () => {
     const { result } = renderHook(() => useThemePreference());
 
     act(() => {
-      result.current.setTheme('tokyo-light');
+      result.current.setTheme('frostline-light');
     });
 
-    expect(mockSetPreferredLight).toHaveBeenCalledWith('tokyo-light');
+    expect(mockSetPreferredLight).toHaveBeenCalledWith('frostline-light');
     expect(mockSetMode).toHaveBeenCalledWith('light');
     expect(mockSetPreferredDark).not.toHaveBeenCalled();
   });
@@ -88,10 +88,10 @@ describe('useThemePreference', () => {
     const { result } = renderHook(() => useThemePreference());
 
     act(() => {
-      result.current.setTheme('catppuccin');
+      result.current.setTheme('badlands-dark');
     });
 
-    expect(mockSetPreferredDark).toHaveBeenCalledWith('catppuccin');
+    expect(mockSetPreferredDark).toHaveBeenCalledWith('badlands-dark');
     expect(mockSetMode).toHaveBeenCalledWith('dark');
     expect(mockSetPreferredLight).not.toHaveBeenCalled();
   });
@@ -112,8 +112,8 @@ describe('useThemePreference', () => {
 
     expect(() => {
       act(() => {
-        result.current.setTheme('graphite-light');
-        result.current.setTheme('graphite');
+        result.current.setTheme('chernarus-light');
+        result.current.setTheme('chernarus-dark');
       });
     }).not.toThrow();
   });

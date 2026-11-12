@@ -25,11 +25,12 @@ describe('Button', () => {
     );
     let button = screen.getByRole('button', { name: /delete server/i });
     expect(button.className).toContain('bg-[var(--color-status-danger)]');
-    expect(button.className).toContain('text-white');
+    expect(button.className).toContain('text-[var(--color-status-danger-fg)]');
 
     rerender(<Button variant="primary">Save Changes</Button>);
     button = screen.getByRole('button', { name: /save changes/i });
     expect(button.className).toContain('bg-[var(--color-primary)]');
+    expect(button.className).toContain('text-[var(--color-primary-fg)]');
   });
 
   it('renders ghost and text variants', () => {

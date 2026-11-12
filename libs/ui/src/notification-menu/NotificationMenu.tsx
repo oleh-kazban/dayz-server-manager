@@ -101,7 +101,7 @@ function NotificationItemRow({
 
   return (
     <div
-      className={`group relative flex items-start gap-2.5 px-2.5 py-2 rounded-xl transition-all ${
+      className={`group relative flex items-start gap-2.5 px-2.5 py-2 rounded-xl transition-colors ${
         isUnread
           ? 'bg-[var(--color-surface-subtle)] border border-[var(--color-border)] shadow-2xs hover:border-[var(--color-border-hover)]'
           : 'bg-transparent border border-transparent hover:bg-[var(--color-surface-subtle)]'
@@ -191,7 +191,7 @@ function NotificationItemRow({
               item.onAction?.(item);
               onActionClose?.();
             }}
-            className="mt-2 self-start inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-[11px] font-semibold bg-[var(--color-primary-light)] text-[var(--color-primary)] hover:bg-[var(--color-primary)] hover:text-white transition-colors cursor-pointer"
+            className="mt-2 self-start inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-[11px] font-semibold bg-[var(--color-primary-light)] text-[var(--color-primary)] hover:bg-[var(--color-primary)] hover:text-[var(--color-primary-fg)] transition-colors cursor-pointer"
           >
             <span>{item.actionLabel}</span>
             <span aria-hidden="true">&rarr;</span>
@@ -205,7 +205,7 @@ function NotificationItemRow({
           type="button"
           aria-label={`Dismiss notification: ${item.title}`}
           onClick={() => onDismissItem(item.id)}
-          className="opacity-0 group-hover:opacity-100 focus:opacity-100 p-1 rounded-md text-[var(--color-text-muted)] hover:text-[var(--color-text-main)] hover:bg-[var(--color-surface-hover)] transition-all cursor-pointer shrink-0"
+          className="opacity-0 group-hover:opacity-100 focus:opacity-100 p-1 rounded-md text-[var(--color-text-muted)] hover:text-[var(--color-text-main)] hover:bg-[var(--color-surface-hover)] transition-[opacity,color,background-color] cursor-pointer shrink-0"
         >
           <X className="w-3.5 h-3.5" />
         </button>
@@ -338,7 +338,7 @@ export function NotificationMenu({
 
         {unreadCount > 0 && (
           <span
-            className="absolute -top-1.5 -right-1.5 flex h-4 min-w-4 px-1 items-center justify-center rounded-full bg-[var(--color-primary)] text-[10px] font-bold text-white shadow-xs ring-2 ring-[var(--color-surface)] pointer-events-none leading-none"
+            className="absolute -top-1.5 -right-1.5 flex h-4 min-w-4 px-1 items-center justify-center rounded-full bg-[var(--color-primary)] text-[10px] font-bold text-[var(--color-primary-fg)] shadow-xs ring-2 ring-[var(--color-surface)] pointer-events-none leading-none"
             aria-hidden="true"
           >
             {unreadCount > 99 ? '99+' : unreadCount}

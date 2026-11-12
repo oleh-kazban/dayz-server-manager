@@ -1,5 +1,7 @@
 import type { Preview } from '@storybook/react';
 
+import { StorybookThemeFrame } from './StorybookThemeFrame';
+
 // Import design system tokens & theme definitions
 import '../src/styles/theme.css';
 
@@ -19,20 +21,22 @@ const preview: Preview = {
     theme: {
       name: 'Theme',
       description: 'Global DSM theme token switcher',
-      defaultValue: 'light',
+      defaultValue: 'vanilla',
       toolbar: {
         icon: 'circlehollow',
         items: [
-          { value: 'light', title: 'Light' },
-          { value: 'dark', title: 'Dark' },
-          { value: 'darcula', title: 'Darcula' },
-          { value: 'graphite', title: 'Graphite' },
-          { value: 'tokyo', title: 'Tokyo' },
-          { value: 'catppuccin', title: 'Catppuccin' },
-          { value: 'darcula-light', title: 'Darcula Light' },
-          { value: 'graphite-light', title: 'Graphite Light' },
-          { value: 'tokyo-light', title: 'Tokyo Light' },
-          { value: 'catppuccin-latte', title: 'Catppuccin Latte' },
+          { value: 'vanilla', title: 'Namalsk Day (Cold)' },
+          { value: 'obsidian', title: 'Namalsk Night (Cold)' },
+          { value: 'frostline-light', title: 'Frostline Day (Cold)' },
+          { value: 'frostline-dark', title: 'Sakhal Night (Cold)' },
+          { value: 'chernarus-light', title: 'Chernarus Overcast (Neutral)' },
+          { value: 'chernarus-dark', title: 'Tisy Bunker (Neutral)' },
+          { value: 'livonia-light', title: 'Livonia Clearing (Neutral)' },
+          { value: 'livonia-dark', title: 'Nadbor Pine (Neutral)' },
+          { value: 'badlands-light', title: 'Badlands Sun (Warm)' },
+          { value: 'badlands-dark', title: 'Badlands Dusk (Warm)' },
+          { value: 'krasno-light', title: 'Krasno Dawn (Warm)' },
+          { value: 'krasno-dark', title: 'Signal Flare (Warm)' },
         ],
         showName: true,
         dynamicTitle: true,
@@ -41,14 +45,11 @@ const preview: Preview = {
   },
   decorators: [
     (Story, context) => {
-      const theme = context.globals.theme || 'light';
+      const theme = String(context.globals.theme || 'vanilla');
       return (
-        <div
-          data-theme={theme}
-          className="min-h-[250px] w-full p-8 bg-[var(--color-canvas)] text-[var(--color-text-main)] font-sans antialiased transition-colors duration-200"
-        >
+        <StorybookThemeFrame theme={theme}>
           <Story />
-        </div>
+        </StorybookThemeFrame>
       );
     },
   ],

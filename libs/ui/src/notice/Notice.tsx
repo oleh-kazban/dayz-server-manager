@@ -97,7 +97,7 @@ export function Notice({
       role={activeRole}
       aria-live={theme.ariaLive}
       aria-labelledby={title ? titleId : undefined}
-      className={`relative flex items-start gap-3 p-3.5 rounded-xl border text-xs font-sans transition-all shadow-xs ${theme.containerClasses} ${className}`.trim()}
+      className={`relative flex items-start gap-3 p-3.5 rounded-xl border text-xs font-sans transition-colors shadow-xs ${theme.containerClasses} ${className}`.trim()}
     >
       {renderedIcon && (
         <span className={`shrink-0 mt-0.5 ${theme.iconClasses}`}>{renderedIcon}</span>

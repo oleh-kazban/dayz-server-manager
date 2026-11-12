@@ -49,7 +49,7 @@ export function Dashboard() {
         )}
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="ui-card p-5 space-y-3">
+          <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-5 shadow-[var(--shadow-card)] space-y-3">
             <div className="flex items-center gap-2 text-sm font-semibold text-[var(--color-text-main)]">
               <ShieldCheck className="w-4 h-4 text-[var(--color-success)]" />
               <span>Authentication Status</span>
@@ -62,7 +62,7 @@ export function Dashboard() {
             </p>
           </div>
 
-          <div className="ui-card p-5 space-y-3">
+          <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-5 shadow-[var(--shadow-card)] space-y-3">
             <div className="flex items-center gap-2 text-sm font-semibold text-[var(--color-text-main)]">
               <Server className="w-4 h-4 text-[var(--color-primary)]" />
               <span>Backend Connectivity</span>

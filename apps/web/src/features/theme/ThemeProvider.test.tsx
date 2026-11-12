@@ -102,11 +102,11 @@ describe('ThemeProvider & useTheme', () => {
           <button type="button" onClick={() => setMode('light')}>
             Set Light
           </button>
-          <button type="button" onClick={() => setPreferredDark('catppuccin')}>
-            Set Catppuccin
+          <button type="button" onClick={() => setPreferredDark('badlands-dark')}>
+            Set Badlands Dusk
           </button>
-          <button type="button" onClick={() => setPreferredLight('tokyo-light')}>
-            Set Tokyo Day
+          <button type="button" onClick={() => setPreferredLight('frostline-light')}>
+            Set Frostline Day
           </button>
         </div>
       );
@@ -122,29 +122,29 @@ describe('ThemeProvider & useTheme', () => {
     expect(screen.getByTestId('pref-dark')).toHaveTextContent('obsidian');
 
     act(() => {
-      screen.getByRole('button', { name: 'Set Tokyo Day' }).click();
+      screen.getByRole('button', { name: 'Set Frostline Day' }).click();
     });
 
-    expect(screen.getByTestId('pref-light')).toHaveTextContent('tokyo-light');
-    expect(screen.getByTestId('active')).toHaveTextContent('tokyo-light');
-    expect(document.documentElement.getAttribute('data-theme')).toBe('tokyo-light');
+    expect(screen.getByTestId('pref-light')).toHaveTextContent('frostline-light');
+    expect(screen.getByTestId('active')).toHaveTextContent('frostline-light');
+    expect(document.documentElement.getAttribute('data-theme')).toBe('frostline-light');
 
     act(() => {
       screen.getByRole('button', { name: 'Set Dark' }).click();
-      screen.getByRole('button', { name: 'Set Catppuccin' }).click();
+      screen.getByRole('button', { name: 'Set Badlands Dusk' }).click();
     });
 
     expect(screen.getByTestId('mode')).toHaveTextContent('dark');
-    expect(screen.getByTestId('pref-dark')).toHaveTextContent('catppuccin');
-    expect(screen.getByTestId('active')).toHaveTextContent('catppuccin');
-    expect(document.documentElement.getAttribute('data-theme')).toBe('catppuccin');
+    expect(screen.getByTestId('pref-dark')).toHaveTextContent('badlands-dark');
+    expect(screen.getByTestId('active')).toHaveTextContent('badlands-dark');
+    expect(document.documentElement.getAttribute('data-theme')).toBe('badlands-dark');
   });
 
   it('loads existing settings from localStorage', () => {
     localStorageDriver.set(THEME_STORAGE_KEY, {
       mode: 'dark',
       preferredLight: 'vanilla',
-      preferredDark: 'darcula',
+      preferredDark: 'krasno-dark',
     });
 
     function Consumer() {
@@ -205,6 +205,6 @@ describe('ThemeProvider & useTheme', () => {
       </ThemeProvider>,
     );
 
-    expect(screen.getByTestId('legacy-theme-values')).toHaveTextContent('dark:tokyo');
+    expect(screen.getByTestId('legacy-theme-values')).toHaveTextContent('dark:frostline-dark');
   });
 });

@@ -161,7 +161,7 @@ export function Pagination({
                 aria-label={`Page ${item}`}
                 className={`inline-flex items-center justify-center h-9 min-w-9 px-2 text-xs font-mono font-medium rounded-lg border transition-colors select-none focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)] ${
                   isCurrent
-                    ? 'border-[var(--color-primary)] bg-[var(--color-primary)] text-white shadow-xs font-semibold'
+                    ? 'border-[var(--color-primary)] bg-[var(--color-primary)] text-[var(--color-primary-fg)] shadow-xs font-semibold'
                     : 'border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-hover)] hover:text-[var(--color-text-main)] active:bg-[var(--color-surface-subtle)] cursor-pointer'
                 } ${disabled ? navButtonDisabled : ''}`}
               >

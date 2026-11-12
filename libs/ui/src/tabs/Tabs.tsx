@@ -120,7 +120,7 @@ export function TabTrigger({
       tabIndex={isActive ? 0 : -1}
       disabled={disabled}
       onClick={handleClick}
-      className={`inline-flex items-center justify-center gap-2 text-xs font-sans whitespace-nowrap transition-all focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--color-primary)] disabled:opacity-40 disabled:cursor-not-allowed ${sizeStyles} ${variantStyles} ${
+      className={`inline-flex items-center justify-center gap-2 text-xs font-sans whitespace-nowrap transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--color-primary)] disabled:opacity-40 disabled:cursor-not-allowed ${sizeStyles} ${variantStyles} ${
         fullWidth ? 'flex-1' : ''
       } ${className}`.trim()}
     >

@@ -31,7 +31,7 @@ export function RootErrorFallback({ error, reset }: RootErrorFallbackProps) {
             <button
               type="button"
               onClick={() => reset()}
-              className="px-3.5 py-1.5 rounded-lg bg-[var(--color-primary)] text-white text-xs font-medium hover:opacity-90 transition-opacity"
+              className="px-3.5 py-1.5 rounded-lg bg-[var(--color-primary)] text-[var(--color-primary-fg)] text-xs font-medium hover:opacity-90 transition-opacity"
             >
               Retry
             </button>

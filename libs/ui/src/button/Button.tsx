@@ -13,9 +13,9 @@ export type { ButtonIcon, ButtonProps, ButtonVariant };
 const VARIANT_CLASSES: Record<ButtonVariant, { standard: string; destructive: string }> = {
   primary: {
     standard:
-      'bg-[var(--color-primary)] text-white enabled:hover:bg-[var(--color-primary-hover)] enabled:active:opacity-95 shadow-xs border border-transparent focus-visible:ring-[var(--color-primary)]',
+      'bg-[var(--color-primary)] text-[var(--color-primary-fg)] enabled:hover:bg-[var(--color-primary-hover)] enabled:active:opacity-95 shadow-xs border border-transparent focus-visible:ring-[var(--color-primary)]',
     destructive:
-      'bg-[var(--color-status-danger)] text-white enabled:hover:opacity-90 enabled:active:opacity-95 shadow-xs border border-transparent focus-visible:ring-[var(--color-status-danger)]',
+      'bg-[var(--color-status-danger)] text-[var(--color-status-danger-fg)] enabled:hover:opacity-90 enabled:active:opacity-95 shadow-xs border border-transparent focus-visible:ring-[var(--color-status-danger)]',
   },
   secondary: {
     standard:
