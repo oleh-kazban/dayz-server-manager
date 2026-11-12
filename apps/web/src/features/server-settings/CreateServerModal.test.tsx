@@ -329,4 +329,97 @@ describe('CreateServerModal', () => {
     fireEvent.click(closeBtn);
     expect(mockOnClose).toHaveBeenCalledTimes(2);
   });
+
+  it('closes modal on Escape key or backdrop click when not submitting (QA-02)', () => {
+    renderModal(true);
+
+    fireEvent.keyDown(window, { key: 'Escape' });
+    expect(mockOnClose).toHaveBeenCalledTimes(1);
+
+    const dialog = screen.getByRole('dialog', { name: /Create DayZ Server/i });
+    fireEvent.click(dialog);
+    expect(mockOnClose).toHaveBeenCalledTimes(2);
+  });
+
+  it('resets dirty form values and validation errors when closed and re-opened (QA-05)', () => {
+    const { rerender } = render(
+      <QueryClientProvider client={queryClient}>
+        <CreateServerModal isOpen={true} onClose={mockOnClose} />
+      </QueryClientProvider>,
+    );
+
+    const nameInput = screen.getByLabelText(/Server Name/i);
+    fireEvent.change(nameInput, { target: { value: 'Dirty Server Name' } });
+    fireEvent.change(screen.getByLabelText(/Installation Path/i), { target: { value: '   ' } });
+    fireEvent.click(screen.getByRole('button', { name: /^Create Server$/i }));
+
+    expect(screen.getByText('Installation path is required.')).toBeInTheDocument();
+    expect(nameInput).toHaveValue('Dirty Server Name');
+
+    // Close modal
+    rerender(
+      <QueryClientProvider client={queryClient}>
+        <CreateServerModal isOpen={false} onClose={mockOnClose} />
+      </QueryClientProvider>,
+    );
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+
+    // Re-open modal
+    rerender(
+      <QueryClientProvider client={queryClient}>
+        <CreateServerModal isOpen={true} onClose={mockOnClose} />
+      </QueryClientProvider>,
+    );
+
+    expect(screen.getByLabelText(/Server Name/i)).toHaveValue('');
+    expect(screen.getByLabelText(/Installation Path/i)).toHaveValue('C:\\DayZServer');
+    expect(screen.queryByText('Installation path is required.')).not.toBeInTheDocument();
+  });
+
+  it('ignores rapid duplicate submit clicks while create mutation is in flight (QA-01)', async () => {
+    let resolveCreate!: (val: Awaited<ReturnType<typeof apiClient.servers.create>>) => void;
+    vi.mocked(apiClient.servers.create).mockReturnValueOnce(
+      new Promise(resolve => {
+        resolveCreate = resolve;
+      }),
+    );
+
+    renderModal(true);
+
+    fireEvent.change(screen.getByLabelText(/Server Name/i), {
+      target: { value: 'Single Flight Server' },
+    });
+
+    const submitBtn = screen.getByRole('button', { name: /^Create Server$/i });
+    const form = submitBtn.closest('form')!;
+
+    // Rapid synchronous double-submit
+    fireEvent.submit(form);
+    fireEvent.submit(form);
+
+    await waitFor(() => {
+      expect(apiClient.servers.create).toHaveBeenCalledTimes(1);
+    });
+
+    resolveCreate({
+      id: 'srv-999',
+      name: 'Single Flight Server',
+      description: null,
+      status: 'stopped',
+      gamePort: 2302,
+      queryPort: 27016,
+      rconPort: 2310,
+      installPath: 'C:\\DayZServer',
+      profilePath: 'C:\\DayZServer\\profiles',
+      missionPath: 'mpmissions\\dayzOffline.chernarusplus',
+      launchParameters: '-cpuCount=4 -doLogs -adminLog -netLog',
+      isDefault: false,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    });
+
+    await waitFor(() => {
+      expect(mockOnClose).toHaveBeenCalled();
+    });
+  });
 });

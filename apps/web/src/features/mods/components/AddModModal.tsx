@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Link } from '@tanstack/react-router';
@@ -34,6 +34,7 @@ import {
   notifyApiError,
   notifySuccess,
   resolveFieldErrors,
+  useModalDialog,
 } from '@aegis/web/core';
 
 import { modsQueryKeys } from '../mods.queries';
@@ -164,6 +165,8 @@ function UrlLookupTab({
   onClose: () => void;
 }) {
   const queryClient = useQueryClient();
+  const lookupInFlightRef = useRef(false);
+  const addInFlightRef = useRef(false);
   const [input, setInput] = useState('');
   const [inputError, setInputError] = useState<string | undefined>();
   const [lookupResult, setLookupResult] = useState<WorkshopLookupResponseDto | null>(null);
@@ -187,6 +190,9 @@ function UrlLookupTab({
       }
       notifyApiError(err, 'Workshop Lookup Failed');
     },
+    onSettled: () => {
+      lookupInFlightRef.current = false;
+    },
   });
 
   const addSingleMutation = useMutation({
@@ -197,6 +203,9 @@ function UrlLookupTab({
       onClose();
     },
     onError: (err: Error) => notifyApiError(err, 'Failed to Add Mod'),
+    onSettled: () => {
+      addInFlightRef.current = false;
+    },
   });
 
   const batchAddMutation = useMutation({
@@ -210,16 +219,21 @@ function UrlLookupTab({
       onClose();
     },
     onError: (err: Error) => notifyApiError(err, 'Failed to Import Collection'),
+    onSettled: () => {
+      addInFlightRef.current = false;
+    },
   });
 
   const handleLookup = (e: React.FormEvent) => {
     e.preventDefault();
+    if (lookupMutation.isPending || lookupInFlightRef.current) return;
     const trimmed = input.trim();
     if (!trimmed) {
       setInputError('Enter a Steam Workshop URL or PublishedFileId.');
       return;
     }
     setInputError(undefined);
+    lookupInFlightRef.current = true;
     lookupMutation.mutate(trimmed);
   };
 
@@ -233,8 +247,16 @@ function UrlLookupTab({
     ) ?? [];
 
   const handleAddSelected = () => {
-    if (selectedItems.length === 0) return;
+    if (
+      selectedItems.length === 0 ||
+      addSingleMutation.isPending ||
+      batchAddMutation.isPending ||
+      addInFlightRef.current
+    ) {
+      return;
+    }
 
+    addInFlightRef.current = true;
     if (selectedItems.length === 1) {
       const item = selectedItems[0];
       addSingleMutation.mutate({
@@ -375,6 +397,8 @@ function WorkshopSearchTab({
   onClose: () => void;
 }) {
   const queryClient = useQueryClient();
+  const searchInFlightRef = useRef(false);
+  const batchAddInFlightRef = useRef(false);
   const [query, setQuery] = useState('');
   const [page, setPage] = useState(1);
   const [searchResult, setSearchResult] = useState<WorkshopSearchResponseDto | null>(null);
@@ -401,6 +425,9 @@ function WorkshopSearchTab({
       }
       notifyApiError(err, 'Workshop Search Failed');
     },
+    onSettled: () => {
+      searchInFlightRef.current = false;
+    },
   });
 
   const batchAddMutation = useMutation({
@@ -414,10 +441,35 @@ function WorkshopSearchTab({
       onClose();
     },
     onError: (err: Error) => notifyApiError(err, 'Failed to Add Selected Mods'),
+    onSettled: () => {
+      batchAddInFlightRef.current = false;
+    },
   });
 
   const handleSearch = (targetPage: number) => {
+    if (searchMutation.isPending || searchInFlightRef.current) return;
+    searchInFlightRef.current = true;
     searchMutation.mutate({ q: query.trim(), page: targetPage });
+  };
+
+  const handleBatchAdd = () => {
+    if (selectedItems.length === 0 || batchAddMutation.isPending || batchAddInFlightRef.current) {
+      return;
+    }
+    batchAddInFlightRef.current = true;
+    batchAddMutation.mutate({
+      mods: selectedItems.map(item => ({
+        sourceType: MOD_SOURCE_TYPE.WORKSHOP,
+        workshopId: item.workshopId,
+        name: item.name,
+        folderName: item.suggestedFolderName,
+        loadTarget,
+        enabled: true,
+        sizeBytes: item.sizeBytes,
+        remoteUpdatedAt: item.remoteUpdatedAt,
+        markAsInstalled,
+      })),
+    });
   };
 
   const toggleItem = (workshopId: string) => {
@@ -537,21 +589,7 @@ function WorkshopSearchTab({
           type="button"
           disabled={selectedItems.length === 0}
           isLoading={batchAddMutation.isPending}
-          onClick={() =>
-            batchAddMutation.mutate({
-              mods: selectedItems.map(item => ({
-                sourceType: MOD_SOURCE_TYPE.WORKSHOP,
-                workshopId: item.workshopId,
-                name: item.name,
-                folderName: item.suggestedFolderName,
-                loadTarget,
-                enabled: true,
-                sizeBytes: item.sizeBytes,
-                remoteUpdatedAt: item.remoteUpdatedAt,
-                markAsInstalled,
-              })),
-            })
-          }
+          onClick={handleBatchAdd}
         >
           {selectedItems.length > 0 ? `Add ${selectedItems.length} Mod(s)` : 'Add Selected'}
         </Button>
@@ -572,6 +610,7 @@ function LocalModTab({
   onClose: () => void;
 }) {
   const queryClient = useQueryClient();
+  const inFlightRef = useRef(false);
   const [name, setName] = useState('');
   const [folderName, setFolderName] = useState('');
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
@@ -601,10 +640,14 @@ function LocalModTab({
       }
       notifyApiError(err, 'Failed to Add Local Mod');
     },
+    onSettled: () => {
+      inFlightRef.current = false;
+    },
   });
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (addLocalMutation.isPending || inFlightRef.current) return;
     const errors = validateLocalModForm(name, folderName);
     if (Object.keys(errors).length > 0) {
       setFieldErrors(errors);
@@ -612,6 +655,7 @@ function LocalModTab({
     }
 
     setFieldErrors({});
+    inFlightRef.current = true;
     addLocalMutation.mutate({
       sourceType: MOD_SOURCE_TYPE.LOCAL,
       name: name.trim(),
@@ -671,7 +715,11 @@ function LocalModTab({
   );
 }
 
-export function AddModModal({ isOpen, serverId, installedWorkshopIds, onClose }: AddModModalProps) {
+function AddModDialog({
+  serverId,
+  installedWorkshopIds,
+  onClose,
+}: Omit<AddModModalProps, 'isOpen'>) {
   const [activeTab, setActiveTab] = useState<AddModTab>('url');
   const [loadTargetByTab, setLoadTargetByTab] = useState<Record<AddModTab, ModLoadTarget>>({
     url: MOD_LOAD_TARGET.CLIENT_SERVER,
@@ -679,7 +727,7 @@ export function AddModModal({ isOpen, serverId, installedWorkshopIds, onClose }:
     local: MOD_LOAD_TARGET.SERVER_ONLY,
   });
 
-  if (!isOpen) return null;
+  const { dialogRef, handleBackdropClick } = useModalDialog({ onClose });
 
   const updateTabLoadTarget = (tab: AddModTab, target: ModLoadTarget) => {
     setLoadTargetByTab(prev => ({ ...prev, [tab]: target }));
@@ -692,9 +740,13 @@ export function AddModModal({ isOpen, serverId, installedWorkshopIds, onClose }:
       role="dialog"
       aria-modal="true"
       aria-labelledby="add-mod-title"
+      onClick={handleBackdropClick}
       className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs"
     >
-      <div className="w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-[var(--shadow-card)] p-6 space-y-5">
+      <div
+        ref={dialogRef}
+        className="w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-[var(--shadow-card)] p-6 space-y-5"
+      >
         <div className="flex items-center justify-between pb-4 border-b border-[var(--color-border)]">
           <div className="flex items-center gap-3">
             <div className="p-2 rounded-lg bg-[var(--color-primary-light)] text-[var(--color-primary)]">
@@ -757,5 +809,16 @@ export function AddModModal({ isOpen, serverId, installedWorkshopIds, onClose }:
         </Tabs>
       </div>
     </div>
+  );
+}
+
+export function AddModModal({ isOpen, serverId, installedWorkshopIds, onClose }: AddModModalProps) {
+  if (!isOpen) return null;
+  return (
+    <AddModDialog
+      serverId={serverId}
+      installedWorkshopIds={installedWorkshopIds}
+      onClose={onClose}
+    />
   );
 }

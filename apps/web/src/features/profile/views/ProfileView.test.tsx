@@ -9,6 +9,11 @@ import * as queriesModule from '../api/profile.queries';
 
 import { ProfileView } from './ProfileView';
 
+vi.mock('@tanstack/react-router', () => ({
+  useRouter: () => ({ invalidate: vi.fn() }),
+  useNavigate: () => vi.fn(),
+}));
+
 vi.mock('../../auth', () => ({
   useAuth: () => ({
     user: null,

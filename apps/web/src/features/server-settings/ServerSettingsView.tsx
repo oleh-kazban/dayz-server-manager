@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from '@tanstack/react-router';
@@ -137,6 +137,7 @@ function ServerSettingsForm({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (isSaving) return;
 
     const errors = validateServerSettingsForm({
       name,
@@ -388,6 +389,8 @@ export function ServerSettingsView() {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [serverFieldErrors, setServerFieldErrors] = useState<Record<string, string>>({});
+  const updateInFlightRef = useRef(false);
+  const deleteInFlightRef = useRef(false);
 
   const clearServerFieldError = (field: string) => {
     setServerFieldErrors(prev => {
@@ -438,6 +441,9 @@ export function ServerSettingsView() {
       setShowDeleteConfirm(false);
       notifyApiError(err, 'Delete Failed');
     },
+    onSettled: () => {
+      deleteInFlightRef.current = false;
+    },
   });
 
   // Detail query for active server - disabled while delete is pending or complete
@@ -475,7 +481,22 @@ export function ServerSettingsView() {
       }
       notifyApiError(err, 'Update Failed');
     },
+    onSettled: () => {
+      updateInFlightRef.current = false;
+    },
   });
+
+  const handleSave = (payload: UpdateServerDto) => {
+    if (updateMutation.isPending || updateInFlightRef.current) return;
+    updateInFlightRef.current = true;
+    updateMutation.mutate(payload);
+  };
+
+  const handleConfirmDelete = () => {
+    if (deleteMutation.isPending || deleteInFlightRef.current) return;
+    deleteInFlightRef.current = true;
+    deleteMutation.mutate();
+  };
 
   if (isServersLoading || isDetailLoading) {
     return (
@@ -547,7 +568,7 @@ export function ServerSettingsView() {
         <ServerSettingsForm
           key={detail.id}
           detail={detail}
-          onSave={payload => updateMutation.mutate(payload)}
+          onSave={handleSave}
           isSaving={updateMutation.isPending}
           serverFieldErrors={serverFieldErrors}
           onClearServerFieldError={clearServerFieldError}
@@ -596,7 +617,7 @@ export function ServerSettingsView() {
             confirmLabel="Delete server"
             cancelLabel="Cancel"
             isLoading={deleteMutation.isPending}
-            onConfirm={() => deleteMutation.mutate()}
+            onConfirm={handleConfirmDelete}
             onCancel={() => setShowDeleteConfirm(false)}
           />
         )}

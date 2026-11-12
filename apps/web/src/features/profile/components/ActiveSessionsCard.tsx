@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 
+import { useNavigate, useRouter } from '@tanstack/react-router';
 import { Laptop, LogOut, Smartphone } from 'lucide-react';
 
 import type { SessionDto } from '@aegis/api-contracts';
@@ -32,9 +33,13 @@ function extractErrorMessage(err: unknown, fallback: string): string {
 }
 
 export function ActiveSessionsCard() {
+  const router = useRouter();
+  const navigate = useNavigate();
   const { data, isLoading } = useSessionsQuery();
   const revokeSessionMutation = useRevokeSessionMutation();
   const revokeOtherSessionsMutation = useRevokeOtherSessionsMutation();
+  const revokeSingleInFlightRef = useRef(false);
+  const revokeBulkInFlightRef = useRef(false);
 
   const [confirmBulkOpen, setConfirmBulkOpen] = useState(false);
   const [confirmCurrentId, setConfirmCurrentId] = useState<string | null>(null);
@@ -47,7 +52,9 @@ export function ActiveSessionsCard() {
       setConfirmCurrentId(session.id);
       return;
     }
+    if (revokeSessionMutation.isPending || revokeSingleInFlightRef.current) return;
 
+    revokeSingleInFlightRef.current = true;
     revokeSessionMutation.mutate(
       { id: session.id, isCurrent: false },
       {
@@ -60,24 +67,37 @@ export function ActiveSessionsCard() {
             extractErrorMessage(err, 'Failed to revoke session'),
           );
         },
+        onSettled: () => {
+          revokeSingleInFlightRef.current = false;
+        },
       },
     );
   };
 
   const handleConfirmCurrentRevoke = () => {
-    if (!confirmCurrentId) return;
+    if (!confirmCurrentId || revokeSessionMutation.isPending || revokeSingleInFlightRef.current) {
+      return;
+    }
+    revokeSingleInFlightRef.current = true;
     revokeSessionMutation.mutate(
       { id: confirmCurrentId, isCurrent: true },
       {
-        onSuccess: () => {
+        onSuccess: async () => {
           setConfirmCurrentId(null);
           showToast.info('Signed Out', 'Your current session was terminated.');
+          await router.invalidate();
+          await navigate({ to: '/sign-in' });
+        },
+        onSettled: () => {
+          revokeSingleInFlightRef.current = false;
         },
       },
     );
   };
 
   const handleConfirmBulk = () => {
+    if (revokeOtherSessionsMutation.isPending || revokeBulkInFlightRef.current) return;
+    revokeBulkInFlightRef.current = true;
     revokeOtherSessionsMutation.mutate(undefined, {
       onSuccess: res => {
         setConfirmBulkOpen(false);
@@ -91,6 +111,9 @@ export function ActiveSessionsCard() {
           'Bulk Revocation Failed',
           extractErrorMessage(err, 'Failed to terminate other sessions'),
         );
+      },
+      onSettled: () => {
+        revokeBulkInFlightRef.current = false;
       },
     });
   };

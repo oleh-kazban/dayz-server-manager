@@ -581,4 +581,95 @@ describe('SteamSettingsView (REQ-01, REQ-02, REQ-03, REQ-04, REQ-07)', () => {
       });
     });
   });
+
+  describe('Synchronous In-Flight Mutation Guards & Diagnostics Modal Dismissal (QA-01, QA-02)', () => {
+    it('ignores rapid duplicate clicks on Save Changes, Clear Session Tokens, Authenticate Session, and Run Diagnostics (QA-01)', async () => {
+      vi.mocked(apiClient.steam.getSettings).mockResolvedValue({
+        ...mockDefaultSettings,
+        authMode: 'account',
+        steamUsername: 'dayz_operator',
+        hasPassword: true,
+        sessionStatus: 'UNAUTHENTICATED',
+      });
+
+      let resolveUpdate!: (val: SteamSettingsDto) => void;
+      vi.mocked(apiClient.steam.updateSettings).mockReturnValueOnce(
+        new Promise(resolve => {
+          resolveUpdate = resolve;
+        }),
+      );
+
+      let resolveClear!: (val: { success: boolean; message: string }) => void;
+      vi.mocked(apiClient.steam.clearSession).mockReturnValueOnce(
+        new Promise(resolve => {
+          resolveClear = resolve;
+        }),
+      );
+
+      let resolveLogin!: (val: { success: boolean; message: string }) => void;
+      vi.mocked(apiClient.steam.loginSession).mockReturnValueOnce(
+        new Promise(resolve => {
+          resolveLogin = resolve;
+        }),
+      );
+
+      let resolveDiag!: (val: SteamDiagnosticsResultDto) => void;
+      vi.mocked(apiClient.steam.runDiagnostics).mockReturnValueOnce(
+        new Promise(resolve => {
+          resolveDiag = resolve;
+        }),
+      );
+
+      renderView();
+
+      await waitFor(() => {
+        expect(screen.getByRole('button', { name: 'Save Changes' })).toBeInTheDocument();
+      });
+
+      const saveBtn = screen.getByRole('button', { name: 'Save Changes' });
+      fireEvent.click(saveBtn);
+      fireEvent.click(saveBtn);
+      await waitFor(() => {
+        expect(apiClient.steam.updateSettings).toHaveBeenCalledTimes(1);
+      });
+
+      const clearBtn = screen.getByRole('button', { name: 'Clear Session Tokens' });
+      fireEvent.click(clearBtn);
+      fireEvent.click(clearBtn);
+      await waitFor(() => {
+        expect(apiClient.steam.clearSession).toHaveBeenCalledTimes(1);
+      });
+
+      const authBtn = screen.getByRole('button', { name: 'Authenticate Session' });
+      fireEvent.click(authBtn);
+      fireEvent.click(authBtn);
+      await waitFor(() => {
+        expect(apiClient.steam.loginSession).toHaveBeenCalledTimes(1);
+      });
+
+      const diagBtn = screen.getByRole('button', { name: 'Run Diagnostics' });
+      fireEvent.click(diagBtn);
+      fireEvent.click(diagBtn);
+      await waitFor(() => {
+        expect(apiClient.steam.runDiagnostics).toHaveBeenCalledTimes(1);
+      });
+
+      // While diagnostics is in flight (isBusy: true), Escape does not close modal
+      fireEvent.keyDown(window, { key: 'Escape' });
+      expect(screen.getByRole('dialog')).toBeInTheDocument();
+
+      resolveUpdate(mockDefaultSettings);
+      resolveClear({ success: true, message: 'Cleared' });
+      resolveLogin({ success: true, message: 'Initiated' });
+      resolveDiag(mockDiagnosticsResult);
+
+      await waitFor(() => {
+        expect(screen.getByText('Diagnostics Passed')).toBeInTheDocument();
+      });
+
+      // Once diagnostics settles (isBusy: false), Escape closes SteamDiagnosticsModal
+      fireEvent.keyDown(window, { key: 'Escape' });
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    });
+  });
 });

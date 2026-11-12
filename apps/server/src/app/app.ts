@@ -100,13 +100,26 @@ export function buildApp(options: BuildAppOptions): FastifyInstance {
 
   app.decorate('authenticate', async (request: FastifyRequest, reply: FastifyReply) => {
     try {
-      const payload = await request.jwtVerify<{
+      type JwtPayload = {
         sub: string;
         username?: string;
         role?: string;
-        type?: string;
+        type?: 'access' | 'refresh';
         sid?: string;
-      }>();
+      };
+
+      const queryToken = !request.headers.authorization
+        ? (request.query as Record<string, unknown> | undefined)?.token
+        : undefined;
+
+      let payload: JwtPayload;
+      if (typeof queryToken === 'string' && queryToken.length > 0) {
+        payload = app.jwt.verify<JwtPayload>(queryToken);
+        request.user = payload;
+      } else {
+        payload = await request.jwtVerify<JwtPayload>();
+      }
+
       if (!payload || payload.type !== 'access') {
         return sendApiError(
           reply,

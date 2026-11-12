@@ -177,7 +177,7 @@ describe('Profile Queries & Mutations', () => {
       expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: sessionsQueryKeys.all });
     });
 
-    it('useRevokeSessionMutation invalidates sessions and logs out if isCurrent is true', async () => {
+    it('useRevokeSessionMutation logs out without invalidating sessions query when isCurrent is true (QA-06)', async () => {
       vi.spyOn(apiClient.sessions, 'revoke').mockResolvedValue({
         success: true,
         message: 'revoked',
@@ -191,15 +191,16 @@ describe('Profile Queries & Mutations', () => {
       });
 
       expect(apiClient.sessions.revoke).toHaveBeenCalledWith('sess-current');
-      expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: sessionsQueryKeys.all });
       expect(mockLogout).toHaveBeenCalled();
+      expect(invalidateSpy).not.toHaveBeenCalled();
     });
 
-    it('useRevokeSessionMutation does not logout if isCurrent is false', async () => {
+    it('useRevokeSessionMutation invalidates sessions and does not logout if isCurrent is false', async () => {
       vi.spyOn(apiClient.sessions, 'revoke').mockResolvedValue({
         success: true,
         message: 'revoked',
       });
+      const invalidateSpy = vi.spyOn(queryClient, 'invalidateQueries');
 
       const { result } = renderHook(() => useRevokeSessionMutation(), { wrapper });
 
@@ -208,6 +209,7 @@ describe('Profile Queries & Mutations', () => {
       });
 
       expect(mockLogout).not.toHaveBeenCalled();
+      expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: sessionsQueryKeys.all });
     });
 
     it('useRevokeOtherSessionsMutation calls revokeOthers and invalidates sessions', async () => {

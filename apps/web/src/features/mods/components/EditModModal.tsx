@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Pencil, X } from 'lucide-react';
@@ -16,6 +16,7 @@ import {
   notifyApiError,
   notifySuccess,
   resolveFieldErrors,
+  useModalDialog,
 } from '@aegis/web/core';
 
 import { modsQueryKeys } from '../mods.queries';
@@ -65,6 +66,7 @@ function EditModForm({
   onClose: () => void;
 }) {
   const queryClient = useQueryClient();
+  const inFlightRef = useRef(false);
 
   const [name, setName] = useState(mod.name);
   const [folderName, setFolderName] = useState(mod.folderName);
@@ -104,10 +106,14 @@ function EditModForm({
       }
       notifyApiError(err, 'Failed to Update Mod');
     },
+    onSettled: () => {
+      inFlightRef.current = false;
+    },
   });
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (updateMutation.isPending || inFlightRef.current) return;
     const errors = validateEditModForm(name, folderName);
     if (Object.keys(errors).length > 0) {
       setFieldErrors(errors);
@@ -115,6 +121,7 @@ function EditModForm({
     }
 
     setFieldErrors({});
+    inFlightRef.current = true;
     updateMutation.mutate({
       name: name.trim(),
       folderName: folderName.trim(),
@@ -181,23 +188,31 @@ function EditModForm({
   );
 }
 
-export function EditModModal({
-  isOpen,
+function EditModDialog({
   mod,
   serverId,
   isServerLocked,
   onClose,
-}: EditModModalProps) {
-  if (!isOpen || !mod) return null;
+}: {
+  mod: ServerModDto;
+  serverId: string;
+  isServerLocked: boolean;
+  onClose: () => void;
+}) {
+  const { dialogRef, handleBackdropClick } = useModalDialog({ onClose });
 
   return (
     <div
       role="dialog"
       aria-modal="true"
       aria-labelledby="edit-mod-title"
+      onClick={handleBackdropClick}
       className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs"
     >
-      <div className="w-full max-w-lg max-h-[90vh] overflow-y-auto rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-[var(--shadow-card)] p-6">
+      <div
+        ref={dialogRef}
+        className="w-full max-w-lg max-h-[90vh] overflow-y-auto rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-[var(--shadow-card)] p-6"
+      >
         <div className="flex items-center justify-between pb-4 border-b border-[var(--color-border)]">
           <div className="flex items-center gap-3">
             <div className="p-2 rounded-lg bg-[var(--color-primary-light)] text-[var(--color-primary)]">
@@ -234,5 +249,24 @@ export function EditModModal({
         />
       </div>
     </div>
+  );
+}
+
+export function EditModModal({
+  isOpen,
+  mod,
+  serverId,
+  isServerLocked,
+  onClose,
+}: EditModModalProps) {
+  if (!isOpen || !mod) return null;
+
+  return (
+    <EditModDialog
+      mod={mod}
+      serverId={serverId}
+      isServerLocked={isServerLocked}
+      onClose={onClose}
+    />
   );
 }

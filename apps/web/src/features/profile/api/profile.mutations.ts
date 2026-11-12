@@ -43,10 +43,11 @@ export function useRevokeSessionMutation() {
       return { ...res, isCurrent };
     },
     onSuccess: data => {
-      queryClient.invalidateQueries({ queryKey: sessionsQueryKeys.all });
       if (data.isCurrent) {
         logout();
+        return;
       }
+      queryClient.invalidateQueries({ queryKey: sessionsQueryKeys.all });
     },
   });
 }

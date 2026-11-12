@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 
 import { KeyRound, ShieldAlert } from 'lucide-react';
 
@@ -26,11 +26,13 @@ export function PasswordRotationCard() {
   const [validationError, setValidationError] = useState<string | null>(null);
 
   const changePasswordMutation = useChangePasswordMutation();
+  const inFlightRef = useRef(false);
 
   const confirmMismatch = confirmPassword.length > 0 && confirmPassword !== newPassword;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (changePasswordMutation.isPending || inFlightRef.current) return;
     setValidationError(null);
 
     if (!currentPassword) {
@@ -83,6 +85,7 @@ export function PasswordRotationCard() {
       return;
     }
 
+    inFlightRef.current = true;
     changePasswordMutation.mutate(
       {
         currentPassword,
@@ -105,6 +108,9 @@ export function PasswordRotationCard() {
             extractErrorMessage(err, 'Failed to rotate password'),
           );
         },
+        onSettled: () => {
+          inFlightRef.current = false;
+        },
       },
     );
   };
@@ -114,7 +120,7 @@ export function PasswordRotationCard() {
       title="Security & Password Rotation"
       subtitle="Update account authentication credentials. Auto-terminates other active device sessions."
     >
-      <form onSubmit={handleSubmit} className="space-y-6">
+      <form noValidate onSubmit={handleSubmit} className="space-y-6">
         <Notice variant="warning" title="Session Invalidation Policy" icon={ShieldAlert}>
           Rotating your password immediately invalidates all active tokens and sessions on other
           browsers and workstations. Your current session will remain authenticated.

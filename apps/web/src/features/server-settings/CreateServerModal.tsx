@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Server, X } from 'lucide-react';
@@ -13,6 +13,7 @@ import {
   resolveFieldErrors,
   serverQueryKeys,
   useActiveServer,
+  useModalDialog,
 } from '@aegis/web/core';
 
 export interface CreateServerModalProps {
@@ -20,9 +21,10 @@ export interface CreateServerModalProps {
   onClose: () => void;
 }
 
-export function CreateServerModal({ isOpen, onClose }: CreateServerModalProps) {
+function CreateServerDialog({ onClose }: { onClose: () => void }) {
   const queryClient = useQueryClient();
   const { setActiveServerId } = useActiveServer();
+  const inFlightRef = useRef(false);
 
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
@@ -64,12 +66,19 @@ export function CreateServerModal({ isOpen, onClose }: CreateServerModalProps) {
       }
       notifyApiError(err, 'Failed to create server');
     },
+    onSettled: () => {
+      inFlightRef.current = false;
+    },
   });
 
-  if (!isOpen) return null;
+  const { dialogRef, handleBackdropClick } = useModalDialog({
+    onClose,
+    isBusy: createMutation.isPending,
+  });
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (createMutation.isPending || inFlightRef.current) return;
 
     const errors: Record<string, string> = {};
 
@@ -107,6 +116,7 @@ export function CreateServerModal({ isOpen, onClose }: CreateServerModalProps) {
     }
 
     setFieldErrors({});
+    inFlightRef.current = true;
 
     createMutation.mutate({
       name: name.trim(),
@@ -128,9 +138,13 @@ export function CreateServerModal({ isOpen, onClose }: CreateServerModalProps) {
       role="dialog"
       aria-modal="true"
       aria-labelledby="create-server-title"
+      onClick={handleBackdropClick}
       className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs"
     >
-      <div className="w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-[var(--shadow-card)] p-6">
+      <div
+        ref={dialogRef}
+        className="w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-[var(--shadow-card)] p-6"
+      >
         <div className="flex items-center justify-between pb-4 border-b border-[var(--color-border)]">
           <div className="flex items-center gap-3">
             <div className="p-2 rounded-lg bg-[var(--color-primary-light)] text-[var(--color-primary)]">
@@ -293,4 +307,9 @@ export function CreateServerModal({ isOpen, onClose }: CreateServerModalProps) {
       </div>
     </div>
   );
+}
+
+export function CreateServerModal({ isOpen, onClose }: CreateServerModalProps) {
+  if (!isOpen) return null;
+  return <CreateServerDialog onClose={onClose} />;
 }

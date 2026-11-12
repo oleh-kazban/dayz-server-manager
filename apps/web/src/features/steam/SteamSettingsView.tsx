@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ExternalLink, Fingerprint, KeyRound, Save, Terminal, Trash2 } from 'lucide-react';
@@ -319,6 +319,7 @@ function SteamSettingsForm({
   const [clearApiKeyOnSave, setClearApiKeyOnSave] = useState(false);
 
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  const updateInFlightRef = useRef(false);
 
   const updateMutation = useMutation({
     mutationFn: (dto: UpdateSteamSettingsDto) => apiClient.steam.updateSettings(dto),
@@ -339,6 +340,9 @@ function SteamSettingsForm({
       setFieldErrors(resolved);
       notifyApiError(err, 'Failed to Save Steam Settings');
     },
+    onSettled: () => {
+      updateInFlightRef.current = false;
+    },
   });
 
   const clearFieldError = (key: string) => {
@@ -353,6 +357,7 @@ function SteamSettingsForm({
 
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
+    if (updateMutation.isPending || updateInFlightRef.current) return;
 
     const clientErrors = resolveAccountErrors(
       authMode,
@@ -394,6 +399,7 @@ function SteamSettingsForm({
       ...(steamWebApiKeyValue !== undefined && { steamWebApiKey: steamWebApiKeyValue }),
     };
 
+    updateInFlightRef.current = true;
     updateMutation.mutate(dto);
   };
 
@@ -777,6 +783,9 @@ export function SteamSettingsView() {
 
   const [isDiagOpen, setIsDiagOpen] = useState(false);
   const [diagResult, setDiagResult] = useState<SteamDiagnosticsResultDto | null>(null);
+  const clearSessionInFlightRef = useRef(false);
+  const loginSessionInFlightRef = useRef(false);
+  const diagInFlightRef = useRef(false);
 
   const { data: settings } = useQuery<SteamSettingsDto>({
     queryKey: ['steam-settings'],
@@ -792,6 +801,9 @@ export function SteamSettingsView() {
     onError: (err: Error) => {
       notifyApiError(err, 'Failed to Clear Session Tokens');
     },
+    onSettled: () => {
+      clearSessionInFlightRef.current = false;
+    },
   });
 
   const loginSessionMutation = useMutation({
@@ -804,6 +816,9 @@ export function SteamSettingsView() {
     },
     onError: (err: Error) => {
       notifyApiError(err, 'Failed to Initiate Steam Login');
+    },
+    onSettled: () => {
+      loginSessionInFlightRef.current = false;
     },
   });
 
@@ -833,7 +848,28 @@ export function SteamSettingsView() {
     onError: (err: Error) => {
       notifyApiError(err, 'Failed to Run SteamCMD Diagnostics');
     },
+    onSettled: () => {
+      diagInFlightRef.current = false;
+    },
   });
+
+  const handleClearSession = () => {
+    if (clearSessionMutation.isPending || clearSessionInFlightRef.current) return;
+    clearSessionInFlightRef.current = true;
+    clearSessionMutation.mutate();
+  };
+
+  const handleLoginSession = () => {
+    if (loginSessionMutation.isPending || loginSessionInFlightRef.current) return;
+    loginSessionInFlightRef.current = true;
+    loginSessionMutation.mutate();
+  };
+
+  const handleRunDiagnostics = () => {
+    if (diagMutation.isPending || diagInFlightRef.current) return;
+    diagInFlightRef.current = true;
+    diagMutation.mutate();
+  };
 
   return (
     <PageContainer>
@@ -841,11 +877,11 @@ export function SteamSettingsView() {
         <SteamSettingsForm
           key={`${settings.id}-${String(settings.updatedAt)}`}
           settings={settings}
-          onClearSession={() => clearSessionMutation.mutate()}
+          onClearSession={handleClearSession}
           isClearingSession={clearSessionMutation.isPending}
-          onLoginSession={() => loginSessionMutation.mutate()}
+          onLoginSession={handleLoginSession}
           isLoggingIn={loginSessionMutation.isPending}
-          onRunDiagnostics={() => diagMutation.mutate()}
+          onRunDiagnostics={handleRunDiagnostics}
           isRunningDiagnostics={diagMutation.isPending}
         />
       ) : (

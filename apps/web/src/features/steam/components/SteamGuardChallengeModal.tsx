@@ -1,9 +1,10 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 import { KeyRound, Radio, ShieldAlert, X } from 'lucide-react';
 
 import type { SteamChallengeEventDto } from '@aegis/api-contracts';
 import { Button, Input, ProgressBar } from '@aegis/ui';
+import { useModalDialog } from '@aegis/web/core';
 
 export interface SteamGuardChallengeModalProps {
   challenge: SteamChallengeEventDto | null;
@@ -24,7 +25,13 @@ function SteamGuardChallengeDialog({
 }: SteamGuardChallengeDialogProps) {
   const [otpCode, setOtpCode] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const submittingRef = useRef(false);
   const [remainingSeconds, setRemainingSeconds] = useState(challenge.timeoutSeconds || 90);
+
+  const { dialogRef, handleBackdropClick } = useModalDialog({
+    onClose: onAbort,
+    isBusy: submitting,
+  });
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -54,14 +61,16 @@ function SteamGuardChallengeDialog({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (otpCode.length !== 5 || submitting) return;
+    if (otpCode.length !== 5 || submitting || submittingRef.current) return;
 
+    submittingRef.current = true;
     setSubmitting(true);
     try {
       await onSubmitOtp(otpCode);
     } catch {
       // Error handled in parent/hook
     } finally {
+      submittingRef.current = false;
       setSubmitting(false);
     }
   };
@@ -71,9 +80,13 @@ function SteamGuardChallengeDialog({
       role="dialog"
       aria-modal="true"
       aria-labelledby="steam-guard-modal-title"
+      onClick={handleBackdropClick}
       className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs"
     >
-      <div className="w-full max-w-md rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-[var(--shadow-card)] p-6 space-y-5 animate-in fade-in zoom-in-95 duration-150">
+      <div
+        ref={dialogRef}
+        className="w-full max-w-md rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-[var(--shadow-card)] p-6 space-y-5 animate-in fade-in zoom-in-95 duration-150"
+      >
         <div className="flex items-center justify-between pb-3 border-b border-[var(--color-border)]">
           <div className="flex items-center gap-3">
             <div className="p-2 rounded-lg bg-[var(--color-primary-light)] text-[var(--color-primary)]">

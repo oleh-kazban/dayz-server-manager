@@ -2,6 +2,7 @@ import { CheckCircle2, Terminal, X, XCircle } from 'lucide-react';
 
 import type { SteamDiagnosticsResultDto } from '@aegis/api-contracts';
 import { Button, StatusTag, Tag } from '@aegis/ui';
+import { useModalDialog } from '@aegis/web/core';
 
 export interface SteamDiagnosticsModalProps {
   isOpen: boolean;
@@ -90,22 +91,25 @@ function DiagnosticLogsViewer({ logs }: { logs: string[] }) {
   );
 }
 
-export function SteamDiagnosticsModal({
-  isOpen,
+function SteamDiagnosticsDialog({
   result,
   isLoading,
   onClose,
-}: SteamDiagnosticsModalProps) {
-  if (!isOpen) return null;
+}: Omit<SteamDiagnosticsModalProps, 'isOpen'>) {
+  const { dialogRef, handleBackdropClick } = useModalDialog({ onClose, isBusy: isLoading });
 
   return (
     <div
       role="dialog"
       aria-modal="true"
       aria-labelledby="steam-diag-title"
+      onClick={handleBackdropClick}
       className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs"
     >
-      <div className="w-full max-w-2xl max-h-[90vh] flex flex-col rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-[var(--shadow-card)] p-6 space-y-5 animate-in fade-in zoom-in-95 duration-150">
+      <div
+        ref={dialogRef}
+        className="w-full max-w-2xl max-h-[90vh] flex flex-col rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-[var(--shadow-card)] p-6 space-y-5 animate-in fade-in zoom-in-95 duration-150"
+      >
         <div className="flex items-center justify-between pb-3 border-b border-[var(--color-border)]">
           <div className="flex items-center gap-3">
             <div className="p-2 rounded-lg bg-[var(--color-primary-light)] text-[var(--color-primary)]">
@@ -210,4 +214,14 @@ export function SteamDiagnosticsModal({
       </div>
     </div>
   );
+}
+
+export function SteamDiagnosticsModal({
+  isOpen,
+  result,
+  isLoading,
+  onClose,
+}: SteamDiagnosticsModalProps) {
+  if (!isOpen) return null;
+  return <SteamDiagnosticsDialog result={result} isLoading={isLoading} onClose={onClose} />;
 }

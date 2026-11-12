@@ -421,5 +421,191 @@ describe('AddModModal', () => {
         expect(mockOnClose).toHaveBeenCalled();
       });
     });
+
+    it('guards against rapid duplicate submit clicks across UrlLookupTab, WorkshopSearchTab, and LocalModTab (QA-01)', async () => {
+      let resolveLookup!: (val: Awaited<ReturnType<typeof apiClient.mods.lookupWorkshop>>) => void;
+      vi.mocked(apiClient.mods.lookupWorkshop).mockReturnValueOnce(
+        new Promise(resolve => {
+          resolveLookup = resolve;
+        }),
+      );
+
+      let resolveSingleAdd!: (val: ServerModDto) => void;
+      vi.mocked(apiClient.mods.add).mockReturnValueOnce(
+        new Promise(resolve => {
+          resolveSingleAdd = resolve;
+        }),
+      );
+
+      renderModal();
+
+      // 1. UrlLookupTab lookup guard
+      const urlInput = screen.getByLabelText('Steam Workshop URL or PublishedFileId');
+      fireEvent.change(urlInput, { target: { value: '1559212036' } });
+      const lookupBtn = screen.getByRole('button', { name: 'Lookup' });
+      const lookupForm = lookupBtn.closest('form')!;
+      fireEvent.submit(lookupForm);
+      fireEvent.submit(lookupForm);
+      await waitFor(() => {
+        expect(apiClient.mods.lookupWorkshop).toHaveBeenCalledTimes(1);
+      });
+
+      resolveLookup({
+        kind: 'item',
+        collectionTitle: null,
+        items: [itemCF],
+        skippedCount: 0,
+      });
+
+      await waitFor(() => {
+        expect(screen.getByText('CF')).toBeInTheDocument();
+      });
+
+      // 2. UrlLookupTab addSelected guard
+      const addModBtn = screen.getByRole('button', { name: 'Add Selected Mod' });
+      fireEvent.click(addModBtn);
+      fireEvent.click(addModBtn);
+      await waitFor(() => {
+        expect(apiClient.mods.add).toHaveBeenCalledTimes(1);
+      });
+
+      // 3. Switch to Search Workshop tab and test search & batchAdd guards
+      fireEvent.click(screen.getByRole('tab', { name: /Search Workshop/i }));
+      let resolveSearch!: (val: Awaited<ReturnType<typeof apiClient.mods.searchWorkshop>>) => void;
+      vi.mocked(apiClient.mods.searchWorkshop).mockReturnValueOnce(
+        new Promise(resolve => {
+          resolveSearch = resolve;
+        }),
+      );
+
+      const searchBtn = screen.getByRole('button', { name: 'Search' });
+      const searchForm = searchBtn.closest('form')!;
+      fireEvent.submit(searchForm);
+      fireEvent.submit(searchForm);
+      await waitFor(() => {
+        expect(apiClient.mods.searchWorkshop).toHaveBeenCalledTimes(1);
+      });
+
+      resolveSearch({
+        items: [itemCOT],
+        total: 1,
+        page: 1,
+        pageSize: 10,
+      });
+
+      await waitFor(() => {
+        expect(screen.getByText('Community Online Tools')).toBeInTheDocument();
+      });
+
+      fireEvent.click(screen.getByLabelText('Select Community Online Tools'));
+
+      let resolveBatchAdd!: (val: Awaited<ReturnType<typeof apiClient.mods.batchAdd>>) => void;
+      vi.mocked(apiClient.mods.batchAdd).mockReturnValueOnce(
+        new Promise(resolve => {
+          resolveBatchAdd = resolve;
+        }),
+      );
+
+      const batchAddBtn = screen.getByRole('button', { name: 'Add 1 Mod(s)' });
+      fireEvent.click(batchAddBtn);
+      fireEvent.click(batchAddBtn);
+      await waitFor(() => {
+        expect(apiClient.mods.batchAdd).toHaveBeenCalledTimes(1);
+      });
+
+      // 4. Switch to Local Mod tab and test local mod submit guard
+      fireEvent.click(screen.getByRole('tab', { name: /Local Mod/i }));
+      let resolveLocalAdd!: (val: ServerModDto) => void;
+      vi.mocked(apiClient.mods.add).mockReturnValueOnce(
+        new Promise(resolve => {
+          resolveLocalAdd = resolve;
+        }),
+      );
+
+      fireEvent.change(screen.getByLabelText('Mod Name'), { target: { value: 'Local1' } });
+      fireEvent.change(screen.getByLabelText('@Folder Name'), { target: { value: '@Local1' } });
+      const localSubmitBtn = screen.getByRole('button', { name: 'Add Local Mod' });
+      const localForm = localSubmitBtn.closest('form')!;
+      fireEvent.submit(localForm);
+      fireEvent.submit(localForm);
+      // 1 from UrlLookupTab + 1 from LocalModTab = 2
+      await waitFor(() => {
+        expect(apiClient.mods.add).toHaveBeenCalledTimes(2);
+      });
+
+      resolveSingleAdd(createdMod);
+      resolveBatchAdd({
+        added: [createdMod],
+        skippedCount: 0,
+        mods: [createdMod],
+        launchPreview: {
+          modFlag: '-mod=@CF',
+          serverModFlag: '',
+          combinedArgs: ['-mod=@CF'],
+          missingFolderCount: 0,
+        },
+        updateAvailableCount: 0,
+      });
+      resolveLocalAdd(createdMod);
+
+      await waitFor(() => {
+        expect(mockOnClose).toHaveBeenCalled();
+      });
+    });
+
+    it('closes on Escape or backdrop click and resets dirty state when closed and re-opened (QA-02, QA-05)', () => {
+      const { rerender } = render(
+        <QueryClientProvider client={queryClient}>
+          <AddModModal
+            isOpen={true}
+            serverId={SERVER_ID}
+            installedWorkshopIds={new Set()}
+            onClose={mockOnClose}
+          />
+        </QueryClientProvider>,
+      );
+
+      fireEvent.keyDown(window, { key: 'Escape' });
+      expect(mockOnClose).toHaveBeenCalledTimes(1);
+
+      const dialog = screen.getByRole('dialog');
+      fireEvent.click(dialog);
+      expect(mockOnClose).toHaveBeenCalledTimes(2);
+
+      // Switch tab and dirty input, then close and re-open
+      fireEvent.click(screen.getByRole('tab', { name: /Local Mod/i }));
+      fireEvent.change(screen.getByLabelText('Mod Name'), { target: { value: 'Dirty Mod' } });
+      fireEvent.click(screen.getByRole('button', { name: 'Add Local Mod' }));
+      expect(screen.getByText('Mod folder name is required.')).toBeInTheDocument();
+
+      rerender(
+        <QueryClientProvider client={queryClient}>
+          <AddModModal
+            isOpen={false}
+            serverId={SERVER_ID}
+            installedWorkshopIds={new Set()}
+            onClose={mockOnClose}
+          />
+        </QueryClientProvider>,
+      );
+
+      rerender(
+        <QueryClientProvider client={queryClient}>
+          <AddModModal
+            isOpen={true}
+            serverId={SERVER_ID}
+            installedWorkshopIds={new Set()}
+            onClose={mockOnClose}
+          />
+        </QueryClientProvider>,
+      );
+
+      // Resets to default tab 'url' and fresh state
+      expect(screen.getByRole('heading', { name: 'Add Client & Server Mod' })).toBeInTheDocument();
+      expect(screen.getByLabelText('Steam Workshop URL or PublishedFileId')).toHaveValue('');
+      fireEvent.click(screen.getByRole('tab', { name: /Local Mod/i }));
+      expect(screen.getByLabelText('Mod Name')).toHaveValue('');
+      expect(screen.queryByText('Mod folder name is required.')).not.toBeInTheDocument();
+    });
   });
 });
