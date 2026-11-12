@@ -73,6 +73,7 @@ Thumbs.db
 specs/
 references/
 GEMINI.md
+.agents/
 ...sandbox/
 
 notes.md
