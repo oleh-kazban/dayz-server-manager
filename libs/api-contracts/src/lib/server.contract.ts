@@ -132,3 +132,134 @@ export const updateServerSchema = z
     },
   );
 export type UpdateServerDto = z.infer<typeof updateServerSchema>;
+
+export const SERVER_FS_PATH_TARGET = {
+  INSTALL_PATH: 'installPath',
+  PROFILE_PATH: 'profilePath',
+  BATTLEYE_PATH: 'battleyePath',
+  MISSION_PATH: 'missionPath',
+} as const;
+
+export const SERVER_FS_PATH_TARGET_VALUES = [
+  SERVER_FS_PATH_TARGET.INSTALL_PATH,
+  SERVER_FS_PATH_TARGET.PROFILE_PATH,
+  SERVER_FS_PATH_TARGET.BATTLEYE_PATH,
+  SERVER_FS_PATH_TARGET.MISSION_PATH,
+] as const;
+
+export const serverFsPathTargetSchema = z.enum(SERVER_FS_PATH_TARGET_VALUES);
+export type ServerFsPathTarget = z.infer<typeof serverFsPathTargetSchema>;
+
+export const SERVER_FS_CHECK_STATUS = {
+  VALID: 'valid',
+  WARNING: 'warning',
+  ERROR: 'error',
+  SKIPPED: 'skipped',
+} as const;
+
+export const SERVER_FS_CHECK_STATUS_VALUES = [
+  SERVER_FS_CHECK_STATUS.VALID,
+  SERVER_FS_CHECK_STATUS.WARNING,
+  SERVER_FS_CHECK_STATUS.ERROR,
+  SERVER_FS_CHECK_STATUS.SKIPPED,
+] as const;
+
+export const serverFsCheckStatusSchema = z.enum(SERVER_FS_CHECK_STATUS_VALUES);
+export type ServerFsCheckStatus = z.infer<typeof serverFsCheckStatusSchema>;
+
+export const SERVER_FS_ISSUE_SEVERITY = {
+  ERROR: 'error',
+  WARNING: 'warning',
+} as const;
+
+export const SERVER_FS_ISSUE_SEVERITY_VALUES = [
+  SERVER_FS_ISSUE_SEVERITY.ERROR,
+  SERVER_FS_ISSUE_SEVERITY.WARNING,
+] as const;
+
+export const serverFsIssueSeveritySchema = z.enum(SERVER_FS_ISSUE_SEVERITY_VALUES);
+export type ServerFsIssueSeverity = z.infer<typeof serverFsIssueSeveritySchema>;
+
+export const SERVER_FS_ISSUE_CODE_VALUES = [
+  'PATH_LEXICAL_INVALID',
+  'PATH_PLATFORM_MISMATCH',
+  'INSTALL_PATH_NOT_ABSOLUTE',
+  'INSTALL_DIR_MISSING',
+  'INSTALL_PATH_NOT_DIRECTORY',
+  'EXECUTABLE_MISSING',
+  'EXECUTABLE_NOT_FILE',
+  'EXECUTABLE_NOT_EXECUTABLE',
+  'PROFILE_DIR_MISSING',
+  'PROFILE_PATH_NOT_DIRECTORY',
+  'PROFILE_DIR_NOT_WRITABLE',
+  'BATTLEYE_DIR_MISSING',
+  'BATTLEYE_PATH_NOT_DIRECTORY',
+  'BATTLEYE_DIR_NOT_WRITABLE',
+  'MPMISSIONS_DIR_MISSING',
+  'MPMISSIONS_PATH_NOT_DIRECTORY',
+  'MISSION_DIR_MISSING',
+  'MISSION_PATH_NOT_DIRECTORY',
+  'MISSION_SYMLINK_ESCAPE',
+  'MISSION_INIT_SCRIPT_MISSING',
+  'MISSION_ECONOMY_DB_MISSING',
+] as const;
+
+export const serverFsIssueCodeSchema = z.enum(SERVER_FS_ISSUE_CODE_VALUES);
+export type ServerFsIssueCode = z.infer<typeof serverFsIssueCodeSchema>;
+
+export const validateServerPathsRequestSchema = z.object({
+  installPath: safePathSchema.optional(),
+  profilePath: safePathSchema.optional(),
+  missionPath: safePathSchema.optional(),
+});
+export type ValidateServerPathsRequestDto = z.infer<typeof validateServerPathsRequestSchema>;
+
+export const serverFsDiagnosticIssueSchema = z.object({
+  target: serverFsPathTargetSchema,
+  severity: serverFsIssueSeveritySchema,
+  code: serverFsIssueCodeSchema,
+  message: z.string().min(1),
+  path: z.string().nullable().optional(),
+});
+export type ServerFsDiagnosticIssueDto = z.infer<typeof serverFsDiagnosticIssueSchema>;
+
+export const serverFsPathStatusSchema = z.object({
+  target: serverFsPathTargetSchema,
+  configuredPath: z.string(),
+  resolvedPath: z.string().nullable(),
+  status: serverFsCheckStatusSchema,
+  exists: z.boolean(),
+  isDirectory: z.boolean().nullable().optional(),
+  writable: z.boolean().nullable().optional(),
+  executablePath: z.string().nullable().optional(),
+  executablePresent: z.boolean().nullable().optional(),
+  executableRunnable: z.boolean().nullable().optional(),
+  hasInitScript: z.boolean().nullable().optional(),
+  hasEconomyDb: z.boolean().nullable().optional(),
+});
+export type ServerFsPathStatusDto = z.infer<typeof serverFsPathStatusSchema>;
+
+export const discoveredMissionSchema = z.object({
+  name: z.string().min(1),
+  relativePath: z.string().min(1),
+  resolvedPath: z.string().min(1),
+  hasInitScript: z.boolean(),
+  hasEconomyDb: z.boolean(),
+});
+export type DiscoveredMissionDto = z.infer<typeof discoveredMissionSchema>;
+
+export const validateServerPathsResponseSchema = z.object({
+  serverId: z.string().uuid(),
+  valid: z.boolean(),
+  platform: z.string().min(1),
+  checkedAt: z.string().datetime(),
+  paths: z.object({
+    installPath: serverFsPathStatusSchema,
+    profilePath: serverFsPathStatusSchema,
+    battleyePath: serverFsPathStatusSchema,
+    missionPath: serverFsPathStatusSchema,
+  }),
+  discoveredMissions: z.array(discoveredMissionSchema),
+  issues: z.array(serverFsDiagnosticIssueSchema),
+});
+export type ValidateServerPathsResponseDto = z.infer<typeof validateServerPathsResponseSchema>;

@@ -3,17 +3,33 @@ import { describe, expect, it } from 'vitest';
 import {
   ACTIVE_SERVER_STATUSES,
   createServerSchema,
+  discoveredMissionSchema,
   isServerActiveStatus,
   launchParametersSchema,
   safePathSchema,
+  SERVER_FS_CHECK_STATUS,
+  SERVER_FS_CHECK_STATUS_VALUES,
+  SERVER_FS_ISSUE_CODE_VALUES,
+  SERVER_FS_ISSUE_SEVERITY,
+  SERVER_FS_ISSUE_SEVERITY_VALUES,
+  SERVER_FS_PATH_TARGET,
+  SERVER_FS_PATH_TARGET_VALUES,
   SERVER_STATUS,
   SERVER_STATUS_VALUES,
   serverDetailSchema,
+  serverFsCheckStatusSchema,
+  serverFsDiagnosticIssueSchema,
+  serverFsIssueCodeSchema,
+  serverFsIssueSeveritySchema,
+  serverFsPathStatusSchema,
+  serverFsPathTargetSchema,
   serverIdParamSchema,
   ServerStatus,
   serverStatusSchema,
   serverSummarySchema,
   updateServerSchema,
+  validateServerPathsRequestSchema,
+  validateServerPathsResponseSchema,
 } from './server.contract';
 
 describe('Server Contracts (@aegis/api-contracts)', () => {
@@ -490,6 +506,213 @@ describe('Server Contracts (@aegis/api-contracts)', () => {
       expect(updateServerSchema.safeParse({ rconPassword: '123' }).success).toBe(false);
       expect(updateServerSchema.safeParse({ gamePort: 999 }).success).toBe(false);
       expect(updateServerSchema.safeParse({ installPath: '../invalid' }).success).toBe(false);
+    });
+  });
+
+  describe('Server Filesystem Inspection Contracts', () => {
+    const validReport = {
+      serverId: 'a1b2c3d4-e5f6-4a1b-8c2d-3e4f5a6b7c8d',
+      valid: true,
+      platform: 'win32',
+      checkedAt: '2026-11-14T12:00:00.000Z',
+      paths: {
+        installPath: {
+          target: SERVER_FS_PATH_TARGET.INSTALL_PATH,
+          configuredPath: 'C:\\DayZServer',
+          resolvedPath: 'C:\\DayZServer',
+          status: SERVER_FS_CHECK_STATUS.VALID,
+          exists: true,
+          isDirectory: true,
+          executablePath: 'C:\\DayZServer\\DayZServer_x64.exe',
+          executablePresent: true,
+          executableRunnable: true,
+        },
+        profilePath: {
+          target: SERVER_FS_PATH_TARGET.PROFILE_PATH,
+          configuredPath: 'profiles',
+          resolvedPath: 'C:\\DayZServer\\profiles',
+          status: SERVER_FS_CHECK_STATUS.VALID,
+          exists: true,
+          isDirectory: true,
+          writable: true,
+        },
+        battleyePath: {
+          target: SERVER_FS_PATH_TARGET.BATTLEYE_PATH,
+          configuredPath: 'C:\\DayZServer\\profiles\\BattlEye',
+          resolvedPath: 'C:\\DayZServer\\profiles\\BattlEye',
+          status: SERVER_FS_CHECK_STATUS.WARNING,
+          exists: false,
+          isDirectory: false,
+          writable: false,
+        },
+        missionPath: {
+          target: SERVER_FS_PATH_TARGET.MISSION_PATH,
+          configuredPath: 'mpmissions\\dayzOffline.chernarusplus',
+          resolvedPath: 'C:\\DayZServer\\mpmissions\\dayzOffline.chernarusplus',
+          status: SERVER_FS_CHECK_STATUS.VALID,
+          exists: true,
+          isDirectory: true,
+          hasInitScript: true,
+          hasEconomyDb: true,
+        },
+      },
+      discoveredMissions: [
+        {
+          name: 'dayzOffline.chernarusplus',
+          relativePath: 'mpmissions/dayzOffline.chernarusplus',
+          resolvedPath: 'C:\\DayZServer\\mpmissions\\dayzOffline.chernarusplus',
+          hasInitScript: true,
+          hasEconomyDb: true,
+        },
+      ],
+      issues: [
+        {
+          target: SERVER_FS_PATH_TARGET.BATTLEYE_PATH,
+          severity: SERVER_FS_ISSUE_SEVERITY.WARNING,
+          code: 'BATTLEYE_DIR_MISSING',
+          message: 'BattlEye directory does not exist yet.',
+          path: 'C:\\DayZServer\\profiles\\BattlEye',
+        },
+      ],
+    };
+
+    it('exposes canonical filesystem enum constants and schemas', () => {
+      expect(SERVER_FS_PATH_TARGET_VALUES).toEqual([
+        'installPath',
+        'profilePath',
+        'battleyePath',
+        'missionPath',
+      ]);
+      expect(SERVER_FS_CHECK_STATUS_VALUES).toEqual(['valid', 'warning', 'error', 'skipped']);
+      expect(SERVER_FS_ISSUE_SEVERITY_VALUES).toEqual(['error', 'warning']);
+      expect(SERVER_FS_ISSUE_CODE_VALUES).toHaveLength(21);
+
+      expect(serverFsPathTargetSchema.safeParse('unknownTarget').success).toBe(false);
+      expect(serverFsCheckStatusSchema.safeParse('pending').success).toBe(false);
+      expect(serverFsIssueSeveritySchema.safeParse('info').success).toBe(false);
+      expect(serverFsIssueCodeSchema.safeParse('UNKNOWN_FS_CODE').success).toBe(false);
+
+      for (const code of SERVER_FS_ISSUE_CODE_VALUES) {
+        expect(serverFsIssueCodeSchema.safeParse(code).success).toBe(true);
+      }
+    });
+
+    it('accepts empty, partial, and full override payloads in validateServerPathsRequestSchema', () => {
+      expect(validateServerPathsRequestSchema.safeParse({}).success).toBe(true);
+      expect(
+        validateServerPathsRequestSchema.safeParse({
+          missionPath: 'mpmissions/dayzOffline.enoch',
+        }).success,
+      ).toBe(true);
+      expect(
+        validateServerPathsRequestSchema.safeParse({
+          installPath: '/opt/dayz',
+          profilePath: 'profiles',
+          missionPath: 'dayzOffline.chernarusplus',
+        }).success,
+      ).toBe(true);
+    });
+
+    it('rejects lexical violations and non-object inputs in validateServerPathsRequestSchema', () => {
+      expect(validateServerPathsRequestSchema.safeParse(null).success).toBe(false);
+      expect(validateServerPathsRequestSchema.safeParse('not-an-object').success).toBe(false);
+      expect(
+        validateServerPathsRequestSchema.safeParse({ installPath: 'C:\\DayZ\\..\\evil' }).success,
+      ).toBe(false);
+      expect(
+        validateServerPathsRequestSchema.safeParse({ profilePath: 'profiles\0bad' }).success,
+      ).toBe(false);
+      expect(
+        validateServerPathsRequestSchema.safeParse({ missionPath: 'mpmissions/<bad>' }).success,
+      ).toBe(false);
+      expect(validateServerPathsRequestSchema.safeParse({ installPath: '' }).success).toBe(false);
+      expect(
+        validateServerPathsRequestSchema.safeParse({ installPath: 'a'.repeat(513) }).success,
+      ).toBe(false);
+      expect(
+        validateServerPathsRequestSchema.safeParse({ profilePath: 'bad:colon:path' }).success,
+      ).toBe(false);
+    });
+
+    it('validates complete diagnostic responses, path statuses, issues, and discovered missions', () => {
+      expect(validateServerPathsResponseSchema.safeParse(validReport).success).toBe(true);
+      expect(
+        serverFsPathStatusSchema.safeParse({
+          target: 'installPath',
+          configuredPath: 'bad',
+          resolvedPath: null,
+          status: 'error',
+          exists: false,
+          isDirectory: null,
+          executablePath: null,
+          executablePresent: false,
+          executableRunnable: false,
+        }).success,
+      ).toBe(true);
+      expect(
+        serverFsDiagnosticIssueSchema.safeParse({
+          target: 'missionPath',
+          severity: 'error',
+          code: 'MISSION_INIT_SCRIPT_MISSING',
+          message: 'Missing init.c',
+          path: null,
+        }).success,
+      ).toBe(true);
+      expect(
+        discoveredMissionSchema.safeParse({
+          name: 'dayzOffline.enoch',
+          relativePath: 'mpmissions/dayzOffline.enoch',
+          resolvedPath: '/opt/dayz/mpmissions/dayzOffline.enoch',
+          hasInitScript: true,
+          hasEconomyDb: false,
+        }).success,
+      ).toBe(true);
+    });
+
+    it('rejects malformed diagnostic response fields and unknown issue/status codes', () => {
+      expect(
+        validateServerPathsResponseSchema.safeParse({
+          ...validReport,
+          serverId: 'not-a-uuid',
+        }).success,
+      ).toBe(false);
+      expect(
+        validateServerPathsResponseSchema.safeParse({
+          ...validReport,
+          checkedAt: 'not-iso-datetime',
+        }).success,
+      ).toBe(false);
+      expect(
+        validateServerPathsResponseSchema.safeParse({
+          ...validReport,
+          platform: '',
+        }).success,
+      ).toBe(false);
+      expect(
+        serverFsDiagnosticIssueSchema.safeParse({
+          target: 'installPath',
+          severity: 'error',
+          code: 'NON_EXISTENT_CODE',
+          message: 'Bad code',
+        }).success,
+      ).toBe(false);
+      expect(
+        serverFsDiagnosticIssueSchema.safeParse({
+          target: 'installPath',
+          severity: 'critical',
+          code: 'INSTALL_DIR_MISSING',
+          message: 'Bad severity',
+        }).success,
+      ).toBe(false);
+      expect(
+        discoveredMissionSchema.safeParse({
+          name: '',
+          relativePath: 'mpmissions/foo',
+          resolvedPath: '/opt/dayz/mpmissions/foo',
+          hasInitScript: true,
+          hasEconomyDb: true,
+        }).success,
+      ).toBe(false);
     });
   });
 });

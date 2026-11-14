@@ -1,6 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { HttpClient } from '../http-client';
+import { type ValidateServerPathsResponseDto } from '@aegis/api-contracts';
+
+import { ApiError, HttpClient, ValidationError } from '../http-client';
 
 import { createServersEndpoint } from './servers';
 
@@ -179,5 +181,159 @@ describe('Servers Endpoint', () => {
       `https://test-server/api/v1/servers/${validUuid}`,
       expect.objectContaining({ method: 'DELETE' }),
     );
+  });
+
+  describe('validatePaths', () => {
+    const buildValidationResponse = (): ValidateServerPathsResponseDto => ({
+      serverId: validUuid,
+      valid: true,
+      platform: 'linux',
+      checkedAt: new Date().toISOString(),
+      paths: {
+        installPath: {
+          target: 'installPath',
+          configuredPath: '/opt/dayz',
+          resolvedPath: '/opt/dayz',
+          status: 'valid',
+          exists: true,
+          isDirectory: true,
+          executablePath: '/opt/dayz/DayZServer',
+          executablePresent: true,
+          executableRunnable: true,
+        },
+        profilePath: {
+          target: 'profilePath',
+          configuredPath: 'profiles',
+          resolvedPath: '/opt/dayz/profiles',
+          status: 'valid',
+          exists: true,
+          isDirectory: true,
+          writable: true,
+        },
+        battleyePath: {
+          target: 'battleyePath',
+          configuredPath: '/opt/dayz/profiles/BattlEye',
+          resolvedPath: '/opt/dayz/profiles/BattlEye',
+          status: 'valid',
+          exists: true,
+          isDirectory: true,
+          writable: true,
+        },
+        missionPath: {
+          target: 'missionPath',
+          configuredPath: 'mpmissions/dayzOffline.chernarusplus',
+          resolvedPath: '/opt/dayz/mpmissions/dayzOffline.chernarusplus',
+          status: 'valid',
+          exists: true,
+          isDirectory: true,
+          hasInitScript: true,
+          hasEconomyDb: true,
+        },
+      },
+      discoveredMissions: [
+        {
+          name: 'dayzOffline.chernarusplus',
+          relativePath: 'mpmissions/dayzOffline.chernarusplus',
+          resolvedPath: '/opt/dayz/mpmissions/dayzOffline.chernarusplus',
+          hasInitScript: true,
+          hasEconomyDb: true,
+        },
+      ],
+      issues: [],
+    });
+
+    it('validates persisted server paths when optional dto is omitted', async () => {
+      const mockResponse = buildValidationResponse();
+      const fetchSpy = vi.spyOn(globalThis, 'fetch').mockImplementation(() =>
+        Promise.resolve(
+          new Response(JSON.stringify(mockResponse), {
+            status: 200,
+            headers: { 'Content-Type': 'application/json' },
+          }),
+        ),
+      );
+
+      const result = await servers.validatePaths(validUuid);
+
+      expect(result).toEqual(mockResponse);
+      expect(fetchSpy).toHaveBeenCalledWith(
+        `https://test-server/api/v1/servers/${validUuid}/validate-paths`,
+        expect.objectContaining({ method: 'POST', body: undefined }),
+      );
+      const [, requestInit] = fetchSpy.mock.calls[0];
+      expect((requestInit?.headers as Record<string, string>)['Content-Type']).toBeUndefined();
+    });
+
+    it('sends JSON draft path overrides when dto is supplied', async () => {
+      const mockResponse = buildValidationResponse();
+      const overrides = {
+        installPath: '/opt/dayz-staging',
+        missionPath: 'dayzOffline.enoch',
+      };
+      const fetchSpy = vi.spyOn(globalThis, 'fetch').mockImplementation(() =>
+        Promise.resolve(
+          new Response(JSON.stringify(mockResponse), {
+            status: 200,
+            headers: { 'Content-Type': 'application/json' },
+          }),
+        ),
+      );
+
+      const result = await servers.validatePaths(validUuid, overrides);
+
+      expect(result).toEqual(mockResponse);
+      expect(fetchSpy).toHaveBeenCalledWith(
+        `https://test-server/api/v1/servers/${validUuid}/validate-paths`,
+        expect.objectContaining({
+          method: 'POST',
+          body: JSON.stringify(overrides),
+          headers: expect.objectContaining({ 'Content-Type': 'application/json' }),
+        }),
+      );
+    });
+
+    it('throws ValidationError when response payload violates validateServerPathsResponseSchema', async () => {
+      const invalidPayload = {
+        ...buildValidationResponse(),
+        serverId: 'not-a-uuid',
+      };
+
+      vi.spyOn(globalThis, 'fetch').mockImplementation(() =>
+        Promise.resolve(
+          new Response(JSON.stringify(invalidPayload), {
+            status: 200,
+            headers: { 'Content-Type': 'application/json' },
+          }),
+        ),
+      );
+
+      await expect(servers.validatePaths(validUuid)).rejects.toBeInstanceOf(ValidationError);
+    });
+
+    it('throws ApiError with errorCode when backend returns 403 or 400 error envelope', async () => {
+      vi.spyOn(globalThis, 'fetch').mockImplementation(() =>
+        Promise.resolve(
+          new Response(
+            JSON.stringify({
+              statusCode: 403,
+              error: 'Forbidden',
+              errorCode: 'AUTH_FORBIDDEN_ADMIN_REQUIRED',
+              message: 'Admin role required',
+            }),
+            {
+              status: 403,
+              headers: { 'Content-Type': 'application/json' },
+            },
+          ),
+        ),
+      );
+
+      await expect(servers.validatePaths(validUuid)).rejects.toMatchObject({
+        name: 'ApiError',
+        status: 403,
+        errorCode: 'AUTH_FORBIDDEN_ADMIN_REQUIRED',
+      });
+      await expect(servers.validatePaths(validUuid)).rejects.toBeInstanceOf(ApiError);
+    });
   });
 });
