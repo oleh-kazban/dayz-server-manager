@@ -1,4 +1,4 @@
-import type { ApiErrorCode, ServerStatus } from '@aegis/api-contracts';
+import type { ApiErrorCode, ServerFsIssueCode, ServerStatus } from '@aegis/api-contracts';
 
 export type NotificationCode =
   | 'SERVER_CREATED'
@@ -30,6 +30,7 @@ export interface TranslationCatalog {
   validation: Record<string, string>;
   notifications: Record<NotificationCode, ToastTranslationEntry>;
   serverStatus: Record<ServerStatus, string>;
+  serverFsIssues: Record<ServerFsIssueCode, string>;
 }
 
 export const enUSTranslations: TranslationCatalog = {
@@ -295,5 +296,34 @@ export const enUSTranslations: TranslationCatalog = {
     stopping: 'Stopping',
     stopped: 'Stopped',
     failed: 'Failed',
+  },
+  serverFsIssues: {
+    PATH_LEXICAL_INVALID:
+      'Path contains invalid characters, traversal sequences (..), or exceeds length limits.',
+    PATH_PLATFORM_MISMATCH: 'Path format does not match the host operating system platform.',
+    INSTALL_PATH_NOT_ABSOLUTE: 'Installation path must be an absolute filesystem path.',
+    INSTALL_DIR_MISSING:
+      'Server installation directory does not exist or is not accessible on the host.',
+    INSTALL_PATH_NOT_DIRECTORY: 'Server installation path points to a file instead of a directory.',
+    EXECUTABLE_MISSING:
+      'DayZ dedicated server executable was not found in the installation directory.',
+    EXECUTABLE_NOT_FILE: 'DayZ server executable path is not a regular file.',
+    EXECUTABLE_NOT_EXECUTABLE: 'DayZ server binary lacks execute permissions for the DSM service.',
+    PROFILE_DIR_MISSING: 'Profile directory does not exist on the host filesystem.',
+    PROFILE_PATH_NOT_DIRECTORY: 'Profile path points to a file instead of a directory.',
+    PROFILE_DIR_NOT_WRITABLE: 'Profile directory is not writable by the DSM service.',
+    BATTLEYE_DIR_MISSING: 'BattlEye directory does not exist yet under the profile directory.',
+    BATTLEYE_PATH_NOT_DIRECTORY:
+      'BattlEye path exists inside the profile directory but is not a directory.',
+    BATTLEYE_DIR_NOT_WRITABLE: 'BattlEye directory is not writable by the DSM service.',
+    MPMISSIONS_DIR_MISSING: 'No mpmissions directory was found inside the installation directory.',
+    MPMISSIONS_PATH_NOT_DIRECTORY:
+      'The mpmissions path inside the installation directory is not a directory.',
+    MISSION_DIR_MISSING: 'Configured mission directory does not exist on the host filesystem.',
+    MISSION_PATH_NOT_DIRECTORY: 'Configured mission path points to a file instead of a directory.',
+    MISSION_SYMLINK_ESCAPE:
+      'Mission path resolves outside the permitted DayZ installation directory.',
+    MISSION_INIT_SCRIPT_MISSING: 'Mission directory is missing the required init.c entry script.',
+    MISSION_ECONOMY_DB_MISSING: 'Mission directory is missing a db/ Central Economy subdirectory.',
   },
 };

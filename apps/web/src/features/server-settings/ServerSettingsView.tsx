@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from '@tanstack/react-router';
@@ -10,6 +10,8 @@ import {
   type ServerDetailDto,
   type ServerSummaryDto,
   type UpdateServerDto,
+  type ValidateServerPathsRequestDto,
+  type ValidateServerPathsResponseDto,
 } from '@aegis/api-contracts';
 import {
   Button,
@@ -33,6 +35,7 @@ import {
   useActiveServer,
 } from '@aegis/web/core';
 
+import { StoragePathsCard } from './components/StoragePathsCard';
 import { CreateServerModal } from './CreateServerModal';
 
 interface ServerSettingsValidationInput {
@@ -117,6 +120,18 @@ function ServerSettingsForm({
   const [launchParameters, setLaunchParameters] = useState(detail.launchParameters ?? '');
   const [isDefault, setIsDefault] = useState(detail.isDefault);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  const [validationResult, setValidationResult] = useState<ValidateServerPathsResponseDto | null>(
+    null,
+  );
+  const validateInFlightRef = useRef(false);
+  const mountedServerIdRef = useRef(detail.id);
+
+  useEffect(() => {
+    mountedServerIdRef.current = detail.id;
+    return () => {
+      mountedServerIdRef.current = '';
+    };
+  }, [detail.id]);
 
   const mergedErrors = { ...serverFieldErrors, ...fieldErrors };
 
@@ -131,6 +146,63 @@ function ServerSettingsForm({
     if (serverFieldErrors[field]) {
       onClearServerFieldError(field);
     }
+  };
+
+  const clearPathErrors = () => {
+    setFieldErrors(prev => {
+      if (!prev.installPath && !prev.profilePath && !prev.missionPath) {
+        return prev;
+      }
+      const next = { ...prev };
+      delete next.installPath;
+      delete next.profilePath;
+      delete next.missionPath;
+      return next;
+    });
+    onClearServerFieldError('installPath');
+    onClearServerFieldError('profilePath');
+    onClearServerFieldError('missionPath');
+  };
+
+  const validatePathsMutation = useMutation({
+    mutationFn: ({ serverId, dto }: { serverId: string; dto: ValidateServerPathsRequestDto }) =>
+      apiClient.servers.validatePaths(serverId, dto),
+    onSuccess: (result, variables) => {
+      if (mountedServerIdRef.current !== variables.serverId) {
+        return;
+      }
+      setValidationResult(result);
+      clearPathErrors();
+    },
+    onError: (err: Error, variables) => {
+      if (mountedServerIdRef.current !== variables.serverId) {
+        return;
+      }
+      const resolvedFields = resolveFieldErrors(extractApiFieldErrors(err));
+      if (Object.keys(resolvedFields).length > 0) {
+        setFieldErrors(prev => ({ ...prev, ...resolvedFields }));
+        return;
+      }
+      notifyApiError(err, 'Path Validation Failed');
+    },
+    onSettled: () => {
+      validateInFlightRef.current = false;
+    },
+  });
+
+  const handleValidatePaths = () => {
+    if (validatePathsMutation.isPending || validateInFlightRef.current) {
+      return;
+    }
+    validateInFlightRef.current = true;
+    validatePathsMutation.mutate({
+      serverId: detail.id,
+      dto: {
+        installPath: installPath.trim(),
+        profilePath: profilePath.trim(),
+        missionPath: missionPath.trim(),
+      },
+    });
   };
 
   const isServerLocked = isServerActiveStatus(detail.status);
@@ -306,45 +378,34 @@ function ServerSettingsForm({
       </Card>
 
       {/* Storage & Paths Card */}
-      <Card
-        title="Storage & File System Paths"
-        subtitle="Host machine directory paths for DayZ executable, profiles, and mission templates"
-      >
-        <div className="p-6 space-y-4">
-          <Input
-            label="Installation Path"
-            value={installPath}
-            disabled={isServerLocked}
-            error={mergedErrors.installPath}
-            onChange={e => {
-              setInstallPath(e.target.value);
-              clearFieldError('installPath');
-            }}
-          />
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <Input
-              label="Profile Path"
-              value={profilePath}
-              disabled={isServerLocked}
-              error={mergedErrors.profilePath}
-              onChange={e => {
-                setProfilePath(e.target.value);
-                clearFieldError('profilePath');
-              }}
-            />
-            <Input
-              label="Mission Path"
-              value={missionPath}
-              disabled={isServerLocked}
-              error={mergedErrors.missionPath}
-              onChange={e => {
-                setMissionPath(e.target.value);
-                clearFieldError('missionPath');
-              }}
-            />
-          </div>
-        </div>
-      </Card>
+      <StoragePathsCard
+        installPath={installPath}
+        profilePath={profilePath}
+        missionPath={missionPath}
+        isServerLocked={isServerLocked}
+        isValidating={validatePathsMutation.isPending}
+        installPathError={mergedErrors.installPath}
+        profilePathError={mergedErrors.profilePath}
+        missionPathError={mergedErrors.missionPath}
+        validationResult={validationResult}
+        onChangeInstallPath={value => {
+          setInstallPath(value);
+          clearFieldError('installPath');
+        }}
+        onChangeProfilePath={value => {
+          setProfilePath(value);
+          clearFieldError('profilePath');
+        }}
+        onChangeMissionPath={value => {
+          setMissionPath(value);
+          clearFieldError('missionPath');
+        }}
+        onSelectMission={nextMissionPath => {
+          setMissionPath(nextMissionPath);
+          clearFieldError('missionPath');
+        }}
+        onValidatePaths={handleValidatePaths}
+      />
 
       {/* Engine Launch Flags */}
       <Card
