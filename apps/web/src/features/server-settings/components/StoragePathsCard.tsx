@@ -196,7 +196,7 @@ function DiscoveredMissionsSection({
                 disabled={isServerLocked}
                 aria-pressed={isSelected}
                 onClick={() => onSelectMission(mission.relativePath)}
-                className={`flex flex-col items-start gap-1.5 rounded-lg border p-2.5 text-left transition-colors cursor-pointer disabled:cursor-not-allowed disabled:opacity-50 ${
+                className={`flex flex-col items-start gap-1.5 rounded-lg border p-2.5 text-left transition-colors cursor-pointer disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)] ${
                   isSelected
                     ? 'border-[var(--color-primary-border)] bg-[var(--color-primary-light)]'
                     : 'border-[var(--color-border)] bg-[var(--color-surface)] hover:bg-[var(--color-surface-hover)]'
@@ -208,10 +208,10 @@ function DiscoveredMissionsSection({
                   </span>
                   <div className="flex items-center gap-1 shrink-0">
                     <Tag variant="subtle" color={mission.hasInitScript ? 'success' : 'danger'} mono>
-                      init.c
+                      init.c {mission.hasInitScript ? '✓' : '✗'}
                     </Tag>
                     <Tag variant="subtle" color={mission.hasEconomyDb ? 'success' : 'warning'} mono>
-                      db/
+                      db/ {mission.hasEconomyDb ? '✓' : '✗'}
                     </Tag>
                   </div>
                 </div>
@@ -271,6 +271,7 @@ export function StoragePathsCard({
           <Input
             id="server-install-path"
             label="Installation Path"
+            placeholder="e.g. C:\DayZServer"
             value={installPath}
             disabled={isServerLocked}
             error={installPathError}
@@ -290,6 +291,7 @@ export function StoragePathsCard({
             <Input
               id="server-profile-path"
               label="Profile Path"
+              placeholder="e.g. profiles"
               value={profilePath}
               disabled={isServerLocked}
               error={profilePathError}
@@ -315,6 +317,7 @@ export function StoragePathsCard({
             <Input
               id="server-mission-path"
               label="Mission Path"
+              placeholder="e.g. mpmissions\dayzOffline.chernarusplus"
               value={missionPath}
               disabled={isServerLocked}
               error={missionPathError}

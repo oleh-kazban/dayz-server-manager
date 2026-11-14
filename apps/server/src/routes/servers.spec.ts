@@ -973,7 +973,7 @@ describe('Servers Routes (/api/v1/servers)', () => {
           headers: { authorization: `Bearer ${adminToken}` },
           payload: {
             installPath: tempHost.installDir,
-            profilePath: tempHost.profileDir,
+            profilePath: 'profiles',
             missionPath: 'dayzOffline.chernarusplus',
           },
         });
@@ -989,6 +989,46 @@ describe('Servers Routes (/api/v1/servers)', () => {
           .where(eq(servers.id, defaultServerId))
           .run();
       }
+    });
+
+    it('returns 200 with valid: false and PROFILE_PATH_NOT_RELATIVE when override profilePath is absolute (Option B)', async () => {
+      const tempHost = createTempDayzHost();
+      const beforeRow = dbInstance.db
+        .select()
+        .from(servers)
+        .where(eq(servers.id, defaultServerId))
+        .get();
+
+      const response = await app.inject({
+        method: 'POST',
+        url: `/api/v1/servers/${defaultServerId}/validate-paths`,
+        headers: { authorization: `Bearer ${adminToken}` },
+        payload: {
+          installPath: tempHost.installDir,
+          profilePath: tempHost.profileDir,
+          missionPath: 'dayzOffline.chernarusplus',
+        },
+      });
+
+      expect(response.statusCode).toBe(200);
+      const body = response.json();
+      expect(validateServerPathsResponseSchema.safeParse(body).success).toBe(true);
+      expect(body.valid).toBe(false);
+      expect(body.paths.profilePath.status).toBe('error');
+      expect(body.paths.battleyePath.status).toBe('skipped');
+      expect(body.issues).toContainEqual(
+        expect.objectContaining({
+          target: 'profilePath',
+          code: 'PROFILE_PATH_NOT_RELATIVE',
+        }),
+      );
+
+      const afterRow = dbInstance.db
+        .select()
+        .from(servers)
+        .where(eq(servers.id, defaultServerId))
+        .get();
+      expect(afterRow).toEqual(beforeRow);
     });
   });
 

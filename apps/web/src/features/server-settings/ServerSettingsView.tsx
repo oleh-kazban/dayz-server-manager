@@ -69,9 +69,14 @@ function validateServerSettingsForm(input: ServerSettingsValidationInput): Recor
   }
   if (!input.profilePath.trim()) {
     errors.profilePath = 'Profile path is required.';
+  } else if (/^(?:[a-zA-Z]:|[\\/])/.test(input.profilePath.trim())) {
+    errors.profilePath = 'Profile path must be relative to the installation path (e.g. profiles).';
   }
   if (!input.missionPath.trim()) {
     errors.missionPath = 'Mission path is required.';
+  } else if (/^(?:[a-zA-Z]:|[\\/])/.test(input.missionPath.trim())) {
+    errors.missionPath =
+      'Mission path must be relative to the installation path (e.g. mpmissions\\dayzOffline.chernarusplus).';
   }
   if (!input.gamePort || input.gamePort < 1024 || input.gamePort > 65535) {
     errors.gamePort = 'Port must be between 1024 and 65535.';
@@ -178,6 +183,7 @@ function ServerSettingsForm({
       if (mountedServerIdRef.current !== variables.serverId) {
         return;
       }
+      setValidationResult(null);
       const resolvedFields = resolveFieldErrors(extractApiFieldErrors(err));
       if (Object.keys(resolvedFields).length > 0) {
         setFieldErrors(prev => ({ ...prev, ...resolvedFields }));

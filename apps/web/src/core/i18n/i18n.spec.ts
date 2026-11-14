@@ -56,6 +56,17 @@ describe('i18n Error & Notification Resolution', () => {
         expect(message.trim().length).toBeGreaterThan(0);
       },
     );
+
+    it('includes all 24 ServerFsIssueCode values including Option B relative-path and profile symlink escape codes', () => {
+      expect(serverFsIssueCodeSchema.options).toHaveLength(24);
+      expect(serverFsIssueCodeSchema.options).toEqual(
+        expect.arrayContaining([
+          'PROFILE_PATH_NOT_RELATIVE',
+          'PROFILE_SYMLINK_ESCAPE',
+          'MISSION_PATH_NOT_RELATIVE',
+        ]),
+      );
+    });
   });
 
   describe('resolveApiErrorMessage', () => {

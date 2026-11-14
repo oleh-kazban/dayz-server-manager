@@ -125,7 +125,7 @@ describe('ServerFsInspectorService (apps/server/src/services/server)', () => {
       const result = service.inspect({
         serverId: TEST_SERVER_ID,
         installPath: fixture.installDir,
-        profilePath: fixture.profileDir,
+        profilePath: 'profiles',
         missionPath: 'mpmissions/dayzOffline.chernarusplus',
       });
 
@@ -594,6 +594,128 @@ describe('ServerFsInspectorService (apps/server/src/services/server)', () => {
     );
   });
 
+  describe('Option B: Strictly Relative profilePath & missionPath Enforcement', () => {
+    it.each([
+      {
+        platform: 'win32' as const,
+        label: 'Windows drive-letter paths',
+        profilePath: 'D:\\Profiles',
+        missionPath: 'D:\\Missions\\custom',
+      },
+      {
+        platform: 'win32' as const,
+        label: 'leading backslash paths on Windows',
+        profilePath: '\\profiles',
+        missionPath: '\\mpmissions\\dayzOffline.chernarusplus',
+      },
+      {
+        platform: 'win32' as const,
+        label: 'leading forward-slash paths on Windows',
+        profilePath: '/profiles',
+        missionPath: '/mpmissions/dayzOffline.chernarusplus',
+      },
+      {
+        platform: 'linux' as const,
+        label: 'POSIX absolute paths on Linux',
+        profilePath: '/var/dayz/profiles',
+        missionPath: '/opt/dayz/mpmissions/dayzOffline.chernarusplus',
+      },
+      {
+        platform: 'linux' as const,
+        label: 'leading backslash paths on Linux',
+        profilePath: '\\profiles',
+        missionPath: '\\mpmissions\\custom',
+      },
+    ])(
+      'rejects $label ($profilePath / $missionPath) with PROFILE_PATH_NOT_RELATIVE & MISSION_PATH_NOT_RELATIVE ahead of fs syscalls',
+      ({ platform, profilePath, missionPath }) => {
+        withMockedPlatform(platform, () => {
+          const statSpy = vi.spyOn(fs, 'statSync');
+          const readdirSpy = vi.spyOn(fs, 'readdirSync');
+          const openSpy = vi.spyOn(fs, 'openSync');
+
+          const result = service.inspect({
+            serverId: TEST_SERVER_ID,
+            installPath: 'relative/DayZServer',
+            profilePath,
+            missionPath,
+          });
+
+          expect(statSpy).not.toHaveBeenCalled();
+          expect(readdirSpy).not.toHaveBeenCalled();
+          expect(openSpy).not.toHaveBeenCalled();
+
+          expect(result.valid).toBe(false);
+          expect(result.paths.profilePath).toEqual({
+            target: SERVER_FS_PATH_TARGET.PROFILE_PATH,
+            configuredPath: profilePath,
+            resolvedPath: null,
+            status: SERVER_FS_CHECK_STATUS.ERROR,
+            exists: false,
+            isDirectory: null,
+            writable: null,
+          });
+          expect(result.paths.battleyePath.status).toBe(SERVER_FS_CHECK_STATUS.SKIPPED);
+          expect(result.paths.missionPath).toEqual({
+            target: SERVER_FS_PATH_TARGET.MISSION_PATH,
+            configuredPath: missionPath,
+            resolvedPath: null,
+            status: SERVER_FS_CHECK_STATUS.ERROR,
+            exists: false,
+            isDirectory: null,
+            hasInitScript: null,
+            hasEconomyDb: null,
+          });
+          expect(result.issues).toContainEqual(
+            expect.objectContaining({
+              target: SERVER_FS_PATH_TARGET.PROFILE_PATH,
+              severity: SERVER_FS_ISSUE_SEVERITY.ERROR,
+              code: 'PROFILE_PATH_NOT_RELATIVE',
+            }),
+          );
+          expect(result.issues).toContainEqual(
+            expect.objectContaining({
+              target: SERVER_FS_PATH_TARGET.MISSION_PATH,
+              severity: SERVER_FS_ISSUE_SEVERITY.ERROR,
+              code: 'MISSION_PATH_NOT_RELATIVE',
+            }),
+          );
+        });
+      },
+    );
+
+    it('discovers missions under valid installPath while rejecting absolute profilePath and missionPath without probing them on disk', () => {
+      const fixture = createValidDayzFixture();
+      fixture.createMission('dayzOffline.chernarusplus');
+
+      const externalProfile = path.join(fixture.root, 'external-profiles');
+      const externalMission = path.join(fixture.root, 'external-mission');
+      const statSpy = vi.spyOn(fs, 'statSync');
+      const openSpy = vi.spyOn(fs, 'openSync');
+
+      const result = service.inspect({
+        serverId: TEST_SERVER_ID,
+        installPath: fixture.installDir,
+        profilePath: externalProfile,
+        missionPath: externalMission,
+      });
+
+      expect(result.valid).toBe(false);
+      expect(result.discoveredMissions).toHaveLength(1);
+      expect(result.paths.installPath.status).toBe(SERVER_FS_CHECK_STATUS.VALID);
+      expect(result.paths.profilePath.status).toBe(SERVER_FS_CHECK_STATUS.ERROR);
+      expect(result.paths.battleyePath.status).toBe(SERVER_FS_CHECK_STATUS.SKIPPED);
+      expect(result.paths.missionPath.status).toBe(SERVER_FS_CHECK_STATUS.ERROR);
+      expect(result.issues.map(i => i.code)).toEqual([
+        'PROFILE_PATH_NOT_RELATIVE',
+        'MISSION_PATH_NOT_RELATIVE',
+      ]);
+      expect(statSpy).not.toHaveBeenCalledWith(externalProfile);
+      expect(statSpy).not.toHaveBeenCalledWith(externalMission);
+      expect(openSpy).not.toHaveBeenCalled();
+    });
+  });
+
   describe('REQ-02 & GUARD-03: Auto-Discovery of Installed DayZ Missions', () => {
     it('discovers depth-1 mission directories sorted alphabetically and excludes files, hidden entries, and depth-2 dirs', () => {
       const fixture = createValidDayzFixture();
@@ -845,13 +967,13 @@ describe('ServerFsInspectorService (apps/server/src/services/server)', () => {
   });
 
   describe('REQ-03 & GUARD-03: Mission Path Resolution and Artifact Validation', () => {
-    it('resolves bare mission names, forward/backslash relative paths, and external absolute mission paths', () => {
+    it('resolves bare mission names, forward/backslash mpmissions relative paths, and custom relative subpaths inside installDir', () => {
       const fixture = createValidDayzFixture();
       const chernarus = fixture.createMission('dayzOffline.chernarusplus');
 
-      const externalMission = path.join(fixture.root, 'CustomExternalMission');
-      fs.mkdirSync(path.join(externalMission, 'db'), { recursive: true });
-      fs.writeFileSync(path.join(externalMission, 'init.c'), 'void main() {}');
+      const customMission = path.join(fixture.installDir, 'custom', 'mission');
+      fs.mkdirSync(path.join(customMission, 'db'), { recursive: true });
+      fs.writeFileSync(path.join(customMission, 'init.c'), 'void main() {}');
 
       // 1. Bare mission name
       const bareRes = service.inspect({
@@ -873,17 +995,17 @@ describe('ServerFsInspectorService (apps/server/src/services/server)', () => {
       expect(backslashRes.valid).toBe(true);
       expect(backslashRes.paths.missionPath.resolvedPath).toBe(chernarus);
 
-      // 3. External absolute path
-      const absoluteRes = service.inspect({
+      // 3. Custom forward-slash relative subpath inside installDir
+      const customRelativeRes = service.inspect({
         serverId: TEST_SERVER_ID,
         installPath: fixture.installDir,
         profilePath: 'profiles',
-        missionPath: externalMission,
+        missionPath: 'custom/mission',
       });
-      expect(absoluteRes.valid).toBe(true);
-      expect(absoluteRes.paths.missionPath.resolvedPath).toBe(externalMission);
-      expect(absoluteRes.paths.missionPath.hasInitScript).toBe(true);
-      expect(absoluteRes.paths.missionPath.hasEconomyDb).toBe(true);
+      expect(customRelativeRes.valid).toBe(true);
+      expect(customRelativeRes.paths.missionPath.resolvedPath).toBe(customMission);
+      expect(customRelativeRes.paths.missionPath.hasInitScript).toBe(true);
+      expect(customRelativeRes.paths.missionPath.hasEconomyDb).toBe(true);
     });
 
     it('validates warning vs error severity for missing db/ and missing init.c', () => {
@@ -1107,11 +1229,12 @@ describe('ServerFsInspectorService (apps/server/src/services/server)', () => {
       const fixture = createValidDayzFixture();
       fixture.createMission('dayzOffline.chernarusplus');
 
-      const missingProfile = path.join(fixture.root, 'missing-profiles');
+      const missingProfileName = 'missing-profiles';
+      const missingProfilePath = path.join(fixture.installDir, missingProfileName);
       const missingRes = service.inspect({
         serverId: TEST_SERVER_ID,
         installPath: fixture.installDir,
-        profilePath: missingProfile,
+        profilePath: missingProfileName,
         missionPath: 'dayzOffline.chernarusplus',
       });
 
@@ -1124,14 +1247,15 @@ describe('ServerFsInspectorService (apps/server/src/services/server)', () => {
           code: 'PROFILE_DIR_MISSING',
         }),
       );
-      expect(fs.existsSync(missingProfile)).toBe(false);
+      expect(fs.existsSync(missingProfilePath)).toBe(false);
 
-      const fileProfile = path.join(fixture.root, 'profile-file.txt');
-      fs.writeFileSync(fileProfile, 'not-a-dir');
+      const fileProfileName = 'profile-file.txt';
+      const fileProfilePath = path.join(fixture.installDir, fileProfileName);
+      fs.writeFileSync(fileProfilePath, 'not-a-dir');
       const notDirRes = service.inspect({
         serverId: TEST_SERVER_ID,
         installPath: fixture.installDir,
-        profilePath: fileProfile,
+        profilePath: fileProfileName,
         missionPath: 'dayzOffline.chernarusplus',
       });
 
@@ -1143,6 +1267,46 @@ describe('ServerFsInspectorService (apps/server/src/services/server)', () => {
         expect.objectContaining({
           target: SERVER_FS_PATH_TARGET.PROFILE_PATH,
           code: 'PROFILE_PATH_NOT_DIRECTORY',
+        }),
+      );
+    });
+
+    it('rejects PROFILE_SYMLINK_ESCAPE when relative profilePath resolves outside installDir without running write probes', () => {
+      const fixture = createValidDayzFixture();
+      fixture.createMission('dayzOffline.chernarusplus');
+      fs.rmSync(fixture.profileDir, { recursive: true, force: true });
+
+      const externalProfile = path.join(fixture.root, 'external-profiles');
+      fs.mkdirSync(path.join(externalProfile, 'BattlEye'), { recursive: true });
+      fs.symlinkSync(externalProfile, fixture.profileDir, SYMLINK_DIR_TYPE);
+
+      const openSpy = vi.spyOn(fs, 'openSync');
+
+      const result = service.inspect({
+        serverId: TEST_SERVER_ID,
+        installPath: fixture.installDir,
+        profilePath: 'profiles',
+        missionPath: 'dayzOffline.chernarusplus',
+      });
+
+      expect(openSpy).not.toHaveBeenCalled();
+      expect(result.valid).toBe(false);
+      expect(result.paths.profilePath).toEqual({
+        target: SERVER_FS_PATH_TARGET.PROFILE_PATH,
+        configuredPath: 'profiles',
+        resolvedPath: externalProfile,
+        status: SERVER_FS_CHECK_STATUS.ERROR,
+        exists: true,
+        isDirectory: true,
+        writable: null,
+      });
+      expect(result.paths.battleyePath.status).toBe(SERVER_FS_CHECK_STATUS.SKIPPED);
+      expect(result.issues).toContainEqual(
+        expect.objectContaining({
+          target: SERVER_FS_PATH_TARGET.PROFILE_PATH,
+          severity: SERVER_FS_ISSUE_SEVERITY.ERROR,
+          code: 'PROFILE_SYMLINK_ESCAPE',
+          path: externalProfile,
         }),
       );
     });
@@ -1178,7 +1342,11 @@ describe('ServerFsInspectorService (apps/server/src/services/server)', () => {
 
       const origRealpath = fs.realpathSync.bind(fs);
       vi.spyOn(fs, 'realpathSync').mockImplementation(target => {
-        if (String(target) === fixture.profileDir || String(target) === fixture.battleyeDir) {
+        if (
+          String(target) === fixture.installDir ||
+          String(target) === fixture.profileDir ||
+          String(target) === fixture.battleyeDir
+        ) {
           throw new Error('realpath fallback');
         }
         return origRealpath(target);
@@ -1231,22 +1399,40 @@ describe('ServerFsInspectorService (apps/server/src/services/server)', () => {
       expect(closeSpy).toHaveBeenCalledWith(99);
     });
 
-    it('still validates absolute profilePath and missionPath independently when installPath fails', () => {
+    it('marks relative profilePath and missionPath as skipped when installPath does not exist, while still rejecting non-relative paths', () => {
       const fixture = createValidDayzFixture();
-      const externalMission = fixture.createMission('dayzOffline.chernarusplus');
+      const missingInstall = path.join(fixture.root, 'missingInstall');
 
-      const result = service.inspect({
+      const relativeRes = service.inspect({
         serverId: TEST_SERVER_ID,
-        installPath: path.join(fixture.root, 'missingInstall'),
-        profilePath: fixture.profileDir,
-        missionPath: externalMission,
+        installPath: missingInstall,
+        profilePath: 'profiles',
+        missionPath: 'dayzOffline.chernarusplus',
       });
 
-      expect(result.valid).toBe(false);
-      expect(result.paths.installPath.status).toBe(SERVER_FS_CHECK_STATUS.ERROR);
-      expect(result.paths.profilePath.status).toBe(SERVER_FS_CHECK_STATUS.VALID);
-      expect(result.paths.battleyePath.status).toBe(SERVER_FS_CHECK_STATUS.VALID);
-      expect(result.paths.missionPath.status).toBe(SERVER_FS_CHECK_STATUS.VALID);
+      expect(relativeRes.valid).toBe(false);
+      expect(relativeRes.paths.installPath.status).toBe(SERVER_FS_CHECK_STATUS.ERROR);
+      expect(relativeRes.paths.profilePath.status).toBe(SERVER_FS_CHECK_STATUS.SKIPPED);
+      expect(relativeRes.paths.battleyePath.status).toBe(SERVER_FS_CHECK_STATUS.SKIPPED);
+      expect(relativeRes.paths.missionPath.status).toBe(SERVER_FS_CHECK_STATUS.SKIPPED);
+
+      const nonRelativeRes = service.inspect({
+        serverId: TEST_SERVER_ID,
+        installPath: missingInstall,
+        profilePath: fixture.profileDir,
+        missionPath: fixture.mpmissionsDir,
+      });
+
+      expect(nonRelativeRes.valid).toBe(false);
+      expect(nonRelativeRes.paths.installPath.status).toBe(SERVER_FS_CHECK_STATUS.ERROR);
+      expect(nonRelativeRes.paths.profilePath.status).toBe(SERVER_FS_CHECK_STATUS.ERROR);
+      expect(nonRelativeRes.paths.battleyePath.status).toBe(SERVER_FS_CHECK_STATUS.SKIPPED);
+      expect(nonRelativeRes.paths.missionPath.status).toBe(SERVER_FS_CHECK_STATUS.ERROR);
+      expect(nonRelativeRes.issues.map(i => i.code)).toEqual([
+        'INSTALL_DIR_MISSING',
+        'PROFILE_PATH_NOT_RELATIVE',
+        'MISSION_PATH_NOT_RELATIVE',
+      ]);
     });
   });
 

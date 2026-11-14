@@ -44,6 +44,10 @@ function isHostAbsolutePath(targetPath: string, platform: NodeJS.Platform): bool
   return getPlatformPathImpl(platform).isAbsolute(targetPath);
 }
 
+function isNonRelativeSubpath(trimmed: string, platform: NodeJS.Platform): boolean {
+  return isHostAbsolutePath(trimmed, platform) || /^[\\/]/.test(trimmed);
+}
+
 function normalizeRelativeSubpath(subpath: string, pathImpl: PlatformPathImpl): string {
   return subpath.replace(/[\\/]+/g, pathImpl.sep);
 }
@@ -630,8 +634,29 @@ function inspectProfileAndBattlEye(
     };
   }
 
-  const isAbsolute = isHostAbsolutePath(lexical.trimmed, ctx.platform);
-  if (!isAbsolute && !resolvedInstall) {
+  if (isNonRelativeSubpath(lexical.trimmed, ctx.platform)) {
+    ctx.issues.push({
+      target: SERVER_FS_PATH_TARGET.PROFILE_PATH,
+      severity: SERVER_FS_ISSUE_SEVERITY.ERROR,
+      code: 'PROFILE_PATH_NOT_RELATIVE',
+      message: 'Profile path must be relative to the installation path (e.g. profiles).',
+      path: lexical.trimmed,
+    });
+    return {
+      profileStatus: {
+        target: SERVER_FS_PATH_TARGET.PROFILE_PATH,
+        configuredPath: lexical.trimmed,
+        resolvedPath: null,
+        status: SERVER_FS_CHECK_STATUS.ERROR,
+        exists: false,
+        isDirectory: null,
+        writable: null,
+      },
+      battleyeStatus: buildSkippedBattleyeStatus(lexical.trimmed, ctx.pathImpl),
+    };
+  }
+
+  if (!resolvedInstall) {
     return {
       profileStatus: {
         target: SERVER_FS_PATH_TARGET.PROFILE_PATH,
@@ -646,12 +671,10 @@ function inspectProfileAndBattlEye(
     };
   }
 
-  const candidateProfile = isAbsolute
-    ? ctx.pathImpl.resolve(lexical.trimmed)
-    : ctx.pathImpl.resolve(
-        resolvedInstall as string,
-        normalizeRelativeSubpath(lexical.trimmed, ctx.pathImpl),
-      );
+  const candidateProfile = ctx.pathImpl.resolve(
+    resolvedInstall,
+    normalizeRelativeSubpath(lexical.trimmed, ctx.pathImpl),
+  );
   const profileStat = safeStat(candidateProfile);
 
   if (!profileStat.exists) {
@@ -671,6 +694,30 @@ function inspectProfileAndBattlEye(
         exists: false,
         isDirectory: false,
         writable: false,
+      },
+      battleyeStatus: buildSkippedBattleyeStatus(candidateProfile, ctx.pathImpl),
+    };
+  }
+
+  const installReal = safeRealpath(resolvedInstall) ?? resolvedInstall;
+  const profileReal = safeRealpath(candidateProfile) ?? candidateProfile;
+  if (!isPathContainedWithin(profileReal, installReal, ctx.platform, false)) {
+    ctx.issues.push({
+      target: SERVER_FS_PATH_TARGET.PROFILE_PATH,
+      severity: SERVER_FS_ISSUE_SEVERITY.ERROR,
+      code: 'PROFILE_SYMLINK_ESCAPE',
+      message: 'Profile directory resolves outside the installation directory.',
+      path: profileReal,
+    });
+    return {
+      profileStatus: {
+        target: SERVER_FS_PATH_TARGET.PROFILE_PATH,
+        configuredPath: rawProfilePath,
+        resolvedPath: profileReal,
+        status: SERVER_FS_CHECK_STATUS.ERROR,
+        exists: true,
+        isDirectory: profileStat.stat.isDirectory(),
+        writable: null,
       },
       battleyeStatus: buildSkippedBattleyeStatus(candidateProfile, ctx.pathImpl),
     };
@@ -698,15 +745,14 @@ function inspectProfileAndBattlEye(
     };
   }
 
-  const resolvedProfile = safeRealpath(candidateProfile) ?? candidateProfile;
-  const writable = probeDirectoryWritable(resolvedProfile, ctx.pathImpl);
+  const writable = probeDirectoryWritable(profileReal, ctx.pathImpl);
   if (!writable) {
     ctx.issues.push({
       target: SERVER_FS_PATH_TARGET.PROFILE_PATH,
       severity: SERVER_FS_ISSUE_SEVERITY.ERROR,
       code: 'PROFILE_DIR_NOT_WRITABLE',
-      message: `Profile directory '${resolvedProfile}' is not writable by the DSM service.`,
-      path: resolvedProfile,
+      message: `Profile directory '${profileReal}' is not writable by the DSM service.`,
+      path: profileReal,
     });
   }
 
@@ -714,13 +760,13 @@ function inspectProfileAndBattlEye(
     profileStatus: {
       target: SERVER_FS_PATH_TARGET.PROFILE_PATH,
       configuredPath: rawProfilePath,
-      resolvedPath: resolvedProfile,
+      resolvedPath: profileReal,
       status: writable ? SERVER_FS_CHECK_STATUS.VALID : SERVER_FS_CHECK_STATUS.ERROR,
       exists: true,
       isDirectory: true,
       writable,
     },
-    battleyeStatus: inspectBattleyeDirectory(resolvedProfile, ctx),
+    battleyeStatus: inspectBattleyeDirectory(profileReal, ctx),
   };
 }
 
@@ -728,12 +774,9 @@ function resolveMissionCandidate(
   trimmed: string,
   resolvedInstall: string | null,
   ctx: InspectionContext,
-): { candidateMission: string | null; containmentBase: string | null } {
-  if (isHostAbsolutePath(trimmed, ctx.platform)) {
-    return { candidateMission: ctx.pathImpl.resolve(trimmed), containmentBase: null };
-  }
+): { candidateMission: string; containmentBase: string } | null {
   if (!resolvedInstall) {
-    return { candidateMission: null, containmentBase: null };
+    return null;
   }
   if (!/[\\/]/.test(trimmed)) {
     return {
@@ -838,13 +881,30 @@ function inspectMissionPath(
     };
   }
 
-  const { candidateMission, containmentBase } = resolveMissionCandidate(
-    lexical.trimmed,
-    resolvedInstall,
-    ctx,
-  );
+  if (isNonRelativeSubpath(lexical.trimmed, ctx.platform)) {
+    ctx.issues.push({
+      target: SERVER_FS_PATH_TARGET.MISSION_PATH,
+      severity: SERVER_FS_ISSUE_SEVERITY.ERROR,
+      code: 'MISSION_PATH_NOT_RELATIVE',
+      message:
+        'Mission path must be relative to the installation path (e.g. mpmissions\\dayzOffline.chernarusplus).',
+      path: lexical.trimmed,
+    });
+    return {
+      target: SERVER_FS_PATH_TARGET.MISSION_PATH,
+      configuredPath: lexical.trimmed,
+      resolvedPath: null,
+      status: SERVER_FS_CHECK_STATUS.ERROR,
+      exists: false,
+      isDirectory: null,
+      hasInitScript: null,
+      hasEconomyDb: null,
+    };
+  }
 
-  if (!candidateMission) {
+  const resolvedTarget = resolveMissionCandidate(lexical.trimmed, resolvedInstall, ctx);
+
+  if (!resolvedTarget) {
     return {
       target: SERVER_FS_PATH_TARGET.MISSION_PATH,
       configuredPath: rawMissionPath,
@@ -857,6 +917,7 @@ function inspectMissionPath(
     };
   }
 
+  const { candidateMission, containmentBase } = resolvedTarget;
   const missionStat = safeStat(candidateMission);
   if (!missionStat.exists) {
     ctx.issues.push({
@@ -878,32 +939,30 @@ function inspectMissionPath(
     };
   }
 
-  if (containmentBase) {
-    const baseReal = safeRealpath(containmentBase);
-    const missionReal = safeRealpath(candidateMission);
-    if (
-      baseReal &&
-      missionReal &&
-      !isPathContainedWithin(missionReal, baseReal, ctx.platform, false)
-    ) {
-      ctx.issues.push({
-        target: SERVER_FS_PATH_TARGET.MISSION_PATH,
-        severity: SERVER_FS_ISSUE_SEVERITY.ERROR,
-        code: 'MISSION_SYMLINK_ESCAPE',
-        message: `Mission path '${lexical.trimmed}' resolves outside the permitted DayZ installation boundary.`,
-        path: missionReal,
-      });
-      return {
-        target: SERVER_FS_PATH_TARGET.MISSION_PATH,
-        configuredPath: rawMissionPath,
-        resolvedPath: missionReal,
-        status: SERVER_FS_CHECK_STATUS.ERROR,
-        exists: true,
-        isDirectory: missionStat.stat.isDirectory(),
-        hasInitScript: null,
-        hasEconomyDb: null,
-      };
-    }
+  const baseReal = safeRealpath(containmentBase);
+  const missionReal = safeRealpath(candidateMission);
+  if (
+    baseReal &&
+    missionReal &&
+    !isPathContainedWithin(missionReal, baseReal, ctx.platform, false)
+  ) {
+    ctx.issues.push({
+      target: SERVER_FS_PATH_TARGET.MISSION_PATH,
+      severity: SERVER_FS_ISSUE_SEVERITY.ERROR,
+      code: 'MISSION_SYMLINK_ESCAPE',
+      message: `Mission path '${lexical.trimmed}' resolves outside the permitted DayZ installation boundary.`,
+      path: missionReal,
+    });
+    return {
+      target: SERVER_FS_PATH_TARGET.MISSION_PATH,
+      configuredPath: rawMissionPath,
+      resolvedPath: missionReal,
+      status: SERVER_FS_CHECK_STATUS.ERROR,
+      exists: true,
+      isDirectory: missionStat.stat.isDirectory(),
+      hasInitScript: null,
+      hasEconomyDb: null,
+    };
   }
 
   if (!missionStat.stat.isDirectory()) {

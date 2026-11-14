@@ -309,6 +309,9 @@ export const enUSTranslations: TranslationCatalog = {
       'DayZ dedicated server executable was not found in the installation directory.',
     EXECUTABLE_NOT_FILE: 'DayZ server executable path is not a regular file.',
     EXECUTABLE_NOT_EXECUTABLE: 'DayZ server binary lacks execute permissions for the DSM service.',
+    PROFILE_PATH_NOT_RELATIVE:
+      'Profile path must be relative to the installation directory (e.g. profiles).',
+    PROFILE_SYMLINK_ESCAPE: 'Profile path resolves outside the installation directory.',
     PROFILE_DIR_MISSING: 'Profile directory does not exist on the host filesystem.',
     PROFILE_PATH_NOT_DIRECTORY: 'Profile path points to a file instead of a directory.',
     PROFILE_DIR_NOT_WRITABLE: 'Profile directory is not writable by the DSM service.',
@@ -319,6 +322,8 @@ export const enUSTranslations: TranslationCatalog = {
     MPMISSIONS_DIR_MISSING: 'No mpmissions directory was found inside the installation directory.',
     MPMISSIONS_PATH_NOT_DIRECTORY:
       'The mpmissions path inside the installation directory is not a directory.',
+    MISSION_PATH_NOT_RELATIVE:
+      'Mission path must be relative to the installation directory (e.g. mpmissions\\dayzOffline.chernarusplus).',
     MISSION_DIR_MISSING: 'Configured mission directory does not exist on the host filesystem.',
     MISSION_PATH_NOT_DIRECTORY: 'Configured mission path points to a file instead of a directory.',
     MISSION_SYMLINK_ESCAPE:

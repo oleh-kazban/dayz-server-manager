@@ -585,7 +585,14 @@ describe('Server Contracts (@aegis/api-contracts)', () => {
       ]);
       expect(SERVER_FS_CHECK_STATUS_VALUES).toEqual(['valid', 'warning', 'error', 'skipped']);
       expect(SERVER_FS_ISSUE_SEVERITY_VALUES).toEqual(['error', 'warning']);
-      expect(SERVER_FS_ISSUE_CODE_VALUES).toHaveLength(21);
+      expect(SERVER_FS_ISSUE_CODE_VALUES).toHaveLength(24);
+      expect(SERVER_FS_ISSUE_CODE_VALUES).toEqual(
+        expect.arrayContaining([
+          'PROFILE_PATH_NOT_RELATIVE',
+          'PROFILE_SYMLINK_ESCAPE',
+          'MISSION_PATH_NOT_RELATIVE',
+        ]),
+      );
 
       expect(serverFsPathTargetSchema.safeParse('unknownTarget').success).toBe(false);
       expect(serverFsCheckStatusSchema.safeParse('pending').success).toBe(false);
