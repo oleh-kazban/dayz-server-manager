@@ -5,8 +5,13 @@ import { fireEvent, render, screen, waitFor, within } from '@testing-library/rea
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { apiClient, ApiError } from '@aegis/api-client';
-import type { ServerDetailDto, ServerSummaryDto } from '@aegis/api-contracts';
+import type {
+  ServerDetailDto,
+  ServerSummaryDto,
+  ValidateServerPathsResponseDto,
+} from '@aegis/api-contracts';
 import { showToast } from '@aegis/ui';
+import { enUSTranslations } from '@aegis/web/core';
 
 import { ServerSettingsView } from './ServerSettingsView';
 
@@ -42,7 +47,7 @@ const mockDefaultServerSummary: ServerSummaryDto = {
 const mockServerDetail: ServerDetailDto = {
   ...mockActiveServerSummary,
   installPath: 'C:\\DayZServer\\Namalsk',
-  profilePath: 'C:\\DayZServer\\Namalsk\\profiles',
+  profilePath: 'profiles',
   missionPath: 'mpmissions\\dayzOffline.namalsk',
   launchParameters: '-cpuCount=4 -doLogs',
 };
@@ -87,6 +92,7 @@ vi.mock('@aegis/api-client', async importOriginal => {
         update: vi.fn(),
         delete: vi.fn(),
         create: vi.fn(),
+        validatePaths: vi.fn(),
       },
     },
   };
@@ -123,6 +129,120 @@ describe('ServerSettingsView', () => {
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     }));
+    vi.mocked(apiClient.servers.validatePaths).mockImplementation(async (serverId, dto) =>
+      buildValidationResult(serverId, {
+        paths: {
+          installPath: {
+            target: 'installPath',
+            configuredPath: dto?.installPath ?? mockServerDetail.installPath,
+            resolvedPath: dto?.installPath ?? mockServerDetail.installPath,
+            status: 'valid',
+            exists: true,
+            isDirectory: true,
+            executablePath: `${dto?.installPath ?? mockServerDetail.installPath}\\DayZServer_x64.exe`,
+            executablePresent: true,
+            executableRunnable: true,
+          },
+          profilePath: {
+            target: 'profilePath',
+            configuredPath: dto?.profilePath ?? mockServerDetail.profilePath,
+            resolvedPath: dto?.profilePath ?? mockServerDetail.profilePath,
+            status: 'valid',
+            exists: true,
+            isDirectory: true,
+            writable: true,
+          },
+          battleyePath: {
+            target: 'battleyePath',
+            configuredPath: `${dto?.profilePath ?? mockServerDetail.profilePath}\\BattlEye`,
+            resolvedPath: `${dto?.profilePath ?? mockServerDetail.profilePath}\\BattlEye`,
+            status: 'valid',
+            exists: true,
+            isDirectory: true,
+            writable: true,
+          },
+          missionPath: {
+            target: 'missionPath',
+            configuredPath: dto?.missionPath ?? mockServerDetail.missionPath,
+            resolvedPath: `${dto?.installPath ?? mockServerDetail.installPath}\\mpmissions\\dayzOffline.namalsk`,
+            status: 'valid',
+            exists: true,
+            isDirectory: true,
+            hasInitScript: true,
+            hasEconomyDb: true,
+          },
+        },
+      }),
+    );
+  });
+
+  const buildValidationResult = (
+    serverId: string,
+    overrides?: Partial<ValidateServerPathsResponseDto>,
+  ): ValidateServerPathsResponseDto => ({
+    serverId,
+    valid: true,
+    platform: 'win32',
+    checkedAt: '2026-11-14T12:00:00.000Z',
+    paths: {
+      installPath: {
+        target: 'installPath',
+        configuredPath: 'C:\\DayZServer\\Namalsk',
+        resolvedPath: 'C:\\DayZServer\\Namalsk',
+        status: 'valid',
+        exists: true,
+        isDirectory: true,
+        executablePath: 'C:\\DayZServer\\Namalsk\\DayZServer_x64.exe',
+        executablePresent: true,
+        executableRunnable: true,
+      },
+      profilePath: {
+        target: 'profilePath',
+        configuredPath: 'profiles',
+        resolvedPath: 'C:\\DayZServer\\Namalsk\\profiles',
+        status: 'valid',
+        exists: true,
+        isDirectory: true,
+        writable: true,
+      },
+      battleyePath: {
+        target: 'battleyePath',
+        configuredPath: 'C:\\DayZServer\\Namalsk\\profiles\\BattlEye',
+        resolvedPath: 'C:\\DayZServer\\Namalsk\\profiles\\BattlEye',
+        status: 'valid',
+        exists: true,
+        isDirectory: true,
+        writable: true,
+      },
+      missionPath: {
+        target: 'missionPath',
+        configuredPath: 'mpmissions\\dayzOffline.namalsk',
+        resolvedPath: 'C:\\DayZServer\\Namalsk\\mpmissions\\dayzOffline.namalsk',
+        status: 'valid',
+        exists: true,
+        isDirectory: true,
+        hasInitScript: true,
+        hasEconomyDb: true,
+      },
+    },
+    discoveredMissions: [
+      {
+        name: 'dayzOffline.chernarusplus',
+        relativePath: 'mpmissions/dayzOffline.chernarusplus',
+        resolvedPath: 'C:\\DayZServer\\Namalsk\\mpmissions\\dayzOffline.chernarusplus',
+        hasInitScript: true,
+        hasEconomyDb: true,
+      },
+      {
+        name: 'dayzOffline.namalsk',
+        relativePath: 'mpmissions/dayzOffline.namalsk',
+        resolvedPath: 'C:\\DayZServer\\Namalsk\\mpmissions\\dayzOffline.namalsk',
+        hasInitScript: true,
+        hasEconomyDb: false,
+      },
+    ],
+    issues: [],
+    ...overrides,
   });
 
   const renderView = () =>
@@ -605,7 +725,7 @@ describe('ServerSettingsView', () => {
     fireEvent.change(installInput, { target: { value: 'D:\\DayZServer' } });
 
     const profileInput = screen.getByDisplayValue(mockServerDetail.profilePath);
-    fireEvent.change(profileInput, { target: { value: 'D:\\DayZServer\\profiles' } });
+    fireEvent.change(profileInput, { target: { value: 'profiles\\updated' } });
 
     const missionInput = screen.getByDisplayValue(mockServerDetail.missionPath);
     fireEvent.change(missionInput, { target: { value: 'mpmissions\\dayzOffline.livonia' } });
@@ -633,7 +753,7 @@ describe('ServerSettingsView', () => {
           rconPort: 2312,
           rconPassword: 'newpassword123',
           installPath: 'D:\\DayZServer',
-          profilePath: 'D:\\DayZServer\\profiles',
+          profilePath: 'profiles\\updated',
           missionPath: 'mpmissions\\dayzOffline.livonia',
           launchParameters: '-cpuCount=8',
           isDefault: true,
@@ -774,7 +894,7 @@ describe('ServerSettingsView', () => {
 
     // 2. Test port collision when ports are equal
     fireEvent.change(installInput, { target: { value: 'C:\\DayZServer\\Namalsk' } });
-    fireEvent.change(profileInput, { target: { value: 'C:\\DayZServer\\Namalsk\\profiles' } });
+    fireEvent.change(profileInput, { target: { value: 'profiles\\namalsk' } });
     fireEvent.change(missionInput, { target: { value: 'mpmissions\\dayzOffline.namalsk' } });
     fireEvent.change(rconPassInput, { target: { value: 'secretpass' } });
 
@@ -904,6 +1024,795 @@ describe('ServerSettingsView', () => {
     resolveDelete({ success: true });
     await waitFor(() => {
       expect(showToast.success).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe('Storage & File System Paths Validation and Mission Discovery (REQ-06)', () => {
+    it('submits trimmed draft paths on Validate Paths click and renders Verified notice, path summaries, and discovered missions', async () => {
+      vi.mocked(apiClient.servers.validatePaths).mockResolvedValueOnce(
+        buildValidationResult(mockActiveServerSummary.id),
+      );
+
+      renderView();
+
+      await waitFor(() => {
+        expect(screen.getByLabelText('Installation Path')).toBeInTheDocument();
+      });
+
+      fireEvent.change(screen.getByLabelText('Installation Path'), {
+        target: { value: '  D:\\Servers\\DayZ  ' },
+      });
+      fireEvent.change(screen.getByLabelText('Profile Path'), {
+        target: { value: '  profiles  ' },
+      });
+      fireEvent.change(screen.getByLabelText('Mission Path'), {
+        target: { value: '  dayzOffline.namalsk  ' },
+      });
+
+      fireEvent.click(screen.getByRole('button', { name: /Validate Paths/i }));
+
+      await waitFor(() => {
+        expect(apiClient.servers.validatePaths).toHaveBeenCalledWith(mockActiveServerSummary.id, {
+          installPath: 'D:\\Servers\\DayZ',
+          profilePath: 'profiles',
+          missionPath: 'dayzOffline.namalsk',
+        });
+      });
+
+      expect(await screen.findByText('Verified')).toBeInTheDocument();
+      expect(
+        screen.getByText(/Installation, executable, profile, and mission paths are verified on/i),
+      ).toBeInTheDocument();
+      expect(screen.getAllByText('Valid')).toHaveLength(4);
+      expect(
+        screen.getByText('Executable: C:\\DayZServer\\Namalsk\\DayZServer_x64.exe'),
+      ).toBeInTheDocument();
+      expect(screen.getByText('init.c present')).toBeInTheDocument();
+      expect(screen.getByText('db/ present')).toBeInTheDocument();
+
+      expect(screen.getByText('Discovered Missions')).toBeInTheDocument();
+      expect(screen.getByText('2 found')).toBeInTheDocument();
+
+      const chernarusBtn = screen.getByRole('button', { name: /dayzOffline\.chernarusplus/i });
+      const namalskBtn = screen.getByRole('button', { name: /dayzOffline\.namalsk/i });
+      expect(chernarusBtn).toHaveAttribute('aria-pressed', 'false');
+      expect(namalskBtn).toHaveAttribute('aria-pressed', 'true');
+      expect(chernarusBtn).toHaveClass('focus-visible:ring-2');
+      expect(namalskBtn).toHaveClass('focus-visible:ring-2');
+      expect(within(chernarusBtn).getByText('init.c ✓')).toBeInTheDocument();
+      expect(within(chernarusBtn).getByText('db/ ✓')).toBeInTheDocument();
+      expect(within(namalskBtn).getByText('init.c ✓')).toBeInTheDocument();
+      expect(within(namalskBtn).getByText('db/ ✗')).toBeInTheDocument();
+    });
+
+    it('renders Verified with Warnings for non-blocking issues (singular and plural) and empty missions hint', async () => {
+      vi.mocked(apiClient.servers.validatePaths)
+        .mockResolvedValueOnce(
+          buildValidationResult(mockActiveServerSummary.id, {
+            valid: true,
+            discoveredMissions: [],
+            paths: {
+              ...buildValidationResult(mockActiveServerSummary.id).paths,
+              battleyePath: {
+                target: 'battleyePath',
+                configuredPath: 'C:\\DayZServer\\Namalsk\\profiles\\BattlEye',
+                resolvedPath: 'C:\\DayZServer\\Namalsk\\profiles\\BattlEye',
+                status: 'warning',
+                exists: false,
+                isDirectory: false,
+                writable: false,
+              },
+            },
+            issues: [
+              {
+                target: 'battleyePath',
+                severity: 'warning',
+                code: 'BATTLEYE_DIR_MISSING',
+                message: 'BattlEye missing',
+              },
+            ],
+          }),
+        )
+        .mockResolvedValueOnce(
+          buildValidationResult(mockActiveServerSummary.id, {
+            valid: true,
+            paths: {
+              ...buildValidationResult(mockActiveServerSummary.id).paths,
+              battleyePath: {
+                target: 'battleyePath',
+                configuredPath: 'C:\\DayZServer\\Namalsk\\profiles\\BattlEye',
+                resolvedPath: 'C:\\DayZServer\\Namalsk\\profiles\\BattlEye',
+                status: 'warning',
+                exists: false,
+                isDirectory: false,
+                writable: false,
+              },
+              missionPath: {
+                target: 'missionPath',
+                configuredPath: 'mpmissions\\dayzOffline.namalsk',
+                resolvedPath: 'C:\\DayZServer\\Namalsk\\mpmissions\\dayzOffline.namalsk',
+                status: 'warning',
+                exists: true,
+                isDirectory: true,
+                hasInitScript: true,
+                hasEconomyDb: false,
+              },
+            },
+            issues: [
+              {
+                target: 'battleyePath',
+                severity: 'warning',
+                code: 'BATTLEYE_DIR_MISSING',
+                message: 'BattlEye missing',
+              },
+              {
+                target: 'missionPath',
+                severity: 'warning',
+                code: 'MISSION_ECONOMY_DB_MISSING',
+                message: 'db missing',
+              },
+            ],
+          }),
+        );
+
+      renderView();
+
+      await waitFor(() => {
+        expect(screen.getByRole('button', { name: /Validate Paths/i })).toBeInTheDocument();
+      });
+
+      // 1 warning + empty missions
+      fireEvent.click(screen.getByRole('button', { name: /Validate Paths/i }));
+
+      expect(await screen.findByText('Verified with Warnings')).toBeInTheDocument();
+      expect(screen.getByText(/with 1 non-blocking warning to review\./i)).toBeInTheDocument();
+      expect(
+        screen.getByText(enUSTranslations.serverFsIssues.BATTLEYE_DIR_MISSING),
+      ).toBeInTheDocument();
+      expect(screen.getByText('0 found')).toBeInTheDocument();
+      expect(screen.getByText(/No missions discovered under/i)).toBeInTheDocument();
+
+      // 2 warnings (plural) + db/ missing tag
+      fireEvent.click(screen.getByRole('button', { name: /Validate Paths/i }));
+
+      await waitFor(() => {
+        expect(screen.getByText(/with 2 non-blocking warnings to review\./i)).toBeInTheDocument();
+      });
+      expect(screen.getByText('db/ missing')).toBeInTheDocument();
+      expect(
+        screen.getByText(enUSTranslations.serverFsIssues.MISSION_ECONOMY_DB_MISSING),
+      ).toBeInTheDocument();
+    });
+
+    it('renders Issues Detected for blocking errors (singular and plural), skipped dependent checks, and missing init.c', async () => {
+      const base = buildValidationResult(mockActiveServerSummary.id);
+      vi.mocked(apiClient.servers.validatePaths)
+        .mockResolvedValueOnce({
+          ...base,
+          valid: false,
+          discoveredMissions: [],
+          paths: {
+            installPath: {
+              target: 'installPath',
+              configuredPath: 'C:\\MissingInstall',
+              resolvedPath: null,
+              status: 'error',
+              exists: false,
+              isDirectory: false,
+              executablePath: null,
+              executablePresent: false,
+              executableRunnable: false,
+            },
+            profilePath: {
+              target: 'profilePath',
+              configuredPath: 'profiles',
+              resolvedPath: null,
+              status: 'skipped',
+              exists: false,
+              isDirectory: null,
+              writable: null,
+            },
+            battleyePath: {
+              target: 'battleyePath',
+              configuredPath: 'profiles\\BattlEye',
+              resolvedPath: null,
+              status: 'skipped',
+              exists: false,
+              isDirectory: null,
+              writable: null,
+            },
+            missionPath: {
+              target: 'missionPath',
+              configuredPath: 'dayzOffline.namalsk',
+              resolvedPath: null,
+              status: 'skipped',
+              exists: false,
+              isDirectory: null,
+              hasInitScript: null,
+              hasEconomyDb: null,
+            },
+          },
+          issues: [
+            {
+              target: 'installPath',
+              severity: 'error',
+              code: 'INSTALL_DIR_MISSING',
+              message: 'Missing install dir',
+            },
+          ],
+        })
+        .mockResolvedValueOnce({
+          ...base,
+          valid: false,
+          discoveredMissions: [
+            {
+              name: 'broken.mission',
+              relativePath: 'mpmissions/broken.mission',
+              resolvedPath: 'C:\\DayZServer\\Namalsk\\mpmissions\\broken.mission',
+              hasInitScript: false,
+              hasEconomyDb: false,
+            },
+          ],
+          paths: {
+            ...base.paths,
+            installPath: {
+              ...base.paths.installPath,
+              status: 'error',
+              executablePresent: false,
+              executableRunnable: false,
+            },
+            missionPath: {
+              ...base.paths.missionPath,
+              status: 'error',
+              hasInitScript: false,
+              hasEconomyDb: false,
+            },
+          },
+          issues: [
+            {
+              target: 'installPath',
+              severity: 'error',
+              code: 'EXECUTABLE_MISSING',
+              message: 'Missing exe',
+            },
+            {
+              target: 'missionPath',
+              severity: 'error',
+              code: 'MISSION_INIT_SCRIPT_MISSING',
+              message: 'Missing init.c',
+            },
+          ],
+        });
+
+      renderView();
+
+      await waitFor(() => {
+        expect(screen.getByRole('button', { name: /Validate Paths/i })).toBeInTheDocument();
+      });
+
+      // 1 diagnostic item + skipped statuses
+      fireEvent.click(screen.getByRole('button', { name: /Validate Paths/i }));
+
+      expect(await screen.findByText('Issues Detected')).toBeInTheDocument();
+      expect(screen.getByText(/\(1 diagnostic item\)\./i)).toBeInTheDocument();
+      expect(screen.getByText('Error')).toBeInTheDocument();
+      expect(screen.getAllByText('Skipped')).toHaveLength(3);
+      expect(
+        screen.getByText(enUSTranslations.serverFsIssues.INSTALL_DIR_MISSING),
+      ).toBeInTheDocument();
+
+      // 2 diagnostic items + missing init.c
+      fireEvent.click(screen.getByRole('button', { name: /Validate Paths/i }));
+
+      await waitFor(() => {
+        expect(screen.getByText(/\(2 diagnostic items\)\./i)).toBeInTheDocument();
+      });
+      expect(screen.getByText('init.c missing')).toBeInTheDocument();
+      expect(
+        screen.getByText(enUSTranslations.serverFsIssues.EXECUTABLE_MISSING),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByText(enUSTranslations.serverFsIssues.MISSION_INIT_SCRIPT_MISSING),
+      ).toBeInTheDocument();
+    });
+
+    it('renders MISSION_SYMLINK_ESCAPE message without rendering init.c missing or db/ missing tags when artifact flags are null', async () => {
+      const base = buildValidationResult(mockActiveServerSummary.id);
+      vi.mocked(apiClient.servers.validatePaths).mockResolvedValueOnce({
+        ...base,
+        valid: false,
+        discoveredMissions: [],
+        paths: {
+          ...base.paths,
+          missionPath: {
+            target: 'missionPath',
+            configuredPath: 'mpmissions\\escapedLink',
+            resolvedPath: 'D:\\ExternalSecret',
+            status: 'error',
+            exists: true,
+            isDirectory: true,
+            hasInitScript: null,
+            hasEconomyDb: null,
+          },
+        },
+        issues: [
+          {
+            target: 'missionPath',
+            severity: 'error',
+            code: 'MISSION_SYMLINK_ESCAPE',
+            message: 'Mission path resolved outside mpmissions directory.',
+          },
+        ],
+      });
+
+      renderView();
+
+      await waitFor(() => {
+        expect(screen.getByRole('button', { name: /Validate Paths/i })).toBeInTheDocument();
+      });
+
+      fireEvent.click(screen.getByRole('button', { name: /Validate Paths/i }));
+
+      expect(await screen.findByText('Issues Detected')).toBeInTheDocument();
+      expect(
+        screen.getByText(enUSTranslations.serverFsIssues.MISSION_SYMLINK_ESCAPE),
+      ).toBeInTheDocument();
+      expect(screen.queryByText('init.c missing')).not.toBeInTheDocument();
+      expect(screen.queryByText('db/ missing')).not.toBeInTheDocument();
+    });
+
+    it('updates Mission Path and clears missionPath error when selecting a discovered mission on a stopped server', async () => {
+      renderView();
+
+      await waitFor(() => {
+        expect(screen.getByLabelText('Mission Path')).toBeInTheDocument();
+      });
+
+      // Trigger client-side missionPath error first, then validate and select discovered mission
+      const missionInput = screen.getByLabelText('Mission Path');
+      fireEvent.change(missionInput, { target: { value: '   ' } });
+      fireEvent.click(screen.getByRole('button', { name: /Save changes/i }));
+      expect(screen.getByText('Mission path is required.')).toBeInTheDocument();
+
+      fireEvent.change(missionInput, { target: { value: 'mpmissions\\dayzOffline.namalsk' } });
+      fireEvent.click(screen.getByRole('button', { name: /Validate Paths/i }));
+
+      const chernarusBtn = await screen.findByRole('button', {
+        name: /dayzOffline\.chernarusplus/i,
+      });
+      const namalskBtn = screen.getByRole('button', { name: /dayzOffline\.namalsk/i });
+      // Backslash mpmissions\dayzOffline.namalsk normalizes to match mpmissions/dayzOffline.namalsk
+      expect(namalskBtn).toHaveAttribute('aria-pressed', 'true');
+
+      fireEvent.click(chernarusBtn);
+
+      expect(screen.getByLabelText('Mission Path')).toHaveValue(
+        'mpmissions/dayzOffline.chernarusplus',
+      );
+      expect(chernarusBtn).toHaveAttribute('aria-pressed', 'true');
+      expect(screen.queryByText('Mission path is required.')).not.toBeInTheDocument();
+    });
+
+    it('allows path validation when server is running while keeping discovered mission selection disabled', async () => {
+      currentActiveSummary = { ...mockDefaultServerSummary, status: 'running' };
+      currentDetail = {
+        ...mockServerDetail,
+        ...mockDefaultServerSummary,
+        status: 'running',
+      };
+
+      renderView();
+
+      await waitFor(() => {
+        expect(screen.getByText(/Configuration Locked/i)).toBeInTheDocument();
+      });
+
+      const validateBtn = screen.getByRole('button', { name: /Validate Paths/i });
+      expect(validateBtn).not.toBeDisabled();
+      fireEvent.click(validateBtn);
+
+      const chernarusBtn = await screen.findByRole('button', {
+        name: /dayzOffline\.chernarusplus/i,
+      });
+      expect(chernarusBtn).toBeDisabled();
+      fireEvent.click(chernarusBtn);
+
+      expect(screen.getByLabelText('Mission Path')).toHaveValue('mpmissions\\dayzOffline.namalsk');
+    });
+
+    it('attaches inline 400 fieldErrors without toast, preserves draft input, and clears errors on subsequent success', async () => {
+      vi.mocked(apiClient.servers.validatePaths)
+        .mockRejectedValueOnce(
+          new ApiError('Validation failed', 400, {
+            statusCode: 400,
+            error: 'Bad Request',
+            errorCode: 'VALIDATION_FAILED',
+            message: 'Path traversal is not permitted',
+            fieldErrors: {
+              installPath: {
+                code: 'PATH_TRAVERSAL_FORBIDDEN',
+                message: 'Path traversal (..) is not permitted',
+              },
+              profilePath: {
+                code: 'PATH_NULL_BYTES_FORBIDDEN',
+                message: 'Null bytes are forbidden',
+              },
+            },
+          }),
+        )
+        .mockResolvedValueOnce(buildValidationResult(mockActiveServerSummary.id));
+
+      renderView();
+
+      await waitFor(() => {
+        expect(screen.getByLabelText('Installation Path')).toBeInTheDocument();
+      });
+
+      fireEvent.change(screen.getByLabelText('Installation Path'), {
+        target: { value: 'C:\\DayZ\\..\\bad' },
+      });
+      fireEvent.click(screen.getByRole('button', { name: /Validate Paths/i }));
+
+      await waitFor(() => {
+        expect(screen.getByText('Path traversal (..) is not permitted.')).toBeInTheDocument();
+        expect(screen.getByText('Null bytes are forbidden in paths.')).toBeInTheDocument();
+      });
+      expect(showToast.error).not.toHaveBeenCalled();
+      expect(screen.getByLabelText('Installation Path')).toHaveValue('C:\\DayZ\\..\\bad');
+
+      // Re-running validation clears inline path errors on success
+      fireEvent.change(screen.getByLabelText('Installation Path'), {
+        target: { value: 'C:\\DayZServer\\Namalsk' },
+      });
+      fireEvent.click(screen.getByRole('button', { name: /Validate Paths/i }));
+
+      await waitFor(() => {
+        expect(screen.getByText('Verified')).toBeInTheDocument();
+      });
+      expect(screen.queryByText('Path traversal (..) is not permitted.')).not.toBeInTheDocument();
+      expect(screen.queryByText('Null bytes are forbidden in paths.')).not.toBeInTheDocument();
+    });
+
+    it('triggers notifyApiError toast on 403 AUTH_FORBIDDEN_ADMIN_REQUIRED without clearing unsaved path inputs', async () => {
+      vi.mocked(apiClient.servers.validatePaths).mockRejectedValueOnce(
+        new ApiError('Forbidden', 403, {
+          statusCode: 403,
+          error: 'Forbidden',
+          errorCode: 'AUTH_FORBIDDEN_ADMIN_REQUIRED',
+          message: 'Admin role required',
+        }),
+      );
+
+      renderView();
+
+      await waitFor(() => {
+        expect(screen.getByLabelText('Installation Path')).toBeInTheDocument();
+      });
+
+      fireEvent.change(screen.getByLabelText('Installation Path'), {
+        target: { value: 'D:\\CustomUnsavedPath' },
+      });
+      fireEvent.click(screen.getByRole('button', { name: /Validate Paths/i }));
+
+      await waitFor(() => {
+        expect(showToast.error).toHaveBeenCalledWith(
+          'Access Denied',
+          'Administrator privileges are required to perform this action.',
+          undefined,
+        );
+      });
+      expect(screen.getByLabelText('Installation Path')).toHaveValue('D:\\CustomUnsavedPath');
+    });
+
+    it('prevents concurrent Validate Paths requests on rapid double-click', async () => {
+      let resolveValidation!: (value: ValidateServerPathsResponseDto) => void;
+      vi.mocked(apiClient.servers.validatePaths).mockReturnValueOnce(
+        new Promise(resolve => {
+          resolveValidation = resolve;
+        }),
+      );
+
+      renderView();
+
+      await waitFor(() => {
+        expect(screen.getByRole('button', { name: /Validate Paths/i })).toBeInTheDocument();
+      });
+
+      const validateBtn = screen.getByRole('button', { name: /Validate Paths/i });
+      fireEvent.click(validateBtn);
+      fireEvent.click(validateBtn);
+
+      await waitFor(() => {
+        expect(apiClient.servers.validatePaths).toHaveBeenCalledTimes(1);
+        expect(validateBtn).toBeDisabled();
+        expect(validateBtn).toHaveAttribute('aria-busy', 'true');
+      });
+
+      resolveValidation(buildValidationResult(mockActiveServerSummary.id));
+
+      expect(await screen.findByText('Verified')).toBeInTheDocument();
+      expect(validateBtn).not.toBeDisabled();
+    });
+
+    it('clears stale validation diagnostics on activeServerId switch and ignores late success and error responses from prior server', async () => {
+      let resolveLateSuccess!: (value: ValidateServerPathsResponseDto) => void;
+      let rejectLateError!: (err: Error) => void;
+
+      vi.mocked(apiClient.servers.validatePaths)
+        .mockResolvedValueOnce(buildValidationResult(mockActiveServerSummary.id))
+        .mockReturnValueOnce(
+          new Promise(resolve => {
+            resolveLateSuccess = resolve;
+          }),
+        )
+        .mockReturnValueOnce(
+          new Promise((_resolve, reject) => {
+            rejectLateError = reject;
+          }),
+        );
+
+      const { rerender } = render(
+        <QueryClientProvider client={queryClient}>
+          <ServerSettingsView />
+        </QueryClientProvider>,
+      );
+
+      await waitFor(() => {
+        expect(screen.getByRole('button', { name: /Validate Paths/i })).toBeInTheDocument();
+      });
+
+      // 1. Validate Server A -> displays Verified + Discovered Missions
+      fireEvent.click(screen.getByRole('button', { name: /Validate Paths/i }));
+      expect(await screen.findByText('Verified')).toBeInTheDocument();
+      expect(screen.getByText('Discovered Missions')).toBeInTheDocument();
+
+      // 2. Start pending validation on Server A, then switch activeServerId to Server B
+      fireEvent.click(screen.getByRole('button', { name: /Validate Paths/i }));
+      await waitFor(() => {
+        expect(apiClient.servers.validatePaths).toHaveBeenCalledTimes(2);
+      });
+
+      const serverBDetail: ServerDetailDto = {
+        ...mockServerDetail,
+        ...mockDefaultServerSummary,
+        status: 'stopped',
+        installPath: 'C:\\DayZServer\\Chernarus',
+        profilePath: 'profiles',
+        missionPath: 'mpmissions\\dayzOffline.chernarusplus',
+      };
+      currentActiveSummary = { ...mockDefaultServerSummary, status: 'stopped' };
+      currentDetail = serverBDetail;
+
+      rerender(
+        <QueryClientProvider client={queryClient}>
+          <ServerSettingsView />
+        </QueryClientProvider>,
+      );
+
+      await waitFor(() => {
+        expect(screen.getByDisplayValue('DayZ Chernarus Vanilla')).toBeInTheDocument();
+      });
+      expect(screen.queryByText('Verified')).not.toBeInTheDocument();
+      expect(screen.queryByText('Discovered Missions')).not.toBeInTheDocument();
+
+      // Late resolution from Server A must be ignored on Server B
+      resolveLateSuccess(buildValidationResult(mockActiveServerSummary.id));
+      await new Promise(resolve => setTimeout(resolve, 10));
+      expect(screen.queryByText('Verified')).not.toBeInTheDocument();
+
+      // 3. Start pending validation on Server B that rejects after switching back to Server A
+      fireEvent.click(screen.getByRole('button', { name: /Validate Paths/i }));
+      await waitFor(() => {
+        expect(apiClient.servers.validatePaths).toHaveBeenCalledTimes(3);
+      });
+
+      currentActiveSummary = { ...mockActiveServerSummary };
+      currentDetail = { ...mockServerDetail };
+
+      rerender(
+        <QueryClientProvider client={queryClient}>
+          <ServerSettingsView />
+        </QueryClientProvider>,
+      );
+
+      await waitFor(() => {
+        expect(screen.getByDisplayValue('DayZ Namalsk')).toBeInTheDocument();
+      });
+
+      rejectLateError(
+        new ApiError('Forbidden', 403, {
+          statusCode: 403,
+          error: 'Forbidden',
+          errorCode: 'AUTH_FORBIDDEN_ADMIN_REQUIRED',
+          message: 'Admin role required',
+        }),
+      );
+      await new Promise(resolve => setTimeout(resolve, 10));
+      expect(showToast.error).not.toHaveBeenCalled();
+    });
+
+    it('clears serverFieldErrors on path input edit when update fails with path fieldErrors', async () => {
+      vi.mocked(apiClient.servers.update).mockRejectedValueOnce(
+        new ApiError('Invalid path', 400, {
+          statusCode: 400,
+          error: 'Bad Request',
+          errorCode: 'VALIDATION_FAILED',
+          message: 'Path traversal (..) is not permitted',
+          fieldErrors: {
+            installPath: {
+              code: 'PATH_TRAVERSAL_FORBIDDEN',
+              message: 'Path traversal (..) is not permitted',
+            },
+            profilePath: {
+              code: 'PATH_INVALID_CHARS',
+              message: 'Path contains invalid filesystem characters',
+            },
+            missionPath: {
+              code: 'PATH_INVALID_COLON',
+              message: 'Colons are only permitted in Windows drive letter prefixes',
+            },
+          },
+        }),
+      );
+
+      renderView();
+
+      await waitFor(() => {
+        expect(screen.getByLabelText('Installation Path')).toBeInTheDocument();
+      });
+
+      fireEvent.click(screen.getByRole('button', { name: /Save changes/i }));
+
+      await waitFor(() => {
+        expect(screen.getByText('Path traversal (..) is not permitted.')).toBeInTheDocument();
+        expect(
+          screen.getByText('Path contains invalid filesystem characters.'),
+        ).toBeInTheDocument();
+        expect(
+          screen.getByText('Colons are only permitted in Windows drive letter prefixes.'),
+        ).toBeInTheDocument();
+      });
+
+      fireEvent.change(screen.getByLabelText('Installation Path'), {
+        target: { value: 'C:\\DayZServer\\Clean' },
+      });
+      expect(screen.queryByText('Path traversal (..) is not permitted.')).not.toBeInTheDocument();
+
+      fireEvent.change(screen.getByLabelText('Profile Path'), {
+        target: { value: 'profiles\\clean' },
+      });
+      expect(
+        screen.queryByText('Path contains invalid filesystem characters.'),
+      ).not.toBeInTheDocument();
+
+      fireEvent.change(screen.getByLabelText('Mission Path'), {
+        target: { value: 'mpmissions\\dayzOffline.chernarusplus' },
+      });
+      expect(
+        screen.queryByText('Colons are only permitted in Windows drive letter prefixes.'),
+      ).not.toBeInTheDocument();
+    });
+
+    it.each([
+      {
+        fieldLabel: 'Profile Path',
+        badValue: 'D:\\Profiles',
+        expectedError: 'Profile path must be relative to the installation path (e.g. profiles).',
+      },
+      {
+        fieldLabel: 'Profile Path',
+        badValue: '/var/profiles',
+        expectedError: 'Profile path must be relative to the installation path (e.g. profiles).',
+      },
+      {
+        fieldLabel: 'Mission Path',
+        badValue: '/mpmissions/foo',
+        expectedError:
+          'Mission path must be relative to the installation path (e.g. mpmissions\\dayzOffline.chernarusplus).',
+      },
+      {
+        fieldLabel: 'Mission Path',
+        badValue: 'D:\\Missions\\custom',
+        expectedError:
+          'Mission path must be relative to the installation path (e.g. mpmissions\\dayzOffline.chernarusplus).',
+      },
+    ])(
+      'blocks form save when $fieldLabel is non-relative "$badValue" (Option B)',
+      async ({ fieldLabel, badValue, expectedError }) => {
+        renderView();
+
+        await waitFor(() => {
+          expect(screen.getByLabelText(fieldLabel)).toBeInTheDocument();
+        });
+
+        fireEvent.change(screen.getByLabelText(fieldLabel), {
+          target: { value: badValue },
+        });
+        fireEvent.click(screen.getByRole('button', { name: /Save changes/i }));
+
+        expect(screen.getByText(expectedError)).toBeInTheDocument();
+        expect(apiClient.servers.update).not.toHaveBeenCalled();
+      },
+    );
+
+    it('renders init.c ✗ and db/ ✗ pills on broken discovered missions alongside distinct PathDiagnosticSummary tags (QA-01, QA-03)', async () => {
+      const base = buildValidationResult(mockActiveServerSummary.id);
+      vi.mocked(apiClient.servers.validatePaths).mockResolvedValueOnce({
+        ...base,
+        valid: false,
+        discoveredMissions: [
+          {
+            name: 'broken.mission',
+            relativePath: 'mpmissions/broken.mission',
+            resolvedPath: 'C:\\DayZServer\\Namalsk\\mpmissions\\broken.mission',
+            hasInitScript: false,
+            hasEconomyDb: false,
+          },
+        ],
+        paths: {
+          ...base.paths,
+          missionPath: {
+            ...base.paths.missionPath,
+            status: 'error',
+            hasInitScript: false,
+            hasEconomyDb: false,
+          },
+        },
+        issues: [
+          {
+            target: 'missionPath',
+            severity: 'error',
+            code: 'MISSION_INIT_SCRIPT_MISSING',
+            message: 'Missing init.c',
+          },
+        ],
+      });
+
+      renderView();
+
+      await waitFor(() => {
+        expect(screen.getByRole('button', { name: /Validate Paths/i })).toBeInTheDocument();
+      });
+
+      fireEvent.click(screen.getByRole('button', { name: /Validate Paths/i }));
+
+      const brokenMissionBtn = await screen.findByRole('button', { name: /broken\.mission/i });
+      expect(brokenMissionBtn).toHaveClass('focus-visible:ring-2');
+      expect(within(brokenMissionBtn).getByText('init.c ✗')).toBeInTheDocument();
+      expect(within(brokenMissionBtn).getByText('db/ ✗')).toBeInTheDocument();
+      expect(screen.getByText('init.c missing')).toBeInTheDocument();
+      expect(screen.getByText('db/ missing')).toBeInTheDocument();
+    });
+
+    it('clears stale Verified banner and discovered missions when a subsequent Validate Paths request rejects (QA-02)', async () => {
+      vi.mocked(apiClient.servers.validatePaths)
+        .mockResolvedValueOnce(buildValidationResult(mockActiveServerSummary.id))
+        .mockRejectedValueOnce(
+          new ApiError('Internal error', 500, {
+            statusCode: 500,
+            error: 'Internal Server Error',
+            errorCode: 'INTERNAL_SERVER_ERROR',
+            message: 'Filesystem inspection failed.',
+          }),
+        );
+
+      renderView();
+
+      await waitFor(() => {
+        expect(screen.getByRole('button', { name: /Validate Paths/i })).toBeInTheDocument();
+      });
+
+      fireEvent.click(screen.getByRole('button', { name: /Validate Paths/i }));
+      expect(await screen.findByText('Verified')).toBeInTheDocument();
+      expect(screen.getByText('Discovered Missions')).toBeInTheDocument();
+
+      fireEvent.click(screen.getByRole('button', { name: /Validate Paths/i }));
+
+      await waitFor(() => {
+        expect(showToast.error).toHaveBeenCalledTimes(1);
+      });
+      expect(screen.queryByText('Verified')).not.toBeInTheDocument();
+      expect(screen.queryByText('Discovered Missions')).not.toBeInTheDocument();
     });
   });
 });

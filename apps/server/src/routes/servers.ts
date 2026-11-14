@@ -15,9 +15,12 @@ import {
   serverSummarySchema,
   type UpdateServerDto,
   updateServerSchema,
+  type ValidateServerPathsRequestDto,
+  validateServerPathsRequestSchema,
 } from '@aegis/api-contracts';
 import { type Server, servers } from '@aegis/database';
 
+import { serverFsInspectorService } from '../services/server/server-fs-inspector.service';
 import { formatZodFieldErrors, sendApiError } from '../utils/api-error';
 
 const PORT_FIELD_KEYS = ['gamePort', 'queryPort', 'rconPort'] as const;
@@ -468,6 +471,47 @@ export const registerServersRoutes: FastifyPluginAsync = async fastify => {
       executeDelete();
 
       return reply.send({ success: true });
+    },
+  );
+
+  // POST /api/v1/servers/:id/validate-paths - Non-mutating filesystem validation & mission discovery
+  fastify.post<{ Params: { id: string } }>(
+    '/:id/validate-paths',
+    {
+      onRequest: [fastify.authenticate],
+    },
+    async (request, reply) => {
+      if (
+        !ensureAdminRole(request, reply, 'Admin role required to validate server filesystem paths')
+      ) {
+        return;
+      }
+
+      const existing = resolveServerByIdOrSendError(fastify, request.params, reply);
+      if (!existing) {
+        return;
+      }
+
+      let overrides: ValidateServerPathsRequestDto = {};
+      if (request.body !== undefined) {
+        const parseResult = validateServerPathsRequestSchema.safeParse(request.body);
+        if (!parseResult.success) {
+          return sendApiError(reply, 400, 'VALIDATION_FAILED', {
+            message: parseResult.error.issues[0].message,
+            fieldErrors: formatZodFieldErrors(parseResult.error),
+          });
+        }
+        overrides = parseResult.data;
+      }
+
+      const result = serverFsInspectorService.inspect({
+        serverId: existing.id,
+        installPath: overrides.installPath ?? existing.installPath,
+        profilePath: overrides.profilePath ?? existing.profilePath,
+        missionPath: overrides.missionPath ?? existing.missionPath,
+      });
+
+      return reply.send(result);
     },
   );
 };

@@ -76,7 +76,7 @@ describe('CreateServerModal', () => {
       queryPort: 27016,
       rconPort: 2310,
       installPath: 'C:\\DayZ',
-      profilePath: 'C:\\DayZ\\profiles',
+      profilePath: 'profiles\\namalsk',
       missionPath: 'mpmissions\\namalsk',
       launchParameters: '-cpuCount=4',
       isDefault: true,
@@ -111,7 +111,7 @@ describe('CreateServerModal', () => {
       target: { value: 'C:\\DayZ' },
     });
     fireEvent.change(screen.getByLabelText(/Profile Path/i), {
-      target: { value: 'C:\\DayZ\\profiles' },
+      target: { value: 'profiles\\namalsk' },
     });
     fireEvent.change(screen.getByLabelText(/Mission Path/i), {
       target: { value: 'mpmissions\\namalsk' },
@@ -136,7 +136,7 @@ describe('CreateServerModal', () => {
         rconPort: 2310,
         rconPassword: 'secretpass',
         installPath: 'C:\\DayZ',
-        profilePath: 'C:\\DayZ\\profiles',
+        profilePath: 'profiles\\namalsk',
         missionPath: 'mpmissions\\namalsk',
         launchParameters: '-cpuCount=4',
         isDefault: true,
@@ -208,7 +208,7 @@ describe('CreateServerModal', () => {
       target: { value: 'C:\\DayZ' },
     });
     fireEvent.change(screen.getByLabelText(/Profile Path/i), {
-      target: { value: 'C:\\DayZ\\profiles' },
+      target: { value: 'profiles' },
     });
     fireEvent.change(screen.getByLabelText(/Mission Path/i), {
       target: { value: 'mpmissions\\namalsk' },
@@ -410,7 +410,7 @@ describe('CreateServerModal', () => {
       queryPort: 27016,
       rconPort: 2310,
       installPath: 'C:\\DayZServer',
-      profilePath: 'C:\\DayZServer\\profiles',
+      profilePath: 'profiles',
       missionPath: 'mpmissions\\dayzOffline.chernarusplus',
       launchParameters: '-cpuCount=4 -doLogs -adminLog -netLog',
       isDefault: false,
@@ -422,4 +422,57 @@ describe('CreateServerModal', () => {
       expect(mockOnClose).toHaveBeenCalled();
     });
   });
+
+  it('pre-populates relative Profile Path default value and placeholder (Option B)', () => {
+    renderModal(true);
+
+    const profileInput = screen.getByLabelText(/Profile Path/i);
+    expect(profileInput).toHaveValue('profiles');
+    expect(profileInput).toHaveAttribute('placeholder', 'e.g. profiles');
+  });
+
+  it.each([
+    {
+      fieldLabel: /Profile Path/i,
+      badValue: 'C:\\DayZ\\profiles',
+      expectedError: 'Profile path must be relative to the installation path (e.g. profiles).',
+    },
+    {
+      fieldLabel: /Profile Path/i,
+      badValue: '/opt/profiles',
+      expectedError: 'Profile path must be relative to the installation path (e.g. profiles).',
+    },
+    {
+      fieldLabel: /Mission Path/i,
+      badValue: 'D:\\missions\\foo',
+      expectedError:
+        'Mission path must be relative to the installation path (e.g. mpmissions\\dayzOffline.chernarusplus).',
+    },
+    {
+      fieldLabel: /Mission Path/i,
+      badValue: '/missions/foo',
+      expectedError:
+        'Mission path must be relative to the installation path (e.g. mpmissions\\dayzOffline.chernarusplus).',
+    },
+  ])(
+    'rejects non-relative path "$badValue" on submit without calling create (Option B)',
+    ({ fieldLabel, badValue, expectedError }) => {
+      renderModal(true);
+
+      fireEvent.change(screen.getByLabelText(/Server Name/i), {
+        target: { value: 'Relative Validation Server' },
+      });
+      fireEvent.change(screen.getByLabelText(/RCON Password/i), {
+        target: { value: 'secretpass' },
+      });
+      fireEvent.change(screen.getByLabelText(fieldLabel), {
+        target: { value: badValue },
+      });
+
+      fireEvent.click(screen.getByRole('button', { name: /^Create Server$/i }));
+
+      expect(screen.getByText(expectedError)).toBeInTheDocument();
+      expect(apiClient.servers.create).not.toHaveBeenCalled();
+    },
+  );
 });

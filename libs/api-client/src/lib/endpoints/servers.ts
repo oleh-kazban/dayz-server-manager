@@ -7,6 +7,9 @@ import {
   type ServerSummaryDto,
   serverSummarySchema,
   type UpdateServerDto,
+  type ValidateServerPathsRequestDto,
+  type ValidateServerPathsResponseDto,
+  validateServerPathsResponseSchema,
 } from '@aegis/api-contracts';
 
 import { type HttpClient } from '../http-client';
@@ -29,5 +32,11 @@ export function createServersEndpoint(client: HttpClient) {
 
     delete: (id: string): Promise<{ success: boolean }> =>
       client.delete(`/api/v1/servers/${id}`, deleteResponseSchema),
+
+    validatePaths: (
+      id: string,
+      dto?: ValidateServerPathsRequestDto,
+    ): Promise<ValidateServerPathsResponseDto> =>
+      client.post(`/api/v1/servers/${id}/validate-paths`, validateServerPathsResponseSchema, dto),
   };
 }

@@ -1,12 +1,16 @@
 import { eq } from 'drizzle-orm';
 import type { FastifyInstance } from 'fastify';
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 
-import { apiErrorResponseSchema } from '@aegis/api-contracts';
+import { apiErrorResponseSchema, validateServerPathsResponseSchema } from '@aegis/api-contracts';
 import { type DatabaseInstance, initDatabase, servers } from '@aegis/database';
 
 import { buildApp } from '../app/app';
 import { loadEnv } from '../config/env';
+import { serverFsInspectorService } from '../services/server/server-fs-inspector.service';
 
 describe('Servers Routes (/api/v1/servers)', () => {
   let app: FastifyInstance;
@@ -737,6 +741,294 @@ describe('Servers Routes (/api/v1/servers)', () => {
         .where(eq(servers.id, defaultServerId))
         .get();
       expect(defaultServer!.isDefault).toBe(false);
+    });
+  });
+
+  describe('POST /api/v1/servers/:id/validate-paths', () => {
+    const tempDirs: string[] = [];
+
+    const createTempDayzHost = () => {
+      const root = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'dsm-route-fs-')));
+      tempDirs.push(root);
+
+      const installDir = path.join(root, 'DayZServer');
+      const profileDir = path.join(installDir, 'profiles');
+      const battleyeDir = path.join(profileDir, 'BattlEye');
+      const missionDir = path.join(installDir, 'mpmissions', 'dayzOffline.chernarusplus');
+
+      fs.mkdirSync(battleyeDir, { recursive: true });
+      fs.mkdirSync(path.join(missionDir, 'db'), { recursive: true });
+      fs.writeFileSync(path.join(missionDir, 'init.c'), 'void main() {}');
+
+      const exeName = process.platform === 'win32' ? 'DayZServer_x64.exe' : 'DayZServer';
+      const exePath = path.join(installDir, exeName);
+      fs.writeFileSync(exePath, 'binary');
+      if (process.platform !== 'win32') {
+        fs.chmodSync(exePath, 0o700);
+      }
+
+      return { root, installDir, profileDir, missionDir };
+    };
+
+    afterEach(() => {
+      vi.restoreAllMocks();
+      while (tempDirs.length > 0) {
+        fs.rmSync(tempDirs.pop()!, { recursive: true, force: true });
+      }
+    });
+
+    it('enforces GUARD-04: returns 401 when unauthenticated', async () => {
+      const inspectSpy = vi.spyOn(serverFsInspectorService, 'inspect');
+      const response = await app.inject({
+        method: 'POST',
+        url: `/api/v1/servers/${defaultServerId}/validate-paths`,
+      });
+
+      expect(response.statusCode).toBe(401);
+      const body = response.json();
+      expect(apiErrorResponseSchema.safeParse(body).success).toBe(true);
+      expect(body.errorCode).toBe('AUTH_TOKEN_MISSING_OR_INVALID');
+      expect(inspectSpy).not.toHaveBeenCalled();
+    });
+
+    it('enforces GUARD-04: returns 403 for non-admin user without invoking filesystem inspector', async () => {
+      const inspectSpy = vi.spyOn(serverFsInspectorService, 'inspect');
+      const response = await app.inject({
+        method: 'POST',
+        url: `/api/v1/servers/${defaultServerId}/validate-paths`,
+        headers: { authorization: `Bearer ${viewerToken}` },
+      });
+
+      expect(response.statusCode).toBe(403);
+      const body = response.json();
+      expect(apiErrorResponseSchema.safeParse(body).success).toBe(true);
+      expect(body.errorCode).toBe('AUTH_FORBIDDEN_ADMIN_REQUIRED');
+      expect(inspectSpy).not.toHaveBeenCalled();
+    });
+
+    it('enforces GUARD-05: returns 400 INVALID_UUID for malformed server id', async () => {
+      const inspectSpy = vi.spyOn(serverFsInspectorService, 'inspect');
+      const response = await app.inject({
+        method: 'POST',
+        url: '/api/v1/servers/not-a-uuid/validate-paths',
+        headers: { authorization: `Bearer ${adminToken}` },
+      });
+
+      expect(response.statusCode).toBe(400);
+      const body = response.json();
+      expect(apiErrorResponseSchema.safeParse(body).success).toBe(true);
+      expect(body.errorCode).toBe('VALIDATION_FAILED');
+      expect(body.fieldErrors?.id?.code).toBe('INVALID_UUID');
+      expect(inspectSpy).not.toHaveBeenCalled();
+    });
+
+    it('enforces GUARD-05: returns 404 SERVER_NOT_FOUND for unknown server UUID', async () => {
+      const inspectSpy = vi.spyOn(serverFsInspectorService, 'inspect');
+      const missingId = '123e4567-e89b-12d3-a456-426614174999';
+      const response = await app.inject({
+        method: 'POST',
+        url: `/api/v1/servers/${missingId}/validate-paths`,
+        headers: { authorization: `Bearer ${adminToken}` },
+      });
+
+      expect(response.statusCode).toBe(404);
+      const body = response.json();
+      expect(apiErrorResponseSchema.safeParse(body).success).toBe(true);
+      expect(body.errorCode).toBe('SERVER_NOT_FOUND');
+      expect(body.params).toEqual({ id: missingId });
+      expect(inspectSpy).not.toHaveBeenCalled();
+    });
+
+    it('enforces GUARD-01: returns 400 VALIDATION_FAILED with fieldErrors for invalid draft body overrides without accessing filesystem', async () => {
+      const inspectSpy = vi.spyOn(serverFsInspectorService, 'inspect');
+
+      const traversalResponse = await app.inject({
+        method: 'POST',
+        url: `/api/v1/servers/${defaultServerId}/validate-paths`,
+        headers: { authorization: `Bearer ${adminToken}` },
+        payload: {
+          installPath: 'C:\\DayZServer\\..\\Windows',
+          profilePath: 'profiles\0evil',
+          missionPath: '',
+        },
+      });
+
+      expect(traversalResponse.statusCode).toBe(400);
+      const traversalBody = traversalResponse.json();
+      expect(apiErrorResponseSchema.safeParse(traversalBody).success).toBe(true);
+      expect(traversalBody.errorCode).toBe('VALIDATION_FAILED');
+      expect(traversalBody.fieldErrors?.installPath?.code).toBe('PATH_TRAVERSAL_FORBIDDEN');
+      expect(traversalBody.fieldErrors?.profilePath?.code).toBe('PATH_NULL_BYTES_FORBIDDEN');
+      expect(traversalBody.fieldErrors?.missionPath?.code).toBe('REQUIRED');
+      expect(inspectSpy).not.toHaveBeenCalled();
+
+      const nullBodyResponse = await app.inject({
+        method: 'POST',
+        url: `/api/v1/servers/${defaultServerId}/validate-paths`,
+        headers: {
+          authorization: `Bearer ${adminToken}`,
+          'content-type': 'application/json',
+        },
+        payload: 'null',
+      });
+
+      expect(nullBodyResponse.statusCode).toBe(400);
+      expect(nullBodyResponse.json().errorCode).toBe('VALIDATION_FAILED');
+      expect(inspectSpy).not.toHaveBeenCalled();
+    });
+
+    it('returns 200 with structured diagnostic issues when inspecting persisted DB paths with omitted or empty JSON body (zero DB mutations)', async () => {
+      const beforeRow = dbInstance.db
+        .select()
+        .from(servers)
+        .where(eq(servers.id, defaultServerId))
+        .get();
+
+      const response = await app.inject({
+        method: 'POST',
+        url: `/api/v1/servers/${defaultServerId}/validate-paths`,
+        headers: {
+          authorization: `Bearer ${adminToken}`,
+          'content-type': 'application/json',
+        },
+      });
+
+      expect(response.statusCode).toBe(200);
+      const body = response.json();
+      expect(validateServerPathsResponseSchema.safeParse(body).success).toBe(true);
+      expect(body.serverId).toBe(defaultServerId);
+      expect(body.valid).toBe(false);
+      expect(body.paths.installPath.configuredPath).toBe(beforeRow!.installPath);
+      expect(body.paths.profilePath.configuredPath).toBe(beforeRow!.profilePath);
+      expect(body.paths.missionPath.configuredPath).toBe(beforeRow!.missionPath);
+      expect(body.issues.length).toBeGreaterThan(0);
+
+      const afterRow = dbInstance.db
+        .select()
+        .from(servers)
+        .where(eq(servers.id, defaultServerId))
+        .get();
+      expect(afterRow).toEqual(beforeRow);
+    });
+
+    it('returns 200 with discoveredMissions for draft path overrides and leaves persisted DB values unchanged (REQ-05)', async () => {
+      const tempHost = createTempDayzHost();
+      const beforeRow = dbInstance.db
+        .select()
+        .from(servers)
+        .where(eq(servers.id, defaultServerId))
+        .get();
+
+      const response = await app.inject({
+        method: 'POST',
+        url: `/api/v1/servers/${defaultServerId}/validate-paths`,
+        headers: { authorization: `Bearer ${adminToken}` },
+        payload: {
+          installPath: tempHost.installDir,
+          profilePath: 'profiles',
+          missionPath: 'mpmissions\\dayzOffline.chernarusplus',
+        },
+      });
+
+      expect(response.statusCode).toBe(200);
+      const body = response.json();
+      expect(validateServerPathsResponseSchema.safeParse(body).success).toBe(true);
+      expect(body.serverId).toBe(defaultServerId);
+      expect(body.valid).toBe(true);
+      expect(body.issues).toEqual([]);
+      expect(body.paths.installPath.resolvedPath).toBe(tempHost.installDir);
+      expect(body.paths.profilePath.resolvedPath).toBe(tempHost.profileDir);
+      expect(body.paths.missionPath.resolvedPath).toBe(tempHost.missionDir);
+      expect(body.discoveredMissions).toEqual([
+        {
+          name: 'dayzOffline.chernarusplus',
+          relativePath: 'mpmissions/dayzOffline.chernarusplus',
+          resolvedPath: tempHost.missionDir,
+          hasInitScript: true,
+          hasEconomyDb: true,
+        },
+      ]);
+
+      // Verify draft validation mutated zero persisted columns
+      const afterRow = dbInstance.db
+        .select()
+        .from(servers)
+        .where(eq(servers.id, defaultServerId))
+        .get();
+      expect(afterRow).toEqual(beforeRow);
+    });
+
+    it('permits non-mutating path validation while server is active/running', async () => {
+      const tempHost = createTempDayzHost();
+      dbInstance.db
+        .update(servers)
+        .set({ status: 'running' })
+        .where(eq(servers.id, defaultServerId))
+        .run();
+
+      try {
+        const response = await app.inject({
+          method: 'POST',
+          url: `/api/v1/servers/${defaultServerId}/validate-paths`,
+          headers: { authorization: `Bearer ${adminToken}` },
+          payload: {
+            installPath: tempHost.installDir,
+            profilePath: 'profiles',
+            missionPath: 'dayzOffline.chernarusplus',
+          },
+        });
+
+        expect(response.statusCode).toBe(200);
+        const body = response.json();
+        expect(body.valid).toBe(true);
+        expect(body.discoveredMissions).toHaveLength(1);
+      } finally {
+        dbInstance.db
+          .update(servers)
+          .set({ status: 'stopped' })
+          .where(eq(servers.id, defaultServerId))
+          .run();
+      }
+    });
+
+    it('returns 200 with valid: false and PROFILE_PATH_NOT_RELATIVE when override profilePath is absolute (Option B)', async () => {
+      const tempHost = createTempDayzHost();
+      const beforeRow = dbInstance.db
+        .select()
+        .from(servers)
+        .where(eq(servers.id, defaultServerId))
+        .get();
+
+      const response = await app.inject({
+        method: 'POST',
+        url: `/api/v1/servers/${defaultServerId}/validate-paths`,
+        headers: { authorization: `Bearer ${adminToken}` },
+        payload: {
+          installPath: tempHost.installDir,
+          profilePath: tempHost.profileDir,
+          missionPath: 'dayzOffline.chernarusplus',
+        },
+      });
+
+      expect(response.statusCode).toBe(200);
+      const body = response.json();
+      expect(validateServerPathsResponseSchema.safeParse(body).success).toBe(true);
+      expect(body.valid).toBe(false);
+      expect(body.paths.profilePath.status).toBe('error');
+      expect(body.paths.battleyePath.status).toBe('skipped');
+      expect(body.issues).toContainEqual(
+        expect.objectContaining({
+          target: 'profilePath',
+          code: 'PROFILE_PATH_NOT_RELATIVE',
+        }),
+      );
+
+      const afterRow = dbInstance.db
+        .select()
+        .from(servers)
+        .where(eq(servers.id, defaultServerId))
+        .get();
+      expect(afterRow).toEqual(beforeRow);
     });
   });
 

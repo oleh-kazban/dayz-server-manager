@@ -3,7 +3,12 @@ import { initReactI18next } from 'react-i18next';
 import i18n from 'i18next';
 
 import { ApiError } from '@aegis/api-client';
-import type { ApiErrorCode, ApiErrorParams, ApiFieldErrorsMap } from '@aegis/api-contracts';
+import type {
+  ApiErrorCode,
+  ApiErrorParams,
+  ApiFieldErrorsMap,
+  ServerFsDiagnosticIssueDto,
+} from '@aegis/api-contracts';
 
 import {
   enUSTranslations,
@@ -147,6 +152,15 @@ export function resolveNotificationMessage(
     title: i18n.t(`notifications.${code}.title`, interpolationParams),
     description: i18n.t(`notifications.${code}.description`, interpolationParams),
   };
+}
+
+export function resolveServerFsIssueMessage(issue: ServerFsDiagnosticIssueDto): string {
+  if (issue.code in enUSTranslations.serverFsIssues) {
+    return i18n.t(`serverFsIssues.${issue.code}`, {
+      defaultValue: issue.message,
+    });
+  }
+  return issue.message;
 }
 
 export { i18n };

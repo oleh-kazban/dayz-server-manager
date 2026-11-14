@@ -33,7 +33,7 @@ function CreateServerDialog({ onClose }: { onClose: () => void }) {
   const [rconPort, setRconPort] = useState(2310);
   const [rconPassword, setRconPassword] = useState('');
   const [installPath, setInstallPath] = useState('C:\\DayZServer');
-  const [profilePath, setProfilePath] = useState('C:\\DayZServer\\profiles');
+  const [profilePath, setProfilePath] = useState('profiles');
   const [missionPath, setMissionPath] = useState('mpmissions\\dayzOffline.chernarusplus');
   const [launchParameters, setLaunchParameters] = useState('-cpuCount=4 -doLogs -adminLog -netLog');
   const [isDefault, setIsDefault] = useState(false);
@@ -90,9 +90,15 @@ function CreateServerDialog({ onClose }: { onClose: () => void }) {
     }
     if (!profilePath.trim()) {
       errors.profilePath = 'Profile path is required.';
+    } else if (/^(?:[a-zA-Z]:|[\\/])/.test(profilePath.trim())) {
+      errors.profilePath =
+        'Profile path must be relative to the installation path (e.g. profiles).';
     }
     if (!missionPath.trim()) {
       errors.missionPath = 'Mission path is required.';
+    } else if (/^(?:[a-zA-Z]:|[\\/])/.test(missionPath.trim())) {
+      errors.missionPath =
+        'Mission path must be relative to the installation path (e.g. mpmissions\\dayzOffline.chernarusplus).';
     }
     if (!gamePort || gamePort < 1024 || gamePort > 65535) {
       errors.gamePort = 'Port must be between 1024 and 65535.';
@@ -256,7 +262,7 @@ function CreateServerDialog({ onClose }: { onClose: () => void }) {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <Input
                 label="Profile Path"
-                placeholder="e.g. C:\DayZServer\profiles"
+                placeholder="e.g. profiles"
                 value={profilePath}
                 error={fieldErrors.profilePath}
                 onChange={e => {

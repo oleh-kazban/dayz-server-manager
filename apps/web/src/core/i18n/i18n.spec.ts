@@ -1,7 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { ApiError } from '@aegis/api-client';
-import { apiErrorCodeSchema } from '@aegis/api-contracts';
+import {
+  apiErrorCodeSchema,
+  type ServerFsDiagnosticIssueDto,
+  serverFsIssueCodeSchema,
+} from '@aegis/api-contracts';
 import { showToast } from '@aegis/ui';
 
 import { notifyApiError, notifySuccess, useNotificationStore } from '../notifications';
@@ -12,6 +16,7 @@ import {
   resolveApiErrorMessage,
   resolveFieldErrors,
   resolveNotificationMessage,
+  resolveServerFsIssueMessage,
 } from './index';
 
 vi.mock('@aegis/ui', async importOriginal => {
@@ -42,6 +47,26 @@ describe('i18n Error & Notification Resolution', () => {
         expect(entry.description.trim().length).toBeGreaterThan(0);
       },
     );
+
+    it.each(serverFsIssueCodeSchema.options)(
+      'maps ServerFsIssueCode "%s" to a non-empty en-US diagnostic message',
+      code => {
+        const message = enUSTranslations.serverFsIssues[code];
+        expect(message).toBeDefined();
+        expect(message.trim().length).toBeGreaterThan(0);
+      },
+    );
+
+    it('includes all 24 ServerFsIssueCode values including Option B relative-path and profile symlink escape codes', () => {
+      expect(serverFsIssueCodeSchema.options).toHaveLength(24);
+      expect(serverFsIssueCodeSchema.options).toEqual(
+        expect.arrayContaining([
+          'PROFILE_PATH_NOT_RELATIVE',
+          'PROFILE_SYMLINK_ESCAPE',
+          'MISSION_PATH_NOT_RELATIVE',
+        ]),
+      );
+    });
   });
 
   describe('resolveApiErrorMessage', () => {
@@ -230,6 +255,42 @@ describe('i18n Error & Notification Resolution', () => {
         'Server Name Conflict',
         'A server named "Chernarus Vanilla" already exists. Please choose a unique name.',
         undefined,
+      );
+    });
+  });
+
+  describe('resolveServerFsIssueMessage', () => {
+    it('resolves known ServerFsIssueCode values from the en-US translation catalog', () => {
+      expect(
+        resolveServerFsIssueMessage({
+          target: 'installPath',
+          severity: 'error',
+          code: 'EXECUTABLE_MISSING',
+          message: 'Raw backend executable error message',
+          path: 'C:\\DayZServer\\DayZServer_x64.exe',
+        }),
+      ).toBe(enUSTranslations.serverFsIssues.EXECUTABLE_MISSING);
+
+      expect(
+        resolveServerFsIssueMessage({
+          target: 'battleyePath',
+          severity: 'warning',
+          code: 'BATTLEYE_DIR_MISSING',
+          message: 'Raw backend BattlEye warning',
+        }),
+      ).toBe(enUSTranslations.serverFsIssues.BATTLEYE_DIR_MISSING);
+    });
+
+    it('falls back to raw issue.message when an unmapped issue code arrives at runtime', () => {
+      const unknownIssue = {
+        target: 'missionPath',
+        severity: 'error',
+        code: 'FUTURE_UNKNOWN_FS_CODE',
+        message: 'Diagnostic fallback from newer backend',
+      } as unknown as ServerFsDiagnosticIssueDto;
+
+      expect(resolveServerFsIssueMessage(unknownIssue)).toBe(
+        'Diagnostic fallback from newer backend',
       );
     });
   });

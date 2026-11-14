@@ -163,6 +163,23 @@ Deliver the dedicated Steam integration workbench at `/settings/steam` in `apps/
 
 ---
 
+## [DSM-00123] Server Filesystem Inspector and Mission Discovery Service
+
+- **Type**: `Story`
+- **Priority**: `P1 (High)`
+- **Status**: `DONE`
+- **Dependencies**: `DSM-00104`
+
+### Summary
+
+Build a dedicated server filesystem inspection and validation engine in `apps/server` (via `libs/platform`). Verify the physical existence and binary execution permissions of the DayZ server executable (`DayZServer_x64.exe` on Windows, `DayZServer` on Linux) under `installPath`. Automatically scan and discover installed missions under `mpmissions/` (e.g. `dayzOffline.chernarusplus`, `dayzOffline.enoch`, `dayzOffline.sakhal`), inspect the profile directory structure (`profiles/`, `profiles/BattlEye`), and verify OS write permissions. Expose validation REST endpoints (`POST /api/v1/servers/:id/validate-paths`) returning structured diagnostic issue reports for missing directories, invalid binaries, or permission errors.
+
+### Delivered Capabilities
+
+Filesystem validator inspecting `installPath`, executable binary presence, profile structure, and mission folders; auto-discovery of valid DayZ missions; REST endpoint and Zod contract for server path validation; diagnostic issue codes (`MISSING_EXECUTABLE`, `MISSING_MISSION`, `PERMISSION_DENIED`).
+
+---
+
 ## [DSM-00121] Static Documentation Pipeline, FAQ Modal, and Release History Integration
 
 - **Type**: `Story`
