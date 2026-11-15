@@ -108,7 +108,6 @@ export interface NavigationItemConfig {
   label: string;
   icon: LucideIcon;
   featureFlag?: keyof ModuleFlags;
-  requiredRole?: 'admin';
 }
 
 export interface NavigationSectionConfig {
@@ -226,7 +225,6 @@ export const APPLIANCE_NAVIGATION_SECTIONS: NavigationSectionConfig[] = [
         to: '/settings/steam',
         label: ROUTE_BREADCRUMBS['/settings/steam'],
         icon: CloudDownload,
-        requiredRole: 'admin',
       },
     ],
   },
@@ -244,7 +242,6 @@ export const APPLIANCE_NAVIGATION_SECTIONS: NavigationSectionConfig[] = [
         to: '/settings/operators',
         label: ROUTE_BREADCRUMBS['/settings/operators'],
         icon: UserCheck,
-        requiredRole: 'admin',
       },
       {
         to: '/audit',

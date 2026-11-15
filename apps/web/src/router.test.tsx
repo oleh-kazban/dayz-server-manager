@@ -22,20 +22,10 @@ const mockAdminAuth: AuthContextValue = {
     username: 'admin',
     email: 'admin@dayz.local',
     role: 'admin',
-    roles: ['admin'],
   },
   isAuthenticated: true,
   login: async () => {},
   logout: () => {},
-};
-
-const mockModeratorAuth: AuthContextValue = {
-  ...mockAdminAuth,
-  user: {
-    ...mockAdminAuth.user!,
-    role: 'moderator',
-    roles: ['moderator'],
-  },
 };
 
 const mockGuestAuth: AuthContextValue = {
@@ -180,11 +170,34 @@ describe('Router Topology & Navigation', () => {
     });
   });
 
-  it('redirects /settings/operators to /dashboard when user is not admin', async () => {
-    renderRoute('/settings/operators', mockModeratorAuth);
+  it('renders /settings/operators and /settings/steam for authenticated operators', async () => {
+    vi.spyOn(apiClient.steam, 'getSettings').mockResolvedValueOnce({
+      id: 'default',
+      steamCmdPath: 'C:\\steamcmd\\steamcmd.exe',
+      steamWorkshopPath: 'C:\\DayZServer\\steamapps\\workshop',
+      steamMetaPath: 'C:\\DayZServer\\steamapps',
+      authMode: 'anonymous',
+      steamUsername: null,
+      hasPassword: false,
+      gameServerAppId: 223350,
+      workshopAppId: 221100,
+      branch: 'public',
+      hasBranchPassword: false,
+      hasSteamWebApiKey: false,
+      sessionStatus: 'UNAUTHENTICATED',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    });
 
+    const operatorsView = renderRoute('/settings/operators', mockAdminAuth);
     await waitFor(() => {
-      expect(screen.getByRole('heading', { name: 'Dashboard' })).toBeInTheDocument();
+      expect(screen.getByRole('heading', { name: 'Console Operators' })).toBeInTheDocument();
+    });
+    operatorsView.unmount();
+
+    renderRoute('/settings/steam', mockAdminAuth);
+    await waitFor(() => {
+      expect(screen.getByRole('heading', { name: 'Steam CMD & Workshop' })).toBeInTheDocument();
     });
   });
 

@@ -5,12 +5,9 @@ import { Check, ChevronsUpDown, Plus, Search, Server as ServerIcon } from 'lucid
 
 import type { ServerSummaryDto } from '@aegis/api-contracts';
 import { getServerStatusPresentation, useActiveServer } from '@aegis/web/core';
-import { useAuth } from '@aegis/web/features/auth';
 
 export function ServerSelector() {
   const { servers, activeServer, setActiveServerId, isLoading } = useActiveServer();
-  const { user } = useAuth();
-  const isAdmin = user?.role === 'admin';
 
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -150,19 +147,16 @@ export function ServerSelector() {
             )}
           </div>
 
-          {/* Add Server Action for Admins */}
-          {isAdmin && (
-            <div className="border-t border-[var(--color-border)] pt-1 px-1">
-              <Link
-                to="/settings/server"
-                onClick={() => setIsOpen(false)}
-                className="flex items-center gap-2 px-2.5 py-1.5 rounded text-xs text-[var(--color-primary)] hover:bg-[var(--color-surface-hover)] transition-colors font-medium"
-              >
-                <Plus className="w-3.5 h-3.5 shrink-0" />
-                <span>Add new server</span>
-              </Link>
-            </div>
-          )}
+          <div className="border-t border-[var(--color-border)] pt-1 px-1">
+            <Link
+              to="/settings/server"
+              onClick={() => setIsOpen(false)}
+              className="flex items-center gap-2 px-2.5 py-1.5 rounded text-xs text-[var(--color-primary)] hover:bg-[var(--color-surface-hover)] transition-colors font-medium"
+            >
+              <Plus className="w-3.5 h-3.5 shrink-0" />
+              <span>Add new server</span>
+            </Link>
+          </div>
         </div>
       )}
     </div>

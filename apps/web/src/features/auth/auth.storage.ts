@@ -6,12 +6,25 @@ import { type AuthUser, authUserSchema } from './auth.types';
 const AUTH_TOKEN_KEY = 'dsm_access_token';
 const AUTH_REFRESH_TOKEN_KEY = 'dsm_refresh_token';
 
+function parseNormalizedStoredUser(raw: unknown): AuthUser | null {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
+    return null;
+  }
+  const normalized: Record<string, unknown> = {
+    ...(raw as Record<string, unknown>),
+    role: 'admin',
+  };
+  delete normalized.roles;
+  const parsed = authUserSchema.safeParse(normalized);
+  return parsed.success ? parsed.data : null;
+}
+
 export const authStorage = {
   get(): AuthUser | null {
-    return (
-      sessionStorageDriver.get<AuthUser | null>(AUTH_STORAGE_KEY, null, authUserSchema) ??
-      localStorageDriver.get<AuthUser | null>(AUTH_STORAGE_KEY, null, authUserSchema)
-    );
+    const raw =
+      sessionStorageDriver.get<unknown>(AUTH_STORAGE_KEY, null) ??
+      localStorageDriver.get<unknown>(AUTH_STORAGE_KEY, null);
+    return parseNormalizedStoredUser(raw);
   },
 
   getToken(): string | null {

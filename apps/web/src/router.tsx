@@ -347,11 +347,6 @@ const settingsSteamRoute = createRoute({
   getParentRoute: () => authedRoute,
   path: '/settings/steam',
   staticData: { breadcrumb: ROUTE_BREADCRUMBS['/settings/steam'], scope: 'appliance' },
-  beforeLoad: ({ context }) => {
-    if (context?.auth?.user?.role !== 'admin') {
-      throw redirect({ to: '/dashboard' });
-    }
-  },
   component: SteamSettingsView,
 });
 
@@ -388,15 +383,10 @@ const settingsOperatorsRoute = createRoute({
   getParentRoute: () => authedRoute,
   path: '/settings/operators',
   staticData: { breadcrumb: ROUTE_BREADCRUMBS['/settings/operators'], scope: 'appliance' },
-  beforeLoad: ({ context }) => {
-    if (context?.auth?.user?.role !== 'admin') {
-      throw redirect({ to: '/dashboard' });
-    }
-  },
   component: () => (
     <PlaceholderView
-      title="Console Operators & RBAC"
-      description="Operator account administration, role assignment (Admin, Moderator, Viewer), and session suspension."
+      title="Console Operators"
+      description="Administrator account management and session supervision."
     />
   ),
 });

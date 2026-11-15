@@ -583,7 +583,7 @@ describe('Header', () => {
       username: 'scout_ops',
       displayName: '   ',
       email: 'scout@aegis.local',
-      role: 'viewer',
+      role: 'admin',
     };
 
     it('emits no greeting when Header renders standalone or with user=null (REQ-04)', () => {

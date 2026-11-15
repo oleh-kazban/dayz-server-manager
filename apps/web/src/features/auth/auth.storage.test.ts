@@ -9,7 +9,6 @@ const mockUser: AuthUser = {
   username: 'admin',
   email: 'admin@dayz.local',
   role: 'admin',
-  roles: ['admin'],
 };
 
 describe('authStorage', () => {
@@ -64,5 +63,37 @@ describe('authStorage', () => {
     expect(authStorage.getRefreshToken()).toBeNull();
     expect(window.localStorage.getItem(AUTH_STORAGE_KEY)).toBeNull();
     expect(window.sessionStorage.getItem(AUTH_STORAGE_KEY)).toBeNull();
+  });
+
+  it('normalizes legacy stored role and roles[] claims to admin and strips roles', () => {
+    authStorage.clear();
+    window.localStorage.setItem(
+      AUTH_STORAGE_KEY,
+      JSON.stringify({
+        id: 'usr-legacy',
+        username: 'legacyMod',
+        email: 'mod@dayz.local',
+        role: 'moderator',
+        roles: ['moderator', 'viewer'],
+      }),
+    );
+
+    const parsed = authStorage.get();
+    expect(parsed).toEqual({
+      id: 'usr-legacy',
+      username: 'legacyMod',
+      email: 'mod@dayz.local',
+      role: 'admin',
+    });
+    expect(parsed && 'roles' in parsed).toBe(false);
+  });
+
+  it('returns null when stored user JSON is malformed or missing required fields', () => {
+    authStorage.clear();
+    window.sessionStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify({ id: 'usr-bad' }));
+    expect(authStorage.get()).toBeNull();
+
+    window.sessionStorage.setItem(AUTH_STORAGE_KEY, '{not-json');
+    expect(authStorage.get()).toBeNull();
   });
 });

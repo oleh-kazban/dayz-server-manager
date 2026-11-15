@@ -38,10 +38,10 @@ function makeMod(overrides: Partial<ServerModDto> = {}): ServerModDto {
 
 describe('mods.columns', () => {
   describe('reconcileModColumns', () => {
-    it('returns the default 11 columns for admins and omits actions for non-admins', () => {
-      const adminCols = reconcileModColumns(null, true);
-      expect(adminCols).toHaveLength(11);
-      expect(adminCols.map(c => c.id)).toEqual([
+    it('returns the default 11 columns including actions for authenticated operators', () => {
+      const defaultCols = reconcileModColumns(null);
+      expect(defaultCols).toHaveLength(11);
+      expect(defaultCols.map(c => c.id)).toEqual([
         'order',
         'mod',
         'folderName',
@@ -54,22 +54,22 @@ describe('mods.columns', () => {
         'enabled',
         'actions',
       ]);
-      expect(adminCols.filter(c => !c.isVisible).map(c => c.id)).toEqual([
+      expect(defaultCols.filter(c => !c.isVisible).map(c => c.id)).toEqual([
         'remoteUpdatedAt',
         'lastSyncedAt',
         'createdAt',
       ]);
-      expect(adminCols.filter(c => c.canHide === false).map(c => c.id)).toEqual([
+      expect(defaultCols.filter(c => c.canHide === false).map(c => c.id)).toEqual([
         'order',
         'mod',
         'enabled',
         'actions',
       ]);
 
-      const viewerCols = reconcileModColumns(undefined, false);
-      expect(viewerCols).toHaveLength(10);
-      expect(viewerCols.map(c => c.id)).not.toContain('actions');
-      expect(viewerCols[viewerCols.length - 1]?.id).toBe('enabled');
+      const undefinedCols = reconcileModColumns(undefined);
+      expect(undefinedCols).toHaveLength(11);
+      expect(undefinedCols.map(c => c.id)).toContain('actions');
+      expect(undefinedCols[undefinedCols.length - 1]?.id).toBe('actions');
     });
 
     it('forces locked columns (order, mod, enabled, actions) to isVisible: true and canHide: false even if tampered', () => {
@@ -79,7 +79,7 @@ describe('mods.columns', () => {
         canHide: true,
       }));
 
-      const reconciled = reconcileModColumns(tampered, true);
+      const reconciled = reconcileModColumns(tampered);
 
       for (const lockedId of ['order', 'mod', 'enabled', 'actions']) {
         const found = reconciled.find(c => c.id === lockedId);
@@ -110,7 +110,7 @@ describe('mods.columns', () => {
         { id: 'actions', isVisible: false },
       ];
 
-      const reconciled = reconcileModColumns(stored, true);
+      const reconciled = reconcileModColumns(stored);
 
       expect(reconciled.map(c => c.id)).toEqual([
         'order',
@@ -136,7 +136,7 @@ describe('mods.columns', () => {
         { id: 'actions', isVisible: true },
       ];
 
-      const reconciled = reconcileModColumns(stored, true);
+      const reconciled = reconcileModColumns(stored);
       expect(reconciled.slice(-2).map(c => c.id)).toEqual(['enabled', 'actions']);
     });
 
@@ -147,7 +147,7 @@ describe('mods.columns', () => {
         { id: 'syncStatus', isVisible: false },
       ];
 
-      const reconciled = reconcileModColumns(stored, true);
+      const reconciled = reconcileModColumns(stored);
       expect(reconciled.map(c => c.id)).toEqual([
         'order',
         'mod',
