@@ -67,6 +67,17 @@ describe('i18n Error & Notification Resolution', () => {
         ]),
       );
     });
+
+    it('includes server config storage and BattlEye sync ApiErrorCode values', () => {
+      expect(apiErrorCodeSchema.options).toEqual(
+        expect.arrayContaining([
+          'CONFIG_PATH_INVALID',
+          'CONFIG_WRITE_FAILED',
+          'CONFIG_BACKUP_FAILED',
+          'CONFIG_RCON_PASSWORD_REQUIRED',
+        ]),
+      );
+    });
   });
 
   describe('resolveApiErrorMessage', () => {
@@ -169,6 +180,10 @@ describe('i18n Error & Notification Resolution', () => {
           code: 'UNKNOWN_CUSTOM_CODE',
           message: 'Raw server validation message',
         },
+        maxPlayers: {
+          code: 'INVALID_VALUE',
+          message: 'Max players must be between 1 and 200',
+        },
       });
 
       expect(fieldErrors).toEqual({
@@ -179,6 +194,7 @@ describe('i18n Error & Notification Resolution', () => {
         gamePort: 'Port must be between 1024 and 65535.',
         installPath: 'Path traversal (..) is not permitted.',
         customField: 'Raw server validation message',
+        maxPlayers: 'Max players must be between 1 and 200',
       });
     });
 
@@ -230,6 +246,21 @@ describe('i18n Error & Notification Resolution', () => {
         title: 'Server Created',
         description: 'Server "Livonia 1PP" has been created successfully.',
       });
+      expect(resolveNotificationMessage('SERVER_CONFIG_SAVED', { name: 'Livonia 1PP' })).toEqual({
+        title: 'serverDZ.cfg Saved',
+        description: 'serverDZ.cfg for "Livonia 1PP" was validated and written to disk.',
+      });
+      expect(resolveNotificationMessage('SERVER_CONFIG_CREATED', { name: 'Livonia 1PP' })).toEqual({
+        title: 'serverDZ.cfg Created',
+        description: 'serverDZ.cfg for "Livonia 1PP" was created from the DSM template.',
+      });
+      expect(resolveNotificationMessage('SERVER_CONFIG_RESTORED', { name: 'Livonia 1PP' })).toEqual(
+        {
+          title: 'Revision Restored',
+          description:
+            'The selected revision of serverDZ.cfg for "Livonia 1PP" was written to disk.',
+        },
+      );
 
       const id = notifySuccess('SERVER_UPDATED', { name: 'Deer Isle' }, 4000);
       expect(id).toBe('toast-success-id');

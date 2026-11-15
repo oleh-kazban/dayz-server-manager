@@ -5,17 +5,12 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { ServerSummaryDto } from '@aegis/api-contracts';
 import { useActiveServer } from '@aegis/web/core';
-import { useAuth } from '@aegis/web/features/auth';
 
 import { ServerSelector } from './ServerSelector';
 
 vi.mock('@aegis/web/core', async importOriginal => ({
   ...(await importOriginal<typeof import('@aegis/web/core')>()),
   useActiveServer: vi.fn(),
-}));
-
-vi.mock('@aegis/web/features/auth', () => ({
-  useAuth: vi.fn(),
 }));
 
 vi.mock('@tanstack/react-router', () => ({
@@ -82,18 +77,6 @@ describe('ServerSelector', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(useAuth).mockReturnValue({
-      user: {
-        id: 'user-1',
-        username: 'admin',
-        role: 'admin',
-        email: 'admin@dayz.local',
-        roles: ['admin'],
-      },
-      isAuthenticated: true,
-      login: vi.fn(),
-      logout: vi.fn(),
-    });
     vi.mocked(useActiveServer).mockReturnValue({
       servers: mockServers,
       activeServer: mockServers[0],
@@ -183,7 +166,7 @@ describe('ServerSelector', () => {
     expect(screen.queryByRole('listbox')).not.toBeInTheDocument();
   });
 
-  it('renders Add new server link for admin operators', () => {
+  it('renders Add new server link unconditionally inside the dropdown', () => {
     render(<ServerSelector />);
 
     const trigger = screen.getByRole('button', { name: /select dayz server instance/i });
@@ -242,27 +225,5 @@ describe('ServerSelector', () => {
 
     render(<ServerSelector />);
     expect(screen.getByText('No server registered')).toBeInTheDocument();
-  });
-
-  it('does not render Add new server link for non-admin operators', () => {
-    vi.mocked(useAuth).mockReturnValue({
-      user: {
-        id: 'user-2',
-        username: 'mod',
-        role: 'moderator',
-        email: 'mod@dayz.local',
-        roles: ['moderator'],
-      },
-      isAuthenticated: true,
-      login: vi.fn(),
-      logout: vi.fn(),
-    });
-
-    render(<ServerSelector />);
-
-    const trigger = screen.getByRole('button', { name: /select dayz server instance/i });
-    fireEvent.click(trigger);
-
-    expect(screen.queryByText('Add new server')).not.toBeInTheDocument();
   });
 });

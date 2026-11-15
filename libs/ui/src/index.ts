@@ -35,6 +35,18 @@ export { Card } from './card';
 export type { CheckboxProps } from './checkbox';
 export { Checkbox } from './checkbox';
 
+// Code Editor (runtime components exported via '@aegis/ui/code-editor' for lazy chunking)
+export type {
+  CodeDiffViewLayout,
+  CodeDiffViewProps,
+  CodeEditorDiagnostic,
+  CodeEditorDiagnosticSeverity,
+  CodeEditorHandle,
+  CodeEditorLanguage,
+  CodeEditorProps,
+  CodeEditorReadOnlyRange,
+} from './code-editor/CodeEditor.types';
+
 // Confirmation
 export type {
   ConfirmationProps,

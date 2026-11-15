@@ -80,15 +80,6 @@ const adminUser: AuthUser = {
   username: 'admin',
   email: 'admin@dayz.local',
   role: 'admin',
-  roles: ['admin'],
-};
-
-const moderatorUser: AuthUser = {
-  id: 'usr-mod',
-  username: 'moderator',
-  email: 'mod@dayz.local',
-  role: 'moderator',
-  roles: ['moderator'],
 };
 
 function renderSidebar(initialFlags?: Parameters<typeof FeatureFlagsProvider>[0]['initialFlags']) {
@@ -268,7 +259,7 @@ describe('Sidebar', () => {
       expect(backButton).not.toHaveAttribute('data-search');
     });
 
-    it('renders appliance navigation sections and links with clean search params search: () => ({})', () => {
+    it('renders all appliance navigation sections and links uniformly without role filtering and with clean search params search: () => ({})', () => {
       renderSidebar();
 
       // Appliance Sections
@@ -282,7 +273,7 @@ describe('Sidebar', () => {
       expect(screen.queryByText('World')).not.toBeInTheDocument();
       expect(screen.queryByText('Configuration')).not.toBeInTheDocument();
 
-      // Links
+      // Links (rendered uniformly for authenticated operators)
       const steamLink = screen.getByRole('link', { name: /steam cmd & workshop/i });
       expect(steamLink).toBeInTheDocument();
       expect(steamLink).toHaveAttribute('href', '/settings/steam');
@@ -302,19 +293,6 @@ describe('Sidebar', () => {
       expect(auditLink).toBeInTheDocument();
       expect(auditLink).toHaveAttribute('href', '/audit');
       expect(auditLink).toHaveAttribute('data-search', '{}');
-    });
-
-    it('hides admin-only links (Console operators, Steam CMD) for non-admin users in appliance scope', () => {
-      authStorage.set(moderatorUser, false);
-
-      renderSidebar();
-
-      expect(screen.queryByRole('link', { name: /console operators/i })).not.toBeInTheDocument();
-      expect(screen.queryByRole('link', { name: /steam cmd & workshop/i })).not.toBeInTheDocument();
-
-      // Non-admin links remain visible
-      expect(screen.getByRole('link', { name: /appliance settings/i })).toBeInTheDocument();
-      expect(screen.getByRole('link', { name: /audit log/i })).toBeInTheDocument();
     });
   });
 

@@ -15,6 +15,43 @@ describe('Error Contracts (@aegis/api-contracts)', () => {
       expect(parsed.success).toBe(true);
     });
 
+    it('includes server config storage and BattlEye sync error codes', () => {
+      expect(apiErrorCodeSchema.options).toEqual(
+        expect.arrayContaining([
+          'CONFIG_PATH_INVALID',
+          'CONFIG_WRITE_FAILED',
+          'CONFIG_BACKUP_FAILED',
+          'CONFIG_RCON_PASSWORD_REQUIRED',
+        ]),
+      );
+    });
+
+    it.each([
+      'CONFIG_EDIT_LOCKED',
+      'CONFIG_LOCK_NOT_HELD',
+      'CONFIG_HASH_MISMATCH',
+      'CONFIG_VALIDATION_FAILED',
+      'CONFIG_FILE_TOO_LARGE',
+      'CONFIG_FILE_EXISTS',
+      'CONFIG_FILE_MISSING',
+      'CONFIG_REVISION_NOT_FOUND',
+      'SERVER_CONFIG_EDIT_IN_PROGRESS',
+    ])('includes serverDZ.cfg editor error code %s in a full error envelope', code => {
+      expect(apiErrorCodeSchema.options).toContain(code);
+      const parsed = apiErrorResponseSchema.safeParse({
+        statusCode: 409,
+        error: 'Conflict',
+        errorCode: code,
+        message: 'Refused',
+        params: { holderName: 'admin', expiresInSeconds: 120, heldByYou: false },
+      });
+      expect(parsed.success).toBe(true);
+    });
+
+    it('rejects nested objects in error params so lock holder details stay flat', () => {
+      expect(apiErrorParamsSchema.safeParse({ holder: { name: 'admin' } }).success).toBe(false);
+    });
+
     it('rejects unrecognized error codes and non-string values', () => {
       expect(apiErrorCodeSchema.safeParse('UNKNOWN_CODE').success).toBe(false);
       expect(apiErrorCodeSchema.safeParse('').success).toBe(false);

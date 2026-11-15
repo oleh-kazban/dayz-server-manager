@@ -49,7 +49,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       displayName: response.user.displayName,
       email: response.user.email ?? '',
       role: response.user.role,
-      roles: [response.user.role],
     };
 
     apiClient.client.setToken(response.accessToken);

@@ -59,7 +59,6 @@ import {
   useStorage,
 } from '@aegis/web/core';
 
-import { useAuth } from '../auth';
 import { CreateServerModal } from '../server-settings';
 
 import { AddModModal } from './components/AddModModal';
@@ -179,7 +178,6 @@ function buildModRowMenuOptions(params: {
 function ModsHeader({
   serverName,
   serverStatus,
-  isAdmin,
   isServerLocked,
   isCheckingUpdates,
   onCheckUpdates,
@@ -187,7 +185,6 @@ function ModsHeader({
 }: {
   serverName: string;
   serverStatus: ServerStatus;
-  isAdmin: boolean;
   isServerLocked: boolean;
   isCheckingUpdates: boolean;
   onCheckUpdates: () => void;
@@ -210,26 +207,24 @@ function ModsHeader({
         </p>
       </div>
 
-      {isAdmin && (
-        <div className="flex flex-wrap items-center gap-3">
-          <Button
-            variant="secondary"
-            leftIcon={RefreshCw}
-            isLoading={isCheckingUpdates}
-            onClick={onCheckUpdates}
-          >
-            Check for updates
-          </Button>
-          <Button
-            variant="primary"
-            leftIcon={Plus}
-            disabled={isServerLocked}
-            onClick={onOpenAddModal}
-          >
-            Add Mod
-          </Button>
-        </div>
-      )}
+      <div className="flex flex-wrap items-center gap-3">
+        <Button
+          variant="secondary"
+          leftIcon={RefreshCw}
+          isLoading={isCheckingUpdates}
+          onClick={onCheckUpdates}
+        >
+          Check for updates
+        </Button>
+        <Button
+          variant="primary"
+          leftIcon={Plus}
+          disabled={isServerLocked}
+          onClick={onOpenAddModal}
+        >
+          Add Mod
+        </Button>
+      </div>
     </div>
   );
 }
@@ -240,7 +235,6 @@ function ModsStatusBanners({
   updateAvailableCount,
   isFiltered,
   isCustomSorted,
-  isAdmin,
   onResetSort,
 }: {
   serverStatus: ServerStatus;
@@ -248,10 +242,9 @@ function ModsStatusBanners({
   updateAvailableCount: number;
   isFiltered: boolean;
   isCustomSorted: boolean;
-  isAdmin: boolean;
   onResetSort: () => void;
 }) {
-  const showReorderPaused = (isFiltered || isCustomSorted) && isAdmin && !isServerLocked;
+  const showReorderPaused = (isFiltered || isCustomSorted) && !isServerLocked;
 
   let reorderPausedText = '';
   if (isFiltered && isCustomSorted) {
@@ -299,13 +292,11 @@ function ModsStatusBanners({
 function ModsEmptyRow({
   colSpan,
   hasAnyMods,
-  isAdmin,
   isServerLocked,
   onOpenAddModal,
 }: {
   colSpan: number;
   hasAnyMods: boolean;
-  isAdmin: boolean;
   isServerLocked: boolean;
   onOpenAddModal: () => void;
 }) {
@@ -320,7 +311,7 @@ function ModsEmptyRow({
           : 'Add Steam Workshop items, collections, or local mods to build your server load order.'
       }
       action={
-        !hasAnyMods && isAdmin ? (
+        !hasAnyMods ? (
           <Button
             variant="primary"
             leftIcon={Plus}
@@ -357,7 +348,6 @@ interface ModCellContext {
   mod: ServerModDto;
   index: number;
   totalMods: number;
-  isAdmin: boolean;
   isServerLocked: boolean;
   canReorder: boolean;
   handleProps: SortableHandleProps;
@@ -496,10 +486,10 @@ const MOD_COLUMN_REGISTRY: Record<ModColumnId, ModColumnDefinition> = {
     align: 'center',
     headClassName: 'w-20 whitespace-nowrap',
     cellClassName: 'w-20 whitespace-nowrap',
-    renderCell: ({ mod, isAdmin, isServerLocked, onToggleEnabled }) => (
+    renderCell: ({ mod, isServerLocked, onToggleEnabled }) => (
       <Toggle
         checked={mod.enabled}
-        disabled={!isAdmin || isServerLocked}
+        disabled={isServerLocked}
         aria-label={`Enable ${mod.name}`}
         onChange={e => onToggleEnabled(e.target.checked)}
       />
@@ -551,7 +541,6 @@ function ModTableRow({
   mod,
   index,
   totalMods,
-  isAdmin,
   isServerLocked,
   canReorder,
   isDragging,
@@ -570,7 +559,6 @@ function ModTableRow({
     mod,
     index,
     totalMods,
-    isAdmin,
     isServerLocked,
     canReorder,
     handleProps,
@@ -601,7 +589,6 @@ function ModTableRow({
 
 export function ModsView() {
   const queryClient = useQueryClient();
-  const { user } = useAuth();
   const { servers, activeServer, activeServerId, isLoading: isServersLoading } = useActiveServer();
 
   const [isCreateServerOpen, setIsCreateServerOpen] = useState(false);
@@ -620,26 +607,20 @@ export function ModsView() {
     localStorageDriver,
   );
 
-  const isAdmin = user?.role === 'admin';
   const serverId = activeServerId ?? '';
 
-  const columns = useMemo(
-    () => reconcileModColumns(storedColumns, isAdmin),
-    [storedColumns, isAdmin],
-  );
+  const columns = useMemo(() => reconcileModColumns(storedColumns), [storedColumns]);
   const visibleColumns = useMemo(() => columns.filter(col => col.isVisible), [columns]);
 
   const handleColumnVisibilityChange = (columnId: string, isVisible: boolean) => {
     if (LOCKED_MOD_COLUMN_IDS.has(columnId)) return;
     setStoredColumns(prev =>
-      reconcileModColumns(prev, true).map(col =>
-        col.id === columnId ? { ...col, isVisible } : col,
-      ),
+      reconcileModColumns(prev).map(col => (col.id === columnId ? { ...col, isVisible } : col)),
     );
   };
 
   const handleColumnsReorder = (reordered: TableColumnItem[]) => {
-    setStoredColumns(reconcileModColumns(reordered, true));
+    setStoredColumns(reconcileModColumns(reordered));
   };
 
   const handleResetColumns = () => {
@@ -647,9 +628,7 @@ export function ModsView() {
   };
 
   const handleShowAllColumns = () => {
-    setStoredColumns(prev =>
-      reconcileModColumns(prev, true).map(col => ({ ...col, isVisible: true })),
-    );
+    setStoredColumns(prev => reconcileModColumns(prev).map(col => ({ ...col, isVisible: true })));
   };
 
   const handleSort = (clickedKey: ModSortKey) => {
@@ -697,8 +676,7 @@ export function ModsView() {
   const isFiltered = searchQuery.trim() !== '' || statusFilter !== 'all' || targetFilter !== 'all';
   const isCustomSorted = sortState.key !== 'order' || sortState.direction !== 'asc';
   const isServerLocked = activeServer ? isServerActiveStatus(activeServer.status) : false;
-  const canReorder =
-    isAdmin && !isServerLocked && !isFiltered && !isCustomSorted && mods.length > 1;
+  const canReorder = !isServerLocked && !isFiltered && !isCustomSorted && mods.length > 1;
 
   const toggleMutation = useMutation({
     mutationFn: ({ modId, enabled }: { modId: string; enabled: boolean }) =>
@@ -829,7 +807,6 @@ export function ModsView() {
         <ModsHeader
           serverName={activeServer.name}
           serverStatus={activeServer.status}
-          isAdmin={isAdmin}
           isServerLocked={isServerLocked}
           isCheckingUpdates={checkUpdatesMutation.isPending}
           onCheckUpdates={() => checkUpdatesMutation.mutate()}
@@ -842,7 +819,6 @@ export function ModsView() {
           updateAvailableCount={modsResponse.updateAvailableCount}
           isFiltered={isFiltered}
           isCustomSorted={isCustomSorted}
-          isAdmin={isAdmin}
           onResetSort={() => setSortState(DEFAULT_SORT_STATE)}
         />
 
@@ -913,7 +889,6 @@ export function ModsView() {
               <ModsEmptyRow
                 colSpan={visibleColumns.length}
                 hasAnyMods={mods.length > 0}
-                isAdmin={isAdmin}
                 isServerLocked={isServerLocked}
                 onOpenAddModal={() => setIsAddModOpen(true)}
               />
@@ -925,7 +900,6 @@ export function ModsView() {
                   mod={mod}
                   index={idx}
                   totalMods={mods.length}
-                  isAdmin={isAdmin}
                   isServerLocked={isServerLocked}
                   canReorder={canReorder}
                   isDragging={isItemDragging(mod.id)}
@@ -946,36 +920,32 @@ export function ModsView() {
 
         <LaunchParamsPreviewCard launchPreview={modsResponse.launchPreview} />
 
-        {isAdmin && (
-          <>
-            <AddModModal
-              isOpen={isAddModOpen}
-              serverId={serverId}
-              installedWorkshopIds={installedWorkshopIds}
-              onClose={() => setIsAddModOpen(false)}
-            />
+        <AddModModal
+          isOpen={isAddModOpen}
+          serverId={serverId}
+          installedWorkshopIds={installedWorkshopIds}
+          onClose={() => setIsAddModOpen(false)}
+        />
 
-            <EditModModal
-              isOpen={Boolean(editingMod)}
-              mod={editingMod}
-              serverId={serverId}
-              isServerLocked={isServerLocked}
-              onClose={() => setEditingMod(null)}
-            />
+        <EditModModal
+          isOpen={Boolean(editingMod)}
+          mod={editingMod}
+          serverId={serverId}
+          isServerLocked={isServerLocked}
+          onClose={() => setEditingMod(null)}
+        />
 
-            {deletingMod && (
-              <Confirmation
-                title="Remove Mod from Server"
-                description={`Remove "${deletingMod.name}" from ${activeServer.name}? Load order will be re-indexed automatically.`}
-                variant="danger"
-                confirmLabel="Remove Mod"
-                cancelLabel="Cancel"
-                isLoading={deleteMutation.isPending}
-                onConfirm={() => deleteMutation.mutate(deletingMod)}
-                onCancel={() => setDeletingMod(null)}
-              />
-            )}
-          </>
+        {deletingMod && (
+          <Confirmation
+            title="Remove Mod from Server"
+            description={`Remove "${deletingMod.name}" from ${activeServer.name}? Load order will be re-indexed automatically.`}
+            variant="danger"
+            confirmLabel="Remove Mod"
+            cancelLabel="Cancel"
+            isLoading={deleteMutation.isPending}
+            onConfirm={() => deleteMutation.mutate(deletingMod)}
+            onCancel={() => setDeletingMod(null)}
+          />
         )}
       </div>
     </PageContainer>

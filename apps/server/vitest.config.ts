@@ -11,6 +11,7 @@ export default defineConfig({
     alias: {
       '@aegis/api-contracts': path.resolve(workspaceRoot, 'libs/api-contracts/src/index.ts'),
       '@aegis/database': path.resolve(workspaceRoot, 'libs/database/src/index.ts'),
+      '@aegis/dayz-config': path.resolve(workspaceRoot, 'libs/dayz-config/src/index.ts'),
       '@aegis/server': path.resolve(__dirname, 'src'),
     },
   },

@@ -20,6 +20,12 @@ describe('Servers Endpoint', () => {
     vi.restoreAllMocks();
   });
 
+  const serverDetailDefaults = {
+    maxPlayers: 60,
+    rconIp: '127.0.0.1',
+    rconPassword: null,
+  };
+
   it('lists servers and parses response', async () => {
     const mockList = [
       {
@@ -68,6 +74,7 @@ describe('Servers Endpoint', () => {
       profilePath: 'C:\\DayZServer\\profiles',
       missionPath: 'mpmissions\\dayzOffline.chernarusplus',
       launchParameters: null,
+      ...serverDetailDefaults,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
@@ -108,6 +115,7 @@ describe('Servers Endpoint', () => {
       status: 'stopped',
       isDefault: false,
       launchParameters: null,
+      ...serverDetailDefaults,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
@@ -144,6 +152,7 @@ describe('Servers Endpoint', () => {
       profilePath: '/opt/dayz/profiles',
       missionPath: 'mpmissions/dayzOffline.chernarusplus',
       launchParameters: null,
+      ...serverDetailDefaults,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
@@ -335,5 +344,9 @@ describe('Servers Endpoint', () => {
       });
       await expect(servers.validatePaths(validUuid)).rejects.toBeInstanceOf(ApiError);
     });
+  });
+
+  it('no longer exposes the removed serverDZ.cfg sync-config call', () => {
+    expect(servers).not.toHaveProperty('syncConfig');
   });
 });

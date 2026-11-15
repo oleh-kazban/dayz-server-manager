@@ -122,25 +122,9 @@ const sampleListResponse: ServerModsListResponseDto = {
   updateAvailableCount: 1,
 };
 
-let mockUserRole: 'admin' | 'viewer' = 'admin';
 let mockServersList: ServerSummaryDto[] = [baseServer];
 let mockActiveServer: ServerSummaryDto | null = baseServer;
 let mockServersLoading = false;
-
-vi.mock('../auth', () => ({
-  useAuth: () => ({
-    user: {
-      id: 'usr-1',
-      username: mockUserRole,
-      email: `${mockUserRole}@dayz.local`,
-      role: mockUserRole,
-      roles: [mockUserRole],
-    },
-    isAuthenticated: true,
-    login: vi.fn(),
-    logout: vi.fn(),
-  }),
-}));
 
 vi.mock('@aegis/web/core', async importOriginal => {
   const actual = await importOriginal<typeof import('@aegis/web/core')>();
@@ -200,7 +184,6 @@ describe('ModsView', () => {
     vi.clearAllMocks();
     vi.spyOn(showToast, 'success').mockReturnValue('toast-ok');
     vi.spyOn(showToast, 'error').mockReturnValue('toast-err');
-    mockUserRole = 'admin';
     mockServersList = [baseServer];
     mockActiveServer = { ...baseServer };
     mockServersLoading = false;
@@ -431,39 +414,6 @@ describe('ModsView', () => {
       expect.anything(),
       expect.anything(),
     );
-  });
-
-  it('hides admin actions and disables toggles for viewer role', async () => {
-    mockUserRole = 'viewer';
-    renderView();
-
-    await waitFor(() => {
-      expect(screen.getByText('CF')).toBeInTheDocument();
-    });
-
-    expect(screen.queryByRole('button', { name: 'Add Mod' })).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Check for updates' })).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Actions for CF' })).not.toBeInTheDocument();
-    expect(screen.getByLabelText('Enable CF')).toBeDisabled();
-    expect(screen.getByRole('button', { name: 'Reorder CF' })).toBeDisabled();
-
-    const table = screen.getByRole('table', { name: 'Server mods inventory' });
-    const headers = within(table)
-      .getAllByRole('columnheader')
-      .map(th => th.textContent?.trim());
-    expect(headers).toEqual([
-      'Order',
-      'Mod',
-      '@Folder',
-      'Target',
-      'Size',
-      'Sync Status',
-      'Enabled',
-    ]);
-
-    fireEvent.click(screen.getByRole('button', { name: /Columns/i }));
-    const dialog = await screen.findByRole('dialog', { name: 'Toggle column visibility' });
-    expect(within(dialog).queryByRole('checkbox', { name: 'Actions' })).not.toBeInTheDocument();
   });
 
   it('renders default column order with compact Enabled width and hidden date columns, and supports toggling Workshop Updated with persistence', async () => {

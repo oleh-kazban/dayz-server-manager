@@ -37,7 +37,6 @@ describe('App Root Component', () => {
         username: 'admin',
         email: 'admin@dayz.local',
         role: 'admin',
-        roles: ['admin'],
       },
       false,
     );

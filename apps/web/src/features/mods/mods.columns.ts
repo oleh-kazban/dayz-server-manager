@@ -172,10 +172,9 @@ function appendMissingColumns(columns: TableColumnItem[], seen: Set<string>): Ta
   return result;
 }
 
-export function reconcileModColumns(stored: unknown, isAdmin: boolean): TableColumnItem[] {
+export function reconcileModColumns(stored: unknown): TableColumnItem[] {
   const { normalized, seen } = normalizeStoredColumns(stored);
-  const reconciled = appendMissingColumns(normalized, seen);
-  return isAdmin ? reconciled : reconciled.filter(col => col.id !== 'actions');
+  return appendMissingColumns(normalized, seen);
 }
 
 function toTimestampMs(value: string | Date | null): number | null {

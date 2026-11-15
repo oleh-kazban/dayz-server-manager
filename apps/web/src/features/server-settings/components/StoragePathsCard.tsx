@@ -1,7 +1,6 @@
 import { FolderSearch } from 'lucide-react';
 
 import type {
-  DiscoveredMissionDto,
   ServerFsCheckStatus,
   ServerFsDiagnosticIssueDto,
   ServerFsPathStatusDto,
@@ -13,6 +12,8 @@ import {
   Card,
   Input,
   Notice,
+  Select,
+  type SelectOption,
   StatusTag,
   type StatusTagSemanticStatus,
   Tag,
@@ -21,19 +22,51 @@ import { resolveServerFsIssueMessage } from '@aegis/web/core';
 
 export interface StoragePathsCardProps {
   installPath: string;
-  profilePath: string;
   missionPath: string;
   isServerLocked: boolean;
   isValidating: boolean;
   installPathError?: string;
-  profilePathError?: string;
   missionPathError?: string;
   validationResult: ValidateServerPathsResponseDto | null;
   onChangeInstallPath: (value: string) => void;
-  onChangeProfilePath: (value: string) => void;
-  onChangeMissionPath: (value: string) => void;
-  onSelectMission: (relativePath: string) => void;
+  onMissionPathChange: (value: string) => void;
   onValidatePaths: () => void;
+}
+
+function trimEdgeSeparators(value: string, trimLeading: boolean): string {
+  let start = 0;
+  let end = value.length;
+  if (trimLeading) {
+    while (start < end && (value[start] === '/' || value[start] === '\\')) {
+      start += 1;
+    }
+  }
+  while (end > start && (value[end - 1] === '/' || value[end - 1] === '\\')) {
+    end -= 1;
+  }
+  return value.slice(start, end);
+}
+
+function joinDerivedPath(basePath: string, ...relativeSegments: string[]): string {
+  const trimmedBase = basePath.trim();
+  const cleanSegments = relativeSegments
+    .map(segment => trimEdgeSeparators(segment.trim(), true))
+    .filter(Boolean);
+  if (cleanSegments.length === 0) {
+    return '';
+  }
+  const useBackslash = trimmedBase.includes('\\') && !trimmedBase.includes('/');
+  const separator = useBackslash ? '\\' : '/';
+  const normalizedRelative = cleanSegments
+    .join('/')
+    .replaceAll('\\', '/')
+    .replaceAll('/', separator);
+  if (!trimmedBase) {
+    return normalizedRelative;
+  }
+  const cleanBase = trimEdgeSeparators(trimmedBase, false);
+  const prefix = cleanBase === '' && trimmedBase.startsWith('/') ? '' : cleanBase;
+  return `${prefix}${separator}${normalizedRelative}`;
 }
 
 const STATUS_TAG_PRESENTATION: Record<
@@ -90,50 +123,48 @@ function renderOverallNotice(result: ValidateServerPathsResponseDto) {
   );
 }
 
-function PathDiagnosticSummary({
-  label,
+/**
+ * Compact validation status rendered directly under the field it describes.
+ * The field itself already shows the path, so only the status and any extra
+ * facts (executable, mission contents, issues) are rendered here.
+ */
+function PathDiagnostics({
   status,
   issues,
 }: {
-  label: string;
   status: ServerFsPathStatusDto;
   issues: ServerFsDiagnosticIssueDto[];
 }) {
   const presentation = STATUS_TAG_PRESENTATION[status.status];
+  const showMissionContents =
+    status.target === 'missionPath' &&
+    status.exists &&
+    status.isDirectory &&
+    typeof status.hasInitScript === 'boolean' &&
+    typeof status.hasEconomyDb === 'boolean';
 
   return (
-    <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-subtle)] p-3 space-y-2">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <span className="text-xs font-medium text-[var(--color-text-main)]">{label}</span>
+    <div data-testid={`path-diagnostics-${status.target}`} className="space-y-1.5">
+      <div className="flex flex-wrap items-center gap-1.5">
         <StatusTag status={presentation.status} label={presentation.label} />
-      </div>
 
-      {status.resolvedPath && (
-        <p className="text-[11px] font-mono text-[var(--color-text-muted)] break-all">
-          {status.resolvedPath}
-        </p>
-      )}
+        {status.target === 'installPath' && status.executablePath && (
+          <span className="text-[11px] font-mono text-[var(--color-text-secondary)] break-all">
+            Executable: {status.executablePath}
+          </span>
+        )}
 
-      {status.target === 'installPath' && status.executablePath && (
-        <p className="text-[11px] font-mono text-[var(--color-text-secondary)] break-all">
-          Executable: {status.executablePath}
-        </p>
-      )}
-
-      {status.target === 'missionPath' &&
-        status.exists &&
-        status.isDirectory &&
-        typeof status.hasInitScript === 'boolean' &&
-        typeof status.hasEconomyDb === 'boolean' && (
-          <div className="flex flex-wrap items-center gap-1.5">
+        {showMissionContents && (
+          <>
             <Tag variant="subtle" color={status.hasInitScript ? 'success' : 'danger'} mono>
               init.c {status.hasInitScript ? 'present' : 'missing'}
             </Tag>
             <Tag variant="subtle" color={status.hasEconomyDb ? 'success' : 'warning'} mono>
               db/ {status.hasEconomyDb ? 'present' : 'missing'}
             </Tag>
-          </div>
+          </>
         )}
+      </div>
 
       {issues.length > 0 && (
         <ul className="space-y-1">
@@ -155,102 +186,52 @@ function PathDiagnosticSummary({
   );
 }
 
-function DiscoveredMissionsSection({
-  missions,
-  currentMissionPath,
-  isServerLocked,
-  onSelectMission,
-}: {
-  missions: DiscoveredMissionDto[];
-  currentMissionPath: string;
-  isServerLocked: boolean;
-  onSelectMission: (relativePath: string) => void;
-}) {
-  const normalizedCurrent = currentMissionPath.trim().replaceAll('\\', '/');
-
-  return (
-    <div className="pt-2 border-t border-[var(--color-border)] space-y-2.5">
-      <div className="flex items-center justify-between gap-2">
-        <span className="text-xs font-semibold text-[var(--color-text-main)]">
-          Discovered Missions
-        </span>
-        <Tag variant="subtle" color="default">
-          {missions.length} found
-        </Tag>
-      </div>
-
-      {missions.length === 0 ? (
-        <p className="text-xs text-[var(--color-text-muted)]">
-          No missions discovered under <code className="font-mono">mpmissions/</code>. You can still
-          enter a mission path manually above.
-        </p>
-      ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-          {missions.map(mission => {
-            const isSelected =
-              normalizedCurrent === mission.relativePath || normalizedCurrent === mission.name;
-            return (
-              <button
-                key={mission.relativePath}
-                type="button"
-                disabled={isServerLocked}
-                aria-pressed={isSelected}
-                onClick={() => onSelectMission(mission.relativePath)}
-                className={`flex flex-col items-start gap-1.5 rounded-lg border p-2.5 text-left transition-colors cursor-pointer disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)] ${
-                  isSelected
-                    ? 'border-[var(--color-primary-border)] bg-[var(--color-primary-light)]'
-                    : 'border-[var(--color-border)] bg-[var(--color-surface)] hover:bg-[var(--color-surface-hover)]'
-                }`}
-              >
-                <div className="flex w-full items-center justify-between gap-2">
-                  <span className="text-xs font-semibold text-[var(--color-text-main)] truncate">
-                    {mission.name}
-                  </span>
-                  <div className="flex items-center gap-1 shrink-0">
-                    <Tag variant="subtle" color={mission.hasInitScript ? 'success' : 'danger'} mono>
-                      init.c {mission.hasInitScript ? '✓' : '✗'}
-                    </Tag>
-                    <Tag variant="subtle" color={mission.hasEconomyDb ? 'success' : 'warning'} mono>
-                      db/ {mission.hasEconomyDb ? '✓' : '✗'}
-                    </Tag>
-                  </div>
-                </div>
-                <span className="text-[11px] font-mono text-[var(--color-text-muted)] break-all">
-                  {mission.relativePath}
-                </span>
-              </button>
-            );
-          })}
-        </div>
-      )}
-    </div>
-  );
-}
-
 export function StoragePathsCard({
   installPath,
-  profilePath,
   missionPath,
   isServerLocked,
   isValidating,
   installPathError,
-  profilePathError,
   missionPathError,
   validationResult,
   onChangeInstallPath,
-  onChangeProfilePath,
-  onChangeMissionPath,
-  onSelectMission,
+  onMissionPathChange,
   onValidatePaths,
 }: StoragePathsCardProps) {
   const issuesByTarget = validationResult
     ? groupIssuesByTarget(validationResult.issues)
     : undefined;
+  const isValidationCurrent =
+    validationResult !== null &&
+    validationResult.paths.installPath.configuredPath === installPath.trim();
+
+  const resolvedProfile =
+    (isValidationCurrent ? validationResult.paths.profilePath.resolvedPath : null) ??
+    (joinDerivedPath(installPath, 'profiles') || '—');
+  const resolvedBattleye =
+    (isValidationCurrent ? validationResult.paths.battleyePath.resolvedPath : null) ??
+    (joinDerivedPath(installPath, 'profiles', 'BattlEye') || '—');
+
+  const normalizedMissionPath = missionPath.trim().replaceAll('\\', '/');
+  const discoveredMissions = validationResult?.discoveredMissions ?? [];
+  const missionOptions: SelectOption<string>[] = discoveredMissions.map(mission => ({
+    value: mission.relativePath,
+    label: joinDerivedPath(installPath, mission.relativePath),
+  }));
+  if (
+    normalizedMissionPath &&
+    !missionOptions.some(option => option.value === normalizedMissionPath)
+  ) {
+    missionOptions.unshift({
+      value: normalizedMissionPath,
+      label: joinDerivedPath(installPath, normalizedMissionPath),
+    });
+  }
 
   return (
     <Card
       title="Storage & File System Paths"
-      subtitle="Host machine directory paths for DayZ executable, profiles, and mission templates"
+      subtitle="Host machine installation directory and derived server data paths"
       actions={
         <Button
           type="button"
@@ -267,80 +248,86 @@ export function StoragePathsCard({
       <div className="p-1 sm:p-2 space-y-4">
         {validationResult && renderOverallNotice(validationResult)}
 
-        <div className="space-y-2">
-          <Input
-            id="server-install-path"
-            label="Installation Path"
-            placeholder="e.g. C:\DayZServer"
-            value={installPath}
-            disabled={isServerLocked}
-            error={installPathError}
-            onChange={e => onChangeInstallPath(e.target.value)}
-          />
-          {validationResult && issuesByTarget && (
-            <PathDiagnosticSummary
-              label="Installation & Executable"
-              status={validationResult.paths.installPath}
-              issues={issuesByTarget.installPath}
-            />
-          )}
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 gap-4">
           <div className="space-y-2">
             <Input
-              id="server-profile-path"
-              label="Profile Path"
-              placeholder="e.g. profiles"
-              value={profilePath}
+              id="server-install-path"
+              label="Installation Path"
+              placeholder="e.g. C:\DayZServer"
+              value={installPath}
               disabled={isServerLocked}
-              error={profilePathError}
-              onChange={e => onChangeProfilePath(e.target.value)}
+              error={installPathError}
+              onChange={e => onChangeInstallPath(e.target.value)}
             />
             {validationResult && issuesByTarget && (
-              <>
-                <PathDiagnosticSummary
-                  label="Profile Directory"
-                  status={validationResult.paths.profilePath}
-                  issues={issuesByTarget.profilePath}
-                />
-                <PathDiagnosticSummary
-                  label="BattlEye Directory"
-                  status={validationResult.paths.battleyePath}
-                  issues={issuesByTarget.battleyePath}
-                />
-              </>
+              <PathDiagnostics
+                status={validationResult.paths.installPath}
+                issues={issuesByTarget.installPath}
+              />
             )}
           </div>
 
           <div className="space-y-2">
-            <Input
-              id="server-mission-path"
-              label="Mission Path"
-              placeholder="e.g. mpmissions\dayzOffline.chernarusplus"
-              value={missionPath}
+            <span className="block text-xs font-medium text-[var(--color-text-secondary)]">
+              Profile Directory
+            </span>
+            <p
+              data-testid="derived-profile-path"
+              className="rounded-lg border border-[var(--color-border-subtle)] bg-[var(--color-surface-subtle)] px-3 py-2 font-mono text-xs text-[var(--color-text-main)] break-all"
+            >
+              {resolvedProfile}
+            </p>
+            {validationResult && issuesByTarget && (
+              <PathDiagnostics
+                status={validationResult.paths.profilePath}
+                issues={issuesByTarget.profilePath}
+              />
+            )}
+          </div>
+
+          <div className="space-y-2">
+            <span className="block text-xs font-medium text-[var(--color-text-secondary)]">
+              BattlEye Directory
+            </span>
+            <p
+              data-testid="derived-battleye-path"
+              className="rounded-lg border border-[var(--color-border-subtle)] bg-[var(--color-surface-subtle)] px-3 py-2 font-mono text-xs text-[var(--color-text-main)] break-all"
+            >
+              {resolvedBattleye}
+            </p>
+            {validationResult && issuesByTarget && (
+              <PathDiagnostics
+                status={validationResult.paths.battleyePath}
+                issues={issuesByTarget.battleyePath}
+              />
+            )}
+          </div>
+
+          <div className="space-y-2">
+            <Select
+              id="missionPath"
+              name="missionPath"
+              label="Active Mission"
+              placeholder="Select a mission..."
+              emptyText="No missions discovered under mpmissions/"
               disabled={isServerLocked}
               error={missionPathError}
-              onChange={e => onChangeMissionPath(e.target.value)}
+              options={missionOptions}
+              value={normalizedMissionPath}
+              onChange={value => {
+                if (value) {
+                  onMissionPathChange(value);
+                }
+              }}
             />
             {validationResult && issuesByTarget && (
-              <PathDiagnosticSummary
-                label="Mission Directory"
+              <PathDiagnostics
                 status={validationResult.paths.missionPath}
                 issues={issuesByTarget.missionPath}
               />
             )}
           </div>
         </div>
-
-        {validationResult && (
-          <DiscoveredMissionsSection
-            missions={validationResult.discoveredMissions}
-            currentMissionPath={missionPath}
-            isServerLocked={isServerLocked}
-            onSelectMission={onSelectMission}
-          />
-        )}
       </div>
     </Card>
   );

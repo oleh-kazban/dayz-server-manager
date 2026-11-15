@@ -1,6 +1,9 @@
-import { integer, sqliteTable, text } from 'drizzle-orm/sqlite-core';
+import { desc } from 'drizzle-orm';
+import { index, integer, primaryKey, sqliteTable, text } from 'drizzle-orm/sqlite-core';
 
 import {
+  CONFIG_FILE_KIND_VALUES,
+  CONFIG_REVISION_SOURCE_VALUES,
   MOD_LOAD_TARGET,
   MOD_LOAD_TARGET_VALUES,
   MOD_SOURCE_TYPE,
@@ -15,9 +18,9 @@ export const users = sqliteTable('users', {
   passwordHash: text('password_hash').notNull(),
   displayName: text('display_name'),
   email: text('email'),
-  role: text('role', { enum: ['admin', 'moderator', 'viewer'] })
+  role: text('role', { enum: ['admin'] })
     .notNull()
-    .default('viewer'),
+    .default('admin'),
   timezone: text('timezone').notNull().default('UTC'),
   timeFormat: text('time_format', { enum: ['12h', '24h'] })
     .notNull()
@@ -55,7 +58,10 @@ export const servers = sqliteTable('servers', {
   gamePort: integer('game_port').notNull().default(2302),
   queryPort: integer('query_port').notNull().default(27016),
   rconPort: integer('rcon_port').notNull().default(2310),
+  rconIp: text('rcon_ip').notNull().default('127.0.0.1'),
+  maxPlayers: integer('max_players').notNull().default(60),
   rconPassword: text('rcon_password'),
+  rconPasswordEncrypted: text('rcon_password_encrypted'),
   launchParameters: text('launch_parameters'),
   isDefault: integer('is_default', { mode: 'boolean' }).notNull().default(false),
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
@@ -118,3 +124,49 @@ export const serverMods = sqliteTable('server_mods', {
 
 export type ServerMod = typeof serverMods.$inferSelect;
 export type NewServerMod = typeof serverMods.$inferInsert;
+
+export const configEditLocks = sqliteTable(
+  'config_edit_locks',
+  {
+    serverId: text('server_id')
+      .notNull()
+      .references(() => servers.id, { onDelete: 'cascade' }),
+    fileKind: text('file_kind', { enum: CONFIG_FILE_KIND_VALUES }).notNull(),
+    sessionToken: text('session_token').notNull(),
+    userId: text('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    acquiredAt: integer('acquired_at', { mode: 'timestamp_ms' }).notNull(),
+    expiresAt: integer('expires_at', { mode: 'timestamp_ms' }).notNull(),
+  },
+  table => [primaryKey({ columns: [table.serverId, table.fileKind] })],
+);
+
+export type ConfigEditLock = typeof configEditLocks.$inferSelect;
+export type NewConfigEditLock = typeof configEditLocks.$inferInsert;
+
+export const serverConfigRevisions = sqliteTable(
+  'server_config_revisions',
+  {
+    id: text('id').primaryKey(),
+    serverId: text('server_id')
+      .notNull()
+      .references(() => servers.id, { onDelete: 'cascade' }),
+    fileKind: text('file_kind', { enum: CONFIG_FILE_KIND_VALUES }).notNull(),
+    content: text('content').notNull(),
+    contentHash: text('content_hash').notNull(),
+    source: text('source', { enum: CONFIG_REVISION_SOURCE_VALUES }).notNull(),
+    userId: text('user_id').references(() => users.id, { onDelete: 'set null' }),
+    createdAt: integer('created_at', { mode: 'timestamp_ms' }).notNull(),
+  },
+  table => [
+    index('idx_server_config_revisions_server_kind_created').on(
+      table.serverId,
+      table.fileKind,
+      desc(table.createdAt),
+    ),
+  ],
+);
+
+export type ServerConfigRevision = typeof serverConfigRevisions.$inferSelect;
+export type NewServerConfigRevision = typeof serverConfigRevisions.$inferInsert;

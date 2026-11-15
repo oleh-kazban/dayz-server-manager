@@ -4,6 +4,27 @@ This document records all completed product backlog items and operational featur
 
 ---
 
+## [DSM-00136] Shared CodeMirror 6 `CodeEditor` with Inline Diagnostics and Read-Only Ranges
+
+- **Type**: `Story`
+- **Priority**: `P1 (High)`
+- **Status**: `DONE`
+- **Dependencies**: `DSM-00105`
+
+### Summary
+
+Deliver a reusable, lazily-loaded `CodeEditor` component in `libs/ui` built on CodeMirror 6, serving as the single text-editing surface for game configuration files across the console (`serverDZ.cfg` in `DSM-00124`, Central Economy XML in `DSM-00120`, future JSON views). The component accepts a pluggable language extension, renders externally supplied diagnostics inline (gutter markers, underlines, hover messages) with `error | warning` severity, supports protected read-only ranges (e.g. DSM-managed secret lines), a global read-only mode, and consumes semantic Aegis CSS variables so all 12 themes render correctly without hardcoded colors.
+
+### Delivered Capabilities
+
+- `CodeEditor` controlled component (`value`, `onChange`, `language`, `diagnostics`, `readOnly`, `readOnlyRanges`, `containerClassName`) with React 19 `ref` prop exposing an imperative handle (focus, scroll-to-line).
+- Route-level code splitting so CodeMirror never enters the main bundle.
+- Aegis theme extension mapped to CSS variables; line numbers, bracket matching, search, undo history.
+- Lightweight `StreamLanguage` mode for Bohemia `.cfg` syntax (comments, strings, numbers, `class` blocks).
+- Storybook CSF3 stories and Vitest/RTL tests.
+
+---
+
 ## [DSM-00135] DayZ 6-Pair Theme Palette System (Cold, Neutral, Warm) and 3x2 Selector Grid
 
 - **Type**: `Story`
@@ -163,6 +184,33 @@ Deliver the dedicated Steam integration workbench at `/settings/steam` in `apps/
 
 ---
 
+## [DSM-00124] serverDZ.cfg Raw Editor, Validator, Edit Locks, Revisions, and BattlEye Sync
+
+- **Type**: `Story`
+- **Priority**: `P1 (High)`
+- **Status**: `DONE`
+- **Dependencies**: `DSM-00104, DSM-00123, DSM-00136`
+
+### Summary
+
+Replace per-field gameplay UI controls with a raw text editor for `serverDZ.cfg`: the physical file is the source of truth for every key it contains (including plaintext `password` and `passwordAdmin`), while the database keeps only a read-only parsed projection for `steamQueryPort` and `maxPlayers` (`servers.missionPath` stays DB-owned and is edited via the `Active Mission` `<Select id="missionPath">` dropdown in `StoragePathsCard`, not overwritten from `serverDZ.cfg` `template`). `hostname` lives only in `serverDZ.cfg` and is decoupled from the internal DSM server `name`; the game port remains a DB-owned launch parameter (`-port=`, `DSM-00125`). Under the admin-only operator model (`'admin'` single role in Zod contracts, SQLite migration `0008_admin_only_and_unredacted_revisions`, and `apps/web` UI while preserving fail-closed `ensureAdminRole` / `requireAdmin` + `AUTH_FORBIDDEN_ADMIN_REQUIRED` backend JWT invariants), secrets in `serverDZ.cfg` are edited unmasked without sentinel redaction, `SecurityCredentialsCard` is removed, and decrypted `rconPassword: string | null` (`serverDetailSchema`, `500 VAULT_KEY_UNAVAILABLE` on vault error) is managed via `#server-rcon-password` in `Network & BattlEye RCON`. Editing `serverDZ.cfg` is allowed only while the server is stopped and opens read-only by default (`CodeEditor` `aria-readonly="true"`, `EditorView.editable.of(false)`) until clicking `Edit` acquires a pessimistic per-editor-session DB lease lock with TTL and heartbeat (`Done` restores read-only state); server start is blocked while a lock is held. Every committed write is recorded as a plaintext revision (`server_config_revisions.content`) with author, timestamp, and source. The BattlEye RCON file (`beserver_x64.cfg` / `beserver.cfg` in `<profilePath>/BattlEye/`) remains DSM-generated from `RConPassword`, `RConPort`, and `RConIP`.
+
+### Delivered Capabilities
+
+- **Parser + validator** (pure TypeScript shared lib `libs/dayz-config` / `@aegis/dayz-config`, importable by `apps/web` and `apps/server`): Layer 1 syntax (Bohemia C-style grammar, nested `class Missions { class DayZ { template = "..."; }; };`, diagnostics with line/column); Layer 2 schema (known-key types and ranges; unknown keys → warning); Layer 3 server-side semantics (mission folder exists via `DSM-00123` inspector, `steamQueryPort` conflicts across servers). Diagnostics carry `error | warning` severity; errors block saves. Missing or unparseable `class Missions` template is an error. Client lints live; the server re-validates authoritatively.
+- **Byte fidelity**: preserve comments, formatting, CRLF/LF line endings, and UTF-8 BOM; 64 KB size cap.
+- **Plaintext config & RCON vault handling**: unmasked `serverDZ.cfg` editing and revisions (`SECRET_PLACEHOLDER`, `libs/dayz-config/src/lib/secrets.ts`, `toSecretReadOnlyRanges`, and encrypted `serverPassword` / `passwordAdmin` DB columns removed); `rconPassword` stored vault-encrypted and returned decrypted in `serverDetailSchema` for `#server-rcon-password` in `Network & BattlEye RCON`; retention cap on `.bak_{timestamp}` files.
+- **Edit locks** (`config_edit_locks` table): explicit lock acquisition when clicking `Edit` in the read-only-by-default editor (only when server is stopped), ~2 min TTL renewed by ~30 s heartbeat, release on `Done` or unmount/unload via `fetch(..., { keepalive: true })`, keyed per editor session; conflict response names holder and acquisition time (_"Being edited by X since HH:MM"_); read-only view for non-holders; admin force-takeover recorded as an audit event. Server start rejected while a non-expired lock exists.
+- **Running-server guard**: editing rejected with `SERVER_RUNNING_CONFIG_LOCKED` while the server is in any active status; status re-checked at both lock acquisition and save. Editor opens read-only when the server is running.
+- **Optimistic hash check** retained as a second line of defence: `PUT` carries the content hash it loaded; mismatch against disk (out-of-band RDP/SSH edits) returns `409`.
+- **Revisions** (`server_config_revisions` table): `server_id`, `file_kind`, `content`, `content_hash`, `updated_by`, `updated_at`, `source` (`editor | template | restore | external`); "last updated by/at" derived from the latest row; external disk drift detected on load and recorded with `source = external` (syncing `queryPort` and `maxPlayers` SQLite projection without overwriting `servers.missionPath`); retention ~50 revisions per file; diff view and one-click restore.
+- **Template bootstrap & zero-duplication create flow**: generate `serverDZ.cfg` from a baseline template when missing; `CreateServerModal` and `ServerSettingsView` omit `Max Players`, `Steam Query Port`, and duplicated create-time `Profile Path` / `Mission Path` inputs, while `POST /api/v1/servers` auto-resolves omitted fields atomically inside `sqlite.transaction(...).immediate()`.
+- **Storage & paths normalization**: migration `0009_normalize_server_profile_path` normalizes `servers.profile_path = 'profiles'` (and `POST /:id/validate-paths` uses `overrides.profilePath ?? 'profiles'`); `StoragePathsCard` uses a 1-per-row vertical stack (`grid-cols-1 gap-4`), removes `DiscoveredMissionsSection`, and exposes an auto-discovered `Active Mission` `<Select id="missionPath">` (with `\`/`/` deduplication via `normalizedMissionPath`) persisted via `PATCH /api/v1/servers/:id` inside `sqlite.transaction(...).immediate()` with `LOCKED_CONFIG_KEYS` protection.
+- **API (contract-first)**: `GET /api/v1/servers/:id/config/server-dz` (plaintext content, hash, projection, lock state, last revision); `PUT` (content + loaded hash, requires held lock); `POST .../validate` (dry-run diagnostics); lock acquire / heartbeat / release / takeover endpoints; revisions list / get / restore.
+- **UI**: `serverDZ.cfg` editor screen built on `CodeEditor` (`DSM-00136`, read-only by default via `aria-readonly="true"` and `EditorView.editable.of(false)`) with inline diagnostics, lock banner, running-server read-only state, revision history with diff and restore; header `Save changes` button (`type="submit" form="server-settings-form"`) placed next to `Add new server`. Removal of `GameplayRulesCard`, `SecurityCredentialsCard`, `Sidebar`/`ServerSelector`/`ModsView` non-admin role gates, and `router.tsx` non-admin redirects.
+
+---
+
 ## [DSM-00123] Server Filesystem Inspector and Mission Discovery Service
 
 - **Type**: `Story`
@@ -229,7 +277,9 @@ Provide a theme selection engine supporting paired light and dark palettes (e.g.
 
 ### Delivered Capabilities
 
-CSS custom property token definitions for light and dark palettes; React `ThemeProvider` and `useThemePreference` hooks; interactive `ThemeSelectorCard` in `/profile`; immediate DOM token updates and persistence.
+- Semantic CSS custom property tokens and `data-theme` definitions in `libs/ui/src/styles/{theme.css,themes.css}`.
+- React theme state & toggle (`apps/web/src/features/theme/{ThemeProvider.tsx,theme.context.ts,theme.types.ts,ThemeToggleButton.tsx}`).
+- Persistence hook (`apps/web/src/features/profile/hooks/useThemePreference.ts`) and `ThemeSelectorCard` (`apps/web/src/features/profile/components/ThemeSelectorCard.tsx`) in `/profile`.
 
 ---
 
@@ -246,7 +296,9 @@ Implement the Operator Profile and Personal Settings workbench (`/profile`) allo
 
 ### Delivered Capabilities
 
-Operator profile REST endpoints (`/api/v1/profile`, `/api/v1/sessions`); frontend workbench at `/profile`; identity updating; password rotation with live strength feedback; active session list with current session indicator and revoke actions.
+- SQLite migration `0003_profile_and_sessions` (`users.display_name`, `timezone`, `time_format` + `sessions` table in `libs/database/src/lib/migrations.ts`).
+- Zod contracts (`profile.contract.ts`, `session.contract.ts`), client endpoints (`endpoints/{profile.ts,sessions.ts}`), and Fastify routes (`/api/v1/profile`, `/api/v1/auth/profile`, `/api/v1/auth/sessions` in `apps/server/src/routes/{profile.ts,sessions.ts}` + `utils/user-agent.ts`).
+- Frontend workbench at `/profile` (`apps/web/src/features/profile/{views/ProfileView.tsx,api/profile.queries.ts,api/profile.mutations.ts}`, `components/{ProfileIdentityCard.tsx,PasswordRotationCard.tsx,PasswordStrengthBar.tsx,ActiveSessionsCard.tsx}`).
 
 ---
 
@@ -263,7 +315,9 @@ Establish a unified toast notification architecture that transforms low-level RE
 
 ### Delivered Capabilities
 
-API error contracts and Fastify structured error formatting; global toast container and stack management; `i18next` error and notification dictionary (`en-US`); field error mapping to form inputs.
+- Structured error envelope & `ApiErrorCode` registry (`libs/api-contracts/src/lib/error.contract.ts`) plus Fastify helpers (`sendApiError`, `formatZodFieldErrors` in `apps/server/src/utils/api-error.ts`).
+- Toast primitives in `libs/ui/src/toast/{Toaster.tsx,CustomToast.tsx,toast.utils.tsx}`.
+- Frontend `i18next` error dictionaries (`apps/web/src/core/i18n/{i18n.ts,locales/en-US.ts}`) and notification dispatchers (`notifySuccess`, `notifyApiError`, `showToast` in `apps/web/src/core/notifications/notify.ts`).
 
 ---
 
@@ -280,7 +334,9 @@ Deliver an end-to-end authentication and operator login workflow securing the DS
 
 ### Delivered Capabilities
 
-Secure password verification via `scrypt`; session issuance and token storage; React `/sign-in` route with client validation and submission states; route authentication guards redirecting unauthenticated traffic.
+- Zod contracts (`libs/api-contracts/src/lib/auth.contract.ts`) and SDK client (`libs/api-client/src/lib/endpoints/auth.ts`).
+- Fastify endpoints in `apps/server/src/routes/auth.ts` (`POST /api/v1/auth/login` rate-limited `10 / 1 min`, `/refresh`, `/logout`), `scrypt` helpers + `0001_initial_users` migration (`libs/database`), and JWT + stateful session check (`fastify.authenticate` in `apps/server/src/app/app.ts`).
+- Frontend `/sign-in` workbench (`apps/web/src/features/auth/{SignIn.tsx,AuthProvider.tsx,auth.storage.ts,signIn.schema.ts}`, `components/{SignInHero.tsx,SignInForm.tsx}`) and TanStack Router `beforeLoad` guards (`apps/web/src/router.tsx`).
 
 ---
 
@@ -297,7 +353,8 @@ Establish an interactive Storybook environment for `libs/ui` that acts as a livi
 
 ### Delivered Capabilities
 
-Storybook Vite configuration and add-ons in `libs/ui/.storybook`; interactive `.stories.tsx` files for every UI component; documentation parameters and Controls table bindings.
+- Storybook Vite setup in `libs/ui/.storybook/{main.ts,preview.tsx,StorybookThemeFrame.tsx}`.
+- Interactive CSF3 `.stories.tsx` suites colocated across all `libs/ui/src/*` component directories with Controls table bindings.
 
 ---
 
@@ -314,7 +371,9 @@ Implement a cohesive, accessible, and lightweight design system component librar
 
 ### Delivered Capabilities
 
-Reusable UI component primitives and compound patterns in `libs/ui`; CSS custom property design tokens; keyboard accessibility and focus rings; 100% test-covered unit test suites.
+- Reusable component library exported from `libs/ui/src/index.ts` (`autosuggest`, `breadcrumbs`, `button`, `card`, `checkbox`, `confirmation`, `date-picker`, `empty-state`, `hero-banner`, `input`, `kpi-card`, `loader`, `menu`, `notice`, `notification-menu`, `pagination`, `progress-bar`, `select`, `skeleton`, `status-tag`, `table`, `tabs`, `tag`, `tag-input`, `toast`, `toggle`, `tooltip`).
+- Shared UI hooks (`libs/ui/src/hooks/{useDebounce.ts,usePopup.ts,useSortableList.ts}`) and design tokens/keyframes (`libs/ui/src/styles/{theme.css,themes.css,keyframes.css,fonts.css}`).
+- Vitest + React Testing Library specs alongside every primitive in `libs/ui/src/**`.
 
 ---
 
@@ -331,7 +390,10 @@ Establish the foundational Nx monorepo architecture, developer tooling, and base
 
 ### Delivered Capabilities
 
-Monorepo scaffolding with Nx and pnpm workspaces; Fastify backend startup and healthcheck endpoint; React 19 client setup with TanStack Router context contracts; Zod API contracts and type-safe HTTP client boundary; SQLite WAL database connection setup.
+- Nx + `pnpm` workspace setup (`nx.json`, `tsconfig.base.json`, `package.json`) with module boundary enforcement and `check:cycles` (Madge).
+- Fastify backend bootstrap (`apps/server/src/main.ts`, `app/app.ts`, `config/env.ts`) and health endpoint (`GET /api/v1/health` in `apps/server/src/routes/health.ts`).
+- Drizzle ORM + `better-sqlite3` WAL persistence and `runMigrations()` (`libs/database/src/lib/{db.ts,migrations.ts,schema.ts}`).
+- Shared Zod contracts (`libs/api-contracts`), type-safe fetch client (`libs/api-client/src/lib/http-client.ts`), and React 19 + TanStack Router/Query shell (`apps/web/src/router.tsx`, `core/query/query-client.ts`).
 
 ---
 
@@ -348,7 +410,8 @@ When the JavaScript bundle finishes bootstrapping React, TanStack Router, and Ta
 
 ### Delivered Capabilities
 
-Updating `RootLoader` and route pending fallbacks with the animated Aegis logo; smooth visual handoff between the HTML splash state and the interactive React root; graceful exit animations.
+- `RootLoader` and `RootErrorFallback` in `apps/web/src/components/layout/RootFallback.tsx`.
+- `AppErrorBoundary`, `InnerApp`, and `RouterProvider` context wiring (`{ auth, features }`) in `apps/web/src/App.tsx` and `apps/web/src/router.tsx`.
 
 ---
 
@@ -365,7 +428,9 @@ When a user with an active dark theme preference or system dark mode launches th
 
 ### Delivered Capabilities
 
-Synchronous pre-bootstrap theme resolution (reading persisted storage or matching system `prefers-color-scheme`) in document head; dark/light theme CSS variables for the splash screen; `prefers-reduced-motion` compliance; accessible loading indicators and ARIA semantics.
+- Synchronous pre-bootstrap script in `apps/web/index.html` reading `localStorage` (`dsm-theme-settings` / `dsm-theme-preference`) and setting `data-theme` on `documentElement` before first paint.
+- Light/dark/preferred-scheme CSS custom properties (`--splash-bg`, `--splash-fg-main`, `--splash-fg-secondary`) plus `@media (prefers-reduced-motion: reduce)` animation suppression.
+- Screen-reader accessible status semantics (`role="status"`, `aria-live="polite"`, `.sr-only`) on `#dsm-splash`.
 
 ---
 
@@ -382,6 +447,7 @@ When a user opens the application on slow network connections, an animated Aegis
 
 ### Delivered Capabilities
 
-Critical inline SVG and CSS assets for viewport centering, responsive sizing, and 3D logo loading animation embedded directly in `index.html`; clean mounting handoff into `#root`.
+- Critical inline SVG and CSS assets in `apps/web/index.html` (`#dsm-splash`, `.aegis-logo.is-loading`, `@keyframes aegis-tent-loading` / `aegis-bridge-loading` with `perspective: 900px`).
+- Clean React root mounting handoff in `apps/web/src/main.tsx` (`__dsmRoot` replacing `#dsm-splash` inside `#root`).
 
 ---

@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { SessionDto } from '@aegis/api-contracts';
@@ -146,13 +146,22 @@ describe('ActiveSessionsCard', () => {
     expect(showToast.success).toHaveBeenCalledWith(
       'Session Terminated',
       'The device session has been revoked.',
+      undefined,
     );
 
     options.onError(new Error('Revocation failed'));
-    expect(showToast.error).toHaveBeenCalledWith('Revocation Failed', 'Revocation failed');
+    expect(showToast.error).toHaveBeenCalledWith(
+      'Revocation Failed',
+      'Revocation failed',
+      undefined,
+    );
 
     options.onError('plain error');
-    expect(showToast.error).toHaveBeenCalledWith('Revocation Failed', 'Failed to revoke session');
+    expect(showToast.error).toHaveBeenLastCalledWith(
+      'Revocation Failed',
+      'An unexpected error occurred. Please try again.',
+      undefined,
+    );
   });
 
   it('opens confirmation modal when clicking sign out on current session', async () => {
@@ -171,19 +180,31 @@ describe('ActiveSessionsCard', () => {
       { id: 'sess-current', isCurrent: true },
       expect.objectContaining({
         onSuccess: expect.any(Function),
+        onError: expect.any(Function),
       }),
     );
 
     const options = mockRevokeSingle.mock.calls[0][1];
     await options.onSuccess();
-    expect(showToast.info).toHaveBeenCalledWith(
+    expect(showToast.success).toHaveBeenCalledWith(
       'Signed Out',
       'Your current session was terminated.',
+      undefined,
     );
     await waitFor(() => {
       expect(mockRouterInvalidate).toHaveBeenCalledTimes(1);
       expect(mockNavigate).toHaveBeenCalledWith({ to: '/sign-in' });
     });
+
+    // Failure to revoke the current session must surface a red toast
+    act(() => {
+      options.onError(new Error('Session store unavailable'));
+    });
+    expect(showToast.error).toHaveBeenCalledWith(
+      'Sign Out Failed',
+      'Session store unavailable',
+      undefined,
+    );
   });
 
   it('guards against rapid duplicate clicks on single session termination, current session revocation, and bulk revocation (QA-01)', () => {
@@ -260,14 +281,16 @@ describe('ActiveSessionsCard', () => {
     options.onSuccess({ revokedCount: 1, message: 'Success' });
     expect(showToast.success).toHaveBeenCalledWith(
       'Sessions Terminated',
-      'Successfully terminated 1 other session.',
+      'Terminated 1 other session(s).',
+      undefined,
     );
 
     // Fallback when error object has no message
     options.onError({});
     expect(showToast.error).toHaveBeenCalledWith(
       'Bulk Revocation Failed',
-      'Failed to terminate other sessions',
+      'An unexpected error occurred. Please try again.',
+      undefined,
     );
   });
 
@@ -339,10 +362,15 @@ describe('ActiveSessionsCard', () => {
     options.onSuccess({ revokedCount: 3, message: 'Success' });
     expect(showToast.success).toHaveBeenCalledWith(
       'Sessions Terminated',
-      'Successfully terminated 3 other sessions.',
+      'Terminated 3 other session(s).',
+      undefined,
     );
 
     options.onError(new Error('Network error'));
-    expect(showToast.error).toHaveBeenCalledWith('Bulk Revocation Failed', 'Network error');
+    expect(showToast.error).toHaveBeenCalledWith(
+      'Bulk Revocation Failed',
+      'Network error',
+      undefined,
+    );
   });
 });

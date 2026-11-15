@@ -11,13 +11,8 @@ import {
   type UpdateServerModDto,
 } from '@aegis/api-contracts';
 import { Button, Input, Select, type SelectOption } from '@aegis/ui';
-import {
-  extractApiFieldErrors,
-  notifyApiError,
-  notifySuccess,
-  resolveFieldErrors,
-  useModalDialog,
-} from '@aegis/web/core';
+import { SaveButton } from '@aegis/web/components';
+import { notifyApiError, notifySuccess, useEditableForm, useModalDialog } from '@aegis/web/core';
 
 import { modsQueryKeys } from '../mods.queries';
 
@@ -34,7 +29,21 @@ const PHASE_1_LOAD_TARGET_OPTIONS: SelectOption<ModLoadTarget>[] = [
   { value: MOD_LOAD_TARGET.SERVER_ONLY, label: 'Server Only (-serverMod=)' },
 ];
 
-function validateEditModForm(name: string, folderName: string): Record<string, string> {
+interface EditModValues extends Record<string, unknown> {
+  name: string;
+  folderName: string;
+  loadTarget: ModLoadTarget;
+}
+
+function toEditModPayload(values: EditModValues): UpdateServerModDto {
+  return {
+    name: values.name.trim(),
+    folderName: values.folderName.trim(),
+    loadTarget: values.loadTarget,
+  };
+}
+
+function validateEditModForm({ name, folderName }: EditModValues): Record<string, string> {
   const errors: Record<string, string> = {};
   const trimmedName = name.trim();
   const trimmedFolder = folderName.trim();
@@ -71,7 +80,6 @@ function EditModForm({
   const [name, setName] = useState(mod.name);
   const [folderName, setFolderName] = useState(mod.folderName);
   const [loadTarget, setLoadTarget] = useState<ModLoadTarget>(mod.loadTarget);
-  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
   const targetOptions: SelectOption<ModLoadTarget>[] =
     mod.loadTarget === MOD_LOAD_TARGET.CLIENT_OPTIONAL
@@ -81,16 +89,6 @@ function EditModForm({
         ]
       : PHASE_1_LOAD_TARGET_OPTIONS;
 
-  const clearFieldError = (key: string) => {
-    if (fieldErrors[key]) {
-      setFieldErrors(prev => {
-        const next = { ...prev };
-        delete next[key];
-        return next;
-      });
-    }
-  };
-
   const updateMutation = useMutation({
     mutationFn: (dto: UpdateServerModDto) => apiClient.mods.update(serverId, mod.id, dto),
     onSuccess: updated => {
@@ -99,11 +97,7 @@ function EditModForm({
       onClose();
     },
     onError: (err: Error) => {
-      const resolved = resolveFieldErrors(extractApiFieldErrors(err));
-      if (Object.keys(resolved).length > 0) {
-        setFieldErrors(resolved);
-        return;
-      }
+      reportServerErrors(err);
       notifyApiError(err, 'Failed to Update Mod');
     },
     onSettled: () => {
@@ -111,26 +105,33 @@ function EditModForm({
     },
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (updateMutation.isPending || inFlightRef.current) return;
-    const errors = validateEditModForm(name, folderName);
-    if (Object.keys(errors).length > 0) {
-      setFieldErrors(errors);
-      return;
-    }
+  const {
+    registerForm,
+    hasChanges,
+    errors: fieldErrors,
+    handleSubmit,
+    reportServerErrors,
+  } = useEditableForm({
+    values: { name, folderName, loadTarget },
+    baseline: { name: mod.name, folderName: mod.folderName, loadTarget: mod.loadTarget },
+    toPayload: toEditModPayload,
+    validate: validateEditModForm,
+    isPending: updateMutation.isPending,
+  });
 
-    setFieldErrors({});
+  const submitValidForm = () => {
+    if (inFlightRef.current) return;
     inFlightRef.current = true;
-    updateMutation.mutate({
-      name: name.trim(),
-      folderName: folderName.trim(),
-      loadTarget,
-    });
+    updateMutation.mutate(toEditModPayload({ name, folderName, loadTarget }));
   };
 
   return (
-    <form noValidate onSubmit={handleSubmit} className="mt-5 space-y-4">
+    <form
+      ref={registerForm}
+      noValidate
+      onSubmit={e => handleSubmit(e, submitValidForm)}
+      className="mt-5 space-y-4"
+    >
       <Input
         label="Mod Name"
         value={name}
@@ -138,7 +139,6 @@ function EditModForm({
         error={fieldErrors.name}
         onChange={e => {
           setName(e.target.value);
-          clearFieldError('name');
         }}
       />
 
@@ -151,7 +151,6 @@ function EditModForm({
           error={fieldErrors.folderName}
           onChange={e => {
             setFolderName(e.target.value);
-            clearFieldError('folderName');
           }}
         />
         <p className="text-xs text-[var(--color-text-muted)]">
@@ -175,14 +174,13 @@ function EditModForm({
         <Button variant="secondary" type="button" onClick={onClose}>
           Cancel
         </Button>
-        <Button
-          variant="primary"
+        <SaveButton
           type="submit"
-          disabled={isServerLocked}
-          isLoading={updateMutation.isPending}
+          hasChanges={hasChanges && !isServerLocked}
+          isPending={updateMutation.isPending}
         >
           Save Changes
-        </Button>
+        </SaveButton>
       </div>
     </form>
   );

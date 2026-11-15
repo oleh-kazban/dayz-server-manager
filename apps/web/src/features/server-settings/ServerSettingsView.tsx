@@ -7,7 +7,10 @@ import { AlertTriangle, Plus, Save, Trash2 } from 'lucide-react';
 import { apiClient } from '@aegis/api-client';
 import {
   isServerActiveStatus,
+  rconIpSchema,
+  rconPasswordSchema,
   type ServerDetailDto,
+  serverNameSchema,
   type ServerSummaryDto,
   type UpdateServerDto,
   type ValidateServerPathsRequestDto,
@@ -23,18 +26,18 @@ import {
   StatusTag,
   Toggle,
 } from '@aegis/ui';
-import { EmptyServersState, PageContainer } from '@aegis/web/components';
+import { EmptyServersState, PageContainer, SaveButton } from '@aegis/web/components';
 import {
-  extractApiFieldErrors,
   getServerStatusPresentation,
   notifyApiError,
   notifySuccess,
-  resolveFieldErrors,
   serverQueries,
   serverQueryKeys,
   useActiveServer,
+  useEditableForm,
 } from '@aegis/web/core';
 
+import { ServerConfigCard } from './components/server-config/ServerConfigCard';
 import { StoragePathsCard } from './components/StoragePathsCard';
 import { CreateServerModal } from './CreateServerModal';
 
@@ -43,46 +46,21 @@ interface ServerSettingsValidationInput {
   rconPassword: string;
   isServerLocked: boolean;
   installPath: string;
-  profilePath: string;
-  missionPath: string;
   gamePort: number;
   queryPort: number;
   rconPort: number;
+  rconIp: string;
 }
 
-function validateServerSettingsForm(input: ServerSettingsValidationInput): Record<string, string> {
-  const errors: Record<string, string> = {};
-
-  if (!input.name.trim()) {
-    errors.name = 'Server name is required.';
-  }
-  if (input.rconPassword && input.rconPassword.length < 6) {
-    errors.rconPassword = 'RCON password must be at least 6 characters.';
-  }
-
-  if (input.isServerLocked) {
-    return errors;
-  }
-
+function validateNetworkAndPaths(
+  input: ServerSettingsValidationInput,
+  errors: Record<string, string>,
+): void {
   if (!input.installPath.trim()) {
     errors.installPath = 'Installation path is required.';
   }
-  if (!input.profilePath.trim()) {
-    errors.profilePath = 'Profile path is required.';
-  } else if (/^(?:[a-zA-Z]:|[\\/])/.test(input.profilePath.trim())) {
-    errors.profilePath = 'Profile path must be relative to the installation path (e.g. profiles).';
-  }
-  if (!input.missionPath.trim()) {
-    errors.missionPath = 'Mission path is required.';
-  } else if (/^(?:[a-zA-Z]:|[\\/])/.test(input.missionPath.trim())) {
-    errors.missionPath =
-      'Mission path must be relative to the installation path (e.g. mpmissions\\dayzOffline.chernarusplus).';
-  }
   if (!input.gamePort || input.gamePort < 1024 || input.gamePort > 65535) {
     errors.gamePort = 'Port must be between 1024 and 65535.';
-  }
-  if (!input.queryPort || input.queryPort < 1024 || input.queryPort > 65535) {
-    errors.queryPort = 'Port must be between 1024 and 65535.';
   }
   if (!input.rconPort || input.rconPort < 1024 || input.rconPort > 65535) {
     errors.rconPort = 'Port must be between 1024 and 65535.';
@@ -94,42 +72,167 @@ function validateServerSettingsForm(input: ServerSettingsValidationInput): Recor
   ) {
     errors.gamePort = 'Game port, query port, and RCON port must all be distinct.';
   }
+  const rconIpResult = rconIpSchema.safeParse(input.rconIp.trim());
+  if (!rconIpResult.success) {
+    errors.rconIp = rconIpResult.error.issues[0].message;
+  }
+}
+
+function validateServerSettingsForm(input: ServerSettingsValidationInput): Record<string, string> {
+  if (input.isServerLocked) {
+    return {};
+  }
+
+  const errors: Record<string, string> = {};
+  if (!input.name.trim()) {
+    errors.name = 'Server name is required.';
+  } else {
+    const nameResult = serverNameSchema.safeParse(input.name.trim());
+    if (!nameResult.success) {
+      errors.name = nameResult.error.issues[0].message;
+    }
+  }
+
+  validateNetworkAndPaths(input, errors);
+
+  if (input.rconPassword.length > 0) {
+    const rconResult = rconPasswordSchema.safeParse(input.rconPassword);
+    if (!rconResult.success) {
+      errors.rconPassword = rconResult.error.issues[0].message;
+    }
+  }
 
   return errors;
 }
 
+interface ServerSettingsValues extends Record<string, unknown> {
+  name: string;
+  description: string;
+  gamePort: number;
+  rconPort: number;
+  rconIp: string;
+  rconPassword: string;
+  installPath: string;
+  missionPath: string;
+  launchParameters: string;
+  isDefault: boolean;
+}
+
+function toServerSettingsValues(detail: ServerDetailDto): ServerSettingsValues {
+  return {
+    name: detail.name,
+    description: detail.description ?? '',
+    gamePort: detail.gamePort,
+    rconPort: detail.rconPort,
+    rconIp: detail.rconIp,
+    rconPassword: detail.rconPassword ?? '',
+    installPath: detail.installPath,
+    missionPath: detail.missionPath,
+    launchParameters: detail.launchParameters ?? '',
+    isDefault: detail.isDefault,
+  };
+}
+
+/** Normalisation applied on save; also the basis for change detection. */
+function normalizeServerSettings(values: ServerSettingsValues) {
+  return {
+    name: values.name.trim(),
+    description: values.description.trim() || null,
+    gamePort: Number(values.gamePort),
+    rconPort: Number(values.rconPort),
+    rconIp: values.rconIp.trim(),
+    rconPassword: values.rconPassword || null,
+    installPath: values.installPath.trim(),
+    missionPath: values.missionPath.trim().replaceAll('\\', '/'),
+    launchParameters: values.launchParameters.trim() || null,
+    isDefault: values.isDefault,
+  };
+}
+
+interface ServerSaveCallbacks {
+  onSaved: (saved: ServerDetailDto) => void;
+  onError: (err: unknown) => void;
+}
+
 interface ServerSettingsFormProps {
   detail: ServerDetailDto;
-  onSave: (payload: UpdateServerDto) => void;
+  onSave: (payload: UpdateServerDto, callbacks: ServerSaveCallbacks) => void;
   isSaving: boolean;
-  serverFieldErrors: Record<string, string>;
-  onClearServerFieldError: (field: string) => void;
+  onHasChangesChange: (hasChanges: boolean) => void;
 }
 
 function ServerSettingsForm({
   detail,
   onSave,
   isSaving,
-  serverFieldErrors,
-  onClearServerFieldError,
+  onHasChangesChange,
 }: ServerSettingsFormProps) {
   const [name, setName] = useState(detail.name);
   const [description, setDescription] = useState(detail.description ?? '');
   const [gamePort, setGamePort] = useState(detail.gamePort);
-  const [queryPort, setQueryPort] = useState(detail.queryPort);
   const [rconPort, setRconPort] = useState(detail.rconPort);
-  const [rconPassword, setRconPassword] = useState('');
+  const [rconIp, setRconIp] = useState(detail.rconIp);
+  const [rconPassword, setRconPassword] = useState(detail.rconPassword ?? '');
   const [installPath, setInstallPath] = useState(detail.installPath);
-  const [profilePath, setProfilePath] = useState(detail.profilePath);
   const [missionPath, setMissionPath] = useState(detail.missionPath);
   const [launchParameters, setLaunchParameters] = useState(detail.launchParameters ?? '');
   const [isDefault, setIsDefault] = useState(detail.isDefault);
-  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [validationResult, setValidationResult] = useState<ValidateServerPathsResponseDto | null>(
     null,
   );
   const validateInFlightRef = useRef(false);
   const mountedServerIdRef = useRef(detail.id);
+  const prevDetailRconRef = useRef(detail.rconPassword ?? '');
+  const prevDetailMissionRef = useRef(detail.missionPath);
+
+  const isServerLocked = isServerActiveStatus(detail.status);
+  const values: ServerSettingsValues = {
+    name,
+    description,
+    gamePort,
+    rconPort,
+    rconIp,
+    rconPassword,
+    installPath,
+    missionPath,
+    launchParameters,
+    isDefault,
+  };
+  const {
+    registerForm,
+    hasChanges,
+    errors,
+    handleSubmit,
+    reportServerErrors,
+    clearServerErrors,
+    markSaved,
+  } = useEditableForm({
+    values,
+    baseline: toServerSettingsValues(detail),
+    toPayload: normalizeServerSettings,
+    validate: v =>
+      validateServerSettingsForm({ ...v, isServerLocked, queryPort: detail.queryPort }),
+    isPending: isSaving,
+  });
+
+  useEffect(() => {
+    onHasChangesChange(hasChanges);
+  }, [hasChanges, onHasChangesChange]);
+
+  useEffect(() => {
+    const incoming = detail.rconPassword ?? '';
+    if (incoming !== prevDetailRconRef.current) {
+      setRconPassword(incoming);
+      prevDetailRconRef.current = incoming;
+    }
+  }, [detail.rconPassword]);
+
+  useEffect(() => {
+    if (detail.missionPath !== prevDetailMissionRef.current) {
+      setMissionPath(detail.missionPath);
+      prevDetailMissionRef.current = detail.missionPath;
+    }
+  }, [detail.missionPath]);
 
   useEffect(() => {
     mountedServerIdRef.current = detail.id;
@@ -138,57 +241,28 @@ function ServerSettingsForm({
     };
   }, [detail.id]);
 
-  const mergedErrors = { ...serverFieldErrors, ...fieldErrors };
-
-  const clearFieldError = (field: string) => {
-    if (fieldErrors[field]) {
-      setFieldErrors(prev => {
-        const next = { ...prev };
-        delete next[field];
-        return next;
-      });
-    }
-    if (serverFieldErrors[field]) {
-      onClearServerFieldError(field);
-    }
-  };
-
-  const clearPathErrors = () => {
-    setFieldErrors(prev => {
-      if (!prev.installPath && !prev.profilePath && !prev.missionPath) {
-        return prev;
-      }
-      const next = { ...prev };
-      delete next.installPath;
-      delete next.profilePath;
-      delete next.missionPath;
-      return next;
-    });
-    onClearServerFieldError('installPath');
-    onClearServerFieldError('profilePath');
-    onClearServerFieldError('missionPath');
-  };
+  interface ValidatePathsMutationVars {
+    serverId: string;
+    dto: ValidateServerPathsRequestDto;
+    sentValues: ServerSettingsValues;
+  }
 
   const validatePathsMutation = useMutation({
-    mutationFn: ({ serverId, dto }: { serverId: string; dto: ValidateServerPathsRequestDto }) =>
+    mutationFn: ({ serverId, dto }: ValidatePathsMutationVars) =>
       apiClient.servers.validatePaths(serverId, dto),
     onSuccess: (result, variables) => {
       if (mountedServerIdRef.current !== variables.serverId) {
         return;
       }
       setValidationResult(result);
-      clearPathErrors();
+      clearServerErrors(['installPath', 'missionPath']);
     },
     onError: (err: Error, variables) => {
       if (mountedServerIdRef.current !== variables.serverId) {
         return;
       }
       setValidationResult(null);
-      const resolvedFields = resolveFieldErrors(extractApiFieldErrors(err));
-      if (Object.keys(resolvedFields).length > 0) {
-        setFieldErrors(prev => ({ ...prev, ...resolvedFields }));
-        return;
-      }
+      reportServerErrors(err, variables.sentValues);
       notifyApiError(err, 'Path Validation Failed');
     },
     onSettled: () => {
@@ -196,78 +270,75 @@ function ServerSettingsForm({
     },
   });
 
+  // Path validation is user-initiated only (Validate Paths button); nothing runs on mount.
   const handleValidatePaths = () => {
     if (validatePathsMutation.isPending || validateInFlightRef.current) {
       return;
     }
     validateInFlightRef.current = true;
+    const trimmedMission = missionPath.trim();
     validatePathsMutation.mutate({
       serverId: detail.id,
+      sentValues: values,
       dto: {
         installPath: installPath.trim(),
-        profilePath: profilePath.trim(),
-        missionPath: missionPath.trim(),
+        profilePath: 'profiles',
+        ...(trimmedMission ? { missionPath: trimmedMission } : {}),
       },
     });
   };
 
-  const isServerLocked = isServerActiveStatus(detail.status);
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (isSaving) return;
-
-    const errors = validateServerSettingsForm({
-      name,
-      rconPassword,
-      isServerLocked,
-      installPath,
-      profilePath,
-      missionPath,
-      gamePort,
-      queryPort,
-      rconPort,
-    });
-
-    if (Object.keys(errors).length > 0) {
-      setFieldErrors(errors);
-      return;
-    }
-
-    setFieldErrors({});
-
+  const submitValidForm = () => {
+    const normalized = normalizeServerSettings(values);
     const payload: UpdateServerDto = {
-      name: name.trim(),
-      description: description.trim() || null,
+      description: normalized.description,
       isDefault,
     };
 
-    if (rconPassword.trim()) {
-      payload.rconPassword = rconPassword.trim();
-    }
-    if (launchParameters.trim()) {
-      payload.launchParameters = launchParameters.trim();
-    }
-
     if (!isServerLocked) {
-      payload.gamePort = Number(gamePort);
-      payload.queryPort = Number(queryPort);
-      payload.rconPort = Number(rconPort);
-      payload.installPath = installPath.trim();
-      payload.profilePath = profilePath.trim();
-      payload.missionPath = missionPath.trim();
+      payload.name = normalized.name;
+      payload.gamePort = normalized.gamePort;
+      payload.rconPort = normalized.rconPort;
+      payload.rconIp = normalized.rconIp;
+      payload.installPath = normalized.installPath;
+      const trimmedMission = missionPath.trim();
+      if (trimmedMission) {
+        payload.missionPath = trimmedMission;
+      }
+      payload.launchParameters = normalized.launchParameters;
+
+      if (normalized.rconPassword !== (detail.rconPassword ?? null)) {
+        payload.rconPassword = normalized.rconPassword;
+      }
     }
 
-    onSave(payload);
+    onSave(payload, {
+      onSaved: saved => {
+        markSaved();
+        const nextRcon = saved.rconPassword ?? '';
+        prevDetailRconRef.current = nextRcon;
+        setRconPassword(nextRcon);
+        prevDetailMissionRef.current = saved.missionPath;
+        setMissionPath(saved.missionPath);
+      },
+      onError: reportServerErrors,
+    });
   };
 
   return (
-    <form noValidate onSubmit={handleSubmit} className="space-y-6">
+    <form
+      id="server-settings-form"
+      ref={registerForm}
+      noValidate
+      onSubmit={e => handleSubmit(e, submitValidForm)}
+      className="space-y-6"
+    >
       {isServerLocked && (
         <Notice variant="warning" title="Server is Active — Configuration Locked">
-          This server is currently <strong className="uppercase">{detail.status}</strong>. Network
-          ports and file storage paths are locked to prevent runtime state corruption. Stop the
-          server to modify these parameters.
+          This server is currently <strong className="uppercase">{detail.status}</strong>. Server
+          identity, network settings, credentials, file paths, and launch parameters are locked to
+          prevent runtime state corruption. Only description and default instance assignment may be
+          changed while active.
         </Notice>
       )}
 
@@ -281,20 +352,19 @@ function ServerSettingsForm({
             <Input
               label="Server Name"
               value={name}
-              error={mergedErrors.name}
+              disabled={isServerLocked}
+              error={errors.name}
               onChange={e => {
                 setName(e.target.value);
-                clearFieldError('name');
               }}
             />
             <Input
               label="Description"
               placeholder="Instance notes or purpose"
               value={description}
-              error={mergedErrors.description}
+              error={errors.description}
               onChange={e => {
                 setDescription(e.target.value);
-                clearFieldError('description');
               }}
             />
           </div>
@@ -310,33 +380,21 @@ function ServerSettingsForm({
         </div>
       </Card>
 
-      {/* Network & Ports Card */}
+      {/* Network & BattlEye RCON Card */}
       <Card
-        title="Network & Port Assignments"
-        subtitle="UDP and TCP listening ports for DayZ game engine, Steam A2S, and BattlEye RCON"
+        title="Network & BattlEye RCON"
+        subtitle="UDP listening port for DayZ game engine and BattlEye RCON configuration"
       >
         <div className="p-6 space-y-4">
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <Input
               label="Game Port (UDP)"
               type="number"
               value={gamePort}
               disabled={isServerLocked}
-              error={mergedErrors.gamePort}
+              error={errors.gamePort}
               onChange={e => {
                 setGamePort(Number(e.target.value));
-                clearFieldError('gamePort');
-              }}
-            />
-            <Input
-              label="Steam Query Port (A2S)"
-              type="number"
-              value={queryPort}
-              disabled={isServerLocked}
-              error={mergedErrors.queryPort}
-              onChange={e => {
-                setQueryPort(Number(e.target.value));
-                clearFieldError('queryPort');
               }}
             />
             <Input
@@ -344,71 +402,57 @@ function ServerSettingsForm({
               type="number"
               value={rconPort}
               disabled={isServerLocked}
-              error={mergedErrors.rconPort}
+              error={errors.rconPort}
               onChange={e => {
                 setRconPort(Number(e.target.value));
-                clearFieldError('rconPort');
+              }}
+            />
+            <Input
+              label="BattlEye RCON Bind IP"
+              type="text"
+              placeholder="127.0.0.1"
+              value={rconIp}
+              disabled={isServerLocked}
+              error={errors.rconIp}
+              onChange={e => {
+                setRconIp(e.target.value);
+              }}
+            />
+            <PasswordInput
+              id="server-rcon-password"
+              label="BattlEye RCON Password"
+              placeholder="Min 6 characters"
+              value={rconPassword}
+              disabled={isServerLocked}
+              error={errors.rconPassword}
+              onChange={e => {
+                setRconPassword(e.target.value);
               }}
             />
           </div>
           {isServerLocked && (
             <p className="text-xs text-[var(--color-text-muted)] italic">
-              Port allocation cannot be altered while the server process is active.
+              Network ports, RCON bind IP, and RCON password cannot be altered while the server
+              process is active.
             </p>
           )}
-        </div>
-      </Card>
-
-      {/* Security & RCON Card */}
-      <Card
-        title="Security & BattlEye RCON"
-        subtitle="Administrative access credentials for real-time game console supervision"
-      >
-        <div className="p-6 space-y-4">
-          <PasswordInput
-            label="New RCON Password"
-            placeholder="Leave blank to keep existing password"
-            value={rconPassword}
-            error={mergedErrors.rconPassword}
-            onChange={e => {
-              setRconPassword(e.target.value);
-              clearFieldError('rconPassword');
-            }}
-          />
-          <p className="text-xs text-[var(--color-text-muted)]">
-            BattlEye RCON requires passwords with a minimum of 6 characters. Passwords are saved in
-            the database and synchronized to <code className="font-mono text-xs">beserver.cfg</code>
-            .
-          </p>
         </div>
       </Card>
 
       {/* Storage & Paths Card */}
       <StoragePathsCard
         installPath={installPath}
-        profilePath={profilePath}
         missionPath={missionPath}
         isServerLocked={isServerLocked}
         isValidating={validatePathsMutation.isPending}
-        installPathError={mergedErrors.installPath}
-        profilePathError={mergedErrors.profilePath}
-        missionPathError={mergedErrors.missionPath}
+        installPathError={errors.installPath}
+        missionPathError={errors.missionPath}
         validationResult={validationResult}
         onChangeInstallPath={value => {
           setInstallPath(value);
-          clearFieldError('installPath');
         }}
-        onChangeProfilePath={value => {
-          setProfilePath(value);
-          clearFieldError('profilePath');
-        }}
-        onChangeMissionPath={value => {
+        onMissionPathChange={value => {
           setMissionPath(value);
-          clearFieldError('missionPath');
-        }}
-        onSelectMission={nextMissionPath => {
-          setMissionPath(nextMissionPath);
-          clearFieldError('missionPath');
         }}
         onValidatePaths={handleValidatePaths}
       />
@@ -422,6 +466,7 @@ function ServerSettingsForm({
           <Input
             label="CLI Arguments"
             value={launchParameters}
+            disabled={isServerLocked}
             placeholder="-cpuCount=4 -doLogs -adminLog -netLog"
             onChange={e => setLaunchParameters(e.target.value)}
           />
@@ -431,13 +476,6 @@ function ServerSettingsForm({
           </p>
         </div>
       </Card>
-
-      {/* Save Bar */}
-      <div className="flex justify-end pt-4">
-        <Button variant="primary" type="submit" leftIcon={Save} isLoading={isSaving}>
-          Save changes
-        </Button>
-      </div>
     </form>
   );
 }
@@ -455,18 +493,9 @@ export function ServerSettingsView() {
 
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const [serverFieldErrors, setServerFieldErrors] = useState<Record<string, string>>({});
+  const [formHasChanges, setFormHasChanges] = useState(false);
   const updateInFlightRef = useRef(false);
   const deleteInFlightRef = useRef(false);
-
-  const clearServerFieldError = (field: string) => {
-    setServerFieldErrors(prev => {
-      if (!prev[field]) return prev;
-      const next = { ...prev };
-      delete next[field];
-      return next;
-    });
-  };
 
   // Delete Mutation declared ahead of detail query to guard active query state
   const deleteMutation = useMutation({
@@ -537,15 +566,9 @@ export function ServerSettingsView() {
         queryClient.setQueryData(serverQueryKeys.detail(activeServerId), updatedServer);
       }
       queryClient.invalidateQueries({ queryKey: serverQueryKeys.list() });
-      setServerFieldErrors({});
       notifySuccess('SERVER_UPDATED', { name: updatedServer.name });
     },
     onError: (err: Error) => {
-      const resolvedFields = resolveFieldErrors(extractApiFieldErrors(err));
-      if (Object.keys(resolvedFields).length > 0) {
-        setServerFieldErrors(resolvedFields);
-        return;
-      }
       notifyApiError(err, 'Update Failed');
     },
     onSettled: () => {
@@ -553,10 +576,10 @@ export function ServerSettingsView() {
     },
   });
 
-  const handleSave = (payload: UpdateServerDto) => {
+  const handleSave = (payload: UpdateServerDto, callbacks: ServerSaveCallbacks) => {
     if (updateMutation.isPending || updateInFlightRef.current) return;
     updateInFlightRef.current = true;
-    updateMutation.mutate(payload);
+    updateMutation.mutate(payload, { onSuccess: callbacks.onSaved, onError: callbacks.onError });
   };
 
   const handleConfirmDelete = () => {
@@ -619,26 +642,41 @@ export function ServerSettingsView() {
               <StatusTag status={statusPresentation.tagStatus} label={statusPresentation.label} />
             </div>
             <p className="mt-1 text-sm text-[var(--color-text-secondary)]">
-              Manage ports, execution flags, security credentials, and file paths for{' '}
+              Manage ports, execution flags, BattlEye RCON, file paths, and serverDZ.cfg for{' '}
               <span className="font-semibold text-[var(--color-text-main)]">{detail.name}</span>.
             </p>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-3">
             <Button variant="secondary" leftIcon={Plus} onClick={() => setIsCreateModalOpen(true)}>
               Add new server
             </Button>
+            <SaveButton
+              type="submit"
+              form="server-settings-form"
+              leftIcon={Save}
+              hasChanges={formHasChanges}
+              isPending={updateMutation.isPending}
+            >
+              Save changes
+            </SaveButton>
           </div>
         </div>
 
         {/* Structured Configuration Form */}
         <ServerSettingsForm
-          key={detail.id}
+          key={`form-${detail.id}`}
           detail={detail}
           onSave={handleSave}
           isSaving={updateMutation.isPending}
-          serverFieldErrors={serverFieldErrors}
-          onClearServerFieldError={clearServerFieldError}
+          onHasChangesChange={setFormHasChanges}
+        />
+
+        <ServerConfigCard
+          key={`config-${detail.id}`}
+          serverId={detail.id}
+          serverName={detail.name}
+          isServerRunning={isServerLocked}
         />
 
         {/* Danger Zone */}

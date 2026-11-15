@@ -10,7 +10,6 @@ import {
   useLayoutStore,
   useNavigationContext,
 } from '@aegis/web/core';
-import { useAuth } from '@aegis/web/features/auth';
 
 import { Logo } from './Logo';
 import { ServerSelector } from './ServerSelector';
@@ -21,7 +20,7 @@ PRIMARY NAVIGATION (SIDEBAR)
 Architectural Note:
 - Responsive: Drawer off-canvas on mobile, fixed rail on desktop.
 - Context-Aware: Single polymorphic shell driven by useNavigationContext().
-- Modular: Dynamically prunes disabled subsystems based on feature flags and RBAC.
+- Modular: Dynamically prunes disabled subsystems based on feature flags.
 ==================================================================== */
 interface SidebarSectionItem {
   to: string;
@@ -145,7 +144,6 @@ function SidebarContent({
 }
 
 export function Sidebar() {
-  const { user } = useAuth();
   const { isEnabled } = useFeatureFlags();
   const { isMobileSidebarOpen, closeMobileSidebar } = useLayoutStore();
   const { activeServer } = useActiveServer();
@@ -200,15 +198,9 @@ export function Sidebar() {
         return null;
       }
 
-      const visibleItems = section.items.filter(item => {
-        if (item.featureFlag && !isEnabled(item.featureFlag)) {
-          return false;
-        }
-        if (item.requiredRole && user?.role !== item.requiredRole) {
-          return false;
-        }
-        return true;
-      });
+      const visibleItems = section.items.filter(
+        item => !item.featureFlag || isEnabled(item.featureFlag),
+      );
 
       if (visibleItems.length === 0) {
         return null;

@@ -4,7 +4,9 @@ import { Check, Globe, Mail, Shield, User } from 'lucide-react';
 import { z } from 'zod';
 
 import type { UserProfileDto } from '@aegis/api-contracts';
-import { Button, Card, Input, Select, type SelectOption, showToast, Tag, Toggle } from '@aegis/ui';
+import { Card, Input, Select, type SelectOption, Tag, Toggle } from '@aegis/ui';
+import { SaveButton } from '@aegis/web/components';
+import { notifyApiError, notifySuccess, useEditableForm } from '@aegis/web/core';
 
 import { useUpdateProfileMutation } from '../api/profile.mutations';
 
@@ -28,15 +30,27 @@ const COMMON_TIMEZONES: { value: string; label: string }[] = [
   { value: 'Pacific/Auckland', label: 'Pacific/Auckland (NZST / NZDT)' },
 ];
 
-function extractErrorMessage(err: unknown, fallback: string): string {
-  if (err && typeof err === 'object') {
-    const record = err as Record<string, unknown>;
-    const response = record.response as Record<string, unknown> | undefined;
-    const data = response?.data as Record<string, unknown> | undefined;
-    if (typeof data?.message === 'string') return data.message;
-    if (typeof record.message === 'string') return record.message;
-  }
-  return fallback;
+interface IdentityValues extends Record<string, unknown> {
+  displayName: string;
+  email: string;
+  timezone: string;
+  timeFormat: '12h' | '24h';
+}
+
+function toProfilePayload(values: IdentityValues) {
+  return {
+    displayName: values.displayName.trim() || null,
+    email: values.email.trim() || null,
+    timezone: values.timezone,
+    timeFormat: values.timeFormat,
+  };
+}
+
+function validateIdentity(values: IdentityValues): Partial<Record<'email', string>> {
+  const email = values.email.trim();
+  return email && !emailSchema.safeParse(email).success
+    ? { email: 'Please enter a valid email address' }
+    : {};
 }
 
 export interface ProfileIdentityCardProps {
@@ -49,10 +63,29 @@ export function ProfileIdentityCard({ profile, isLoading }: ProfileIdentityCardP
   const [email, setEmail] = useState(profile?.email ?? '');
   const [timezone, setTimezone] = useState(profile?.timezone ?? 'UTC');
   const [timeFormat, setTimeFormat] = useState<'12h' | '24h'>(profile?.timeFormat ?? '24h');
-  const [emailError, setEmailError] = useState<string | undefined>();
 
   const updateProfileMutation = useUpdateProfileMutation();
   const inFlightRef = useRef(false);
+
+  const {
+    registerForm,
+    hasChanges,
+    errors: fieldErrors,
+    handleSubmit,
+    reportServerErrors,
+    markSaved,
+  } = useEditableForm({
+    values: { displayName, email, timezone, timeFormat },
+    baseline: {
+      displayName: profile?.displayName ?? '',
+      email: profile?.email ?? '',
+      timezone: profile?.timezone ?? 'UTC',
+      timeFormat: profile?.timeFormat ?? '24h',
+    },
+    toPayload: toProfilePayload,
+    validate: validateIdentity,
+    isPending: updateProfileMutation.isPending,
+  });
 
   const timezoneOptions: SelectOption<string>[] = (() => {
     const opts = COMMON_TIMEZONES.map(tz => ({
@@ -65,57 +98,38 @@ export function ProfileIdentityCard({ profile, isLoading }: ProfileIdentityCardP
     return opts;
   })();
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (updateProfileMutation.isPending || inFlightRef.current) return;
-
-    if (email.trim()) {
-      const emailParse = emailSchema.safeParse(email.trim());
-      if (!emailParse.success) {
-        setEmailError('Please enter a valid email address');
-        return;
-      }
-    }
-    setEmailError(undefined);
+  const submitValidForm = () => {
+    if (inFlightRef.current) return;
     inFlightRef.current = true;
 
-    updateProfileMutation.mutate(
-      {
-        displayName: displayName.trim() || null,
-        email: email.trim() || null,
-        timezone,
-        timeFormat,
+    updateProfileMutation.mutate(toProfilePayload({ displayName, email, timezone, timeFormat }), {
+      onSuccess: () => {
+        markSaved();
+        notifySuccess('PROFILE_UPDATED');
       },
-      {
-        onSuccess: () => {
-          showToast.success(
-            'Profile updated',
-            'Your identity and regional preferences have been saved.',
-          );
-        },
-        onError: (err: unknown) => {
-          showToast.error('Update failed', extractErrorMessage(err, 'Failed to update profile'));
-        },
-        onSettled: () => {
-          inFlightRef.current = false;
-        },
+      onError: (err: unknown) => {
+        reportServerErrors(err);
+        notifyApiError(err, 'Profile Update Failed');
       },
-    );
+      onSettled: () => {
+        inFlightRef.current = false;
+      },
+    });
   };
 
-  let roleColor: 'danger' | 'amber' | 'gray' = 'gray';
-  if (profile?.role === 'admin') {
-    roleColor = 'danger';
-  } else if (profile?.role === 'moderator') {
-    roleColor = 'amber';
-  }
+  const roleColor = 'danger' as const;
 
   return (
     <Card
       title="Identity & Regional Settings"
       subtitle="Manage your operator callsign, contact credentials, and localized temporal display."
     >
-      <form noValidate onSubmit={handleSubmit} className="space-y-6">
+      <form
+        ref={registerForm}
+        noValidate
+        onSubmit={e => handleSubmit(e, submitValidForm)}
+        className="space-y-6"
+      >
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <span className="block text-xs font-semibold text-[var(--color-text-muted)] uppercase tracking-wider mb-2">
@@ -139,11 +153,11 @@ export function ProfileIdentityCard({ profile, isLoading }: ProfileIdentityCardP
             <div className="flex items-center gap-2 p-2.5 rounded-lg border border-[var(--color-border-subtle)] bg-[var(--color-surface-subtle)]">
               <Shield className="w-4 h-4 text-[var(--color-text-muted)] shrink-0" />
               <Tag color={roleColor} variant="subtle">
-                {(profile?.role ?? 'viewer').toUpperCase()}
+                {(profile?.role ?? 'admin').toUpperCase()}
               </Tag>
             </div>
             <p className="mt-1 text-xs text-[var(--color-text-muted)]">
-              Role permissions are managed globally in Operators settings.
+              Administrator accounts have full permissions across all console operations.
             </p>
           </div>
         </div>
@@ -155,7 +169,10 @@ export function ProfileIdentityCard({ profile, isLoading }: ProfileIdentityCardP
               label="Display Name (Callsign)"
               placeholder="e.g. Major Kovac"
               value={displayName}
-              onChange={e => setDisplayName(e.target.value)}
+              error={fieldErrors.displayName}
+              onChange={e => {
+                setDisplayName(e.target.value);
+              }}
               disabled={isLoading || updateProfileMutation.isPending}
               leftIcon={User}
             />
@@ -173,9 +190,8 @@ export function ProfileIdentityCard({ profile, isLoading }: ProfileIdentityCardP
               value={email}
               onChange={e => {
                 setEmail(e.target.value);
-                if (emailError) setEmailError(undefined);
               }}
-              error={emailError}
+              error={fieldErrors.email}
               disabled={isLoading || updateProfileMutation.isPending}
               leftIcon={Mail}
             />
@@ -192,8 +208,11 @@ export function ProfileIdentityCard({ profile, isLoading }: ProfileIdentityCardP
               label="Regional Timezone"
               options={timezoneOptions}
               value={timezone}
+              error={fieldErrors.timezone}
               onChange={val => {
-                if (val) setTimezone(val);
+                if (val) {
+                  setTimezone(val);
+                }
               }}
               disabled={isLoading || updateProfileMutation.isPending}
               leftIcon={Globe}
@@ -214,15 +233,14 @@ export function ProfileIdentityCard({ profile, isLoading }: ProfileIdentityCardP
         </div>
 
         <div className="flex justify-end pt-4 border-t border-[var(--color-border-subtle)]">
-          <Button
+          <SaveButton
             type="submit"
-            variant="primary"
-            isLoading={updateProfileMutation.isPending}
-            disabled={isLoading}
+            hasChanges={hasChanges && !isLoading}
+            isPending={updateProfileMutation.isPending}
             leftIcon={Check}
           >
             Save Preferences
-          </Button>
+          </SaveButton>
         </div>
       </form>
     </Card>

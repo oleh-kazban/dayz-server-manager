@@ -22,6 +22,8 @@
       "@aegis/api-contracts/*": ["libs/api-contracts/src/*"],
       "@aegis/database": ["libs/database/src/index.ts"],
       "@aegis/database/*": ["libs/database/src/*"],
+      "@aegis/dayz-config": ["libs/dayz-config/src/index.ts"],
+      "@aegis/dayz-config/*": ["libs/dayz-config/src/*"],
       "@aegis/ui": ["libs/ui/src/index.ts"],
       "@aegis/ui/*": ["libs/ui/src/*"],
       "@aegis/web/*": ["apps/web/src/*"]

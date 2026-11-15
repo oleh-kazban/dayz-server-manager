@@ -87,6 +87,9 @@ describe('Server Contracts', () => {
       profilePath: 'C:\\DayZServer\\profiles',
       missionPath: 'mpmissions\\dayzOffline.enoch',
       launchParameters: '-cpuCount=4',
+      maxPlayers: 60,
+      rconIp: '127.0.0.1',
+      rconPassword: null,
       createdAt: new Date(),
       updatedAt: new Date(),
     };
@@ -139,22 +142,26 @@ describe('Server Contracts', () => {
     }
   });
 
-  it('validates updateServerSchema and detects port collisions on partial update', () => {
+  it('validates updateServerSchema and detects game/RCON port collisions on partial update', () => {
     const validUpdate = {
       name: 'Renamed Server',
       gamePort: 2402,
-      queryPort: 27017,
+      rconPort: 2410,
     };
     expect(updateServerSchema.safeParse(validUpdate).success).toBe(true);
 
-    const collidingUpdate = {
-      gamePort: 2402,
-      queryPort: 2402,
-    };
-    const parsed = updateServerSchema.safeParse(collidingUpdate);
+    const parsed = updateServerSchema.safeParse({ gamePort: 2402, rconPort: 2402 });
     expect(parsed.success).toBe(false);
     if (!parsed.success) {
       expect(parsed.error.issues[0].message).toContain('must not conflict');
+    }
+  });
+
+  it('drops file-owned queryPort from update payloads instead of comparing it', () => {
+    const parsed = updateServerSchema.safeParse({ gamePort: 2402, queryPort: 2402 });
+    expect(parsed.success).toBe(true);
+    if (parsed.success) {
+      expect(parsed.data).toEqual({ gamePort: 2402 });
     }
   });
 });

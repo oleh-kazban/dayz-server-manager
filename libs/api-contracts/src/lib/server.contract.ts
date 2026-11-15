@@ -66,6 +66,33 @@ export const launchParametersSchema = z
   .max(1024)
   .refine(val => !val.includes('\0'), 'Null bytes are forbidden');
 
+const IPV4_REGEX =
+  /^(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]\d|\d)(?:\.(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]\d|\d)){3}$/;
+const RCON_PASSWORD_ASCII_REGEX = /^[\x21\x23-\x26\x28-\x5b\x5d-\x7e]+$/;
+
+function noControlBreakChars(val: string): boolean {
+  return !/[\r\n\0]/.test(val);
+}
+
+export const serverNameSchema = z
+  .string()
+  .min(1, 'Name is required')
+  .max(64)
+  .refine(noControlBreakChars, 'Control characters (CR, LF, null bytes) are forbidden');
+
+export const rconIpSchema = z
+  .string()
+  .regex(IPV4_REGEX, 'RCON IP must be a valid IPv4 address (e.g. 127.0.0.1)');
+
+export const rconPasswordSchema = z
+  .string()
+  .min(6, 'RCON password must be between 6 and 32 characters')
+  .max(32, 'RCON password must be between 6 and 32 characters')
+  .regex(
+    RCON_PASSWORD_ASCII_REGEX,
+    'RCON password must use printable ASCII characters without whitespace, quotes, or backslashes',
+  );
+
 export const serverIdParamSchema = z.object({
   id: z.string().uuid('Invalid server ID format. Must be a valid UUID.'),
 });
@@ -76,55 +103,69 @@ export const serverDetailSchema = serverSummarySchema.extend({
   profilePath: safePathSchema,
   missionPath: safePathSchema,
   launchParameters: launchParametersSchema.nullable().optional(),
+  maxPlayers: z.number().int().min(1).max(200),
+  rconIp: rconIpSchema,
+  rconPassword: z.string().nullable(),
 });
 export type ServerDetailDto = z.infer<typeof serverDetailSchema>;
 
 export const createServerSchema = z
   .object({
-    name: z.string().min(1, 'Name is required').max(64),
+    name: serverNameSchema,
     description: z.string().max(256).optional(),
     installPath: safePathSchema,
-    profilePath: safePathSchema,
-    missionPath: safePathSchema,
+    profilePath: safePathSchema.optional(),
+    missionPath: safePathSchema.optional(),
     gamePort: z.number().int().min(1024).max(65535).default(2302),
-    queryPort: z.number().int().min(1024).max(65535).default(27016),
+    queryPort: z.number().int().min(1024).max(65535).optional(),
     rconPort: z.number().int().min(1024).max(65535).default(2310),
-    rconPassword: z.string().min(6).optional(),
+    rconIp: rconIpSchema.default('127.0.0.1'),
+    maxPlayers: z
+      .number()
+      .int()
+      .min(1, 'Max players must be between 1 and 200')
+      .max(200, 'Max players must be between 1 and 200')
+      .optional(),
+    rconPassword: rconPasswordSchema.optional(),
     launchParameters: launchParametersSchema.optional(),
     isDefault: z.boolean().optional(),
   })
   .refine(
-    data =>
-      data.gamePort !== data.queryPort &&
-      data.gamePort !== data.rconPort &&
-      data.queryPort !== data.rconPort,
+    data => {
+      if (data.gamePort === data.rconPort) {
+        return false;
+      }
+      if (data.queryPort === undefined) {
+        return true;
+      }
+      return data.queryPort !== data.gamePort && data.queryPort !== data.rconPort;
+    },
     {
       message: 'gamePort, queryPort, and rconPort must all be distinct ports',
       path: ['gamePort'],
     },
   );
-export type CreateServerDto = z.infer<typeof createServerSchema>;
+export type CreateServerDto = z.input<typeof createServerSchema>;
 
 export const updateServerSchema = z
   .object({
-    name: z.string().min(1).max(64).optional(),
+    name: serverNameSchema.optional(),
     description: z.string().max(256).nullable().optional(),
     installPath: safePathSchema.optional(),
-    profilePath: safePathSchema.optional(),
     missionPath: safePathSchema.optional(),
     gamePort: z.number().int().min(1024).max(65535).optional(),
-    queryPort: z.number().int().min(1024).max(65535).optional(),
     rconPort: z.number().int().min(1024).max(65535).optional(),
-    rconPassword: z.string().min(6).nullable().optional(),
+    rconIp: rconIpSchema.optional(),
+    rconPassword: rconPasswordSchema.nullable().optional(),
     launchParameters: launchParametersSchema.nullable().optional(),
     isDefault: z.boolean().optional(),
   })
   .refine(
     data => {
-      const ports = [data.gamePort, data.queryPort, data.rconPort].filter(
-        (p): p is number => p !== undefined,
-      );
-      return new Set(ports).size === ports.length;
+      if (data.gamePort === undefined || data.rconPort === undefined) {
+        return true;
+      }
+      return data.gamePort !== data.rconPort;
     },
     {
       message: 'Specified ports must not conflict with one another',

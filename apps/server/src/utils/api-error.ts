@@ -15,6 +15,8 @@ const HTTP_STATUS_PHRASES: Record<number, string> = {
   403: 'Forbidden',
   404: 'Not Found',
   409: 'Conflict',
+  413: 'Payload Too Large',
+  422: 'Unprocessable Entity',
   429: 'Too Many Requests',
   500: 'Internal Server Error',
   502: 'Bad Gateway',
@@ -45,34 +47,58 @@ interface RawZodIssue {
   maximum?: number;
   origin?: string;
   type?: string;
+  format?: string;
 }
 
 function isNumericField(fieldKey: string, rawIssue: RawZodIssue): boolean {
   return rawIssue.origin === 'number' || rawIssue.type === 'number' || PORT_FIELDS.has(fieldKey);
 }
 
+function mapTooSmallIssue(
+  isPort: boolean,
+  isNumber: boolean,
+  message: string,
+  minimum: number,
+): ApiFieldError {
+  if (!isNumber && minimum === 1) {
+    return { code: 'REQUIRED', message };
+  }
+  if (isNumber && !isPort) {
+    return { code: 'INVALID_VALUE', message };
+  }
+  return {
+    code: isNumber ? 'NUMBER_TOO_SMALL' : 'STRING_TOO_SHORT',
+    message,
+    params: { min: minimum },
+  };
+}
+
+function mapTooBigIssue(
+  isPort: boolean,
+  isNumber: boolean,
+  message: string,
+  maximum: number,
+): ApiFieldError {
+  if (isNumber && !isPort) {
+    return { code: 'INVALID_VALUE', message };
+  }
+  return {
+    code: isNumber ? 'NUMBER_TOO_LARGE' : 'STRING_TOO_LONG',
+    message,
+    params: { max: maximum },
+  };
+}
+
 function mapBoundIssue(fieldKey: string, rawIssue: RawZodIssue): ApiFieldError | null {
+  const isPort = PORT_FIELDS.has(fieldKey);
   const isNumber = isNumericField(fieldKey, rawIssue);
 
   if (rawIssue.code === 'too_small' && typeof rawIssue.minimum === 'number') {
-    if (!isNumber && rawIssue.minimum === 1) {
-      return { code: 'REQUIRED', message: rawIssue.message };
-    }
-    return {
-      code: isNumber ? 'NUMBER_TOO_SMALL' : 'STRING_TOO_SHORT',
-      message: rawIssue.message,
-      params: { min: rawIssue.minimum },
-    };
+    return mapTooSmallIssue(isPort, isNumber, rawIssue.message, rawIssue.minimum);
   }
-
   if (rawIssue.code === 'too_big' && typeof rawIssue.maximum === 'number') {
-    return {
-      code: isNumber ? 'NUMBER_TOO_LARGE' : 'STRING_TOO_LONG',
-      message: rawIssue.message,
-      params: { max: rawIssue.maximum },
-    };
+    return mapTooBigIssue(isPort, isNumber, rawIssue.message, rawIssue.maximum);
   }
-
   return null;
 }
 
@@ -92,7 +118,8 @@ function mapZodIssueToFieldError(
   }
 
   if (rawIssue.code === 'invalid_format' || rawIssue.code === 'invalid_string') {
-    return { code: 'INVALID_UUID', message: issue.message };
+    const code = rawIssue.format === 'uuid' ? 'INVALID_UUID' : 'INVALID_VALUE';
+    return { code, message: issue.message };
   }
 
   if (rawIssue.code === 'invalid_type') {

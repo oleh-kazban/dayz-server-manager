@@ -48,7 +48,6 @@ describe('Dashboard Component', () => {
       username: 'admin',
       email: 'admin@dayz.local',
       role: 'admin' as const,
-      roles: ['admin' as const],
     },
     isAuthenticated: true,
     login: vi.fn(),

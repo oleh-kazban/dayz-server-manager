@@ -29,7 +29,6 @@ const testUser: AuthUser = {
   username: 'Alex Kovac',
   email: 'alex@dayz.local',
   role: 'admin',
-  roles: ['admin'],
 };
 
 describe('UserProfile', () => {

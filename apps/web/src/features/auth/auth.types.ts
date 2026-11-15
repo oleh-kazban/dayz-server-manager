@@ -1,6 +1,8 @@
 import { z } from 'zod';
 
-export const userRoleSchema = z.enum(['admin', 'moderator', 'viewer']);
+import { userRoleSchema } from '@aegis/api-contracts';
+
+export { userRoleSchema };
 export type UserRole = z.infer<typeof userRoleSchema>;
 
 export const authUserSchema = z.object({
@@ -9,7 +11,6 @@ export const authUserSchema = z.object({
   displayName: z.string().nullable().optional(),
   email: z.string(),
   role: userRoleSchema,
-  roles: z.array(userRoleSchema).optional(),
 });
 export type AuthUser = z.infer<typeof authUserSchema>;
 

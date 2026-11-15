@@ -10,6 +10,7 @@ import * as schema from './schema';
 
 export interface DatabaseOptions {
   dbPath?: string;
+  vaultKeyDir?: string;
 }
 
 export type DsmDatabase = BetterSQLite3Database<typeof schema>;
@@ -40,7 +41,7 @@ export function initDatabase(options: DatabaseOptions = {}): DatabaseInstance {
   sqlite.pragma('busy_timeout = 5000');
 
   // Run declarative migrations
-  runMigrations(sqlite);
+  runMigrations(sqlite, { vaultKeyDir: options.vaultKeyDir });
 
   const db = drizzle(sqlite, { schema });
 

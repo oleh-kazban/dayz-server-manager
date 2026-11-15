@@ -156,7 +156,7 @@ describe('AddModModal', () => {
   });
 
   describe('Tab 1: URL / ID / Collection', () => {
-    it('validates empty input and surfaces STEAM_WORKSHOP_INVALID_INPUT inline', async () => {
+    it('validates empty input and surfaces STEAM_WORKSHOP_INVALID_INPUT inline with a red toast', async () => {
       renderModal();
 
       fireEvent.click(screen.getByRole('button', { name: 'Lookup' }));
@@ -184,6 +184,11 @@ describe('AddModModal', () => {
           screen.getByText('Enter a numeric Workshop ID or a steamcommunity.com Workshop URL.'),
         ).toBeInTheDocument();
       });
+      expect(showToast.error).toHaveBeenCalledWith(
+        'Invalid Workshop Input',
+        'Enter a numeric Workshop ID or a valid steamcommunity.com Workshop URL.',
+        undefined,
+      );
     });
 
     it('resolves a single Workshop item and submits via apiClient.mods.add with markAsInstalled', async () => {
@@ -296,6 +301,11 @@ describe('AddModModal', () => {
       await waitFor(() => {
         expect(screen.getByText('Steam Web API Key Required')).toBeInTheDocument();
       });
+      expect(showToast.error).toHaveBeenCalledWith(
+        'Steam Web API Key Required',
+        'Configure a Steam Web API Key in Steam Settings to search the Workshop.',
+        undefined,
+      );
 
       const settingsLink = screen.getByRole('link', {
         name: /Configure Steam Web API Key in Steam Settings/i,
@@ -400,6 +410,7 @@ describe('AddModModal', () => {
 
       expect(screen.getByText('Mod name is required.')).toBeInTheDocument();
       expect(screen.getByText('Mod folder name is required.')).toBeInTheDocument();
+      expect(screen.getByLabelText('Mod Name')).toHaveFocus();
       expect(apiClient.mods.add).not.toHaveBeenCalled();
 
       fireEvent.change(screen.getByLabelText('Mod Name'), {
@@ -420,6 +431,40 @@ describe('AddModModal', () => {
         });
         expect(mockOnClose).toHaveBeenCalled();
       });
+    });
+
+    it('highlights the conflicting folder inline AND fires a red toast when the API rejects the local mod', async () => {
+      vi.mocked(apiClient.mods.add).mockRejectedValueOnce(
+        new ApiError('Conflict', 409, {
+          statusCode: 409,
+          error: 'Conflict',
+          errorCode: 'MOD_ALREADY_INSTALLED',
+          message: 'Folder already exists',
+          params: { identifier: '@ServerScripts' },
+          fieldErrors: {
+            folderName: { code: 'INVALID_VALUE', message: 'Folder "@ServerScripts" is in use.' },
+          },
+        }),
+      );
+
+      renderModal();
+
+      fireEvent.click(screen.getByRole('tab', { name: /Local Mod/i }));
+      fireEvent.change(screen.getByLabelText('Mod Name'), { target: { value: 'Server Scripts' } });
+      fireEvent.change(screen.getByLabelText('@Folder Name'), {
+        target: { value: '@ServerScripts' },
+      });
+      fireEvent.click(screen.getByRole('button', { name: 'Add Local Mod' }));
+
+      await waitFor(() => {
+        expect(screen.getByText('Folder "@ServerScripts" is in use.')).toBeInTheDocument();
+      });
+      expect(showToast.error).toHaveBeenCalledWith(
+        'Mod Already Installed',
+        'Mod "@ServerScripts" is already configured on this server.',
+        undefined,
+      );
+      expect(mockOnClose).not.toHaveBeenCalled();
     });
 
     it('guards against rapid duplicate submit clicks across UrlLookupTab, WorkshopSearchTab, and LocalModTab (QA-01)', async () => {

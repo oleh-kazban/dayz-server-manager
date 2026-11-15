@@ -5,8 +5,6 @@ import { useAuth, type UserRole } from '@aegis/web/features/auth';
 
 const ROLE_LABELS: Record<UserRole, string> = {
   admin: 'Administrator',
-  moderator: 'Moderator',
-  viewer: 'Viewer',
 };
 
 export function UserProfile() {

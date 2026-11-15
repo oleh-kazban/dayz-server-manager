@@ -26,8 +26,8 @@ export function Card({
     >
       {/* Header */}
       {hasHeader && (
-        <div className="flex items-start justify-between gap-4">
-          <div>
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div className="min-w-0">
             {title && (
               <TitleTag className="text-base font-semibold tracking-tight text-[var(--color-text-main)]">
                 {title}
@@ -37,7 +37,7 @@ export function Card({
               <p className="mt-0.5 text-xs text-[var(--color-text-muted)]">{subtitle}</p>
             )}
           </div>
-          {actions && <div className="flex items-center gap-2 shrink-0">{actions}</div>}
+          {actions && <div className="flex flex-wrap items-center gap-2 max-w-full">{actions}</div>}
         </div>
       )}
 

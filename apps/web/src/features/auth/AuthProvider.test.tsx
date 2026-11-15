@@ -50,7 +50,6 @@ describe('AuthProvider & useAuth', () => {
       username: 'storedAdmin',
       email: 'stored@dayz.local',
       role: 'admin',
-      roles: ['admin'],
     };
     authStorage.set(existingUser, false, { accessToken: 'existing-jwt' });
 
@@ -82,7 +81,6 @@ describe('AuthProvider & useAuth', () => {
         username: 'syncAdmin',
         email: 'sync@dayz.local',
         role: 'admin',
-        roles: ['admin'],
       },
       false,
       { accessToken: 'sync-jwt-token' },
@@ -180,7 +178,6 @@ describe('AuthProvider & useAuth', () => {
       username: 'refreshUser',
       email: 'refresh@dayz.local',
       role: 'admin',
-      roles: ['admin'],
     };
 
     it('logs out and returns null when refresh token is missing', async () => {

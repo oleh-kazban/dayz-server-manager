@@ -74,6 +74,7 @@ specs/
 references/
 GEMINI.md
 .agents/
+.claude/
 ...sandbox/
 
 notes.md

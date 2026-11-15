@@ -23,7 +23,7 @@ export const registerProfileRoutes: FastifyPluginAsync = async fastify => {
         username: user.username,
         displayName: user.displayName ?? null,
         email: user.email ?? null,
-        role: user.role,
+        role: 'admin' as const,
         timezone: user.timezone ?? 'UTC',
         timeFormat: user.timeFormat ?? '24h',
         createdAt: user.createdAt.toISOString(),
@@ -53,7 +53,11 @@ export const registerProfileRoutes: FastifyPluginAsync = async fastify => {
         try {
           Intl.DateTimeFormat(undefined, { timeZone: timezone });
         } catch {
-          return sendApiError(reply, 400, 'VALIDATION_FAILED', 'Invalid IANA timezone identifier');
+          const message = 'Invalid IANA timezone identifier';
+          return sendApiError(reply, 400, 'VALIDATION_FAILED', {
+            message,
+            fieldErrors: { timezone: { code: 'INVALID_VALUE', message } },
+          });
         }
       }
 
@@ -92,7 +96,7 @@ export const registerProfileRoutes: FastifyPluginAsync = async fastify => {
         username: updated.username,
         displayName: updated.displayName ?? null,
         email: updated.email ?? null,
-        role: updated.role,
+        role: 'admin' as const,
         timezone: updated.timezone ?? 'UTC',
         timeFormat: updated.timeFormat ?? '24h',
         createdAt: updated.createdAt.toISOString(),
@@ -124,12 +128,11 @@ export const registerProfileRoutes: FastifyPluginAsync = async fastify => {
 
       // GUARD-01: verify currentPassword before any mutation
       if (!verifyPassword(currentPassword, user.passwordHash)) {
-        return sendApiError(
-          reply,
-          400,
-          'AUTH_PASSWORD_MISMATCH',
-          'Current password does not match',
-        );
+        const message = 'Current password does not match';
+        return sendApiError(reply, 400, 'AUTH_PASSWORD_MISMATCH', {
+          message,
+          fieldErrors: { currentPassword: { code: 'AUTH_PASSWORD_MISMATCH', message } },
+        });
       }
 
       // Update password hash

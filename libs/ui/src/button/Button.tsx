@@ -13,27 +13,27 @@ export type { ButtonIcon, ButtonProps, ButtonVariant };
 const VARIANT_CLASSES: Record<ButtonVariant, { standard: string; destructive: string }> = {
   primary: {
     standard:
-      'bg-[var(--color-primary)] text-[var(--color-primary-fg)] enabled:hover:bg-[var(--color-primary-hover)] enabled:active:opacity-95 shadow-xs border border-transparent focus-visible:ring-[var(--color-primary)]',
+      'bg-[var(--color-primary)] text-[var(--color-primary-fg)] enabled:not-aria-disabled:hover:bg-[var(--color-primary-hover)] enabled:not-aria-disabled:active:opacity-95 shadow-xs border border-transparent focus-visible:ring-[var(--color-primary)]',
     destructive:
-      'bg-[var(--color-status-danger)] text-[var(--color-status-danger-fg)] enabled:hover:opacity-90 enabled:active:opacity-95 shadow-xs border border-transparent focus-visible:ring-[var(--color-status-danger)]',
+      'bg-[var(--color-status-danger)] text-[var(--color-status-danger-fg)] enabled:not-aria-disabled:hover:opacity-90 enabled:not-aria-disabled:active:opacity-95 shadow-xs border border-transparent focus-visible:ring-[var(--color-status-danger)]',
   },
   secondary: {
     standard:
-      'border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text-secondary)] enabled:hover:bg-[var(--color-surface-hover)] enabled:hover:text-[var(--color-text-main)] enabled:active:bg-[var(--color-surface-subtle)] shadow-xs focus-visible:ring-[var(--color-primary)]',
+      'border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text-secondary)] enabled:not-aria-disabled:hover:bg-[var(--color-surface-hover)] enabled:not-aria-disabled:hover:text-[var(--color-text-main)] enabled:not-aria-disabled:active:bg-[var(--color-surface-subtle)] shadow-xs focus-visible:ring-[var(--color-primary)]',
     destructive:
-      'border border-[var(--color-status-danger-border)] bg-[var(--color-surface)] text-[var(--color-status-danger)] enabled:hover:bg-[var(--color-status-danger-light)] enabled:active:opacity-90 shadow-xs focus-visible:ring-[var(--color-status-danger)]',
+      'border border-[var(--color-status-danger-border)] bg-[var(--color-surface)] text-[var(--color-status-danger)] enabled:not-aria-disabled:hover:bg-[var(--color-status-danger-light)] enabled:not-aria-disabled:active:opacity-90 shadow-xs focus-visible:ring-[var(--color-status-danger)]',
   },
   ghost: {
     standard:
-      'border border-transparent bg-transparent text-[var(--color-text-secondary)] enabled:hover:bg-[var(--color-surface-hover)] enabled:hover:text-[var(--color-text-main)] enabled:active:bg-[var(--color-surface-subtle)] focus-visible:ring-[var(--color-primary)]',
+      'border border-transparent bg-transparent text-[var(--color-text-secondary)] enabled:not-aria-disabled:hover:bg-[var(--color-surface-hover)] enabled:not-aria-disabled:hover:text-[var(--color-text-main)] enabled:not-aria-disabled:active:bg-[var(--color-surface-subtle)] focus-visible:ring-[var(--color-primary)]',
     destructive:
-      'border border-transparent bg-transparent text-[var(--color-status-danger)] enabled:hover:bg-[var(--color-status-danger-light)] enabled:active:opacity-90 focus-visible:ring-[var(--color-status-danger)]',
+      'border border-transparent bg-transparent text-[var(--color-status-danger)] enabled:not-aria-disabled:hover:bg-[var(--color-status-danger-light)] enabled:not-aria-disabled:active:opacity-90 focus-visible:ring-[var(--color-status-danger)]',
   },
   text: {
     standard:
-      'border-0 bg-transparent text-[var(--color-primary)] enabled:hover:underline enabled:active:opacity-80 p-0 h-auto font-medium shadow-none focus-visible:ring-1 focus-visible:ring-[var(--color-primary)]',
+      'border-0 bg-transparent text-[var(--color-primary)] enabled:not-aria-disabled:hover:underline enabled:not-aria-disabled:active:opacity-80 p-0 h-auto font-medium shadow-none focus-visible:ring-1 focus-visible:ring-[var(--color-primary)]',
     destructive:
-      'border-0 bg-transparent text-[var(--color-status-danger)] enabled:hover:underline enabled:active:opacity-80 p-0 h-auto font-medium shadow-none focus-visible:ring-1 focus-visible:ring-[var(--color-status-danger)]',
+      'border-0 bg-transparent text-[var(--color-status-danger)] enabled:not-aria-disabled:hover:underline enabled:not-aria-disabled:active:opacity-80 p-0 h-auto font-medium shadow-none focus-visible:ring-1 focus-visible:ring-[var(--color-status-danger)]',
   },
 };
 
@@ -114,7 +114,7 @@ export function Button({
       type={type}
       disabled={isButtonDisabled}
       aria-busy={isLoading}
-      className={`inline-flex items-center whitespace-nowrap select-none transition-colors duration-150 cursor-pointer disabled:cursor-not-allowed disabled:opacity-50 disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-surface)] ${alignmentClass} ${variantStyle} ${dimensionClass} ${className}`.trim()}
+      className={`inline-flex items-center whitespace-nowrap select-none transition-colors duration-150 cursor-pointer disabled:cursor-not-allowed disabled:opacity-50 disabled:shadow-none aria-disabled:cursor-not-allowed aria-disabled:opacity-50 aria-disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-surface)] ${alignmentClass} ${variantStyle} ${dimensionClass} ${className}`.trim()}
     >
       {isLoading ? (
         <Loader2 className={`animate-spin ${ICON_CLASS}`} aria-hidden="true" />
