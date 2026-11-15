@@ -47,7 +47,7 @@ import {
   toLf,
 } from '@aegis/dayz-config';
 
-import { ConfigStorageError, sha256Hex, writeFileAtomically } from './config-atomic-writer';
+import { ConfigStorageError, writeFileAtomically } from './config-atomic-writer';
 import {
   type Clock,
   type ConfigEditLockService,
@@ -126,6 +126,15 @@ interface RevisionRow {
   createdAt: Date;
   displayName: string | null;
   username: string | null;
+}
+
+/**
+ * Version token of the file bytes on disk (like an HTTP ETag): detects edits made outside DSM
+ * between load and save. It is not credential storage — the same admin receives the full
+ * plaintext file, so the digest reveals nothing beyond what is already returned.
+ */
+function configVersionHash(bytes: Buffer): string {
+  return crypto.createHash('sha256').update(bytes).digest('hex');
 }
 
 function stripLeadingBomChar(text: string): string {
@@ -310,7 +319,7 @@ export class ServerDzConfigService {
     }
 
     const buffer = readTarget(targetPath);
-    const contentHash = sha256Hex(buffer);
+    const contentHash = configVersionHash(buffer);
     const decoded = decodeConfigBuffer(buffer);
     const content = decoded.lf;
     const projection = extractProjection(analyzeServerConfig(content).document);
@@ -473,7 +482,7 @@ export class ServerDzConfigService {
     }
 
     const diskBuffer = readTarget(targetPath);
-    if (sha256Hex(diskBuffer) !== baseHash) {
+    if (configVersionHash(diskBuffer) !== baseHash) {
       throw new ConfigStorageError(
         'CONFIG_HASH_MISMATCH',
         'serverDZ.cfg changed on disk since it was loaded.',
@@ -511,6 +520,7 @@ export class ServerDzConfigService {
     }
 
     const projection = extractProjection(request.document);
+    const contentHash = configVersionHash(bytes);
     const written = writeFileAtomically({
       targetPath: request.targetPath,
       content: bytes,
@@ -524,7 +534,7 @@ export class ServerDzConfigService {
       const revisionId = this.insertRevision({
         serverId: server.id,
         content: request.lf,
-        contentHash: written.contentHash,
+        contentHash,
         source: request.source,
         userId: request.actor.userId,
       });
@@ -556,7 +566,7 @@ export class ServerDzConfigService {
         serverId: server.id,
         source: request.source,
         revisionId,
-        contentHash: written.contentHash,
+        contentHash,
         written: written.written,
         backupPath: written.backupPath,
       },
@@ -565,7 +575,7 @@ export class ServerDzConfigService {
 
     const revision = this.findRevisionRow(server.id, revisionId);
     return saveServerDzConfigResponseSchema.parse({
-      contentHash: written.contentHash,
+      contentHash,
       projection,
       diagnostics: request.diagnostics,
       revision: toRevisionSummary(revision),

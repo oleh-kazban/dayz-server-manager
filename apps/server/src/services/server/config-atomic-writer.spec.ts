@@ -1,4 +1,3 @@
-import crypto from 'node:crypto';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -62,11 +61,7 @@ describe('config-atomic-writer', () => {
       fileName: 'serverDZ.cfg',
       backupRootDir,
     });
-    expect(first).toEqual({
-      written: true,
-      backupPath: null,
-      contentHash: crypto.createHash('sha256').update(contentV1, 'utf8').digest('hex'),
-    });
+    expect(first).toEqual({ written: true, backupPath: null });
     expect(fs.readFileSync(targetPath, 'utf8')).toBe(contentV1);
     expect(fs.readdirSync(targetDir)).toEqual(['serverDZ.cfg']);
 
@@ -78,7 +73,7 @@ describe('config-atomic-writer', () => {
       fileName: 'serverDZ.cfg',
       backupRootDir,
     });
-    expect(same).toEqual({ written: false, backupPath: null, contentHash: first.contentHash });
+    expect(same).toEqual({ written: false, backupPath: null });
     expect(fs.existsSync(path.join(backupRootDir, serverId))).toBe(false);
 
     // Updating bytes captures pre-commit backup with v1 bytes and replaces target
@@ -92,15 +87,12 @@ describe('config-atomic-writer', () => {
     });
     expect(updated.written).toBe(true);
     expect(updated.backupPath).toBeTruthy();
-    expect(updated.contentHash).toBe(
-      crypto.createHash('sha256').update(fs.readFileSync(targetPath)).digest('hex'),
-    );
     expect(fs.readFileSync(targetPath, 'utf8')).toBe(contentV2);
     expect(fs.readFileSync(updated.backupPath as string, 'utf8')).toBe(contentV1);
     expect(fs.readdirSync(targetDir)).toEqual(['serverDZ.cfg']);
   });
 
-  it('writes Buffer content byte-for-byte (BOM + CRLF) and hashes the exact bytes', () => {
+  it('writes Buffer content byte-for-byte (BOM + CRLF)', () => {
     const targetPath = path.join(targetDir, 'serverDZ.cfg');
     const bytes = Buffer.concat([
       Buffer.from([0xef, 0xbb, 0xbf]),
@@ -117,7 +109,6 @@ describe('config-atomic-writer', () => {
 
     expect(result.written).toBe(true);
     expect(fs.readFileSync(targetPath).equals(bytes)).toBe(true);
-    expect(result.contentHash).toBe(crypto.createHash('sha256').update(bytes).digest('hex'));
   });
 
   it('maps edit-workflow error codes to their HTTP status and carries params', () => {

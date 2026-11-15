@@ -86,11 +86,6 @@ export interface AtomicWriteOptions {
 export interface AtomicWriteResult {
   written: boolean;
   backupPath: string | null;
-  contentHash: string;
-}
-
-export function sha256Hex(data: Buffer): string {
-  return crypto.createHash('sha256').update(data).digest('hex');
 }
 
 function assertSafeIdentifier(
@@ -308,12 +303,11 @@ export function writeFileAtomically(options: AtomicWriteOptions): AtomicWriteRes
   const exists = assertMutableRegularFile(options.targetPath);
   const nextBuffer =
     typeof options.content === 'string' ? Buffer.from(options.content, 'utf8') : options.content;
-  const contentHash = sha256Hex(nextBuffer);
 
   if (exists) {
     const existingBuffer = fs.readFileSync(options.targetPath);
     if (Buffer.compare(existingBuffer, nextBuffer) === 0) {
-      return { written: false, backupPath: null, contentHash };
+      return { written: false, backupPath: null };
     }
   }
 
@@ -334,7 +328,7 @@ export function writeFileAtomically(options: AtomicWriteOptions): AtomicWriteRes
     writeExclusiveFile(tempPath, nextBuffer, targetMode, platform);
     assertMutableRegularFile(options.targetPath);
     fs.renameSync(tempPath, options.targetPath);
-    return { written: true, backupPath, contentHash };
+    return { written: true, backupPath };
   } catch (err) {
     cleanupUnlinkQuietly(tempPath);
     if (err instanceof ConfigStorageError) {
