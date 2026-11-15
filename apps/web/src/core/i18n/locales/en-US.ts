@@ -281,6 +281,11 @@ export const enUSTranslations: TranslationCatalog = {
     PATH_INVALID_COLON: 'Colons are only permitted in Windows drive letter prefixes.',
     INVALID_TYPE: 'Invalid value provided.',
     INVALID_VALUE: '{{message}}',
+    // Steam path checks run on the host; the server message names the exact problem and path.
+    INVALID_STEAMCMD_PATH: '{{message}}',
+    STORAGE_PATH_INVALID: '{{message}}',
+    STORAGE_PATH_NOT_WRITABLE: '{{message}}',
+    INSUFFICIENT_STORAGE_SPACE: '{{message}}',
     AUTH_PASSWORD_MISMATCH: 'Current password is incorrect.',
   },
   notifications: {

@@ -20,7 +20,7 @@ import {
   verifyVaultKey,
 } from '@aegis/database';
 
-import { steamPathService } from '../services/steam/steam-path.service';
+import { type PathValidationResult, steamPathService } from '../services/steam/steam-path.service';
 import {
   steamRunnerService,
   type SteamSessionStatusType,
@@ -100,37 +100,55 @@ function getOrCreateDefaultSettings(fastify: FastifyInstance): SteamSettings {
   return record;
 }
 
+type SteamPathField = 'steamCmdPath' | 'steamWorkshopPath' | 'steamMetaPath';
+
+const STEAM_PATH_CHECKS: readonly {
+  field: SteamPathField;
+  validate: (value: string) => PathValidationResult;
+  fallbackCode: ApiErrorCode;
+  fallbackMessage: string;
+}[] = [
+  {
+    field: 'steamCmdPath',
+    validate: value => steamPathService.validateSteamCmdPath(value),
+    fallbackCode: 'INVALID_STEAMCMD_PATH',
+    fallbackMessage: 'Invalid SteamCMD binary path',
+  },
+  {
+    field: 'steamWorkshopPath',
+    validate: value => steamPathService.validateStoragePath(value),
+    fallbackCode: 'STORAGE_PATH_NOT_WRITABLE',
+    fallbackMessage: 'Invalid Workshop path',
+  },
+  {
+    field: 'steamMetaPath',
+    validate: value => steamPathService.validateStoragePath(value),
+    fallbackCode: 'STORAGE_PATH_NOT_WRITABLE',
+    fallbackMessage: 'Invalid SteamCMD metadata path',
+  },
+];
+
+/**
+ * Rejects the first invalid path with the toast-level error code and a `fieldErrors` entry
+ * for the offending input, so the client highlights and focuses it (GEMINI.md §5).
+ */
 function validatePathPreconditions(data: UpdateSteamSettingsDto, reply: FastifyReply): boolean {
-  if (data.steamCmdPath !== undefined) {
-    const cmdCheck = steamPathService.validateSteamCmdPath(data.steamCmdPath);
-    if (!cmdCheck.valid) {
-      sendApiError(reply, 400, cmdCheck.errorCode ?? 'INVALID_STEAMCMD_PATH', {
-        message: cmdCheck.message ?? 'Invalid SteamCMD binary path',
+  for (const { field, validate, fallbackCode, fallbackMessage } of STEAM_PATH_CHECKS) {
+    const value = data[field];
+    if (value === undefined) {
+      continue;
+    }
+    const check = validate(value);
+    if (!check.valid) {
+      const errorCode = check.errorCode ?? fallbackCode;
+      const message = check.message ?? fallbackMessage;
+      sendApiError(reply, 400, errorCode, {
+        message,
+        fieldErrors: { [field]: { code: errorCode, message } },
       });
       return false;
     }
   }
-
-  if (data.steamWorkshopPath !== undefined) {
-    const workshopCheck = steamPathService.validateStoragePath(data.steamWorkshopPath);
-    if (!workshopCheck.valid) {
-      sendApiError(reply, 400, workshopCheck.errorCode ?? 'STORAGE_PATH_NOT_WRITABLE', {
-        message: workshopCheck.message ?? 'Invalid Workshop path',
-      });
-      return false;
-    }
-  }
-
-  if (data.steamMetaPath !== undefined) {
-    const metaCheck = steamPathService.validateStoragePath(data.steamMetaPath);
-    if (!metaCheck.valid) {
-      sendApiError(reply, 400, metaCheck.errorCode ?? 'STORAGE_PATH_NOT_WRITABLE', {
-        message: metaCheck.message ?? 'Invalid SteamCMD metadata path',
-      });
-      return false;
-    }
-  }
-
   return true;
 }
 
