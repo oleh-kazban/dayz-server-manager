@@ -1,9 +1,61 @@
 import type Database from 'better-sqlite3';
 
+import { decryptVaultSecret, encryptVaultSecret, resolveVaultKey, verifyVaultKey } from './crypto';
+
+export interface MigrationOptions {
+  vaultKeyDir?: string;
+}
+
 export interface DsmMigration {
   id: string;
   name: string;
-  up: (sqlite: Database.Database) => void;
+  up: (sqlite: Database.Database, options?: MigrationOptions) => void;
+}
+
+const SERVER_CONFIG_MIGRATION_COLUMNS: readonly [string, string][] = [
+  ['max_players', 'INTEGER NOT NULL DEFAULT 60'],
+  ['rcon_ip', "TEXT NOT NULL DEFAULT '127.0.0.1'"],
+  ['rcon_password_encrypted', 'TEXT'],
+];
+
+function ensureServerConfigColumns(sqlite: Database.Database): void {
+  const columns = sqlite.pragma('table_info(servers)') as { name: string }[];
+  const columnNames = new Set(columns.map(column => column.name));
+
+  for (const [columnName, columnDef] of SERVER_CONFIG_MIGRATION_COLUMNS) {
+    if (!columnNames.has(columnName)) {
+      sqlite.exec(`ALTER TABLE servers ADD COLUMN ${columnName} ${columnDef};`);
+    }
+  }
+}
+
+function backfillLegacyRconSecrets(sqlite: Database.Database, options?: MigrationOptions): void {
+  const legacyRows = sqlite
+    .prepare(
+      "SELECT id, rcon_password FROM servers WHERE rcon_password IS NOT NULL AND trim(rcon_password) != '' AND rcon_password_encrypted IS NULL",
+    )
+    .all() as { id: string; rcon_password: string }[];
+
+  if (legacyRows.length === 0) {
+    return;
+  }
+
+  const vaultKey = resolveVaultKey(options?.vaultKeyDir);
+  if (!verifyVaultKey(vaultKey)) {
+    throw new Error('Vault key verification failed while migrating legacy RCON passwords');
+  }
+
+  const updateStmt = sqlite.prepare(
+    'UPDATE servers SET rcon_password_encrypted = ?, rcon_password = NULL WHERE id = ?',
+  );
+
+  for (const row of legacyRows) {
+    const encrypted = encryptVaultSecret(row.rcon_password, vaultKey);
+    if (decryptVaultSecret(encrypted, vaultKey) !== row.rcon_password) {
+      throw new Error(`Encrypted RCON secret verification failed for server '${row.id}'`);
+    }
+    updateStmt.run(encrypted, row.id);
+  }
 }
 
 export const migrations: DsmMigration[] = [
@@ -17,7 +69,7 @@ export const migrations: DsmMigration[] = [
           username TEXT NOT NULL UNIQUE,
           password_hash TEXT NOT NULL,
           email TEXT,
-          role TEXT NOT NULL DEFAULT 'viewer',
+          role TEXT NOT NULL DEFAULT 'admin',
           created_at INTEGER NOT NULL,
           last_login_at INTEGER
         );
@@ -34,7 +86,7 @@ export const migrations: DsmMigration[] = [
         sqlite.exec('ALTER TABLE users ADD COLUMN last_login_at INTEGER;');
       }
       if (!columnNames.has('role')) {
-        sqlite.exec("ALTER TABLE users ADD COLUMN role TEXT NOT NULL DEFAULT 'viewer';");
+        sqlite.exec("ALTER TABLE users ADD COLUMN role TEXT NOT NULL DEFAULT 'admin';");
       }
     },
   },
@@ -216,9 +268,56 @@ export const migrations: DsmMigration[] = [
       `);
     },
   },
+  {
+    id: '0006_server_config_and_vault_secrets',
+    name: 'Add server config fields and backfill encrypted RCON secrets',
+    up: (sqlite: Database.Database, options?: MigrationOptions) => {
+      ensureServerConfigColumns(sqlite);
+      backfillLegacyRconSecrets(sqlite, options);
+    },
+  },
+  {
+    id: '0007_server_config_editor',
+    name: 'Create config edit lock and config revision tables',
+    up: (sqlite: Database.Database) => {
+      sqlite.exec(`
+        CREATE TABLE IF NOT EXISTS config_edit_locks (
+          server_id TEXT NOT NULL REFERENCES servers(id) ON DELETE CASCADE,
+          file_kind TEXT NOT NULL,
+          session_token TEXT NOT NULL,
+          user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+          acquired_at INTEGER NOT NULL,
+          expires_at INTEGER NOT NULL,
+          PRIMARY KEY (server_id, file_kind)
+        );
+
+        CREATE TABLE IF NOT EXISTS server_config_revisions (
+          id TEXT PRIMARY KEY,
+          server_id TEXT NOT NULL REFERENCES servers(id) ON DELETE CASCADE,
+          file_kind TEXT NOT NULL,
+          content TEXT NOT NULL,
+          content_hash TEXT NOT NULL,
+          source TEXT NOT NULL,
+          user_id TEXT REFERENCES users(id) ON DELETE SET NULL,
+          created_at INTEGER NOT NULL
+        );
+
+        CREATE INDEX IF NOT EXISTS idx_server_config_revisions_server_kind_created
+          ON server_config_revisions(server_id, file_kind, created_at DESC);
+      `);
+    },
+  },
+  {
+    id: '0008_admin_only_and_relative_profile_path',
+    name: 'Normalize user roles to admin and server profile paths to the relative profiles directory',
+    up: (sqlite: Database.Database) => {
+      sqlite.exec("UPDATE users SET role = 'admin' WHERE role != 'admin';");
+      sqlite.exec("UPDATE servers SET profile_path = 'profiles' WHERE profile_path != 'profiles';");
+    },
+  },
 ];
 
-export function runMigrations(sqlite: Database.Database): void {
+export function runMigrations(sqlite: Database.Database, options?: MigrationOptions): void {
   sqlite.exec(`
     CREATE TABLE IF NOT EXISTS _dsm_migrations (
       id TEXT PRIMARY KEY,
@@ -235,7 +334,7 @@ export function runMigrations(sqlite: Database.Database): void {
 
     for (const migration of migrations) {
       if (!appliedIds.has(migration.id)) {
-        migration.up(sqlite);
+        migration.up(sqlite, options);
         sqlite
           .prepare('INSERT INTO _dsm_migrations (id, name, applied_at) VALUES (?, ?, ?)')
           .run(migration.id, migration.name, Date.now());

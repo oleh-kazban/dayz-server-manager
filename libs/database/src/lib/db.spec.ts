@@ -31,7 +31,7 @@ describe('Database Initialization & Seeding', () => {
       expect(seededServers).toHaveLength(0);
 
       const migrations = instance.sqlite.prepare('SELECT * FROM _dsm_migrations').all();
-      expect(migrations).toHaveLength(5);
+      expect(migrations).toHaveLength(8);
     } finally {
       instance.close();
     }
@@ -161,6 +161,17 @@ describe('Database Initialization & Seeding', () => {
     expect(namesAfter).toContain('email');
     expect(namesAfter).toContain('last_login_at');
     expect(namesAfter).toContain('role');
+
+    // Verify users.role defaults to 'admin'
+    legacyDb
+      .prepare(
+        "INSERT INTO users (id, username, password_hash, created_at) VALUES ('usr-def', 'defuser', 'hash', 1)",
+      )
+      .run();
+    const insertedRole = legacyDb.prepare("SELECT role FROM users WHERE id = 'usr-def'").get() as {
+      role: string;
+    };
+    expect(insertedRole.role).toBe('admin');
 
     // Verify servers table was created by migration 0002
     const serverColumns = legacyDb.pragma('table_info(servers)') as { name: string }[];
@@ -301,7 +312,7 @@ describe('Database Initialization & Seeding', () => {
         // Idempotent re-run
         runMigrations(instance.sqlite);
         const migrations = instance.sqlite.prepare('SELECT * FROM _dsm_migrations').all();
-        expect(migrations).toHaveLength(5);
+        expect(migrations).toHaveLength(8);
       } finally {
         instance.close();
       }
