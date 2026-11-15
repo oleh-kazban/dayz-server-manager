@@ -1,5 +1,6 @@
 import type { FastifyReply, FastifyRequest } from 'fastify';
 
+import type { UserRole } from '@aegis/api-contracts';
 import type { DatabaseInstance, DsmDatabase } from '@aegis/database';
 
 import type { SseHub } from '../services/realtime/sse-hub';
@@ -19,14 +20,14 @@ declare module '@fastify/jwt' {
     payload: {
       sub: string;
       username?: string;
-      role?: string;
+      role?: UserRole;
       type?: 'access' | 'refresh';
       sid?: string;
     };
     user: {
       sub: string;
       username?: string;
-      role?: string;
+      role?: UserRole;
       type?: 'access' | 'refresh';
       sid?: string;
     };

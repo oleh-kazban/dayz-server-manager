@@ -9,7 +9,11 @@ import {
   SERVER_FS_PATH_TARGET,
 } from '@aegis/api-contracts';
 
-import { ServerFsInspectorService, serverFsInspectorService } from './server-fs-inspector.service';
+import {
+  findFirstValidMissionTemplate,
+  ServerFsInspectorService,
+  serverFsInspectorService,
+} from './server-fs-inspector.service';
 
 const TEST_SERVER_ID = '11111111-1111-4111-a111-111111111111';
 const SYMLINK_DIR_TYPE: fs.symlink.Type = process.platform === 'win32' ? 'junction' : 'dir';
@@ -514,6 +518,38 @@ describe('ServerFsInspectorService (apps/server/src/services/server)', () => {
       { label: 'empty string', badPath: '' },
       { label: 'whitespace-only string', badPath: '   ' },
       { label: 'non-string runtime value', badPath: null as unknown as string },
+    ])(
+      'rejects installPath and profilePath lexical violation ($label) without syscalls while skipping optional missionPath',
+      ({ badPath }) => {
+        const statSpy = vi.spyOn(fs, 'statSync');
+        const readdirSpy = vi.spyOn(fs, 'readdirSync');
+        const openSpy = vi.spyOn(fs, 'openSync');
+
+        const result = service.inspect({
+          serverId: TEST_SERVER_ID,
+          installPath: badPath,
+          profilePath: badPath,
+          missionPath: badPath,
+        });
+
+        expect(statSpy).not.toHaveBeenCalled();
+        expect(readdirSpy).not.toHaveBeenCalled();
+        expect(openSpy).not.toHaveBeenCalled();
+
+        expect(result.valid).toBe(false);
+        expect(result.paths.installPath.status).toBe(SERVER_FS_CHECK_STATUS.ERROR);
+        expect(result.paths.profilePath.status).toBe(SERVER_FS_CHECK_STATUS.ERROR);
+        expect(result.paths.battleyePath.status).toBe(SERVER_FS_CHECK_STATUS.SKIPPED);
+        expect(result.paths.missionPath.status).toBe(SERVER_FS_CHECK_STATUS.SKIPPED);
+        expect(result.discoveredMissions).toEqual([]);
+        expect(result.issues.map(i => i.code)).toEqual([
+          'PATH_LEXICAL_INVALID',
+          'PATH_LEXICAL_INVALID',
+        ]);
+      },
+    );
+
+    it.each([
       { label: 'path exceeding 512 characters', badPath: `/${'a'.repeat(512)}` },
       { label: 'null byte', badPath: '/opt/dayz\0evil' },
       { label: 'parent directory traversal', badPath: '/opt/dayz/../etc/passwd' },
@@ -1433,6 +1469,50 @@ describe('ServerFsInspectorService (apps/server/src/services/server)', () => {
         'PROFILE_PATH_NOT_RELATIVE',
         'MISSION_PATH_NOT_RELATIVE',
       ]);
+    });
+  });
+
+  describe('Optional missionPath & findFirstValidMissionTemplate', () => {
+    it.each([undefined, null, '', '   '])(
+      'keeps valid: true and marks missionPath skipped when missionPath is %o',
+      missionPath => {
+        const fixture = createValidDayzFixture();
+        fixture.createMission('dayzOffline.chernarusplus');
+
+        const result = service.inspect({
+          serverId: TEST_SERVER_ID,
+          installPath: fixture.installDir,
+          profilePath: 'profiles',
+          missionPath,
+        });
+
+        expect(result.valid).toBe(true);
+        expect(result.issues).toEqual([]);
+        expect(result.paths.missionPath).toEqual({
+          target: SERVER_FS_PATH_TARGET.MISSION_PATH,
+          configuredPath: '',
+          resolvedPath: null,
+          status: SERVER_FS_CHECK_STATUS.SKIPPED,
+          exists: false,
+          isDirectory: null,
+          hasInitScript: null,
+          hasEconomyDb: null,
+        });
+        expect(result.discoveredMissions.map(m => m.name)).toContain('dayzOffline.chernarusplus');
+      },
+    );
+
+    it('discovers the first valid mission with init.c and valid template characters, or returns null when absent/escaped', () => {
+      const fixture = createValidDayzFixture();
+      fixture.createMission('aaa.noInit', { init: false });
+      fixture.createMission('bbb bad-space', { init: true });
+      fixture.createMission('dayzOffline.enoch', { init: true });
+      fixture.createMission('empty.chernarus', { init: true });
+
+      expect(findFirstValidMissionTemplate(fixture.installDir)).toBe('dayzOffline.enoch');
+
+      const bareDir = createTempRoot('dsm-no-missions-');
+      expect(findFirstValidMissionTemplate(bareDir)).toBeNull();
     });
   });
 

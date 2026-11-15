@@ -128,7 +128,7 @@ describe('Profile Routes (/api/v1/profile & /api/v1/auth/profile)', () => {
       const ghostToken = app.jwt.sign(
         {
           sub: '99999999-9999-9999-9999-999999999999',
-          role: 'viewer',
+          role: 'admin',
           type: 'access',
         },
         { expiresIn: '15m' },
@@ -237,6 +237,7 @@ describe('Profile Routes (/api/v1/profile & /api/v1/auth/profile)', () => {
       const body = response.json();
       expect(body.errorCode).toBe('VALIDATION_FAILED');
       expect(body.message).toContain('Invalid IANA timezone identifier');
+      expect(body.fieldErrors.timezone.code).toBe('INVALID_VALUE');
     });
 
     it('enforces GUARD-03: username and role cannot be mutated', async () => {
@@ -271,7 +272,7 @@ describe('Profile Routes (/api/v1/profile & /api/v1/auth/profile)', () => {
       const ghostToken = app.jwt.sign(
         {
           sub: '99999999-9999-9999-9999-999999999998',
-          role: 'viewer',
+          role: 'admin',
           type: 'access',
         },
         { expiresIn: '15m' },
@@ -299,13 +300,13 @@ describe('Profile Routes (/api/v1/profile & /api/v1/auth/profile)', () => {
         .prepare(
           `
         INSERT INTO users (id, username, password_hash, role, timezone, time_format, created_at)
-        VALUES (?, 'triggeruser', 'dummyhash', 'viewer', 'UTC', '24h', ?)
+        VALUES (?, 'triggeruser', 'dummyhash', 'admin', 'UTC', '24h', ?)
       `,
         )
         .run(tempUserId, now.getTime());
 
       const tempToken = app.jwt.sign(
-        { sub: tempUserId, role: 'viewer', type: 'access' },
+        { sub: tempUserId, role: 'admin', type: 'access' },
         { expiresIn: '15m' },
       );
 
@@ -418,6 +419,7 @@ describe('Profile Routes (/api/v1/profile & /api/v1/auth/profile)', () => {
       expect(response.statusCode).toBe(400);
       const body = response.json();
       expect(body.errorCode).toBe('AUTH_PASSWORD_MISMATCH');
+      expect(body.fieldErrors.currentPassword.code).toBe('AUTH_PASSWORD_MISMATCH');
 
       // Assert zero mutation to password hash
       const afterUser = dbInstance.sqlite
@@ -503,7 +505,7 @@ describe('Profile Routes (/api/v1/profile & /api/v1/auth/profile)', () => {
       const ghostToken = app.jwt.sign(
         {
           sub: '99999999-9999-9999-9999-999999999997',
-          role: 'viewer',
+          role: 'admin',
           type: 'access',
         },
         { expiresIn: '15m' },

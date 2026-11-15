@@ -79,7 +79,7 @@ describe('Sessions Routes (/api/v1/auth/sessions)', () => {
         id: user2Id,
         username: 'user2',
         passwordHash: hashPassword('user2pass1!'),
-        role: 'viewer',
+        role: 'admin',
         timezone: 'UTC',
         timeFormat: '24h',
         createdAt: now,

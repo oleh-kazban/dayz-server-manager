@@ -1,6 +1,4 @@
-import crypto from 'node:crypto';
 import fs from 'node:fs';
-import path from 'node:path';
 
 import {
   type DiscoveredMissionDto,
@@ -14,8 +12,21 @@ import {
   type ValidateServerPathsResponseDto,
   validateServerPathsResponseSchema,
 } from '@aegis/api-contracts';
+import { isValidMissionTemplate } from '@aegis/dayz-config';
 
-type PlatformPathImpl = typeof path.win32 | typeof path.posix;
+import {
+  getPlatformPathImpl,
+  isDirectoryReadable,
+  isHostAbsolutePath,
+  isNonRelativeSubpath,
+  isPathContainedWithin,
+  normalizeRelativeSubpath,
+  type PlatformPathImpl,
+  probeDirectoryWritable,
+  safeRealpath,
+  safeStat,
+  validateLexicalCandidate,
+} from './server-path-safety';
 
 interface InspectionContext {
   platform: NodeJS.Platform;
@@ -23,112 +34,32 @@ interface InspectionContext {
   issues: ServerFsDiagnosticIssueDto[];
 }
 
-type LexicalValidationResult =
-  | { valid: true; trimmed: string }
-  | { valid: false; code: 'PATH_LEXICAL_INVALID' | 'PATH_PLATFORM_MISMATCH'; message: string };
-
-type SafeStatResult = { exists: true; stat: fs.Stats } | { exists: false; errorCode?: string };
-
 export interface InspectServerPathsInput {
   serverId: string;
   installPath: string;
   profilePath: string;
-  missionPath: string;
+  missionPath?: string | null;
 }
 
-function getPlatformPathImpl(platform: NodeJS.Platform): PlatformPathImpl {
-  return platform === 'win32' ? path.win32 : path.posix;
-}
-
-function isHostAbsolutePath(targetPath: string, platform: NodeJS.Platform): boolean {
-  return getPlatformPathImpl(platform).isAbsolute(targetPath);
-}
-
-function isNonRelativeSubpath(trimmed: string, platform: NodeJS.Platform): boolean {
-  return isHostAbsolutePath(trimmed, platform) || /^[\\/]/.test(trimmed);
-}
-
-function normalizeRelativeSubpath(subpath: string, pathImpl: PlatformPathImpl): string {
-  return subpath.replace(/[\\/]+/g, pathImpl.sep);
-}
-
-function validateColonPlacement(
-  trimmed: string,
-  platform: NodeJS.Platform,
-): LexicalValidationResult {
-  const colonIndex = trimmed.indexOf(':');
-  if (colonIndex === -1) {
-    return { valid: true, trimmed };
+export function findFirstValidMissionTemplate(
+  installReal: string,
+  platform: NodeJS.Platform = process.platform,
+): string | null {
+  const pathImpl = getPlatformPathImpl(platform);
+  const mpmissionsReal = safeRealpath(pathImpl.join(installReal, 'mpmissions'));
+  if (!mpmissionsReal || !isPathContainedWithin(mpmissionsReal, installReal, platform, false)) {
+    return null;
   }
 
-  const validDriveColon =
-    colonIndex === 1 && /^[a-zA-Z]:[\\/]/.test(trimmed) && trimmed.indexOf(':', 2) === -1;
-  if (!validDriveColon) {
-    return {
-      valid: false,
-      code: 'PATH_LEXICAL_INVALID',
-      message: 'Colons are only permitted in Windows drive letter prefixes.',
-    };
-  }
-
-  if (platform !== 'win32') {
-    return {
-      valid: false,
-      code: 'PATH_PLATFORM_MISMATCH',
-      message: 'Windows drive letter paths are not valid on this host platform.',
-    };
-  }
-
-  return { valid: true, trimmed };
-}
-
-function validateLexicalCandidate(
-  rawPath: string,
-  platform: NodeJS.Platform,
-): LexicalValidationResult {
-  if (!rawPath || typeof rawPath !== 'string') {
-    return {
-      valid: false,
-      code: 'PATH_LEXICAL_INVALID',
-      message: 'Path must be a non-empty string.',
-    };
-  }
-
-  const trimmed = rawPath.trim();
-  if (trimmed.length === 0 || trimmed.length > 512) {
-    return {
-      valid: false,
-      code: 'PATH_LEXICAL_INVALID',
-      message: 'Path length must be between 1 and 512 characters.',
-    };
-  }
-
-  if (trimmed.includes('\0')) {
-    return {
-      valid: false,
-      code: 'PATH_LEXICAL_INVALID',
-      message: 'Null bytes are forbidden in paths.',
-    };
-  }
-
-  if (trimmed.includes('..')) {
-    return {
-      valid: false,
-      code: 'PATH_LEXICAL_INVALID',
-      message: 'Path traversal (..) is not permitted.',
-    };
-  }
-
-  const hasControlChar = Array.from(trimmed).some(ch => ch.charCodeAt(0) < 32);
-  if (/[<>"|?*]/.test(trimmed) || hasControlChar) {
-    return {
-      valid: false,
-      code: 'PATH_LEXICAL_INVALID',
-      message: 'Path contains invalid filesystem characters.',
-    };
-  }
-
-  return validateColonPlacement(trimmed, platform);
+  const discovered = discoverMissions(installReal, {
+    platform,
+    pathImpl,
+    issues: [],
+  });
+  const firstValid = discovered.find(
+    mission => mission.hasInitScript && isValidMissionTemplate(mission.name),
+  );
+  return firstValid ? firstValid.name : null;
 }
 
 function inspectLexicalPath(
@@ -152,74 +83,6 @@ function inspectLexicalPath(
     return { valid: false, configuredPath };
   }
   return { valid: true, configuredPath, trimmed: lexical.trimmed };
-}
-
-function isPathContainedWithin(
-  candidateReal: string,
-  baseReal: string,
-  platform: NodeJS.Platform,
-  allowEqual = false,
-): boolean {
-  const pathImpl = getPlatformPathImpl(platform);
-  const normalizedCandidate = platform === 'win32' ? candidateReal.toLowerCase() : candidateReal;
-  const normalizedBase = platform === 'win32' ? baseReal.toLowerCase() : baseReal;
-  const rel = pathImpl.relative(normalizedBase, normalizedCandidate);
-  if (rel === '') {
-    return allowEqual;
-  }
-  const escapesParent = rel === '..' || rel.startsWith(`..${pathImpl.sep}`);
-  return !escapesParent && !pathImpl.isAbsolute(rel);
-}
-
-function safeStat(targetPath: string): SafeStatResult {
-  try {
-    return { exists: true, stat: fs.statSync(targetPath) };
-  } catch (err) {
-    return {
-      exists: false,
-      errorCode: (err as NodeJS.ErrnoException).code,
-    };
-  }
-}
-
-function safeRealpath(targetPath: string): string | null {
-  try {
-    return fs.realpathSync(targetPath);
-  } catch {
-    return null;
-  }
-}
-
-function isDirectoryReadable(dirPath: string, platform: NodeJS.Platform): boolean {
-  try {
-    const mode = platform === 'win32' ? fs.constants.R_OK : fs.constants.R_OK | fs.constants.X_OK;
-    fs.accessSync(dirPath, mode);
-    return true;
-  } catch {
-    return false;
-  }
-}
-
-function probeDirectoryWritable(dirPath: string, pathImpl: PlatformPathImpl): boolean {
-  const probeFile = pathImpl.join(dirPath, `.dsm_fs_probe_${crypto.randomUUID()}.tmp`);
-  let fd: number | undefined;
-  try {
-    try {
-      fd = fs.openSync(
-        probeFile,
-        fs.constants.O_WRONLY | fs.constants.O_CREAT | fs.constants.O_EXCL,
-        0o600,
-      );
-    } finally {
-      if (fd !== undefined) {
-        fs.closeSync(fd);
-      }
-    }
-    fs.unlinkSync(probeFile);
-    return true;
-  } catch {
-    return false;
-  }
 }
 
 function compareMissionNames(a: DiscoveredMissionDto, b: DiscoveredMissionDto): number {
@@ -863,10 +726,23 @@ function inspectMissionArtifacts(
 }
 
 function inspectMissionPath(
-  rawMissionPath: string,
+  rawMissionPath: string | null | undefined,
   resolvedInstall: string | null,
   ctx: InspectionContext,
 ): ServerFsPathStatusDto {
+  if (rawMissionPath == null || rawMissionPath.trim().length === 0) {
+    return {
+      target: SERVER_FS_PATH_TARGET.MISSION_PATH,
+      configuredPath: '',
+      resolvedPath: null,
+      status: SERVER_FS_CHECK_STATUS.SKIPPED,
+      exists: false,
+      isDirectory: null,
+      hasInitScript: null,
+      hasEconomyDb: null,
+    };
+  }
+
   const lexical = inspectLexicalPath(SERVER_FS_PATH_TARGET.MISSION_PATH, rawMissionPath, ctx);
   if (!lexical.valid) {
     return {
@@ -1015,7 +891,8 @@ export class ServerFsInspectorService {
       installResult.status.status === SERVER_FS_CHECK_STATUS.VALID &&
       profileStatus.status === SERVER_FS_CHECK_STATUS.VALID &&
       (missionStatus.status === SERVER_FS_CHECK_STATUS.VALID ||
-        missionStatus.status === SERVER_FS_CHECK_STATUS.WARNING);
+        missionStatus.status === SERVER_FS_CHECK_STATUS.WARNING ||
+        missionStatus.status === SERVER_FS_CHECK_STATUS.SKIPPED);
 
     return validateServerPathsResponseSchema.parse({
       serverId: input.serverId,

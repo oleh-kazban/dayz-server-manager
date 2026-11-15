@@ -10,6 +10,7 @@ import Fastify, {
   type FastifyServerOptions,
 } from 'fastify';
 
+import { type UserRole } from '@aegis/api-contracts';
 import { type DatabaseInstance, initDatabase, sessions } from '@aegis/database';
 
 import { type EnvConfig } from '../config/env';
@@ -17,6 +18,7 @@ import { registerAuthRoutes } from '../routes/auth';
 import { registerHealthRoutes } from '../routes/health';
 import { registerProfileRoutes } from '../routes/profile';
 import { registerRealtimeRoutes } from '../routes/realtime';
+import { registerServerConfigRoutes } from '../routes/server-config';
 import { registerServerModsRoutes } from '../routes/server-mods';
 import { registerServersRoutes } from '../routes/servers';
 import { registerSessionsRoutes } from '../routes/sessions';
@@ -103,7 +105,7 @@ export function buildApp(options: BuildAppOptions): FastifyInstance {
       type JwtPayload = {
         sub: string;
         username?: string;
-        role?: string;
+        role?: UserRole;
         type?: 'access' | 'refresh';
         sid?: string;
       };
@@ -162,6 +164,7 @@ export function buildApp(options: BuildAppOptions): FastifyInstance {
   app.register(registerSessionsRoutes, { prefix: '/api/v1/auth/sessions' });
   app.register(registerServersRoutes, { prefix: '/api/v1/servers' });
   app.register(registerServerModsRoutes, { prefix: '/api/v1/servers' });
+  app.register(registerServerConfigRoutes, { prefix: '/api/v1/servers' });
   app.register(registerRealtimeRoutes, { prefix: '/api/v1/realtime' });
   app.register(registerSteamRoutes, { prefix: '/api/v1/settings/steam' });
   app.register(registerWorkshopRoutes, { prefix: '/api/v1/workshop' });
