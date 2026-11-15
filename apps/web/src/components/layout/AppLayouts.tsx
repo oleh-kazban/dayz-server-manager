@@ -2,6 +2,8 @@ import { Suspense } from 'react';
 
 import { Outlet } from '@tanstack/react-router';
 
+import { UnsavedChangesProvider } from '@aegis/web/core';
+
 import { AppShell } from './AppShell';
 import { RootLoader } from './RootFallback';
 
@@ -15,8 +17,10 @@ export function RootLayout() {
 
 export function AuthedLayout() {
   return (
-    <AppShell>
-      <Outlet />
-    </AppShell>
+    <UnsavedChangesProvider>
+      <AppShell>
+        <Outlet />
+      </AppShell>
+    </UnsavedChangesProvider>
   );
 }

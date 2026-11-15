@@ -1,12 +1,13 @@
 import type { ReactNode } from 'react';
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { apiClient, ApiError } from '@aegis/api-client';
 import type { ServerModDto, WorkshopResolvedItemDto } from '@aegis/api-contracts';
 import { showToast } from '@aegis/ui';
+import { UnsavedChangesScope } from '@aegis/web/core';
 
 import { AddModModal } from './AddModModal';
 
@@ -651,6 +652,54 @@ describe('AddModModal', () => {
       fireEvent.click(screen.getByRole('tab', { name: /Local Mod/i }));
       expect(screen.getByLabelText('Mod Name')).toHaveValue('');
       expect(screen.queryByText('Mod folder name is required.')).not.toBeInTheDocument();
+    });
+  });
+
+  describe('unsaved changes guard (DSM-00138)', () => {
+    const renderGuarded = () =>
+      render(
+        <QueryClientProvider client={queryClient}>
+          <UnsavedChangesScope>
+            <AddModModal
+              isOpen
+              serverId={SERVER_ID}
+              installedWorkshopIds={new Set()}
+              onClose={mockOnClose}
+            />
+          </UnsavedChangesScope>
+        </QueryClientProvider>,
+      );
+    const discardDialog = () =>
+      screen.getByRole('alertdialog', { name: 'Discard unsaved changes?' });
+
+    it('closes without asking when the Local Mod form is empty', () => {
+      renderGuarded();
+
+      fireEvent.click(screen.getByRole('button', { name: 'Close dialog' }));
+
+      expect(mockOnClose).toHaveBeenCalledTimes(1);
+      expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
+    });
+
+    it('keeps local mod input across tab switches and asks before any close discards it', async () => {
+      renderGuarded();
+      fireEvent.click(screen.getByRole('tab', { name: /Local Mod/i }));
+      fireEvent.change(screen.getByLabelText('Mod Name'), { target: { value: 'Server Scripts' } });
+
+      fireEvent.click(screen.getByRole('tab', { name: /URL \/ ID/i }));
+      fireEvent.click(screen.getByRole('tab', { name: /Local Mod/i }));
+      expect(screen.getByLabelText('Mod Name')).toHaveValue('Server Scripts');
+
+      // Cancel on another tab still protects the local input
+      fireEvent.click(screen.getByRole('tab', { name: /URL \/ ID/i }));
+      fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+      fireEvent.click(within(discardDialog()).getByRole('button', { name: 'Keep editing' }));
+      await waitFor(() => expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument());
+      expect(mockOnClose).not.toHaveBeenCalled();
+
+      fireEvent.keyDown(window, { key: 'Escape' });
+      fireEvent.click(within(discardDialog()).getByRole('button', { name: 'Discard changes' }));
+      await waitFor(() => expect(mockOnClose).toHaveBeenCalledTimes(1));
     });
   });
 });

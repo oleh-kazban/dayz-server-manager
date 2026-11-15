@@ -1,8 +1,9 @@
 import type { ReactNode } from 'react';
 
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { UnsavedChangesScope, useUnsavedChangesGuard } from '@aegis/web/core';
 import { AuthProvider } from '@aegis/web/features/auth';
 import { authStorage } from '@aegis/web/features/auth/auth.storage';
 import type { AuthUser } from '@aegis/web/features/auth/auth.types';
@@ -23,6 +24,11 @@ vi.mock('@tanstack/react-router', () => ({
     invalidate: mockInvalidate,
   }),
 }));
+
+function DirtyForm() {
+  useUnsavedChangesGuard(true);
+  return null;
+}
 
 const testUser: AuthUser = {
   id: 'usr-1',
@@ -81,7 +87,36 @@ describe('UserProfile', () => {
 
     await waitFor(() => {
       expect(mockInvalidate).toHaveBeenCalled();
-      expect(mockNavigate).toHaveBeenCalledWith({ to: '/sign-in' });
+      expect(mockNavigate).toHaveBeenCalledWith({ to: '/sign-in', ignoreBlocker: true });
+      expect(authStorage.get()).toBeNull();
+    });
+  });
+
+  it('asks before signing out over unsaved form changes (DSM-00138)', async () => {
+    render(
+      <AuthProvider>
+        <UnsavedChangesScope>
+          <DirtyForm />
+          <UserProfile />
+        </UnsavedChangesScope>
+      </AuthProvider>,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Sign out' }));
+    const dialog = screen.getByRole('alertdialog', { name: 'Discard unsaved changes?' });
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Keep editing' }));
+
+    await waitFor(() => expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument());
+    expect(authStorage.get()).not.toBeNull();
+    expect(mockNavigate).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Sign out' }));
+    fireEvent.click(
+      within(screen.getByRole('alertdialog')).getByRole('button', { name: 'Discard changes' }),
+    );
+
+    await waitFor(() => {
+      expect(mockNavigate).toHaveBeenCalledWith({ to: '/sign-in', ignoreBlocker: true });
       expect(authStorage.get()).toBeNull();
     });
   });

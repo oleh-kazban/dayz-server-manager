@@ -285,6 +285,10 @@ describe('Steam Routes (/api/v1/settings/steam)', () => {
       expect(res.statusCode).toBe(400);
       const body = res.json();
       expect(body.errorCode).toBe('INVALID_STEAMCMD_PATH');
+      // The offending field is named so the client can highlight it (GEMINI.md §5)
+      expect(body.fieldErrors).toEqual({
+        steamCmdPath: { code: 'INVALID_STEAMCMD_PATH', message: 'Binary does not exist' },
+      });
 
       // Guarantee zero mutations
       const rowAfter = dbInstance.db
@@ -316,6 +320,37 @@ describe('Steam Routes (/api/v1/settings/steam)', () => {
       expect(res.statusCode).toBe(400);
       const body = res.json();
       expect(body.errorCode).toBe('STORAGE_PATH_NOT_WRITABLE');
+      expect(body.fieldErrors).toEqual({
+        steamWorkshopPath: { code: 'STORAGE_PATH_NOT_WRITABLE', message: 'No write access' },
+      });
+    });
+
+    it('names steamMetaPath in fieldErrors when only the metadata path is invalid', async () => {
+      vi.spyOn(steamPathService, 'validateStoragePath').mockReturnValue({
+        valid: false,
+        errorCode: 'STORAGE_PATH_INVALID',
+        message: 'Path traversal is not permitted',
+      });
+
+      const res = await app.inject({
+        method: 'PATCH',
+        url: '/api/v1/settings/steam',
+        headers: { authorization: `Bearer ${adminToken}` },
+        payload: {
+          steamMetaPath: process.platform === 'win32' ? 'D:\\meta' : '/mnt/meta',
+        },
+      });
+
+      expect(res.statusCode).toBe(400);
+      expect(res.json()).toMatchObject({
+        errorCode: 'STORAGE_PATH_INVALID',
+        fieldErrors: {
+          steamMetaPath: {
+            code: 'STORAGE_PATH_INVALID',
+            message: 'Path traversal is not permitted',
+          },
+        },
+      });
     });
 
     it('encrypts steamWebApiKey at rest, preserves when omitted, and clears when null or empty string', async () => {

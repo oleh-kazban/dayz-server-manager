@@ -6,6 +6,7 @@ import type { ConfigRevisionSummaryDto } from '@aegis/api-contracts';
 import { analyzeServerConfig } from '@aegis/dayz-config';
 import { Button, Card, Confirmation, Notice, Skeleton, useDebounce } from '@aegis/ui';
 import type { CodeEditorHandle } from '@aegis/ui/code-editor';
+import { useUnsavedChangesGuard } from '@aegis/web/core';
 
 import { ConfigDiagnosticsList } from './ConfigDiagnosticsList';
 import { ConfigLockBanner } from './ConfigLockBanner';
@@ -181,6 +182,8 @@ export function ServerConfigCard({ serverId, serverName, isServerRunning }: Serv
   const isDiagnosticsCurrent = isServerResult || debouncedText === displayedText;
   const hasBlockingErrors = isDiagnosticsCurrent && countDiagnostics(diagnostics).errors > 0;
   const isDirty = isSessionDirty(session);
+  // Route change / tab close with an unsaved draft asks first (DSM-00138); Cancel keeps its own dialog.
+  useUnsavedChangesGuard(isDirty);
 
   if (configQuery.isLoading) {
     return (

@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { type RefObject, useRef, useState } from 'react';
 
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Link } from '@tanstack/react-router';
@@ -29,7 +29,15 @@ import {
   Tag,
   Toggle,
 } from '@aegis/ui';
-import { notifyApiError, notifySuccess, useEditableForm, useModalDialog } from '@aegis/web/core';
+import {
+  type DiscardGuard,
+  notifyApiError,
+  notifySuccess,
+  useDiscardGuardSlot,
+  useEditableForm,
+  useModalDialog,
+  usePublishDiscardGuard,
+} from '@aegis/web/core';
 
 import { modsQueryKeys } from '../mods.queries';
 
@@ -157,12 +165,16 @@ function UrlLookupTab({
   loadTarget,
   onLoadTargetChange,
   onClose,
+  onCancel,
 }: {
   serverId: string;
   installedWorkshopIds: Set<string>;
   loadTarget: ModLoadTarget;
   onLoadTargetChange: (target: ModLoadTarget) => void;
+  /** Closes after a successful add. */
   onClose: () => void;
+  /** Closes on user cancel; asks first when the Local Mod tab holds unsaved input. */
+  onCancel: () => void;
 }) {
   const queryClient = useQueryClient();
   const lookupInFlightRef = useRef(false);
@@ -365,7 +377,7 @@ function UrlLookupTab({
       )}
 
       <div className="flex justify-end gap-3 pt-4 border-t border-[var(--color-border)]">
-        <Button variant="secondary" type="button" onClick={onClose}>
+        <Button variant="secondary" type="button" onClick={onCancel}>
           Cancel
         </Button>
         <Button
@@ -388,12 +400,16 @@ function WorkshopSearchTab({
   loadTarget,
   onLoadTargetChange,
   onClose,
+  onCancel,
 }: {
   serverId: string;
   installedWorkshopIds: Set<string>;
   loadTarget: ModLoadTarget;
   onLoadTargetChange: (target: ModLoadTarget) => void;
+  /** Closes after a successful add. */
   onClose: () => void;
+  /** Closes on user cancel; asks first when the Local Mod tab holds unsaved input. */
+  onCancel: () => void;
 }) {
   const queryClient = useQueryClient();
   const searchInFlightRef = useRef(false);
@@ -516,7 +532,7 @@ function WorkshopSearchTab({
           action={
             <Link
               to="/settings/steam"
-              onClick={onClose}
+              onClick={onCancel}
               className="inline-flex items-center gap-1.5 text-xs font-semibold text-[var(--color-primary)] hover:underline"
             >
               Configure Steam Web API Key in Steam Settings
@@ -579,7 +595,7 @@ function WorkshopSearchTab({
       )}
 
       <div className="flex justify-end gap-3 pt-4 border-t border-[var(--color-border)]">
-        <Button variant="secondary" type="button" onClick={onClose}>
+        <Button variant="secondary" type="button" onClick={onCancel}>
           Cancel
         </Button>
         <Button
@@ -601,11 +617,13 @@ function LocalModTab({
   loadTarget,
   onLoadTargetChange,
   onClose,
+  discardGuardSlot,
 }: {
   serverId: string;
   loadTarget: ModLoadTarget;
   onLoadTargetChange: (target: ModLoadTarget) => void;
   onClose: () => void;
+  discardGuardSlot: RefObject<DiscardGuard | null>;
 }) {
   const queryClient = useQueryClient();
   const inFlightRef = useRef(false);
@@ -633,12 +651,15 @@ function LocalModTab({
     errors: fieldErrors,
     handleSubmit,
     reportServerErrors,
+    confirmDiscard,
   } = useEditableForm({
     values: { name, folderName },
     baseline: null,
     validate: validateLocalModForm,
     isPending: addLocalMutation.isPending,
   });
+
+  usePublishDiscardGuard(discardGuardSlot, confirmDiscard);
 
   const submitValidForm = () => {
     if (inFlightRef.current) return;
@@ -694,7 +715,7 @@ function LocalModTab({
       />
 
       <div className="flex justify-end gap-3 pt-4 border-t border-[var(--color-border)]">
-        <Button variant="secondary" type="button" onClick={onClose}>
+        <Button variant="secondary" type="button" onClick={() => confirmDiscard(onClose)}>
           Cancel
         </Button>
         <Button variant="primary" type="submit" isLoading={addLocalMutation.isPending}>
@@ -717,7 +738,9 @@ function AddModDialog({
     local: MOD_LOAD_TARGET.SERVER_ONLY,
   });
 
-  const { dialogRef, handleBackdropClick } = useModalDialog({ onClose });
+  const { slotRef, runGuarded } = useDiscardGuardSlot();
+  const requestClose = () => runGuarded(onClose);
+  const { dialogRef, handleBackdropClick } = useModalDialog({ onClose: requestClose });
 
   const updateTabLoadTarget = (tab: AddModTab, target: ModLoadTarget) => {
     setLoadTargetByTab(prev => ({ ...prev, [tab]: target }));
@@ -760,7 +783,7 @@ function AddModDialog({
             isIconOnly
             leftIcon={X}
             aria-label="Close dialog"
-            onClick={onClose}
+            onClick={requestClose}
           />
         </div>
 
@@ -777,6 +800,7 @@ function AddModDialog({
               loadTarget={loadTargetByTab.url}
               onLoadTargetChange={target => updateTabLoadTarget('url', target)}
               onClose={onClose}
+              onCancel={requestClose}
             />
           </TabContent>
           <TabContent value="search">
@@ -786,14 +810,17 @@ function AddModDialog({
               loadTarget={loadTargetByTab.search}
               onLoadTargetChange={target => updateTabLoadTarget('search', target)}
               onClose={onClose}
+              onCancel={requestClose}
             />
           </TabContent>
-          <TabContent value="local">
+          {/* Kept mounted so typed local-mod input survives tab switches (DSM-00138). */}
+          <TabContent value="local" forceMount>
             <LocalModTab
               serverId={serverId}
               loadTarget={loadTargetByTab.local}
               onLoadTargetChange={target => updateTabLoadTarget('local', target)}
               onClose={onClose}
+              discardGuardSlot={slotRef}
             />
           </TabContent>
         </Tabs>

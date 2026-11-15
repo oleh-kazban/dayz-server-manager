@@ -3,6 +3,7 @@ import { type SyntheticEvent, useEffect, useRef, useState } from 'react';
 import { extractApiFieldErrors, resolveFieldErrors } from '../i18n';
 
 import { focusFirstInvalidField, isStructurallyEqual } from './forms.utils';
+import { useUnsavedChangesGuard } from './unsaved-changes';
 
 export type FormErrors<TValues> = Partial<Record<keyof TValues & string, string>>;
 
@@ -45,6 +46,7 @@ export function useEditableForm<TValues extends Record<string, unknown>>({
   const [attempted, setAttempted] = useState(false);
   const [serverErrors, setServerErrors] = useState<ServerErrorState<TValues> | null>(null);
   const [focusRequest, setFocusRequest] = useState(0);
+  const [initialValues] = useState(values);
   const submittedValuesRef = useRef(values);
 
   useEffect(() => {
@@ -55,6 +57,13 @@ export function useEditableForm<TValues extends Record<string, unknown>>({
 
   const hasChanges =
     baseline === null || !isStructurallyEqual(toPayload(values), toPayload(baseline));
+  // Unsaved edits (DSM-00138): update forms reuse the change state; create forms compare
+  // against the values they opened with, since their submit is always enabled.
+  const isDirty =
+    baseline === null
+      ? !isStructurallyEqual(toPayload(values), toPayload(initialValues))
+      : hasChanges;
+  const { confirmDiscard, release: releaseUnsavedChanges } = useUnsavedChangesGuard(isDirty);
 
   const visibleServerErrors: Record<string, string> = {};
   if (serverErrors) {
@@ -117,6 +126,12 @@ export function useEditableForm<TValues extends Record<string, unknown>>({
     /** Callback ref for the <form>; scopes focus-first-invalid to this form. */
     registerForm: setFormElement,
     hasChanges,
+    /** True while the form holds edits that would be lost on navigation or close. */
+    isDirty,
+    /** Runs `action` directly when the form is clean, otherwise after "Discard unsaved changes?". */
+    confirmDiscard,
+    /** Stops the unsaved-changes guard before a post-submit programmatic navigation. */
+    releaseUnsavedChanges,
     errors,
     handleSubmit,
     reportServerErrors,

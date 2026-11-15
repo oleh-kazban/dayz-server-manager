@@ -9,11 +9,16 @@ import { isServerRoute } from '../navigation';
 
 import { serverQueries } from './server.queries';
 
+export interface SetActiveServerOptions {
+  /** Skip the unsaved-changes guard (DSM-00138) when the caller already resolved the edits. */
+  ignoreBlocker?: boolean;
+}
+
 export interface UseActiveServerResult {
   servers: ServerSummaryDto[];
   activeServer: ServerSummaryDto | null;
   activeServerId: string | null;
-  setActiveServerId: (id: string) => void;
+  setActiveServerId: (id: string, options?: SetActiveServerOptions) => void;
   isLoading: boolean;
   error: Error | null;
 }
@@ -44,7 +49,8 @@ export function useActiveServer(): UseActiveServerResult {
     return servers.find(s => s.isDefault) ?? servers[0];
   }, [servers, searchServerId]);
 
-  // Synchronize URL search params when servers change or if serverId is invalid/missing
+  // Synchronize URL search params when servers change or if serverId is invalid/missing.
+  // These replace-navigations only normalise the URL, so they never trigger the unsaved-changes guard.
   useEffect(() => {
     if (isLoading) return;
 
@@ -57,6 +63,7 @@ export function useActiveServer(): UseActiveServerResult {
             return next;
           }) as never,
           replace: true,
+          ignoreBlocker: true,
         });
       }
       return;
@@ -69,6 +76,7 @@ export function useActiveServer(): UseActiveServerResult {
           serverId: activeServer.id,
         })) as never,
         replace: true,
+        ignoreBlocker: true,
       });
     } else if (!activeServer && searchServerId) {
       navigate({
@@ -78,12 +86,14 @@ export function useActiveServer(): UseActiveServerResult {
           return next;
         }) as never,
         replace: true,
+        ignoreBlocker: true,
       });
     }
   }, [isLoading, isServer, activeServer, searchServerId, navigate]);
 
-  const setActiveServerId = (id: string) => {
+  const setActiveServerId = (id: string, options: SetActiveServerOptions = {}) => {
     navigate({
+      ignoreBlocker: options.ignoreBlocker,
       search: ((prev: Record<string, unknown>) => ({
         ...prev,
         serverId: id,

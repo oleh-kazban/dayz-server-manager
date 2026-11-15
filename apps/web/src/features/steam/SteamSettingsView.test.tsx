@@ -2,7 +2,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { apiClient } from '@aegis/api-client';
+import { apiClient, ApiError } from '@aegis/api-client';
 import type { SteamDiagnosticsResultDto, SteamSettingsDto } from '@aegis/api-contracts';
 import { showToast } from '@aegis/ui';
 
@@ -202,6 +202,34 @@ describe('SteamSettingsView (REQ-01, REQ-02, REQ-03, REQ-04, REQ-07)', () => {
 
     fireEvent.change(screen.getByLabelText('Steam Account Password'), { target: { value: '' } });
     expect(saveBtn).toHaveAttribute('aria-disabled', 'true');
+  });
+
+  it('highlights and focuses the rejected SteamCMD path alongside the red toast; editing hides it', async () => {
+    const message = "SteamCMD path does not exist: 'C:\\missing\\steamcmd.exe'";
+    vi.mocked(apiClient.steam.updateSettings).mockRejectedValueOnce(
+      new ApiError(message, 400, {
+        statusCode: 400,
+        error: 'Bad Request',
+        errorCode: 'INVALID_STEAMCMD_PATH',
+        message,
+        fieldErrors: { steamCmdPath: { code: 'INVALID_STEAMCMD_PATH', message } },
+      }),
+    );
+    renderView();
+
+    const pathInput = await screen.findByLabelText('SteamCMD Binary Path');
+    fireEvent.change(pathInput, { target: { value: 'C:\\missing\\steamcmd.exe' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Save Changes' }));
+
+    await waitFor(() => expect(showToast.error).toHaveBeenCalled());
+    expect(await screen.findByText(message)).toBeInTheDocument();
+    expect(pathInput).toHaveAttribute('aria-invalid', 'true');
+    await waitFor(() => expect(pathInput).toHaveFocus());
+
+    fireEvent.change(pathInput, {
+      target: { value: 'D:\\SteamLibrary\\steamapps\\common\\SteamCMD' },
+    });
+    expect(screen.queryByText(message)).not.toBeInTheDocument();
   });
 
   it('submits updated settings when clicking Save Changes with custom branch enabled', async () => {

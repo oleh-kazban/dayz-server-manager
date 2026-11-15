@@ -1,10 +1,11 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { apiClient, ApiError } from '@aegis/api-client';
 import type { ServerModDto } from '@aegis/api-contracts';
 import { showToast } from '@aegis/ui';
+import { UnsavedChangesScope } from '@aegis/web/core';
 
 import { EditModModal } from './EditModModal';
 
@@ -209,6 +210,85 @@ describe('EditModModal', () => {
     resolveUpdate(sampleMod);
     await waitFor(() => {
       expect(mockOnClose).toHaveBeenCalledTimes(3);
+    });
+  });
+
+  describe('unsaved changes guard (DSM-00138)', () => {
+    const renderGuarded = () =>
+      render(
+        <QueryClientProvider client={queryClient}>
+          <UnsavedChangesScope>
+            <EditModModal
+              isOpen
+              mod={sampleMod}
+              serverId={SERVER_ID}
+              isServerLocked={false}
+              onClose={mockOnClose}
+            />
+          </UnsavedChangesScope>
+        </QueryClientProvider>,
+      );
+    const discardDialog = () =>
+      screen.getByRole('alertdialog', { name: 'Discard unsaved changes?' });
+
+    it('closes without asking while unchanged', () => {
+      renderGuarded();
+
+      fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+      fireEvent.keyDown(window, { key: 'Escape' });
+
+      expect(mockOnClose).toHaveBeenCalledTimes(2);
+      expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
+    });
+
+    it('asks before Cancel, X, Escape and backdrop discard edits; "Keep editing" keeps them', async () => {
+      renderGuarded();
+      fireEvent.change(screen.getByLabelText('Mod Name'), { target: { value: 'CF Renamed' } });
+
+      const closeAttempts = [
+        () => fireEvent.click(screen.getByRole('button', { name: 'Cancel' })),
+        () => fireEvent.click(screen.getByRole('button', { name: 'Close dialog' })),
+        () => fireEvent.keyDown(window, { key: 'Escape' }),
+        () => fireEvent.click(screen.getByRole('dialog')),
+      ];
+      for (const attempt of closeAttempts) {
+        attempt();
+        fireEvent.click(within(discardDialog()).getByRole('button', { name: 'Keep editing' }));
+        await waitFor(() => expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument());
+      }
+
+      expect(mockOnClose).not.toHaveBeenCalled();
+      expect(screen.getByLabelText('Mod Name')).toHaveValue('CF Renamed');
+    });
+
+    it('closes after "Discard changes" and ignores Escape pressed inside the confirmation', async () => {
+      renderGuarded();
+      fireEvent.change(screen.getByLabelText('Mod Name'), { target: { value: 'CF Renamed' } });
+
+      fireEvent.click(screen.getByRole('button', { name: 'Close dialog' }));
+      const confirmation = discardDialog();
+      fireEvent.keyDown(confirmation, { key: 'Escape' });
+      expect(mockOnClose).not.toHaveBeenCalled();
+      // Focus may also sit on <body> (e.g. after tabbing past the last control)
+      const escapeOnBody = new KeyboardEvent('keydown', { key: 'Escape', cancelable: true });
+      window.dispatchEvent(escapeOnBody);
+      expect(escapeOnBody.defaultPrevented).toBe(false);
+      expect(mockOnClose).not.toHaveBeenCalled();
+      expect(screen.getAllByRole('alertdialog')).toHaveLength(1);
+
+      fireEvent.click(within(confirmation).getByRole('button', { name: 'Discard changes' }));
+      await waitFor(() => expect(mockOnClose).toHaveBeenCalledTimes(1));
+    });
+
+    it('closes without asking after a successful save', async () => {
+      vi.mocked(apiClient.mods.update).mockResolvedValueOnce({ ...sampleMod, name: 'CF Renamed' });
+      renderGuarded();
+      fireEvent.change(screen.getByLabelText('Mod Name'), { target: { value: 'CF Renamed' } });
+
+      fireEvent.click(screen.getByRole('button', { name: 'Save Changes' }));
+
+      await waitFor(() => expect(mockOnClose).toHaveBeenCalledTimes(1));
+      expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
     });
   });
 });

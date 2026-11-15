@@ -1,9 +1,10 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { apiClient, ApiError } from '@aegis/api-client';
 import { showToast } from '@aegis/ui';
+import { serverQueryKeys, UnsavedChangesScope } from '@aegis/web/core';
 
 import { CreateServerModal } from './CreateServerModal';
 
@@ -511,6 +512,75 @@ describe('CreateServerModal', () => {
         launchParameters: '-cpuCount=4 -doLogs -adminLog -netLog',
         isDefault: false,
       });
+    });
+  });
+
+  describe('unsaved changes guard (DSM-00138)', () => {
+    const renderGuarded = () =>
+      render(
+        <QueryClientProvider client={queryClient}>
+          <UnsavedChangesScope>
+            <CreateServerModal isOpen onClose={mockOnClose} />
+          </UnsavedChangesScope>
+        </QueryClientProvider>,
+      );
+    const discardDialog = () =>
+      screen.getByRole('alertdialog', { name: 'Discard unsaved changes?' });
+
+    it('closes without asking while the form still holds its defaults', () => {
+      renderGuarded();
+
+      fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+
+      expect(mockOnClose).toHaveBeenCalledTimes(1);
+      expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
+    });
+
+    it('asks before discarding typed input and closes only after "Discard changes"', async () => {
+      renderGuarded();
+      fireEvent.change(screen.getByLabelText(/Server Name/i), { target: { value: 'Namalsk' } });
+
+      fireEvent.keyDown(window, { key: 'Escape' });
+      fireEvent.click(within(discardDialog()).getByRole('button', { name: 'Keep editing' }));
+      await waitFor(() => expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument());
+      expect(mockOnClose).not.toHaveBeenCalled();
+      expect(screen.getByLabelText(/Server Name/i)).toHaveValue('Namalsk');
+
+      fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+      fireEvent.click(within(discardDialog()).getByRole('button', { name: 'Discard changes' }));
+      await waitFor(() => expect(mockOnClose).toHaveBeenCalledTimes(1));
+    });
+
+    it('switches to the created server and closes without asking', async () => {
+      vi.mocked(apiClient.servers.create).mockResolvedValue({
+        id: 'srv-new',
+        name: 'Namalsk',
+        description: null,
+        status: 'stopped',
+        gamePort: 2302,
+        queryPort: 27016,
+        rconPort: 2310,
+        installPath: 'C:\\DayZServer',
+        profilePath: 'profiles',
+        missionPath: 'mpmissions\\dayzOffline.chernarusplus',
+        launchParameters: null,
+        isDefault: false,
+        ...serverDetailDefaults,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      });
+      renderGuarded();
+      fireEvent.change(screen.getByLabelText(/Server Name/i), { target: { value: 'Namalsk' } });
+
+      fireEvent.click(screen.getByRole('button', { name: 'Create Server' }));
+
+      await waitFor(() => expect(mockOnClose).toHaveBeenCalledTimes(1));
+      expect(mockSetActiveServerId).toHaveBeenCalledWith('srv-new');
+      expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
+      // The list cache knows the new server before the switch, so URL sync keeps it selected.
+      expect(
+        queryClient.getQueryData<{ id: string }[]>(serverQueryKeys.list())?.map(s => s.id),
+      ).toContain('srv-new');
     });
   });
 });

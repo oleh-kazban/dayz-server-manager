@@ -519,12 +519,14 @@ export function ServerSettingsView() {
       queryClient.invalidateQueries({ queryKey: serverQueryKeys.list() });
       notifySuccess('SERVER_DELETED', { name: deletedServerName });
 
+      // Edits to a deleted server cannot be saved anymore; leave without the discard prompt.
       const nextServer = servers.find(s => s.id !== deletedId);
       if (nextServer) {
-        setActiveServerId(nextServer.id);
+        setActiveServerId(nextServer.id, { ignoreBlocker: true });
       } else {
         navigate({
           to: '/dashboard',
+          ignoreBlocker: true,
           search: ((prev: Record<string, unknown>) => {
             const next = { ...prev };
             delete next.serverId;
