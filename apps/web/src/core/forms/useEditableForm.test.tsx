@@ -97,6 +97,32 @@ describe('useEditableForm', () => {
     expect(result.current.hasChanges).toBe(true);
   });
 
+  it('reports unsaved edits (DSM-00138): update forms follow hasChanges, create forms compare to their opening values', () => {
+    const { result: update, rerender: rerenderUpdate } = renderHook(
+      ({ values }: { values: Values }) =>
+        useEditableForm({ values, baseline: saved, toPayload, validate, isPending: false }),
+      { initialProps: { values: saved } },
+    );
+    expect(update.current.isDirty).toBe(false);
+    rerenderUpdate({ values: { ...saved, port: 2400 } });
+    expect(update.current.isDirty).toBe(true);
+    rerenderUpdate({ values: { ...saved, name: ' Alpha ' } });
+    expect(update.current.isDirty).toBe(false);
+
+    const opening: Values = { name: '', port: 2302 };
+    const { result: create, rerender: rerenderCreate } = renderHook(
+      ({ values }: { values: Values }) =>
+        useEditableForm({ values, baseline: null, toPayload, validate, isPending: false }),
+      { initialProps: { values: opening } },
+    );
+    expect(create.current.hasChanges).toBe(true);
+    expect(create.current.isDirty).toBe(false);
+    rerenderCreate({ values: { ...opening, name: 'New server' } });
+    expect(create.current.isDirty).toBe(true);
+    rerenderCreate({ values: { ...opening, name: '   ' } });
+    expect(create.current.isDirty).toBe(false);
+  });
+
   it('ignores submits while unchanged (including Enter) or pending', () => {
     const onValid = vi.fn();
     const { rerender } = render(<TestForm baseline={saved} onValid={onValid} />);
