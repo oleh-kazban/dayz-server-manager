@@ -129,7 +129,7 @@ describe('EditModModal', () => {
     expect(showToast.success).toHaveBeenCalled();
   });
 
-  it('maps server ApiError fieldErrors onto folderName input and respects isServerLocked', async () => {
+  it('maps server ApiError fieldErrors onto folderName input, fires a red toast, and respects isServerLocked', async () => {
     vi.mocked(apiClient.mods.update).mockRejectedValueOnce(
       new ApiError('Conflict', 409, {
         statusCode: 409,
@@ -153,12 +153,29 @@ describe('EditModModal', () => {
     await waitFor(() => {
       expect(screen.getByText('Folder "@Other" is already in use.')).toBeInTheDocument();
     });
+    expect(vi.mocked(showToast.error).mock.calls[0][0]).toBe('Mod Already Installed');
     expect(mockOnClose).not.toHaveBeenCalled();
 
     const { unmount } = renderModal({ isServerLocked: true });
     const saveButtons = screen.getAllByRole('button', { name: 'Save Changes' });
-    expect(saveButtons[saveButtons.length - 1]).toBeDisabled();
+    expect(saveButtons[saveButtons.length - 1]).toHaveAttribute('aria-disabled', 'true');
     unmount();
+  });
+
+  it('keeps Save Changes inert until the mod changes and again after reverting (DSM-00137)', () => {
+    renderModal();
+    const saveBtn = screen.getByRole('button', { name: 'Save Changes' });
+    const nameInput = screen.getByLabelText('Mod Name');
+
+    expect(saveBtn).toHaveAttribute('aria-disabled', 'true');
+    fireEvent.submit(saveBtn.closest('form')!);
+    expect(apiClient.mods.update).not.toHaveBeenCalled();
+
+    fireEvent.change(nameInput, { target: { value: 'Renamed' } });
+    expect(saveBtn).not.toHaveAttribute('aria-disabled');
+
+    fireEvent.change(nameInput, { target: { value: ` ${sampleMod.name} ` } });
+    expect(saveBtn).toHaveAttribute('aria-disabled', 'true');
   });
 
   it('closes on Escape key or backdrop click and ignores rapid duplicate submit clicks while in flight (QA-01, QA-02)', async () => {
@@ -178,6 +195,7 @@ describe('EditModModal', () => {
     fireEvent.click(dialog);
     expect(mockOnClose).toHaveBeenCalledTimes(2);
 
+    fireEvent.change(screen.getByLabelText('Mod Name'), { target: { value: 'Renamed' } });
     const saveBtn = screen.getByRole('button', { name: 'Save Changes' });
     const form = saveBtn.closest('form')!;
 

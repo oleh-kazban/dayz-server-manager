@@ -1,6 +1,7 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { ApiError } from '@aegis/api-client';
 import type { UserProfileDto } from '@aegis/api-contracts';
 import { showToast } from '@aegis/ui';
 
@@ -52,26 +53,24 @@ describe('ProfileIdentityCard', () => {
     expect(screen.getByDisplayValue('kovac@dayz.local')).toBeInTheDocument();
   });
 
-  it('renders moderator role badge with amber tag', () => {
-    const modProfile: UserProfileDto = {
+  it('renders minimal admin profile with ADMIN role tag and empty optional fields', () => {
+    const minimalProfile: UserProfileDto = {
       ...mockAdminProfile,
-      role: 'moderator',
-    };
-    render(<ProfileIdentityCard profile={modProfile} />);
-    expect(screen.getByText('MODERATOR')).toBeInTheDocument();
-  });
-
-  it('renders viewer role badge with gray tag when profile is minimal', () => {
-    const viewerProfile: UserProfileDto = {
-      ...mockAdminProfile,
-      role: 'viewer',
+      role: 'admin',
       displayName: null,
       email: null,
       timezone: 'UTC',
       timeFormat: '12h',
     };
-    render(<ProfileIdentityCard profile={viewerProfile} />);
-    expect(screen.getByText('VIEWER')).toBeInTheDocument();
+    render(<ProfileIdentityCard profile={minimalProfile} />);
+    expect(screen.getByText('ADMIN')).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        'Administrator accounts have full permissions across all console operations.',
+      ),
+    ).toBeInTheDocument();
+    expect(screen.getByLabelText('Display Name (Callsign)')).toHaveValue('');
+    expect(screen.getByLabelText('Notification Email')).toHaveValue('');
   });
 
   it('handles custom timezone not in COMMON_TIMEZONES list', () => {
@@ -105,6 +104,9 @@ describe('ProfileIdentityCard', () => {
   it('ignores rapid duplicate submit clicks while updateProfileMutation is in flight (QA-01)', () => {
     render(<ProfileIdentityCard profile={mockAdminProfile} />);
 
+    fireEvent.change(screen.getByLabelText('Display Name (Callsign)'), {
+      target: { value: 'Edited Call' },
+    });
     const submitBtn = screen.getByRole('button', { name: 'Save Preferences' });
     const form = submitBtn.closest('form')!;
 
@@ -147,30 +149,72 @@ describe('ProfileIdentityCard', () => {
     const options = mockMutate.mock.calls[0][1];
     options.onSuccess();
     expect(showToast.success).toHaveBeenCalledWith(
-      'Profile updated',
+      'Profile Updated',
       'Your identity and regional preferences have been saved.',
+      undefined,
     );
   });
 
-  it('triggers error toast when update mutation fails with error response', () => {
+  it('highlights server fieldErrors inline AND fires a red error toast when the update fails', () => {
     render(<ProfileIdentityCard profile={mockAdminProfile} />);
 
-    const submitBtn = screen.getByRole('button', { name: 'Save Preferences' });
-    fireEvent.click(submitBtn);
+    fireEvent.change(screen.getByLabelText('Display Name (Callsign)'), {
+      target: { value: 'Edited Call' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Save Preferences' }));
 
     const options = mockMutate.mock.calls[0][1];
-    options.onError({
-      response: { data: { message: 'Invalid timezone' } },
+    act(() => {
+      options.onError(
+        new ApiError('Invalid IANA timezone identifier', 400, {
+          statusCode: 400,
+          error: 'Bad Request',
+          errorCode: 'VALIDATION_FAILED',
+          message: 'Invalid IANA timezone identifier',
+          fieldErrors: {
+            timezone: { code: 'INVALID_VALUE', message: 'Invalid IANA timezone identifier' },
+          },
+        }),
+      );
     });
-    expect(showToast.error).toHaveBeenCalledWith('Update failed', 'Invalid timezone');
+    expect(screen.getByText('Invalid IANA timezone identifier')).toBeInTheDocument();
+    expect(showToast.error).toHaveBeenCalledWith(
+      'Validation Error',
+      'Please review the highlighted fields and correct any invalid values.',
+      undefined,
+    );
 
-    // Test with plain Error message
-    options.onError(new Error('Network error'));
-    expect(showToast.error).toHaveBeenCalledWith('Update failed', 'Network error');
+    // Non-API error -> toast with its message, no inline errors
+    act(() => {
+      options.onError(new Error('Network error'));
+    });
+    expect(showToast.error).toHaveBeenLastCalledWith(
+      'Profile Update Failed',
+      'Network error',
+      undefined,
+    );
+    expect(screen.queryByText('Invalid IANA timezone identifier')).not.toBeInTheDocument();
+  });
 
-    // Test with unknown object fallback
-    options.onError({});
-    expect(showToast.error).toHaveBeenCalledWith('Update failed', 'Failed to update profile');
+  it('keeps Save Preferences inert until something changes and focuses an invalid email on save (DSM-00137)', () => {
+    render(<ProfileIdentityCard profile={mockAdminProfile} />);
+    const submitBtn = screen.getByRole('button', { name: 'Save Preferences' });
+    const emailInput = screen.getByLabelText('Notification Email');
+
+    expect(submitBtn).toHaveAttribute('aria-disabled', 'true');
+    fireEvent.submit(submitBtn.closest('form')!);
+    expect(mockMutate).not.toHaveBeenCalled();
+
+    fireEvent.change(emailInput, { target: { value: 'not-an-email' } });
+    expect(submitBtn).not.toHaveAttribute('aria-disabled');
+    fireEvent.click(submitBtn);
+    expect(screen.getByText('Please enter a valid email address')).toBeInTheDocument();
+    expect(emailInput).toHaveFocus();
+    expect(mockMutate).not.toHaveBeenCalled();
+
+    fireEvent.change(emailInput, { target: { value: ' kovac@dayz.local ' } });
+    expect(screen.queryByText('Please enter a valid email address')).not.toBeInTheDocument();
+    expect(submitBtn).toHaveAttribute('aria-disabled', 'true');
   });
 
   it('updates timezone on select change and ignores empty change', () => {
@@ -178,6 +222,9 @@ describe('ProfileIdentityCard', () => {
 
     const select = screen.getByLabelText('Regional Timezone');
     fireEvent.change(select, { target: { value: 'Europe/Berlin' } });
+    fireEvent.change(screen.getByLabelText('Display Name (Callsign)'), {
+      target: { value: 'Edited Call' },
+    });
 
     const submitBtn = screen.getByRole('button', { name: 'Save Preferences' });
     fireEvent.click(submitBtn);

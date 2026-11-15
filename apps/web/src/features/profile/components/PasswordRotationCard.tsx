@@ -2,89 +2,79 @@ import { useRef, useState } from 'react';
 
 import { KeyRound, ShieldAlert } from 'lucide-react';
 
-import { Button, Card, Notice, PasswordInput, showToast } from '@aegis/ui';
+import { Card, Notice, PasswordInput } from '@aegis/ui';
+import { SaveButton } from '@aegis/web/components';
+import { notifyApiError, notifySuccess, useEditableForm } from '@aegis/web/core';
 
 import { useChangePasswordMutation } from '../api/profile.mutations';
 
 import { PasswordStrengthBar } from './PasswordStrengthBar';
 
-function extractErrorMessage(err: unknown, fallback: string): string {
-  if (err && typeof err === 'object') {
-    const record = err as Record<string, unknown>;
-    const response = record.response as Record<string, unknown> | undefined;
-    const data = response?.data as Record<string, unknown> | undefined;
-    if (typeof data?.message === 'string') return data.message;
-    if (typeof record.message === 'string') return record.message;
+type PasswordField = 'currentPassword' | 'newPassword' | 'confirmPassword';
+
+function validateNewPassword(password: string): string | undefined {
+  if (password.length < 8) return 'New password must be at least 8 characters in length.';
+  if (password.length > 64) return 'New password must not exceed 64 characters.';
+  if (!/\d/.test(password)) return 'Password must contain at least 1 number.';
+  if (!/[!@#$%^&*()_+\-=[\]{}|;':",.<>?/~`\\]/.test(password)) {
+    return 'Password must contain at least 1 special symbol.';
   }
-  return fallback;
+  if (!/[a-z]/.test(password)) return 'Password must contain at least 1 lowercase letter.';
+  if (!/[A-Z]/.test(password)) return 'Password must contain at least 1 uppercase letter.';
+  if (/\s/.test(password)) return 'Whitespace is not permitted in passwords.';
+  return undefined;
+}
+
+type PasswordValues = Record<PasswordField, string>;
+
+const EMPTY_PASSWORD_VALUES: PasswordValues = {
+  currentPassword: '',
+  newPassword: '',
+  confirmPassword: '',
+};
+
+function validatePasswordForm({
+  currentPassword,
+  newPassword,
+  confirmPassword,
+}: PasswordValues): Partial<Record<PasswordField, string>> {
+  const errors: Partial<Record<PasswordField, string>> = {};
+  if (!currentPassword) errors.currentPassword = 'Current password is required.';
+  const newPasswordError = validateNewPassword(newPassword);
+  if (newPasswordError) {
+    errors.newPassword = newPasswordError;
+  } else if (newPassword !== confirmPassword) {
+    errors.confirmPassword = 'New password and confirmation do not match.';
+  }
+  return errors;
 }
 
 export function PasswordRotationCard() {
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [validationError, setValidationError] = useState<string | null>(null);
 
   const changePasswordMutation = useChangePasswordMutation();
   const inFlightRef = useRef(false);
 
+  const {
+    registerForm,
+    hasChanges,
+    errors: fieldErrors,
+    handleSubmit,
+    reportServerErrors,
+    markSaved,
+  } = useEditableForm({
+    values: { currentPassword, newPassword, confirmPassword },
+    baseline: EMPTY_PASSWORD_VALUES,
+    validate: validatePasswordForm,
+    isPending: changePasswordMutation.isPending,
+  });
+
   const confirmMismatch = confirmPassword.length > 0 && confirmPassword !== newPassword;
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (changePasswordMutation.isPending || inFlightRef.current) return;
-    setValidationError(null);
-
-    if (!currentPassword) {
-      setValidationError('Current password is required.');
-      return;
-    }
-
-    if (newPassword.length < 8) {
-      setValidationError('New password must be at least 8 characters in length.');
-      return;
-    }
-
-    if (newPassword.length > 64) {
-      setValidationError('New password must not exceed 64 characters.');
-      return;
-    }
-
-    if (!/[\d\W_]/.test(newPassword)) {
-      setValidationError('New password must contain at least 1 number or special character.');
-      return;
-    }
-
-    if (!/\d/.test(newPassword)) {
-      setValidationError('Password must contain at least 1 number.');
-      return;
-    }
-
-    if (!/[!@#$%^&*()_+\-=[\]{}|;':",.<>?/~`\\]/.test(newPassword)) {
-      setValidationError('Password must contain at least 1 special symbol.');
-      return;
-    }
-
-    if (!/[a-z]/.test(newPassword)) {
-      setValidationError('Password must contain at least 1 lowercase letter.');
-      return;
-    }
-
-    if (!/[A-Z]/.test(newPassword)) {
-      setValidationError('Password must contain at least 1 uppercase letter.');
-      return;
-    }
-
-    if (/\s/.test(newPassword)) {
-      setValidationError('Whitespace is not permitted in passwords.');
-      return;
-    }
-
-    if (newPassword !== confirmPassword) {
-      setValidationError('New password and confirmation do not match.');
-      return;
-    }
-
+  const submitValidForm = () => {
+    if (inFlightRef.current) return;
     inFlightRef.current = true;
     changePasswordMutation.mutate(
       {
@@ -97,16 +87,12 @@ export function PasswordRotationCard() {
           setCurrentPassword('');
           setNewPassword('');
           setConfirmPassword('');
-          showToast.success(
-            'Password Rotated',
-            'Your password was updated and all other active sessions have been invalidated.',
-          );
+          markSaved();
+          notifySuccess('PASSWORD_ROTATED');
         },
         onError: (err: unknown) => {
-          showToast.error(
-            'Rotation Refused',
-            extractErrorMessage(err, 'Failed to rotate password'),
-          );
+          reportServerErrors(err);
+          notifyApiError(err, 'Password Rotation Failed');
         },
         onSettled: () => {
           inFlightRef.current = false;
@@ -120,17 +106,16 @@ export function PasswordRotationCard() {
       title="Security & Password Rotation"
       subtitle="Update account authentication credentials. Auto-terminates other active device sessions."
     >
-      <form noValidate onSubmit={handleSubmit} className="space-y-6">
+      <form
+        ref={registerForm}
+        noValidate
+        onSubmit={e => handleSubmit(e, submitValidForm)}
+        className="space-y-6"
+      >
         <Notice variant="warning" title="Session Invalidation Policy" icon={ShieldAlert}>
           Rotating your password immediately invalidates all active tokens and sessions on other
           browsers and workstations. Your current session will remain authenticated.
         </Notice>
-
-        {validationError && (
-          <div className="p-3 rounded-lg border border-[var(--color-status-danger-border)] bg-[var(--color-status-danger-light)] text-[var(--color-status-danger)] text-sm">
-            {validationError}
-          </div>
-        )}
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-start">
           <PasswordInput
@@ -138,9 +123,9 @@ export function PasswordRotationCard() {
             label="Current Password"
             placeholder="••••••••••••"
             value={currentPassword}
+            error={fieldErrors.currentPassword}
             onChange={e => {
               setCurrentPassword(e.target.value);
-              if (validationError) setValidationError(null);
             }}
             disabled={changePasswordMutation.isPending}
             required
@@ -152,9 +137,9 @@ export function PasswordRotationCard() {
               label="New Password"
               placeholder="••••••••••••"
               value={newPassword}
+              error={fieldErrors.newPassword}
               onChange={e => {
                 setNewPassword(e.target.value);
-                if (validationError) setValidationError(null);
               }}
               disabled={changePasswordMutation.isPending}
               required
@@ -167,10 +152,12 @@ export function PasswordRotationCard() {
             label="Confirm New Password"
             placeholder="••••••••••••"
             value={confirmPassword}
-            error={confirmMismatch ? 'Passwords do not match' : undefined}
+            error={
+              fieldErrors.confirmPassword ??
+              (confirmMismatch ? 'Passwords do not match' : undefined)
+            }
             onChange={e => {
               setConfirmPassword(e.target.value);
-              if (validationError) setValidationError(null);
             }}
             disabled={changePasswordMutation.isPending}
             required
@@ -178,14 +165,14 @@ export function PasswordRotationCard() {
         </div>
 
         <div className="flex justify-end pt-4 border-t border-[var(--color-border-subtle)]">
-          <Button
+          <SaveButton
             type="submit"
-            variant="primary"
-            isLoading={changePasswordMutation.isPending}
+            hasChanges={hasChanges}
+            isPending={changePasswordMutation.isPending}
             leftIcon={KeyRound}
           >
             Rotate Credentials
-          </Button>
+          </SaveButton>
         </div>
       </form>
     </Card>

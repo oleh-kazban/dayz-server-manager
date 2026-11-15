@@ -1,6 +1,7 @@
 import { act, fireEvent, render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { ApiError } from '@aegis/api-client';
 import { showToast } from '@aegis/ui';
 
 import * as mutationsModule from '../api/profile.mutations';
@@ -47,10 +48,23 @@ describe('PasswordRotationCard', () => {
     const submitBtn = screen.getByRole('button', { name: 'Rotate Credentials' });
     const form = submitBtn.closest('form')!;
     expect(form).toHaveAttribute('noValidate');
+
+    // Inert while every field is empty (DSM-00137 A4)
+    expect(submitBtn).toHaveAttribute('aria-disabled', 'true');
+    fireEvent.click(submitBtn);
+    expect(screen.queryByText('Current password is required.')).not.toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText('New Password'), { target: { value: 'Str0ng!Pass1' } });
+    expect(submitBtn).not.toHaveAttribute('aria-disabled');
     fireEvent.click(submitBtn);
 
     expect(screen.getByText('Current password is required.')).toBeInTheDocument();
+    expect(screen.getByLabelText('Current Password')).toHaveFocus();
     expect(mockMutate).not.toHaveBeenCalled();
+
+    // Live re-validation after the failed attempt
+    fireEvent.change(screen.getByLabelText('Current Password'), { target: { value: 'x' } });
+    expect(screen.queryByText('Current password is required.')).not.toBeInTheDocument();
   });
 
   it('ignores rapid duplicate submit clicks while changePasswordMutation is in flight (QA-01)', () => {
@@ -191,13 +205,14 @@ describe('PasswordRotationCard', () => {
     expect(showToast.success).toHaveBeenCalledWith(
       'Password Rotated',
       'Your password was updated and all other active sessions have been invalidated.',
+      undefined,
     );
     expect(currentInput).toHaveValue('');
     expect(newInput).toHaveValue('');
     expect(confirmInput).toHaveValue('');
   });
 
-  it('handles rotation refusal and displays error toast', () => {
+  it('highlights the current password field AND fires a red toast when the server rejects it', () => {
     render(<PasswordRotationCard />);
 
     fireEvent.change(screen.getByLabelText('Current Password'), {
@@ -211,21 +226,45 @@ describe('PasswordRotationCard', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Rotate Credentials' }));
 
     const options = mockMutate.mock.calls[0][1];
-    options.onError({
-      response: { data: { message: 'Current password does not match' } },
+    act(() => {
+      options.onError(
+        new ApiError('Current password does not match', 400, {
+          statusCode: 400,
+          error: 'Bad Request',
+          errorCode: 'AUTH_PASSWORD_MISMATCH',
+          message: 'Current password does not match',
+          fieldErrors: {
+            currentPassword: {
+              code: 'AUTH_PASSWORD_MISMATCH',
+              message: 'Current password does not match',
+            },
+          },
+        }),
+      );
     });
 
+    expect(screen.getByText('Current password is incorrect.')).toBeInTheDocument();
+    expect(screen.getByLabelText('Current Password')).toHaveAttribute('aria-invalid', 'true');
     expect(showToast.error).toHaveBeenCalledWith(
-      'Rotation Refused',
-      'Current password does not match',
+      'Password Mismatch',
+      'The current password provided is incorrect.',
+      undefined,
     );
 
-    // Error with plain message property
-    options.onError(new Error('Network error'));
-    expect(showToast.error).toHaveBeenCalledWith('Rotation Refused', 'Network error');
+    // Editing the highlighted field clears its error
+    fireEvent.change(screen.getByLabelText('Current Password'), {
+      target: { value: 'otherPass1!' },
+    });
+    expect(screen.queryByText('Current password is incorrect.')).not.toBeInTheDocument();
 
-    // Error with no message / empty object / primitive fallback
-    options.onError('unknown string error');
-    expect(showToast.error).toHaveBeenCalledWith('Rotation Refused', 'Failed to rotate password');
+    // Non-API error -> toast with its message
+    act(() => {
+      options.onError(new Error('Network error'));
+    });
+    expect(showToast.error).toHaveBeenLastCalledWith(
+      'Password Rotation Failed',
+      'Network error',
+      undefined,
+    );
   });
 });

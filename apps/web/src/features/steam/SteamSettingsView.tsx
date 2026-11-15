@@ -22,15 +22,9 @@ import {
   Tag,
   Toggle,
 } from '@aegis/ui';
-import { PageContainer } from '@aegis/web/components';
+import { PageContainer, SaveButton } from '@aegis/web/components';
 
-import {
-  extractApiFieldErrors,
-  notifyApiError,
-  notifyInfo,
-  notifySuccess,
-  resolveFieldErrors,
-} from '../../core';
+import { notifyApiError, notifyInfo, notifySuccess, useEditableForm } from '../../core';
 
 import { SteamDiagnosticsModal } from './components/SteamDiagnosticsModal';
 import { SteamGuardChallengeModal } from './components/SteamGuardChallengeModal';
@@ -119,6 +113,80 @@ function resolveSteamWebApiKeyPayload(
   }
   const trimmed = steamWebApiKey.trim();
   return trimmed ? trimmed : undefined;
+}
+
+interface SteamFormValues extends Record<string, unknown> {
+  authMode: 'anonymous' | 'account';
+  steamUsername: string;
+  steamPassword: string;
+  isChangingPassword: boolean;
+  steamCmdPath: string;
+  steamWorkshopPath: string;
+  steamMetaPath: string;
+  gameServerAppId: number;
+  workshopAppId: number;
+  useCustomBranch: boolean;
+  branch: string;
+  branchPassword: string;
+  isChangingBranchPassword: boolean;
+  steamWebApiKey: string;
+  clearApiKeyOnSave: boolean;
+}
+
+function toSteamFormValues(settings: SteamSettingsDto): SteamFormValues {
+  return {
+    authMode: settings.authMode,
+    steamUsername: settings.steamUsername || '',
+    steamPassword: '',
+    isChangingPassword: false,
+    steamCmdPath: settings.steamCmdPath,
+    steamWorkshopPath: settings.steamWorkshopPath,
+    steamMetaPath: settings.steamMetaPath,
+    gameServerAppId: settings.gameServerAppId,
+    workshopAppId: settings.workshopAppId,
+    useCustomBranch: settings.branch !== 'public' || settings.hasBranchPassword,
+    branch: settings.branch,
+    branchPassword: '',
+    isChangingBranchPassword: false,
+    steamWebApiKey: '',
+    clearApiKeyOnSave: false,
+  };
+}
+
+/** The update DTO a save would send; also the basis for change detection. */
+function buildSteamSettingsDto(
+  values: SteamFormValues,
+  settings: SteamSettingsDto,
+): UpdateSteamSettingsDto {
+  const steamPassword = resolveSteamPassword(
+    values.authMode,
+    settings.hasPassword,
+    values.isChangingPassword,
+    values.steamPassword,
+  );
+  const branchPassword = resolveBranchPassword(
+    values.useCustomBranch,
+    settings.hasBranchPassword,
+    values.isChangingBranchPassword,
+    values.branchPassword,
+  );
+  const steamWebApiKey = resolveSteamWebApiKeyPayload(
+    values.clearApiKeyOnSave,
+    values.steamWebApiKey,
+  );
+  return {
+    authMode: values.authMode,
+    steamCmdPath: values.steamCmdPath.trim(),
+    steamWorkshopPath: values.steamWorkshopPath.trim(),
+    steamMetaPath: values.steamMetaPath.trim(),
+    gameServerAppId: values.gameServerAppId,
+    workshopAppId: values.workshopAppId,
+    branch: values.useCustomBranch ? values.branch.trim() || 'public' : 'public',
+    steamUsername: values.authMode === 'account' ? values.steamUsername.trim() : null,
+    ...(steamPassword !== undefined && { steamPassword }),
+    ...(branchPassword !== undefined && { branchPassword }),
+    ...(steamWebApiKey !== undefined && { steamWebApiKey }),
+  };
 }
 
 interface SteamWebApiKeyVaultSectionProps {
@@ -318,7 +386,6 @@ function SteamSettingsForm({
   const [isUpdatingApiKey, setIsUpdatingApiKey] = useState(false);
   const [clearApiKeyOnSave, setClearApiKeyOnSave] = useState(false);
 
-  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const updateInFlightRef = useRef(false);
 
   const updateMutation = useMutation({
@@ -333,11 +400,10 @@ function SteamSettingsForm({
       setSteamPassword('');
       setBranchPassword('');
       setSteamWebApiKey('');
-      setFieldErrors({});
+      markSaved();
     },
     onError: (err: Error) => {
-      const resolved = resolveFieldErrors(extractApiFieldErrors(err));
-      setFieldErrors(resolved);
+      reportServerErrors(err);
       notifyApiError(err, 'Failed to Save Steam Settings');
     },
     onSettled: () => {
@@ -345,62 +411,43 @@ function SteamSettingsForm({
     },
   });
 
-  const clearFieldError = (key: string) => {
-    if (fieldErrors[key]) {
-      setFieldErrors(prev => {
-        const next = { ...prev };
-        delete next[key];
-        return next;
-      });
-    }
+  const values: SteamFormValues = {
+    authMode,
+    steamUsername,
+    steamPassword,
+    isChangingPassword,
+    steamCmdPath,
+    steamWorkshopPath,
+    steamMetaPath,
+    gameServerAppId,
+    workshopAppId,
+    useCustomBranch,
+    branch,
+    branchPassword,
+    isChangingBranchPassword,
+    steamWebApiKey,
+    clearApiKeyOnSave,
   };
+  const {
+    registerForm,
+    hasChanges,
+    errors: fieldErrors,
+    handleSubmit,
+    reportServerErrors,
+    markSaved,
+  } = useEditableForm({
+    values,
+    baseline: toSteamFormValues(settings),
+    toPayload: v => buildSteamSettingsDto(v, settings),
+    validate: v =>
+      resolveAccountErrors(v.authMode, v.steamUsername, v.steamPassword, settings.hasPassword),
+    isPending: updateMutation.isPending,
+  });
 
-  const handleSave = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (updateMutation.isPending || updateInFlightRef.current) return;
-
-    const clientErrors = resolveAccountErrors(
-      authMode,
-      steamUsername,
-      steamPassword,
-      settings.hasPassword,
-    );
-    if (Object.keys(clientErrors).length > 0) {
-      setFieldErrors(clientErrors);
-      return;
-    }
-
-    const branchPasswordValue = resolveBranchPassword(
-      useCustomBranch,
-      settings.hasBranchPassword,
-      isChangingBranchPassword,
-      branchPassword,
-    );
-    const steamPasswordValue = resolveSteamPassword(
-      authMode,
-      settings.hasPassword,
-      isChangingPassword,
-      steamPassword,
-    );
-
-    const steamWebApiKeyValue = resolveSteamWebApiKeyPayload(clearApiKeyOnSave, steamWebApiKey);
-
-    const dto: UpdateSteamSettingsDto = {
-      authMode,
-      steamCmdPath: steamCmdPath.trim(),
-      steamWorkshopPath: steamWorkshopPath.trim(),
-      steamMetaPath: steamMetaPath.trim(),
-      gameServerAppId,
-      workshopAppId,
-      branch: useCustomBranch ? branch.trim() || 'public' : 'public',
-      steamUsername: authMode === 'account' ? steamUsername.trim() : null,
-      ...(steamPasswordValue !== undefined && { steamPassword: steamPasswordValue }),
-      ...(branchPasswordValue !== undefined && { branchPassword: branchPasswordValue }),
-      ...(steamWebApiKeyValue !== undefined && { steamWebApiKey: steamWebApiKeyValue }),
-    };
-
+  const submitValidForm = () => {
+    if (updateInFlightRef.current) return;
     updateInFlightRef.current = true;
-    updateMutation.mutate(dto);
+    updateMutation.mutate(buildSteamSettingsDto(values, settings));
   };
 
   return (
@@ -437,14 +484,14 @@ function SteamSettingsForm({
           >
             Run Diagnostics
           </Button>
-          <Button
-            variant="primary"
+          <SaveButton
             leftIcon={Save}
-            onClick={handleSave}
-            isLoading={updateMutation.isPending}
+            hasChanges={hasChanges}
+            isPending={updateMutation.isPending}
+            onClick={e => handleSubmit(e, submitValidForm)}
           >
             Save Changes
-          </Button>
+          </SaveButton>
         </div>
       </div>
 
@@ -491,7 +538,12 @@ function SteamSettingsForm({
       </div>
 
       {/* Form Grid: 3 Cards */}
-      <form noValidate onSubmit={handleSave} className="space-y-6">
+      <form
+        ref={registerForm}
+        noValidate
+        onSubmit={e => handleSubmit(e, submitValidForm)}
+        className="space-y-6"
+      >
         {/* Card 1: Steam Authentication & Credential Vault */}
         <Card
           title="Steam Authentication & Credential Vault"
@@ -505,7 +557,6 @@ function SteamSettingsForm({
                 value={authMode}
                 onChange={val => {
                   setAuthMode(val as 'anonymous' | 'account');
-                  clearFieldError('authMode');
                 }}
               />
 
@@ -517,7 +568,6 @@ function SteamSettingsForm({
                   error={fieldErrors.steamUsername}
                   onChange={e => {
                     setSteamUsername(e.target.value);
-                    clearFieldError('steamUsername');
                   }}
                 />
               )}
@@ -561,7 +611,6 @@ function SteamSettingsForm({
                       error={fieldErrors.steamPassword}
                       onChange={e => {
                         setSteamPassword(e.target.value);
-                        clearFieldError('steamPassword');
                       }}
                     />
                     {settings.hasPassword && (
@@ -600,7 +649,6 @@ function SteamSettingsForm({
               onUndoClear={() => setClearApiKeyOnSave(false)}
               onChangeKey={val => {
                 setSteamWebApiKey(val);
-                clearFieldError('steamWebApiKey');
               }}
             />
           </div>
@@ -620,7 +668,6 @@ function SteamSettingsForm({
                 error={fieldErrors.steamCmdPath}
                 onChange={e => {
                   setSteamCmdPath(e.target.value);
-                  clearFieldError('steamCmdPath');
                 }}
               />
               <p className="text-xs text-[var(--color-text-muted)]">
@@ -636,7 +683,6 @@ function SteamSettingsForm({
                 error={fieldErrors.steamWorkshopPath}
                 onChange={e => {
                   setSteamWorkshopPath(e.target.value);
-                  clearFieldError('steamWorkshopPath');
                 }}
               />
               <p className="text-xs text-[var(--color-text-muted)]">
@@ -653,7 +699,6 @@ function SteamSettingsForm({
                 error={fieldErrors.steamMetaPath}
                 onChange={e => {
                   setSteamMetaPath(e.target.value);
-                  clearFieldError('steamMetaPath');
                 }}
               />
               <p className="text-xs text-[var(--color-text-muted)]">
@@ -677,7 +722,6 @@ function SteamSettingsForm({
                 value={String(gameServerAppId)}
                 onChange={val => {
                   setGameServerAppId(Number(val));
-                  clearFieldError('gameServerAppId');
                 }}
               />
 
@@ -689,7 +733,6 @@ function SteamSettingsForm({
                 error={fieldErrors.workshopAppId}
                 onChange={e => {
                   setWorkshopAppId(Number(e.target.value));
-                  clearFieldError('workshopAppId');
                 }}
               />
             </div>
@@ -706,8 +749,6 @@ function SteamSettingsForm({
                     setBranch('public');
                     setBranchPassword('');
                     setIsChangingBranchPassword(false);
-                    clearFieldError('branch');
-                    clearFieldError('branchPassword');
                   }
                 }}
               />
@@ -722,7 +763,6 @@ function SteamSettingsForm({
                   error={fieldErrors.branch}
                   onChange={e => {
                     setBranch(e.target.value);
-                    clearFieldError('branch');
                   }}
                 />
 
@@ -749,7 +789,6 @@ function SteamSettingsForm({
                       error={fieldErrors.branchPassword}
                       onChange={e => {
                         setBranchPassword(e.target.value);
-                        clearFieldError('branchPassword');
                       }}
                     />
                     {settings.hasBranchPassword && (

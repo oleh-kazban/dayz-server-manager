@@ -4,7 +4,8 @@ import { useNavigate, useRouter } from '@tanstack/react-router';
 import { Laptop, LogOut, Smartphone } from 'lucide-react';
 
 import type { SessionDto } from '@aegis/api-contracts';
-import { Button, Card, Confirmation, Loader, showToast, Tag } from '@aegis/ui';
+import { Button, Card, Confirmation, Loader, Tag } from '@aegis/ui';
+import { notifyApiError, notifySuccess } from '@aegis/web/core';
 
 import { useRevokeOtherSessionsMutation, useRevokeSessionMutation } from '../api/profile.mutations';
 import { useSessionsQuery } from '../api/profile.queries';
@@ -19,17 +20,6 @@ function formatRelativeTime(isoString: string): string {
   if (diffHr < 24) return `Active ${diffHr} hour${diffHr === 1 ? '' : 's'} ago`;
   const diffDays = Math.floor(diffHr / 24);
   return `Active ${diffDays} day${diffDays === 1 ? '' : 's'} ago`;
-}
-
-function extractErrorMessage(err: unknown, fallback: string): string {
-  if (err && typeof err === 'object') {
-    const record = err as Record<string, unknown>;
-    const response = record.response as Record<string, unknown> | undefined;
-    const data = response?.data as Record<string, unknown> | undefined;
-    if (typeof data?.message === 'string') return data.message;
-    if (typeof record.message === 'string') return record.message;
-  }
-  return fallback;
 }
 
 export function ActiveSessionsCard() {
@@ -59,13 +49,10 @@ export function ActiveSessionsCard() {
       { id: session.id, isCurrent: false },
       {
         onSuccess: () => {
-          showToast.success('Session Terminated', 'The device session has been revoked.');
+          notifySuccess('SESSION_REVOKED');
         },
         onError: (err: unknown) => {
-          showToast.error(
-            'Revocation Failed',
-            extractErrorMessage(err, 'Failed to revoke session'),
-          );
+          notifyApiError(err, 'Revocation Failed');
         },
         onSettled: () => {
           revokeSingleInFlightRef.current = false;
@@ -84,9 +71,13 @@ export function ActiveSessionsCard() {
       {
         onSuccess: async () => {
           setConfirmCurrentId(null);
-          showToast.info('Signed Out', 'Your current session was terminated.');
+          notifySuccess('CURRENT_SESSION_REVOKED');
           await router.invalidate();
           await navigate({ to: '/sign-in' });
+        },
+        onError: (err: unknown) => {
+          setConfirmCurrentId(null);
+          notifyApiError(err, 'Sign Out Failed');
         },
         onSettled: () => {
           revokeSingleInFlightRef.current = false;
@@ -101,16 +92,10 @@ export function ActiveSessionsCard() {
     revokeOtherSessionsMutation.mutate(undefined, {
       onSuccess: res => {
         setConfirmBulkOpen(false);
-        showToast.success(
-          'Sessions Terminated',
-          `Successfully terminated ${res.revokedCount} other session${res.revokedCount === 1 ? '' : 's'}.`,
-        );
+        notifySuccess('OTHER_SESSIONS_REVOKED', { count: res.revokedCount });
       },
       onError: (err: unknown) => {
-        showToast.error(
-          'Bulk Revocation Failed',
-          extractErrorMessage(err, 'Failed to terminate other sessions'),
-        );
+        notifyApiError(err, 'Bulk Revocation Failed');
       },
       onSettled: () => {
         revokeBulkInFlightRef.current = false;

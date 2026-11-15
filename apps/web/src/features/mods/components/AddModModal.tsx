@@ -29,13 +29,7 @@ import {
   Tag,
   Toggle,
 } from '@aegis/ui';
-import {
-  extractApiFieldErrors,
-  notifyApiError,
-  notifySuccess,
-  resolveFieldErrors,
-  useModalDialog,
-} from '@aegis/web/core';
+import { notifyApiError, notifySuccess, useEditableForm, useModalDialog } from '@aegis/web/core';
 
 import { modsQueryKeys } from '../mods.queries';
 
@@ -82,7 +76,13 @@ function toggleIdInSet(prev: Set<string>, id: string): Set<string> {
   return next;
 }
 
-function validateLocalModForm(name: string, folderName: string): Record<string, string> {
+function validateLocalModForm({
+  name,
+  folderName,
+}: {
+  name: string;
+  folderName: string;
+}): Record<string, string> {
   const errors: Record<string, string> = {};
   if (!name.trim()) {
     errors.name = 'Mod name is required.';
@@ -186,7 +186,6 @@ function UrlLookupTab({
     onError: (err: Error) => {
       if (err instanceof ApiError && err.errorCode === 'STEAM_WORKSHOP_INVALID_INPUT') {
         setInputError('Enter a numeric Workshop ID or a steamcommunity.com Workshop URL.');
-        return;
       }
       notifyApiError(err, 'Workshop Lookup Failed');
     },
@@ -421,7 +420,6 @@ function WorkshopSearchTab({
       if (err instanceof ApiError && err.errorCode === 'STEAM_WEB_API_KEY_REQUIRED') {
         setMissingApiKey(true);
         setSearchResult(null);
-        return;
       }
       notifyApiError(err, 'Workshop Search Failed');
     },
@@ -613,17 +611,6 @@ function LocalModTab({
   const inFlightRef = useRef(false);
   const [name, setName] = useState('');
   const [folderName, setFolderName] = useState('');
-  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
-
-  const clearFieldError = (key: string) => {
-    if (fieldErrors[key]) {
-      setFieldErrors(prev => {
-        const next = { ...prev };
-        delete next[key];
-        return next;
-      });
-    }
-  };
 
   const addLocalMutation = useMutation({
     mutationFn: (dto: AddServerModDto) => apiClient.mods.add(serverId, dto),
@@ -633,11 +620,7 @@ function LocalModTab({
       onClose();
     },
     onError: (err: Error) => {
-      const resolved = resolveFieldErrors(extractApiFieldErrors(err));
-      if (Object.keys(resolved).length > 0) {
-        setFieldErrors(resolved);
-        return;
-      }
+      reportServerErrors(err);
       notifyApiError(err, 'Failed to Add Local Mod');
     },
     onSettled: () => {
@@ -645,16 +628,20 @@ function LocalModTab({
     },
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (addLocalMutation.isPending || inFlightRef.current) return;
-    const errors = validateLocalModForm(name, folderName);
-    if (Object.keys(errors).length > 0) {
-      setFieldErrors(errors);
-      return;
-    }
+  const {
+    registerForm,
+    errors: fieldErrors,
+    handleSubmit,
+    reportServerErrors,
+  } = useEditableForm({
+    values: { name, folderName },
+    baseline: null,
+    validate: validateLocalModForm,
+    isPending: addLocalMutation.isPending,
+  });
 
-    setFieldErrors({});
+  const submitValidForm = () => {
+    if (inFlightRef.current) return;
     inFlightRef.current = true;
     addLocalMutation.mutate({
       sourceType: MOD_SOURCE_TYPE.LOCAL,
@@ -666,7 +653,12 @@ function LocalModTab({
   };
 
   return (
-    <form noValidate onSubmit={handleSubmit} className="space-y-4">
+    <form
+      ref={registerForm}
+      noValidate
+      onSubmit={e => handleSubmit(e, submitValidForm)}
+      className="space-y-4"
+    >
       <Input
         label="Mod Name"
         placeholder="e.g. Server Custom Scripts"
@@ -674,7 +666,6 @@ function LocalModTab({
         error={fieldErrors.name}
         onChange={e => {
           setName(e.target.value);
-          clearFieldError('name');
         }}
       />
 
@@ -686,7 +677,6 @@ function LocalModTab({
           error={fieldErrors.folderName}
           onChange={e => {
             setFolderName(e.target.value);
-            clearFieldError('folderName');
           }}
         />
         <p className="text-xs text-[var(--color-text-muted)]">

@@ -178,6 +178,32 @@ describe('SteamSettingsView (REQ-01, REQ-02, REQ-03, REQ-04, REQ-07)', () => {
     expect(screen.getByText('Password Stored & Encrypted')).toBeInTheDocument();
   });
 
+  it('keeps Save Changes inert until a real change; opening an empty password change does not count (DSM-00137)', async () => {
+    vi.mocked(apiClient.steam.getSettings).mockResolvedValue({
+      ...mockDefaultSettings,
+      authMode: 'account',
+      steamUsername: 'dayz_operator',
+      hasPassword: true,
+    });
+    renderView();
+
+    const saveBtn = await screen.findByRole('button', { name: 'Save Changes' });
+    expect(saveBtn).toHaveAttribute('aria-disabled', 'true');
+    fireEvent.click(saveBtn);
+    expect(apiClient.steam.updateSettings).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Change Password' }));
+    expect(saveBtn).toHaveAttribute('aria-disabled', 'true');
+
+    fireEvent.change(screen.getByLabelText('Steam Account Password'), {
+      target: { value: 'NewSecret123' },
+    });
+    expect(saveBtn).not.toHaveAttribute('aria-disabled');
+
+    fireEvent.change(screen.getByLabelText('Steam Account Password'), { target: { value: '' } });
+    expect(saveBtn).toHaveAttribute('aria-disabled', 'true');
+  });
+
   it('submits updated settings when clicking Save Changes with custom branch enabled', async () => {
     renderView();
 
@@ -627,6 +653,9 @@ describe('SteamSettingsView (REQ-01, REQ-02, REQ-03, REQ-04, REQ-07)', () => {
       });
 
       const saveBtn = screen.getByRole('button', { name: 'Save Changes' });
+      fireEvent.change(screen.getByLabelText('Steam Username'), {
+        target: { value: 'dayz_operator_2' },
+      });
       fireEvent.click(saveBtn);
       fireEvent.click(saveBtn);
       await waitFor(() => {
