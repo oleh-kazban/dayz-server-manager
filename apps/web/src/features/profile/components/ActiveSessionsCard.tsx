@@ -73,7 +73,8 @@ export function ActiveSessionsCard() {
           setConfirmCurrentId(null);
           notifySuccess('CURRENT_SESSION_REVOKED');
           await router.invalidate();
-          await navigate({ to: '/sign-in' });
+          // The session is gone server-side; no form can be saved anymore (DSM-00138).
+          await navigate({ to: '/sign-in', ignoreBlocker: true });
         },
         onError: (err: unknown) => {
           setConfirmCurrentId(null);

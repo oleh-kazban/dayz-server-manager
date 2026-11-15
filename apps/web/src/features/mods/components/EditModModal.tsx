@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { type RefObject, useRef, useState } from 'react';
 
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Pencil, X } from 'lucide-react';
@@ -12,7 +12,15 @@ import {
 } from '@aegis/api-contracts';
 import { Button, Input, Select, type SelectOption } from '@aegis/ui';
 import { SaveButton } from '@aegis/web/components';
-import { notifyApiError, notifySuccess, useEditableForm, useModalDialog } from '@aegis/web/core';
+import {
+  type DiscardGuard,
+  notifyApiError,
+  notifySuccess,
+  useDiscardGuardSlot,
+  useEditableForm,
+  useModalDialog,
+  usePublishDiscardGuard,
+} from '@aegis/web/core';
 
 import { modsQueryKeys } from '../mods.queries';
 
@@ -68,11 +76,13 @@ function EditModForm({
   serverId,
   isServerLocked,
   onClose,
+  discardGuardSlot,
 }: {
   mod: ServerModDto;
   serverId: string;
   isServerLocked: boolean;
   onClose: () => void;
+  discardGuardSlot: RefObject<DiscardGuard | null>;
 }) {
   const queryClient = useQueryClient();
   const inFlightRef = useRef(false);
@@ -111,6 +121,7 @@ function EditModForm({
     errors: fieldErrors,
     handleSubmit,
     reportServerErrors,
+    confirmDiscard,
   } = useEditableForm({
     values: { name, folderName, loadTarget },
     baseline: { name: mod.name, folderName: mod.folderName, loadTarget: mod.loadTarget },
@@ -118,6 +129,8 @@ function EditModForm({
     validate: validateEditModForm,
     isPending: updateMutation.isPending,
   });
+
+  usePublishDiscardGuard(discardGuardSlot, confirmDiscard);
 
   const submitValidForm = () => {
     if (inFlightRef.current) return;
@@ -171,7 +184,7 @@ function EditModForm({
       />
 
       <div className="flex justify-end gap-3 pt-4 border-t border-[var(--color-border)]">
-        <Button variant="secondary" type="button" onClick={onClose}>
+        <Button variant="secondary" type="button" onClick={() => confirmDiscard(onClose)}>
           Cancel
         </Button>
         <SaveButton
@@ -197,7 +210,9 @@ function EditModDialog({
   isServerLocked: boolean;
   onClose: () => void;
 }) {
-  const { dialogRef, handleBackdropClick } = useModalDialog({ onClose });
+  const { slotRef, runGuarded } = useDiscardGuardSlot();
+  const requestClose = () => runGuarded(onClose);
+  const { dialogRef, handleBackdropClick } = useModalDialog({ onClose: requestClose });
 
   return (
     <div
@@ -234,7 +249,7 @@ function EditModDialog({
             isIconOnly
             leftIcon={X}
             aria-label="Close dialog"
-            onClick={onClose}
+            onClick={requestClose}
           />
         </div>
 
@@ -244,6 +259,7 @@ function EditModDialog({
           serverId={serverId}
           isServerLocked={isServerLocked}
           onClose={onClose}
+          discardGuardSlot={slotRef}
         />
       </div>
     </div>

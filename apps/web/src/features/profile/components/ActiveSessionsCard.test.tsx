@@ -193,7 +193,7 @@ describe('ActiveSessionsCard', () => {
     );
     await waitFor(() => {
       expect(mockRouterInvalidate).toHaveBeenCalledTimes(1);
-      expect(mockNavigate).toHaveBeenCalledWith({ to: '/sign-in' });
+      expect(mockNavigate).toHaveBeenCalledWith({ to: '/sign-in', ignoreBlocker: true });
     });
 
     // Failure to revoke the current session must surface a red toast

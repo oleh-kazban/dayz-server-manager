@@ -547,7 +547,9 @@ describe('ServerSettingsView', () => {
         'Server "DayZ Namalsk" has been removed from DayZ Server Manager.',
         undefined,
       );
-      expect(mockSetActiveServerId).toHaveBeenCalledWith(mockDefaultServerSummary.id);
+      expect(mockSetActiveServerId).toHaveBeenCalledWith(mockDefaultServerSummary.id, {
+        ignoreBlocker: true,
+      });
     });
   });
 

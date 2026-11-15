@@ -3,6 +3,17 @@ import { useEffect, useRef } from 'react';
 const FOCUSABLE_SELECTOR =
   'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
+/**
+ * True while a native modal <dialog> outside this modal is open on top of it. Checked
+ * regardless of the event target: focus can sit on <body> (e.g. after tabbing past the
+ * dialog's last control), and the stacked dialog must still own Escape and Tab.
+ */
+function hasStackedDialog(modal: HTMLElement | null): boolean {
+  return Array.from(document.querySelectorAll('dialog[open]')).some(
+    dialog => !modal?.contains(dialog),
+  );
+}
+
 export interface UseModalDialogOptions {
   onClose: () => void;
   isBusy?: boolean;
@@ -24,6 +35,12 @@ export function useModalDialog({ onClose, isBusy = false }: UseModalDialogOption
     document.body.style.overflow = 'hidden';
 
     const handleKeyDown = (event: KeyboardEvent) => {
+      // A native <dialog> stacked on top (e.g. "Discard unsaved changes?") owns its own
+      // Escape and focus handling; the modal underneath must not react to it.
+      if (hasStackedDialog(dialogRef.current)) {
+        return;
+      }
+
       if (event.key === 'Escape') {
         if (!isBusyRef.current) {
           event.preventDefault();
@@ -35,7 +52,7 @@ export function useModalDialog({ onClose, isBusy = false }: UseModalDialogOption
       if (event.key === 'Tab' && dialogRef.current) {
         const focusableElements = Array.from(
           dialogRef.current.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR),
-        ).filter(el => !el.hidden && el.getAttribute('aria-hidden') !== 'true');
+        ).filter(el => !el.closest('[hidden]') && el.getAttribute('aria-hidden') !== 'true');
 
         if (focusableElements.length === 0) {
           event.preventDefault();

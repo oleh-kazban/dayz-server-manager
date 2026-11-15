@@ -96,6 +96,7 @@ function CreateServerDialog({ onClose }: { onClose: () => void }) {
     onSuccess: newServer => {
       queryClient.setQueryData(serverQueryKeys.detail(newServer.id), newServer);
       queryClient.invalidateQueries({ queryKey: serverQueryKeys.list() });
+      releaseUnsavedChanges();
       setActiveServerId(newServer.id);
       notifySuccess('SERVER_CREATED', { name: newServer.name });
       onClose();
@@ -114,15 +115,28 @@ function CreateServerDialog({ onClose }: { onClose: () => void }) {
     errors: fieldErrors,
     handleSubmit,
     reportServerErrors,
+    confirmDiscard,
+    releaseUnsavedChanges,
   } = useEditableForm({
-    values: { name, description, installPath, gamePort, rconPort, rconPassword },
+    values: {
+      name,
+      description,
+      installPath,
+      gamePort,
+      rconPort,
+      rconPassword,
+      launchParameters,
+      isDefault,
+    },
     baseline: null,
     validate: validateCreateServerForm,
     isPending: createMutation.isPending,
   });
 
+  const requestClose = () => confirmDiscard(onClose);
+
   const { dialogRef, handleBackdropClick } = useModalDialog({
-    onClose,
+    onClose: requestClose,
     isBusy: createMutation.isPending,
   });
 
@@ -176,7 +190,7 @@ function CreateServerDialog({ onClose }: { onClose: () => void }) {
             isIconOnly
             leftIcon={X}
             aria-label="Close dialog"
-            onClick={onClose}
+            onClick={requestClose}
           />
         </div>
 
@@ -272,7 +286,7 @@ function CreateServerDialog({ onClose }: { onClose: () => void }) {
           </div>
 
           <div className="flex justify-end gap-3 pt-4 border-t border-[var(--color-border)]">
-            <Button variant="secondary" type="button" onClick={onClose}>
+            <Button variant="secondary" type="button" onClick={requestClose}>
               Cancel
             </Button>
             <Button variant="primary" type="submit" isLoading={createMutation.isPending}>

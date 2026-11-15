@@ -1,6 +1,7 @@
 import { Link, useNavigate, useRouter } from '@tanstack/react-router';
 import { LogOut } from 'lucide-react';
 
+import { useConfirmDiscardAll } from '@aegis/web/core';
 import { useAuth, type UserRole } from '@aegis/web/features/auth';
 
 const ROLE_LABELS: Record<UserRole, string> = {
@@ -11,11 +12,17 @@ export function UserProfile() {
   const { user, logout } = useAuth();
   const router = useRouter();
   const navigate = useNavigate();
+  const confirmDiscardAll = useConfirmDiscardAll();
 
-  const handleLogout = async () => {
+  const signOut = async () => {
     logout();
     await router.invalidate();
-    await navigate({ to: '/sign-in' });
+    // Unsaved edits were already confirmed for discard above (DSM-00138).
+    await navigate({ to: '/sign-in', ignoreBlocker: true });
+  };
+
+  const handleLogout = () => {
+    confirmDiscardAll(() => void signOut());
   };
 
   // Derive initials from displayName or username (e.g., "Alex Kovac" -> "AK", "Administrator" -> "AD")
