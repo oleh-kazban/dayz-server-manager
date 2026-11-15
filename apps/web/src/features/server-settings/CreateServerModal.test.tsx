@@ -66,6 +66,12 @@ describe('CreateServerModal', () => {
     expect(container).toBeEmptyDOMElement();
   });
 
+  const serverDetailDefaults = {
+    maxPlayers: 60,
+    rconIp: '127.0.0.1',
+    rconPassword: 'secretpass' as string | null,
+  };
+
   it('renders modal elements and handles form input modification and submission', async () => {
     vi.mocked(apiClient.servers.create).mockResolvedValue({
       id: 'srv-123',
@@ -76,10 +82,12 @@ describe('CreateServerModal', () => {
       queryPort: 27016,
       rconPort: 2310,
       installPath: 'C:\\DayZ',
-      profilePath: 'profiles\\namalsk',
-      missionPath: 'mpmissions\\namalsk',
+      profilePath: 'profiles',
+      missionPath: 'mpmissions\\dayzOffline.chernarusplus',
       launchParameters: '-cpuCount=4',
       isDefault: true,
+      ...serverDetailDefaults,
+      maxPlayers: 80,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     });
@@ -87,6 +95,10 @@ describe('CreateServerModal', () => {
     renderModal(true);
 
     expect(screen.getByRole('heading', { name: 'Create DayZ Server' })).toBeInTheDocument();
+    expect(screen.queryByLabelText(/Query Port/i)).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(/Max Players/i)).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(/Profile Path/i)).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(/Mission Path/i)).not.toBeInTheDocument();
 
     // Type into inputs
     fireEvent.change(screen.getByLabelText(/Server Name/i), {
@@ -98,9 +110,6 @@ describe('CreateServerModal', () => {
     fireEvent.change(screen.getByLabelText(/^Game Port$/i), {
       target: { value: '2302' },
     });
-    fireEvent.change(screen.getByLabelText(/Query Port/i), {
-      target: { value: '27016' },
-    });
     fireEvent.change(screen.getByLabelText(/RCON Port/i), {
       target: { value: '2310' },
     });
@@ -109,12 +118,6 @@ describe('CreateServerModal', () => {
     });
     fireEvent.change(screen.getByLabelText(/Installation Path/i), {
       target: { value: 'C:\\DayZ' },
-    });
-    fireEvent.change(screen.getByLabelText(/Profile Path/i), {
-      target: { value: 'profiles\\namalsk' },
-    });
-    fireEvent.change(screen.getByLabelText(/Mission Path/i), {
-      target: { value: 'mpmissions\\namalsk' },
     });
     fireEvent.change(screen.getByLabelText(/Launch Parameters/i), {
       target: { value: '-cpuCount=4' },
@@ -132,12 +135,9 @@ describe('CreateServerModal', () => {
         name: 'Namalsk Hardcore',
         description: 'Survival server',
         gamePort: 2302,
-        queryPort: 27016,
         rconPort: 2310,
         rconPassword: 'secretpass',
         installPath: 'C:\\DayZ',
-        profilePath: 'profiles\\namalsk',
-        missionPath: 'mpmissions\\namalsk',
         launchParameters: '-cpuCount=4',
         isDefault: true,
       });
@@ -151,33 +151,21 @@ describe('CreateServerModal', () => {
     });
   });
 
-  it('validates port range bounds, distinct port collisions, short passwords, and required paths', async () => {
+  it('validates port range bounds, distinct game/RCON ports, short passwords, and required install path', async () => {
     renderModal(true);
 
     fireEvent.change(screen.getByLabelText(/Server Name/i), {
       target: { value: 'Test' },
     });
-    // Clear required paths
     fireEvent.change(screen.getByLabelText(/Installation Path/i), {
       target: { value: '   ' },
     });
-    fireEvent.change(screen.getByLabelText(/Profile Path/i), {
-      target: { value: '   ' },
-    });
-    fireEvent.change(screen.getByLabelText(/Mission Path/i), {
-      target: { value: '   ' },
-    });
-    // Set invalid port bounds
     fireEvent.change(screen.getByLabelText(/^Game Port$/i), {
       target: { value: '500' },
-    });
-    fireEvent.change(screen.getByLabelText(/Query Port/i), {
-      target: { value: '80' },
     });
     fireEvent.change(screen.getByLabelText(/RCON Port/i), {
       target: { value: '70000' },
     });
-    // Set short rcon password
     fireEvent.change(screen.getByLabelText(/RCON Password/i), {
       target: { value: '123' },
     });
@@ -185,33 +173,36 @@ describe('CreateServerModal', () => {
     fireEvent.click(screen.getByRole('button', { name: /^Create Server$/i }));
 
     expect(screen.getByText('Installation path is required.')).toBeInTheDocument();
-    expect(screen.getByText('Profile path is required.')).toBeInTheDocument();
-    expect(screen.getByText('Mission path is required.')).toBeInTheDocument();
-    expect(screen.getAllByText('Port must be between 1024 and 65535.')).toHaveLength(3);
-    expect(screen.getByText('RCON password must be at least 6 characters.')).toBeInTheDocument();
+    expect(screen.getAllByText('Port must be between 1024 and 65535.')).toHaveLength(2);
+    expect(
+      screen.getByText('RCON password must be between 6 and 32 characters'),
+    ).toBeInTheDocument();
     expect(showToast.error).not.toHaveBeenCalled();
+
+    // Reject control characters in Server Name via serverNameSchema
+    fireEvent.change(screen.getByLabelText(/Server Name/i), {
+      target: { value: 'Bad\0Name' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: /^Create Server$/i }));
+    expect(
+      screen.getByText('Control characters (CR, LF, null bytes) are forbidden'),
+    ).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText(/Server Name/i), {
+      target: { value: 'Test' },
+    });
 
     // Type into gamePort to clear its error
     fireEvent.change(screen.getByLabelText(/^Game Port$/i), {
       target: { value: '2302' },
     });
-    expect(screen.getAllByText('Port must be between 1024 and 65535.')).toHaveLength(2);
+    expect(screen.getAllByText('Port must be between 1024 and 65535.')).toHaveLength(1);
 
     // Set matching game and rcon ports to trigger distinct validation
-    fireEvent.change(screen.getByLabelText(/Query Port/i), {
-      target: { value: '27016' },
-    });
     fireEvent.change(screen.getByLabelText(/RCON Port/i), {
       target: { value: '2302' },
     });
     fireEvent.change(screen.getByLabelText(/Installation Path/i), {
       target: { value: 'C:\\DayZ' },
-    });
-    fireEvent.change(screen.getByLabelText(/Profile Path/i), {
-      target: { value: 'profiles' },
-    });
-    fireEvent.change(screen.getByLabelText(/Mission Path/i), {
-      target: { value: 'mpmissions\\namalsk' },
     });
     fireEvent.change(screen.getByLabelText(/RCON Password/i), {
       target: { value: 'validpass' },
@@ -219,12 +210,10 @@ describe('CreateServerModal', () => {
 
     fireEvent.click(screen.getByRole('button', { name: /^Create Server$/i }));
 
-    expect(
-      screen.getByText('Game port, query port, and RCON port must all be distinct.'),
-    ).toBeInTheDocument();
+    expect(screen.getByText('Game port and RCON port must be distinct.')).toBeInTheDocument();
   });
 
-  it('highlights all conflicting/invalid fields inline simultaneously without firing a toast when fieldErrors are present, and fires a toast only on non-field errors (REQ-03)', async () => {
+  it('highlights all conflicting/invalid fields inline AND fires a red error toast for every API failure (REQ-03)', async () => {
     // 1. Simultaneous 409 conflicts on name, gamePort, and rconPort
     vi.mocked(apiClient.servers.create).mockRejectedValueOnce(
       new ApiError('Server conflicts', 409, {
@@ -271,10 +260,13 @@ describe('CreateServerModal', () => {
         screen.getByText('Port 2310 is already in use by server "DayZ Local".'),
       ).toBeInTheDocument();
     });
-    expect(showToast.error).not.toHaveBeenCalled();
-    expect(screen.queryByText('Creation Error')).not.toBeInTheDocument();
+    expect(showToast.error).toHaveBeenLastCalledWith(
+      'Server Name Conflict',
+      'A server named "Duplicate Server" already exists. Please choose a unique name.',
+      undefined,
+    );
 
-    // 2. 400 VALIDATION_FAILED with structured fieldErrors -> inline only, no toast
+    // 2. 400 VALIDATION_FAILED with structured fieldErrors -> inline + toast
     vi.mocked(apiClient.servers.create).mockRejectedValueOnce(
       new ApiError('Validation failed', 400, {
         statusCode: 400,
@@ -295,9 +287,13 @@ describe('CreateServerModal', () => {
     await waitFor(() => {
       expect(screen.getByText('Path traversal (..) is not permitted.')).toBeInTheDocument();
     });
-    expect(showToast.error).not.toHaveBeenCalled();
+    expect(showToast.error).toHaveBeenLastCalledWith(
+      'Validation Error',
+      'Please review the highlighted fields and correct any invalid values.',
+      undefined,
+    );
 
-    // 3. Non-field 500 server error -> triggers notifyApiError toast
+    // 3. Non-field 500 server error -> toast only
     vi.mocked(apiClient.servers.create).mockRejectedValueOnce(
       new ApiError('Internal error', 500, {
         statusCode: 500,
@@ -316,6 +312,58 @@ describe('CreateServerModal', () => {
         undefined,
       );
     });
+  });
+
+  it('fires a toast when a 409 conflict targets a field the modal does not render (server-derived queryPort)', async () => {
+    vi.mocked(apiClient.servers.create).mockRejectedValueOnce(
+      new ApiError('Port collision', 409, {
+        statusCode: 409,
+        error: 'Conflict',
+        errorCode: 'SERVER_PORT_COLLISION',
+        message: "Port 27016 collides with existing server 'DayZ Local' (ID: srv-1)",
+        params: { port: 27016, occupiedBy: 'DayZ Local', occupiedById: 'srv-1' },
+        fieldErrors: {
+          queryPort: {
+            code: 'SERVER_PORT_COLLISION',
+            message: "Port 27016 collides with existing server 'DayZ Local' (ID: srv-1)",
+            params: { port: 27016, occupiedBy: 'DayZ Local', occupiedById: 'srv-1' },
+          },
+        },
+      }),
+    );
+
+    renderModal(true);
+
+    fireEvent.change(screen.getByLabelText(/Server Name/i), {
+      target: { value: 'Second Server' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: /^Create Server$/i }));
+
+    await waitFor(() => {
+      expect(showToast.error).toHaveBeenCalledTimes(1);
+    });
+    expect(vi.mocked(showToast.error).mock.calls[0][1]).toMatch(/27016/);
+    // Modal stays open so the user can adjust the input
+    expect(screen.getByRole('button', { name: /^Create Server$/i })).toBeInTheDocument();
+  });
+
+  it('keeps Create Server enabled, focuses the first invalid field on submit, and re-validates live (DSM-00137)', () => {
+    renderModal(true);
+    const submit = screen.getByRole('button', { name: /^Create Server$/i });
+    expect(submit).toBeEnabled();
+    expect(submit).not.toHaveAttribute('aria-disabled');
+
+    const nameInput = screen.getByLabelText(/Server Name/i);
+    fireEvent.change(nameInput, { target: { value: '' } });
+    expect(screen.queryByText('Server name is required.')).not.toBeInTheDocument();
+
+    fireEvent.click(submit);
+    expect(screen.getByText('Server name is required.')).toBeInTheDocument();
+    expect(nameInput).toHaveFocus();
+    expect(apiClient.servers.create).not.toHaveBeenCalled();
+
+    fireEvent.change(nameInput, { target: { value: 'New Server' } });
+    expect(screen.queryByText('Server name is required.')).not.toBeInTheDocument();
   });
 
   it('closes modal when Cancel button or X icon is clicked', () => {
@@ -414,6 +462,8 @@ describe('CreateServerModal', () => {
       missionPath: 'mpmissions\\dayzOffline.chernarusplus',
       launchParameters: '-cpuCount=4 -doLogs -adminLog -netLog',
       isDefault: false,
+      ...serverDetailDefaults,
+      rconPassword: null,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     });
@@ -423,56 +473,44 @@ describe('CreateServerModal', () => {
     });
   });
 
-  it('pre-populates relative Profile Path default value and placeholder (Option B)', () => {
+  it('submits undefined rconPassword when password field is left blank', async () => {
+    vi.mocked(apiClient.servers.create).mockResolvedValue({
+      id: 'srv-minimal',
+      name: 'Minimal Server',
+      description: null,
+      status: 'stopped',
+      gamePort: 2302,
+      queryPort: 27016,
+      rconPort: 2310,
+      installPath: 'C:\\DayZServer',
+      profilePath: 'profiles',
+      missionPath: 'mpmissions\\dayzOffline.chernarusplus',
+      launchParameters: '-cpuCount=4 -doLogs -adminLog -netLog',
+      isDefault: false,
+      ...serverDetailDefaults,
+      rconPassword: null,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    });
+
     renderModal(true);
 
-    const profileInput = screen.getByLabelText(/Profile Path/i);
-    expect(profileInput).toHaveValue('profiles');
-    expect(profileInput).toHaveAttribute('placeholder', 'e.g. profiles');
+    fireEvent.change(screen.getByLabelText(/Server Name/i), {
+      target: { value: 'Minimal Server' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: /^Create Server$/i }));
+
+    await waitFor(() => {
+      expect(apiClient.servers.create).toHaveBeenCalledWith({
+        name: 'Minimal Server',
+        description: undefined,
+        gamePort: 2302,
+        rconPort: 2310,
+        rconPassword: undefined,
+        installPath: 'C:\\DayZServer',
+        launchParameters: '-cpuCount=4 -doLogs -adminLog -netLog',
+        isDefault: false,
+      });
+    });
   });
-
-  it.each([
-    {
-      fieldLabel: /Profile Path/i,
-      badValue: 'C:\\DayZ\\profiles',
-      expectedError: 'Profile path must be relative to the installation path (e.g. profiles).',
-    },
-    {
-      fieldLabel: /Profile Path/i,
-      badValue: '/opt/profiles',
-      expectedError: 'Profile path must be relative to the installation path (e.g. profiles).',
-    },
-    {
-      fieldLabel: /Mission Path/i,
-      badValue: 'D:\\missions\\foo',
-      expectedError:
-        'Mission path must be relative to the installation path (e.g. mpmissions\\dayzOffline.chernarusplus).',
-    },
-    {
-      fieldLabel: /Mission Path/i,
-      badValue: '/missions/foo',
-      expectedError:
-        'Mission path must be relative to the installation path (e.g. mpmissions\\dayzOffline.chernarusplus).',
-    },
-  ])(
-    'rejects non-relative path "$badValue" on submit without calling create (Option B)',
-    ({ fieldLabel, badValue, expectedError }) => {
-      renderModal(true);
-
-      fireEvent.change(screen.getByLabelText(/Server Name/i), {
-        target: { value: 'Relative Validation Server' },
-      });
-      fireEvent.change(screen.getByLabelText(/RCON Password/i), {
-        target: { value: 'secretpass' },
-      });
-      fireEvent.change(screen.getByLabelText(fieldLabel), {
-        target: { value: badValue },
-      });
-
-      fireEvent.click(screen.getByRole('button', { name: /^Create Server$/i }));
-
-      expect(screen.getByText(expectedError)).toBeInTheDocument();
-      expect(apiClient.servers.create).not.toHaveBeenCalled();
-    },
-  );
 });

@@ -18,7 +18,15 @@ export type NotificationCode =
   | 'MOD_UPDATES_CHECKED'
   | 'MOD_MARKED_SYNCED'
   | 'MOD_ENABLED'
-  | 'MOD_DISABLED';
+  | 'MOD_DISABLED'
+  | 'SERVER_CONFIG_SAVED'
+  | 'SERVER_CONFIG_CREATED'
+  | 'SERVER_CONFIG_RESTORED'
+  | 'PROFILE_UPDATED'
+  | 'PASSWORD_ROTATED'
+  | 'SESSION_REVOKED'
+  | 'OTHER_SESSIONS_REVOKED'
+  | 'CURRENT_SESSION_REVOKED';
 
 export interface ToastTranslationEntry {
   title: string;
@@ -101,7 +109,8 @@ export const enUSTranslations: TranslationCatalog = {
     },
     SERVER_RUNNING_CONFIG_LOCKED: {
       title: 'Configuration Locked',
-      description: 'Cannot modify network ports or file paths while "{{name}}" is {{status}}.',
+      description:
+        'Cannot modify server configuration, ports, credentials, or file paths while "{{name}}" is {{status}}.',
     },
     SERVER_RUNNING_DELETE_LOCKED: {
       title: 'Deletion Locked',
@@ -198,6 +207,63 @@ export const enUSTranslations: TranslationCatalog = {
       title: 'Steam Web API Key Required',
       description: 'Configure a Steam Web API Key in Steam Settings to search the Workshop.',
     },
+    CONFIG_PATH_INVALID: {
+      title: 'Invalid Config Path',
+      description:
+        'One or more configuration paths failed containment checks or point to a symlink.',
+    },
+    CONFIG_WRITE_FAILED: {
+      title: 'Config Write Failed',
+      description:
+        'Unable to atomically write DayZ configuration files to disk. Check filesystem permissions.',
+    },
+    CONFIG_BACKUP_FAILED: {
+      title: 'Config Backup Failed',
+      description:
+        'Pre-commit backup failed before modifying configuration files. Disk files remain untouched.',
+    },
+    CONFIG_RCON_PASSWORD_REQUIRED: {
+      title: 'RCON Password Required',
+      description: 'Configure a BattlEye RCON password before generating the BattlEye RCON file.',
+    },
+    CONFIG_EDIT_LOCKED: {
+      title: 'Configuration Being Edited',
+      description: 'serverDZ.cfg is being edited by {{holderName}}. Try again when they finish.',
+    },
+    CONFIG_LOCK_NOT_HELD: {
+      title: 'Edit Lock Lost',
+      description:
+        'This editor no longer holds the serverDZ.cfg edit lock. Your changes were not written.',
+    },
+    CONFIG_HASH_MISMATCH: {
+      title: 'File Changed on Disk',
+      description:
+        'serverDZ.cfg was modified after it was loaded. Reload the file before writing again.',
+    },
+    CONFIG_VALIDATION_FAILED: {
+      title: 'Configuration Invalid',
+      description: '{{errorCount}} error(s) block saving. Line {{firstLine}}: {{firstMessage}}',
+    },
+    CONFIG_FILE_TOO_LARGE: {
+      title: 'Configuration Too Large',
+      description: 'serverDZ.cfg must not exceed 64 KB.',
+    },
+    CONFIG_FILE_EXISTS: {
+      title: 'Configuration Already Exists',
+      description: 'serverDZ.cfg already exists. Reload to edit the existing file.',
+    },
+    CONFIG_FILE_MISSING: {
+      title: 'Configuration Missing',
+      description: 'serverDZ.cfg does not exist. Create it from the template first.',
+    },
+    CONFIG_REVISION_NOT_FOUND: {
+      title: 'Revision Not Found',
+      description: 'The selected serverDZ.cfg revision no longer exists.',
+    },
+    SERVER_CONFIG_EDIT_IN_PROGRESS: {
+      title: 'Configuration Being Edited',
+      description: 'serverDZ.cfg is being edited by {{holderName}}. Wait until editing ends.',
+    },
   },
   validation: {
     REQUIRED: 'This field is required.',
@@ -215,6 +281,7 @@ export const enUSTranslations: TranslationCatalog = {
     PATH_INVALID_COLON: 'Colons are only permitted in Windows drive letter prefixes.',
     INVALID_TYPE: 'Invalid value provided.',
     INVALID_VALUE: '{{message}}',
+    AUTH_PASSWORD_MISMATCH: 'Current password is incorrect.',
   },
   notifications: {
     SERVER_CREATED: {
@@ -224,6 +291,18 @@ export const enUSTranslations: TranslationCatalog = {
     SERVER_UPDATED: {
       title: 'Settings Saved',
       description: 'Configuration for "{{name}}" has been updated successfully.',
+    },
+    SERVER_CONFIG_SAVED: {
+      title: 'serverDZ.cfg Saved',
+      description: 'serverDZ.cfg for "{{name}}" was validated and written to disk.',
+    },
+    SERVER_CONFIG_CREATED: {
+      title: 'serverDZ.cfg Created',
+      description: 'serverDZ.cfg for "{{name}}" was created from the DSM template.',
+    },
+    SERVER_CONFIG_RESTORED: {
+      title: 'Revision Restored',
+      description: 'The selected revision of serverDZ.cfg for "{{name}}" was written to disk.',
     },
     SERVER_DELETED: {
       title: 'Server Deleted',
@@ -288,6 +367,26 @@ export const enUSTranslations: TranslationCatalog = {
     MOD_DISABLED: {
       title: 'Mod Disabled',
       description: '"{{name}}" has been disabled.',
+    },
+    PROFILE_UPDATED: {
+      title: 'Profile Updated',
+      description: 'Your identity and regional preferences have been saved.',
+    },
+    PASSWORD_ROTATED: {
+      title: 'Password Rotated',
+      description: 'Your password was updated and all other active sessions have been invalidated.',
+    },
+    SESSION_REVOKED: {
+      title: 'Session Terminated',
+      description: 'The device session has been revoked.',
+    },
+    OTHER_SESSIONS_REVOKED: {
+      title: 'Sessions Terminated',
+      description: 'Terminated {{count}} other session(s).',
+    },
+    CURRENT_SESSION_REVOKED: {
+      title: 'Signed Out',
+      description: 'Your current session was terminated.',
     },
   },
   serverStatus: {

@@ -4,21 +4,77 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Server, X } from 'lucide-react';
 
 import { apiClient } from '@aegis/api-client';
-import type { CreateServerDto } from '@aegis/api-contracts';
+import { type CreateServerDto, rconPasswordSchema, serverNameSchema } from '@aegis/api-contracts';
 import { Button, Input, PasswordInput, Toggle } from '@aegis/ui';
 import {
-  extractApiFieldErrors,
   notifyApiError,
   notifySuccess,
-  resolveFieldErrors,
   serverQueryKeys,
   useActiveServer,
+  useEditableForm,
   useModalDialog,
 } from '@aegis/web/core';
 
 export interface CreateServerModalProps {
   isOpen: boolean;
   onClose: () => void;
+}
+
+interface CreateServerValidationInput {
+  name: string;
+  installPath: string;
+  gamePort: number;
+  rconPort: number;
+  rconPassword: string;
+}
+
+function validateCreateServerPaths(
+  input: CreateServerValidationInput,
+  errors: Record<string, string>,
+): void {
+  if (!input.installPath.trim()) {
+    errors.installPath = 'Installation path is required.';
+  }
+}
+
+function validateCreateServerPorts(
+  input: CreateServerValidationInput,
+  errors: Record<string, string>,
+): void {
+  if (!input.gamePort || input.gamePort < 1024 || input.gamePort > 65535) {
+    errors.gamePort = 'Port must be between 1024 and 65535.';
+  }
+  if (!input.rconPort || input.rconPort < 1024 || input.rconPort > 65535) {
+    errors.rconPort = 'Port must be between 1024 and 65535.';
+  }
+  if (input.gamePort === input.rconPort) {
+    errors.gamePort = 'Game port and RCON port must be distinct.';
+  }
+}
+
+function validateCreateServerForm(input: CreateServerValidationInput): Record<string, string> {
+  const errors: Record<string, string> = {};
+
+  if (!input.name.trim()) {
+    errors.name = 'Server name is required.';
+  } else {
+    const nameResult = serverNameSchema.safeParse(input.name.trim());
+    if (!nameResult.success) {
+      errors.name = nameResult.error.issues[0].message;
+    }
+  }
+
+  validateCreateServerPaths(input, errors);
+  validateCreateServerPorts(input, errors);
+
+  if (input.rconPassword) {
+    const rconResult = rconPasswordSchema.safeParse(input.rconPassword);
+    if (!rconResult.success) {
+      errors.rconPassword = rconResult.error.issues[0].message;
+    }
+  }
+
+  return errors;
 }
 
 function CreateServerDialog({ onClose }: { onClose: () => void }) {
@@ -29,25 +85,11 @@ function CreateServerDialog({ onClose }: { onClose: () => void }) {
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [gamePort, setGamePort] = useState(2302);
-  const [queryPort, setQueryPort] = useState(27016);
   const [rconPort, setRconPort] = useState(2310);
   const [rconPassword, setRconPassword] = useState('');
   const [installPath, setInstallPath] = useState('C:\\DayZServer');
-  const [profilePath, setProfilePath] = useState('profiles');
-  const [missionPath, setMissionPath] = useState('mpmissions\\dayzOffline.chernarusplus');
   const [launchParameters, setLaunchParameters] = useState('-cpuCount=4 -doLogs -adminLog -netLog');
   const [isDefault, setIsDefault] = useState(false);
-  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
-
-  const clearFieldError = (field: string) => {
-    if (fieldErrors[field]) {
-      setFieldErrors(prev => {
-        const next = { ...prev };
-        delete next[field];
-        return next;
-      });
-    }
-  };
 
   const createMutation = useMutation({
     mutationFn: (dto: CreateServerDto) => apiClient.servers.create(dto),
@@ -59,11 +101,7 @@ function CreateServerDialog({ onClose }: { onClose: () => void }) {
       onClose();
     },
     onError: (err: Error) => {
-      const resolvedFields = resolveFieldErrors(extractApiFieldErrors(err));
-      if (Object.keys(resolvedFields).length > 0) {
-        setFieldErrors(resolvedFields);
-        return;
-      }
+      reportServerErrors(err);
       notifyApiError(err, 'Failed to create server');
     },
     onSettled: () => {
@@ -71,67 +109,32 @@ function CreateServerDialog({ onClose }: { onClose: () => void }) {
     },
   });
 
+  const {
+    registerForm,
+    errors: fieldErrors,
+    handleSubmit,
+    reportServerErrors,
+  } = useEditableForm({
+    values: { name, description, installPath, gamePort, rconPort, rconPassword },
+    baseline: null,
+    validate: validateCreateServerForm,
+    isPending: createMutation.isPending,
+  });
+
   const { dialogRef, handleBackdropClick } = useModalDialog({
     onClose,
     isBusy: createMutation.isPending,
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (createMutation.isPending || inFlightRef.current) return;
-
-    const errors: Record<string, string> = {};
-
-    if (!name.trim()) {
-      errors.name = 'Server name is required.';
-    }
-    if (!installPath.trim()) {
-      errors.installPath = 'Installation path is required.';
-    }
-    if (!profilePath.trim()) {
-      errors.profilePath = 'Profile path is required.';
-    } else if (/^(?:[a-zA-Z]:|[\\/])/.test(profilePath.trim())) {
-      errors.profilePath =
-        'Profile path must be relative to the installation path (e.g. profiles).';
-    }
-    if (!missionPath.trim()) {
-      errors.missionPath = 'Mission path is required.';
-    } else if (/^(?:[a-zA-Z]:|[\\/])/.test(missionPath.trim())) {
-      errors.missionPath =
-        'Mission path must be relative to the installation path (e.g. mpmissions\\dayzOffline.chernarusplus).';
-    }
-    if (!gamePort || gamePort < 1024 || gamePort > 65535) {
-      errors.gamePort = 'Port must be between 1024 and 65535.';
-    }
-    if (!queryPort || queryPort < 1024 || queryPort > 65535) {
-      errors.queryPort = 'Port must be between 1024 and 65535.';
-    }
-    if (!rconPort || rconPort < 1024 || rconPort > 65535) {
-      errors.rconPort = 'Port must be between 1024 and 65535.';
-    }
-    if (gamePort === queryPort || gamePort === rconPort || queryPort === rconPort) {
-      errors.gamePort = 'Game port, query port, and RCON port must all be distinct.';
-    }
-    if (rconPassword && rconPassword.length < 6) {
-      errors.rconPassword = 'RCON password must be at least 6 characters.';
-    }
-
-    if (Object.keys(errors).length > 0) {
-      setFieldErrors(errors);
-      return;
-    }
-
-    setFieldErrors({});
+  const submitValidForm = () => {
+    if (inFlightRef.current) return;
     inFlightRef.current = true;
 
     createMutation.mutate({
       name: name.trim(),
       description: description.trim() || undefined,
       installPath: installPath.trim(),
-      profilePath: profilePath.trim(),
-      missionPath: missionPath.trim(),
       gamePort: Number(gamePort),
-      queryPort: Number(queryPort),
       rconPort: Number(rconPort),
       rconPassword: rconPassword || undefined,
       launchParameters: launchParameters.trim() || undefined,
@@ -177,7 +180,12 @@ function CreateServerDialog({ onClose }: { onClose: () => void }) {
           />
         </div>
 
-        <form noValidate onSubmit={handleSubmit} className="mt-5 space-y-4">
+        <form
+          ref={registerForm}
+          noValidate
+          onSubmit={e => handleSubmit(e, submitValidForm)}
+          className="mt-5 space-y-4"
+        >
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Input
               label="Server Name"
@@ -186,7 +194,6 @@ function CreateServerDialog({ onClose }: { onClose: () => void }) {
               error={fieldErrors.name}
               onChange={e => {
                 setName(e.target.value);
-                clearFieldError('name');
               }}
             />
             <Input
@@ -196,12 +203,11 @@ function CreateServerDialog({ onClose }: { onClose: () => void }) {
               error={fieldErrors.description}
               onChange={e => {
                 setDescription(e.target.value);
-                clearFieldError('description');
               }}
             />
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Input
               label="Game Port"
               type="number"
@@ -209,17 +215,6 @@ function CreateServerDialog({ onClose }: { onClose: () => void }) {
               error={fieldErrors.gamePort}
               onChange={e => {
                 setGamePort(Number(e.target.value));
-                clearFieldError('gamePort');
-              }}
-            />
-            <Input
-              label="Query Port (A2S)"
-              type="number"
-              value={queryPort}
-              error={fieldErrors.queryPort}
-              onChange={e => {
-                setQueryPort(Number(e.target.value));
-                clearFieldError('queryPort');
               }}
             />
             <Input
@@ -229,7 +224,6 @@ function CreateServerDialog({ onClose }: { onClose: () => void }) {
               error={fieldErrors.rconPort}
               onChange={e => {
                 setRconPort(Number(e.target.value));
-                clearFieldError('rconPort');
               }}
             />
           </div>
@@ -241,7 +235,6 @@ function CreateServerDialog({ onClose }: { onClose: () => void }) {
             error={fieldErrors.rconPassword}
             onChange={e => {
               setRconPassword(e.target.value);
-              clearFieldError('rconPassword');
             }}
           />
 
@@ -256,31 +249,8 @@ function CreateServerDialog({ onClose }: { onClose: () => void }) {
               error={fieldErrors.installPath}
               onChange={e => {
                 setInstallPath(e.target.value);
-                clearFieldError('installPath');
               }}
             />
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <Input
-                label="Profile Path"
-                placeholder="e.g. profiles"
-                value={profilePath}
-                error={fieldErrors.profilePath}
-                onChange={e => {
-                  setProfilePath(e.target.value);
-                  clearFieldError('profilePath');
-                }}
-              />
-              <Input
-                label="Mission Path"
-                placeholder="e.g. mpmissions\dayzOffline.chernarusplus"
-                value={missionPath}
-                error={fieldErrors.missionPath}
-                onChange={e => {
-                  setMissionPath(e.target.value);
-                  clearFieldError('missionPath');
-                }}
-              />
-            </div>
           </div>
 
           <div className="pt-2 border-t border-[var(--color-border)]">
