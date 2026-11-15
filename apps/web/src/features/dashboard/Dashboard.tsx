@@ -4,7 +4,8 @@ import { Plus, Server, ShieldCheck } from 'lucide-react';
 
 import { apiClient } from '@aegis/api-client';
 import type { HealthResponseDto } from '@aegis/api-contracts';
-import { Button, EmptyServersState, PageContainer } from '@aegis/web/components';
+import { Button } from '@aegis/ui';
+import { EmptyServersState, PageContainer } from '@aegis/web/components';
 import { useActiveServer } from '@aegis/web/core';
 
 import { useAuth } from '../auth';

@@ -1,5 +1,6 @@
 export * from './config/app-version';
 export * from './features';
+export * from './forms';
 export * from './i18n';
 export * from './layout';
 export * from './markdown';
