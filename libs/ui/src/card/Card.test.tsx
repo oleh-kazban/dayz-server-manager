@@ -78,4 +78,41 @@ describe('Card', () => {
     expect(articleRef.current).toBeInstanceOf(HTMLElement);
     expect(articleRef.current?.tagName.toLowerCase()).toBe('article');
   });
+
+  it('allows wrapping in header and multi-button actions containers to prevent mobile overflow', () => {
+    render(
+      <Card
+        title="serverDZ.cfg"
+        subtitle="Primary dedicated server configuration with a long descriptive subtitle"
+        actions={
+          <>
+            <button type="button">History</button>
+            <button type="button">Discard</button>
+            <button type="button">Save Changes</button>
+          </>
+        }
+      >
+        Editor content
+      </Card>,
+    );
+
+    const heading = screen.getByRole('heading', { name: 'serverDZ.cfg' });
+    const historyButton = screen.getByRole('button', { name: 'History' });
+    const discardButton = screen.getByRole('button', { name: 'Discard' });
+    const saveButton = screen.getByRole('button', { name: 'Save Changes' });
+
+    const titleWrapper = heading.parentElement;
+    const actionsContainer = historyButton.parentElement;
+    const headerContainer = titleWrapper?.parentElement;
+
+    expect(titleWrapper).toHaveClass('min-w-0');
+    expect(headerContainer).toHaveClass('flex', 'flex-wrap');
+    expect(headerContainer).not.toHaveClass('flex-nowrap');
+
+    expect(actionsContainer).toContainElement(discardButton);
+    expect(actionsContainer).toContainElement(saveButton);
+    expect(actionsContainer).toBe(headerContainer?.lastElementChild);
+    expect(actionsContainer).toHaveClass('flex', 'flex-wrap', 'max-w-full');
+    expect(actionsContainer).not.toHaveClass('shrink-0');
+  });
 });
