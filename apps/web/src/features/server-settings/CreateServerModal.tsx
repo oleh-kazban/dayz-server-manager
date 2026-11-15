@@ -4,7 +4,12 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Server, X } from 'lucide-react';
 
 import { apiClient } from '@aegis/api-client';
-import { type CreateServerDto, rconPasswordSchema, serverNameSchema } from '@aegis/api-contracts';
+import {
+  type CreateServerDto,
+  rconPasswordSchema,
+  serverNameSchema,
+  type ServerSummaryDto,
+} from '@aegis/api-contracts';
 import { Button, Input, PasswordInput, Toggle } from '@aegis/ui';
 import {
   notifyApiError,
@@ -95,6 +100,11 @@ function CreateServerDialog({ onClose }: { onClose: () => void }) {
     mutationFn: (dto: CreateServerDto) => apiClient.servers.create(dto),
     onSuccess: newServer => {
       queryClient.setQueryData(serverQueryKeys.detail(newServer.id), newServer);
+      // Seed the list before switching: otherwise useActiveServer's URL sync sees an unknown
+      // serverId and redirects back to the default server until the refetch lands.
+      queryClient.setQueryData<ServerSummaryDto[]>(serverQueryKeys.list(), old =>
+        old ? [...old.filter(s => s.id !== newServer.id), newServer] : [newServer],
+      );
       queryClient.invalidateQueries({ queryKey: serverQueryKeys.list() });
       releaseUnsavedChanges();
       setActiveServerId(newServer.id);

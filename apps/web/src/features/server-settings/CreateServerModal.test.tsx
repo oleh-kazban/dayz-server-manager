@@ -4,7 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { apiClient, ApiError } from '@aegis/api-client';
 import { showToast } from '@aegis/ui';
-import { UnsavedChangesScope } from '@aegis/web/core';
+import { serverQueryKeys, UnsavedChangesScope } from '@aegis/web/core';
 
 import { CreateServerModal } from './CreateServerModal';
 
@@ -577,6 +577,10 @@ describe('CreateServerModal', () => {
       await waitFor(() => expect(mockOnClose).toHaveBeenCalledTimes(1));
       expect(mockSetActiveServerId).toHaveBeenCalledWith('srv-new');
       expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
+      // The list cache knows the new server before the switch, so URL sync keeps it selected.
+      expect(
+        queryClient.getQueryData<{ id: string }[]>(serverQueryKeys.list())?.map(s => s.id),
+      ).toContain('srv-new');
     });
   });
 });
