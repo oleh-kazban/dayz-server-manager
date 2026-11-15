@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
+import { userRoleSchema } from './auth.contract';
 import {
   changePasswordResponseSchema,
   changePasswordSchema,
@@ -8,6 +9,14 @@ import {
 } from './profile.contract';
 
 describe('Profile Contracts', () => {
+  describe('userRoleSchema', () => {
+    it('accepts only admin and rejects deprecated moderator/viewer roles', () => {
+      expect(userRoleSchema.safeParse('admin').success).toBe(true);
+      expect(userRoleSchema.safeParse('moderator').success).toBe(false);
+      expect(userRoleSchema.safeParse('viewer').success).toBe(false);
+    });
+  });
+
   describe('userProfileSchema', () => {
     it('validates a complete user profile DTO', () => {
       const valid = {
@@ -34,7 +43,7 @@ describe('Profile Contracts', () => {
       const minimal = {
         id: 'usr-min',
         username: 'operator',
-        role: 'viewer',
+        role: 'admin',
         createdAt: '2026-11-01T12:00:00.000Z',
       };
 
@@ -52,7 +61,7 @@ describe('Profile Contracts', () => {
         username: 'operator',
         displayName: null,
         email: null,
-        role: 'moderator',
+        role: 'admin',
         createdAt: '2026-11-01T12:00:00.000Z',
         lastLoginAt: null,
       };
@@ -61,7 +70,24 @@ describe('Profile Contracts', () => {
       expect(result.success).toBe(true);
     });
 
-    it('rejects invalid role or invalid datetime string', () => {
+    it('rejects non-admin roles or invalid datetime string', () => {
+      expect(
+        userProfileSchema.safeParse({
+          id: 'usr-mod',
+          username: 'operator',
+          role: 'moderator',
+          createdAt: '2026-11-01T12:00:00.000Z',
+        }).success,
+      ).toBe(false);
+      expect(
+        userProfileSchema.safeParse({
+          id: 'usr-view',
+          username: 'operator',
+          role: 'viewer',
+          createdAt: '2026-11-01T12:00:00.000Z',
+        }).success,
+      ).toBe(false);
+
       const invalid = {
         id: 'usr-bad',
         username: 'operator',

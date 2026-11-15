@@ -6,6 +6,8 @@ import {
   discoveredMissionSchema,
   isServerActiveStatus,
   launchParametersSchema,
+  rconIpSchema,
+  rconPasswordSchema,
   safePathSchema,
   SERVER_FS_CHECK_STATUS,
   SERVER_FS_CHECK_STATUS_VALUES,
@@ -24,6 +26,7 @@ import {
   serverFsPathStatusSchema,
   serverFsPathTargetSchema,
   serverIdParamSchema,
+  serverNameSchema,
   ServerStatus,
   serverStatusSchema,
   serverSummarySchema,
@@ -301,11 +304,51 @@ describe('Server Contracts (@aegis/api-contracts)', () => {
       profilePath: 'C:/DayZServer/profiles',
       missionPath: 'C:/DayZServer/mpmissions/dayzOffline.chernarusplus',
       launchParameters: '-config=serverDZ.cfg -cpuCount=4',
+      maxPlayers: 60,
+      rconIp: '127.0.0.1',
+      rconPassword: 'secretPassword123',
     };
 
     it('validates a complete detail object', () => {
       const res = serverDetailSchema.safeParse(validDetail);
       expect(res.success).toBe(true);
+    });
+
+    it('rejects out-of-range maxPlayers and invalid RCON IP in detail schema', () => {
+      expect(serverDetailSchema.safeParse({ ...validDetail, maxPlayers: 0 }).success).toBe(false);
+      expect(serverDetailSchema.safeParse({ ...validDetail, maxPlayers: 201 }).success).toBe(false);
+      expect(serverDetailSchema.safeParse({ ...validDetail, rconIp: '999.0.0.1' }).success).toBe(
+        false,
+      );
+    });
+
+    it('strips legacy gameplay fields that now live in serverDZ.cfg', () => {
+      const res = serverDetailSchema.safeParse({
+        ...validDetail,
+        disable3rdPerson: true,
+        verifySignatures: false,
+        serverTime: 'not-validated-anymore',
+        serverTimeAcceleration: 999,
+      });
+      expect(res.success).toBe(true);
+      if (res.success) {
+        expect(res.data).not.toHaveProperty('disable3rdPerson');
+        expect(res.data).not.toHaveProperty('verifySignatures');
+        expect(res.data).not.toHaveProperty('serverTime');
+        expect(res.data).not.toHaveProperty('serverTimeAcceleration');
+      }
+    });
+
+    it('requires rconPassword (string | null) without legacy admin/join flags', () => {
+      const withoutRconPassword: Record<string, unknown> = { ...validDetail };
+      delete withoutRconPassword.rconPassword;
+      expect(serverDetailSchema.safeParse(withoutRconPassword).success).toBe(false);
+
+      const nullRcon = serverDetailSchema.safeParse({
+        ...validDetail,
+        rconPassword: null,
+      });
+      expect(nullRcon.success).toBe(true);
     });
 
     it('accepts null or omitted launchParameters', () => {
@@ -348,24 +391,66 @@ describe('Server Contracts (@aegis/api-contracts)', () => {
       expect(res.success).toBe(true);
     });
 
-    it('applies default port values when omitted', () => {
+    it('applies default gamePort, rconPort, and rconIp while keeping auto-resolved fields undefined and stripping removed fields', () => {
+      const legacyAdminValue = ['legacy', 'admin'].join('-');
+      const legacyJoinValue = ['legacy', 'join'].join('-');
       const minimalPayload = {
         name: validCreatePayload.name,
-        description: validCreatePayload.description,
         installPath: validCreatePayload.installPath,
-        profilePath: validCreatePayload.profilePath,
-        missionPath: validCreatePayload.missionPath,
-        rconPassword: validCreatePayload.rconPassword,
-        launchParameters: validCreatePayload.launchParameters,
-        isDefault: validCreatePayload.isDefault,
+        disable3rdPerson: true,
+        serverTime: '2026/06/15/14/30',
+        passwordAdmin: legacyAdminValue,
+        serverPassword: legacyJoinValue,
       };
       const res = createServerSchema.safeParse(minimalPayload);
       expect(res.success).toBe(true);
       if (res.success) {
         expect(res.data.gamePort).toBe(2302);
-        expect(res.data.queryPort).toBe(27016);
         expect(res.data.rconPort).toBe(2310);
+        expect(res.data.rconIp).toBe('127.0.0.1');
+        expect(res.data.profilePath).toBeUndefined();
+        expect(res.data.missionPath).toBeUndefined();
+        expect(res.data.queryPort).toBeUndefined();
+        expect(res.data.maxPlayers).toBeUndefined();
+        expect(res.data).not.toHaveProperty('disable3rdPerson');
+        expect(res.data).not.toHaveProperty('serverTime');
+        expect(res.data).not.toHaveProperty('passwordAdmin');
+        expect(res.data).not.toHaveProperty('serverPassword');
       }
+
+      const withMission = createServerSchema.safeParse({
+        name: validCreatePayload.name,
+        installPath: validCreatePayload.installPath,
+        missionPath: 'mpmissions\\dayzOffline.enoch',
+      });
+      expect(withMission.success).toBe(true);
+      expect(
+        createServerSchema.safeParse({
+          name: validCreatePayload.name,
+          installPath: validCreatePayload.installPath,
+          missionPath: '../escape',
+        }).success,
+      ).toBe(false);
+    });
+
+    it('allows omitted queryPort when gamePort is 27016 and rejects gamePort === rconPort', () => {
+      expect(
+        createServerSchema.safeParse({
+          name: 'Custom Game Port',
+          installPath: 'C:/DayZServer',
+          gamePort: 27016,
+          rconPort: 2310,
+        }).success,
+      ).toBe(true);
+
+      expect(
+        createServerSchema.safeParse({
+          name: 'Colliding Game And RCON',
+          installPath: 'C:/DayZServer',
+          gamePort: 2310,
+          rconPort: 2310,
+        }).success,
+      ).toBe(false);
     });
 
     it('rejects port collision between gamePort and queryPort', () => {
@@ -438,6 +523,48 @@ describe('Server Contracts (@aegis/api-contracts)', () => {
       expect(
         createServerSchema.safeParse({ ...minimal, description: 'a'.repeat(257) }).success,
       ).toBe(false);
+
+      // maxPlayers boundaries 1..200
+      expect(createServerSchema.safeParse({ ...minimal, maxPlayers: 0 }).success).toBe(false);
+      expect(createServerSchema.safeParse({ ...minimal, maxPlayers: 1 }).success).toBe(true);
+      expect(createServerSchema.safeParse({ ...minimal, maxPlayers: 200 }).success).toBe(true);
+      expect(createServerSchema.safeParse({ ...minimal, maxPlayers: 201 }).success).toBe(false);
+      expect(createServerSchema.safeParse({ ...minimal, maxPlayers: 60.5 }).success).toBe(false);
+    });
+  });
+
+  describe('Server Credential & Network Field Schemas', () => {
+    it('validates serverNameSchema and rejects CR/LF/null control chars', () => {
+      expect(serverNameSchema.safeParse('DayZ Chernarus #1').success).toBe(true);
+      expect(serverNameSchema.safeParse('').success).toBe(false);
+      expect(serverNameSchema.safeParse('a'.repeat(65)).success).toBe(false);
+      expect(serverNameSchema.safeParse('Bad\nName').success).toBe(false);
+      expect(serverNameSchema.safeParse('Bad\rName').success).toBe(false);
+      expect(serverNameSchema.safeParse('Bad\0Name').success).toBe(false);
+    });
+
+    it('validates rconIpSchema as IPv4 only', () => {
+      expect(rconIpSchema.safeParse('127.0.0.1').success).toBe(true);
+      expect(rconIpSchema.safeParse('0.0.0.0').success).toBe(true);
+      expect(rconIpSchema.safeParse('255.255.255.255').success).toBe(true);
+      expect(rconIpSchema.safeParse('256.0.0.1').success).toBe(false);
+      expect(rconIpSchema.safeParse('192.168.1').success).toBe(false);
+      expect(rconIpSchema.safeParse('localhost').success).toBe(false);
+      expect(rconIpSchema.safeParse('::1').success).toBe(false);
+    });
+
+    it('validates rconPasswordSchema 6-32 printable ASCII without quotes, spaces, or backslashes', () => {
+      expect(rconPasswordSchema.safeParse('Abc!23#_9').success).toBe(true);
+      expect(rconPasswordSchema.safeParse('a'.repeat(6)).success).toBe(true);
+      expect(rconPasswordSchema.safeParse('a'.repeat(32)).success).toBe(true);
+      expect(rconPasswordSchema.safeParse('a'.repeat(5)).success).toBe(false);
+      expect(rconPasswordSchema.safeParse('a'.repeat(33)).success).toBe(false);
+      expect(rconPasswordSchema.safeParse('pass word').success).toBe(false);
+      expect(rconPasswordSchema.safeParse('pass"word').success).toBe(false);
+      expect(rconPasswordSchema.safeParse("pass'word").success).toBe(false);
+      expect(rconPasswordSchema.safeParse('pass\\word').success).toBe(false);
+      expect(rconPasswordSchema.safeParse('pass\nword').success).toBe(false);
+      expect(rconPasswordSchema.safeParse('пароль12').success).toBe(false);
     });
   });
 
@@ -447,64 +574,80 @@ describe('Server Contracts (@aegis/api-contracts)', () => {
       expect(res.success).toBe(true);
     });
 
-    it('accepts partial update with only single port', () => {
+    it('accepts partial update with only a single port or distinct game/RCON ports', () => {
       expect(updateServerSchema.safeParse({ gamePort: 2302 }).success).toBe(true);
-      expect(updateServerSchema.safeParse({ queryPort: 27016 }).success).toBe(true);
       expect(updateServerSchema.safeParse({ rconPort: 2310 }).success).toBe(true);
-    });
-
-    it('accepts partial update with distinct pairs or triples of ports', () => {
-      expect(updateServerSchema.safeParse({ gamePort: 2302, queryPort: 27016 }).success).toBe(true);
       expect(updateServerSchema.safeParse({ gamePort: 2302, rconPort: 2310 }).success).toBe(true);
-      expect(updateServerSchema.safeParse({ queryPort: 27016, rconPort: 2310 }).success).toBe(true);
-      expect(
-        updateServerSchema.safeParse({ gamePort: 2302, queryPort: 27016, rconPort: 2310 }).success,
-      ).toBe(true);
     });
 
-    it('rejects update with colliding ports', () => {
-      // gamePort and queryPort collide
-      const res1 = updateServerSchema.safeParse({ gamePort: 2302, queryPort: 2302 });
-      expect(res1.success).toBe(false);
-      if (!res1.success) {
-        expect(res1.error.issues[0].message).toBe(
+    it('rejects update when gamePort and rconPort collide', () => {
+      const res = updateServerSchema.safeParse({ gamePort: 2310, rconPort: 2310 });
+      expect(res.success).toBe(false);
+      if (!res.success) {
+        expect(res.error.issues[0].message).toBe(
           'Specified ports must not conflict with one another',
         );
-        expect(res1.error.issues[0].path).toEqual(['gamePort']);
+        expect(res.error.issues[0].path).toEqual(['gamePort']);
       }
-
-      // gamePort and rconPort collide
-      const res2 = updateServerSchema.safeParse({ gamePort: 2310, rconPort: 2310 });
-      expect(res2.success).toBe(false);
-
-      // queryPort and rconPort collide
-      const res3 = updateServerSchema.safeParse({ queryPort: 2310, rconPort: 2310 });
-      expect(res3.success).toBe(false);
-
-      // all three collide
-      const res4 = updateServerSchema.safeParse({
-        gamePort: 2302,
-        queryPort: 2302,
-        rconPort: 2302,
-      });
-      expect(res4.success).toBe(false);
     });
 
-    it('accepts nullable optional fields', () => {
+    it('accepts safe missionPath on update and rejects traversal or empty missionPath', () => {
+      const valid = updateServerSchema.safeParse({
+        missionPath: 'mpmissions\\dayzOffline.enoch',
+      });
+      expect(valid.success).toBe(true);
+      if (valid.success) {
+        expect(valid.data.missionPath).toBe('mpmissions\\dayzOffline.enoch');
+      }
+
+      expect(updateServerSchema.safeParse({ missionPath: '../not-validated' }).success).toBe(false);
+      expect(updateServerSchema.safeParse({ missionPath: '' }).success).toBe(false);
+    });
+
+    it('strips file-owned and removed fields so they never collide or persist', () => {
+      const legacyAdminValue = ['legacy', 'admin'].join('-');
+      const legacyJoinValue = ['legacy', 'join'].join('-');
+      const res = updateServerSchema.safeParse({
+        gamePort: 2302,
+        queryPort: 2302,
+        maxPlayers: 999,
+        profilePath: 'custom-profiles',
+        passwordAdmin: legacyAdminValue,
+        serverPassword: legacyJoinValue,
+        serverTime: '2026/02/30/00/00',
+      });
+      expect(res.success).toBe(true);
+      if (res.success) {
+        expect(res.data).toEqual({ gamePort: 2302 });
+      }
+      expect(updateServerSchema.safeParse({ queryPort: 2310, rconPort: 2310 }).success).toBe(true);
+    });
+
+    it('accepts null rconPassword clearing on update and rejects the empty string', () => {
       const res = updateServerSchema.safeParse({
         description: null,
         rconPassword: null,
         launchParameters: null,
       });
       expect(res.success).toBe(true);
+
+      const clearViaEmptyString = updateServerSchema.safeParse({
+        rconPassword: '',
+      });
+      expect(clearViaEmptyString.success).toBe(false);
+      expect(updateServerSchema.safeParse({ rconPassword: 'ValidPass!1' }).success).toBe(true);
     });
 
     it('rejects invalid field values on update', () => {
       expect(updateServerSchema.safeParse({ name: '' }).success).toBe(false);
       expect(updateServerSchema.safeParse({ name: 'a'.repeat(65) }).success).toBe(false);
+      expect(updateServerSchema.safeParse({ name: 'Line\nBreak' }).success).toBe(false);
       expect(updateServerSchema.safeParse({ description: 'a'.repeat(257) }).success).toBe(false);
       expect(updateServerSchema.safeParse({ rconPassword: '123' }).success).toBe(false);
+      expect(updateServerSchema.safeParse({ rconPassword: 'bad pass' }).success).toBe(false);
+      expect(updateServerSchema.safeParse({ rconIp: 'bad-ip' }).success).toBe(false);
       expect(updateServerSchema.safeParse({ gamePort: 999 }).success).toBe(false);
+      expect(updateServerSchema.safeParse({ rconPort: 65536 }).success).toBe(false);
       expect(updateServerSchema.safeParse({ installPath: '../invalid' }).success).toBe(false);
     });
   });
