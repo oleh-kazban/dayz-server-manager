@@ -1,4 +1,9 @@
-import { isServerActiveStatus, type ServerStatus } from '@aegis/api-contracts';
+import {
+  isServerActiveStatus,
+  SERVER_STATUS,
+  type ServerLastExitDto,
+  type ServerStatus,
+} from '@aegis/api-contracts';
 import type { StatusTagStatus } from '@aegis/ui';
 
 import { i18n } from '../i18n';
@@ -48,4 +53,36 @@ export function getServerStatusPresentation(status: ServerStatus): ServerStatusP
     label: i18n.t(`serverStatus.${status}`),
     isActive: isServerActiveStatus(status),
   };
+}
+
+export interface ServerExitPresentation {
+  /** Short label, e.g. "Crashed (exit 1)". */
+  label: string;
+  /** Full sentence for tooltips and screen readers, including the time. */
+  description: string;
+}
+
+function exitDetail(lastExit: ServerLastExitDto): string | null {
+  if (lastExit.signal) {
+    return lastExit.signal;
+  }
+  return lastExit.exitCode === null ? null : `exit ${lastExit.exitCode}`;
+}
+
+/**
+ * Why the server is `failed` (DSM-00164): only unexpected exits are explained in the shell, so
+ * this returns `null` for any other status or when no exit was recorded.
+ */
+export function getServerExitPresentation(
+  status: ServerStatus,
+  lastExit: ServerLastExitDto | null,
+): ServerExitPresentation | null {
+  if (status !== SERVER_STATUS.FAILED || !lastExit) {
+    return null;
+  }
+  const reason = i18n.t(`serverExitReason.${lastExit.reason}`);
+  const detail = exitDetail(lastExit);
+  const label = detail ? `${reason} (${detail})` : reason;
+  const at = new Date(lastExit.at).toLocaleString();
+  return { label, description: `${label} at ${at}` };
 }

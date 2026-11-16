@@ -1,4 +1,9 @@
-import type { ApiErrorCode, ServerFsIssueCode, ServerStatus } from '@aegis/api-contracts';
+import type {
+  ApiErrorCode,
+  ServerExitReason,
+  ServerFsIssueCode,
+  ServerStatus,
+} from '@aegis/api-contracts';
 
 export type NotificationCode =
   | 'SERVER_CREATED'
@@ -38,6 +43,7 @@ export interface TranslationCatalog {
   validation: Record<string, string>;
   notifications: Record<NotificationCode, ToastTranslationEntry>;
   serverStatus: Record<ServerStatus, string>;
+  serverExitReason: Record<ServerExitReason, string>;
   serverFsIssues: Record<ServerFsIssueCode, string>;
 }
 
@@ -439,6 +445,14 @@ export const enUSTranslations: TranslationCatalog = {
     stopping: 'Stopping',
     stopped: 'Stopped',
     failed: 'Failed',
+  },
+  serverExitReason: {
+    start_failed: 'Failed to start',
+    crashed: 'Crashed',
+    exited_while_offline: 'Exited while DSM was offline',
+    force_stopped: 'Force-stopped',
+    stopped: 'Stopped via RCON',
+    shutdown_timeout: 'Killed after shutdown timeout',
   },
   serverFsIssues: {
     PATH_LEXICAL_INVALID:
