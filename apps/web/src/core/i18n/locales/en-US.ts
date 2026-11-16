@@ -9,6 +9,7 @@ export type NotificationCode =
   | 'SERVER_CREATED'
   | 'SERVER_UPDATED'
   | 'SERVER_DELETED'
+  | 'SERVER_START_REQUESTED'
   | 'STEAM_SETTINGS_UPDATED'
   | 'STEAM_SESSION_CLEARED'
   | 'STEAM_AUTH_SUCCESS'
@@ -357,6 +358,10 @@ export const enUSTranslations: TranslationCatalog = {
     SERVER_DELETED: {
       title: 'Server Deleted',
       description: 'Server "{{name}}" has been removed from DayZ Server Manager.',
+    },
+    SERVER_START_REQUESTED: {
+      title: 'Server Starting',
+      description: '"{{name}}" is starting. Its status updates live.',
     },
     STEAM_SETTINGS_UPDATED: {
       title: 'Steam Settings Saved',

@@ -17,6 +17,7 @@ import {
 
 import { type AuthContextValue, SignIn } from './features/auth';
 import { Dashboard } from './features/dashboard';
+import { MaintenanceView } from './features/maintenance';
 import { ModsView } from './features/mods';
 import { ProfileView } from './features/profile';
 import { ServerSettingsView } from './features/server-settings';
@@ -168,12 +169,7 @@ const maintenanceRoute = createRoute({
   getParentRoute: () => authedRoute,
   path: '/maintenance',
   staticData: { breadcrumb: ROUTE_BREADCRUMBS['/maintenance'] },
-  component: () => (
-    <PlaceholderView
-      title="Maintenance & Lifecycle"
-      description="Orchestrated restart sequences, player join locks, SteamCMD updates, and emergency process termination."
-    />
-  ),
+  component: MaintenanceView,
 });
 
 const auditRoute = createRoute({

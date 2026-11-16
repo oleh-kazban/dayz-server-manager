@@ -6,7 +6,14 @@ import {
   DEFAULT_LAUNCH_OPTIONS,
   launchCommandPreviewSchema,
 } from '@aegis/api-contracts';
-import { type DatabaseInstance, initDatabase, serverMods, servers } from '@aegis/database';
+import {
+  configEditLocks,
+  type DatabaseInstance,
+  initDatabase,
+  serverMods,
+  servers,
+  users,
+} from '@aegis/database';
 
 import { buildApp } from '../app/app';
 import { loadEnv } from '../config/env';
@@ -124,6 +131,39 @@ describe('Launch Command Route (GET /api/v1/servers/:id/launch-command)', () => 
       'LAUNCH_MOD_FOLDER_MISSING',
       'LAUNCH_FILE_PATCHING_ENABLED',
     ]);
+  });
+
+  it('reports no edit lock by default and the holder while serverDZ.cfg is being edited', async () => {
+    expect((await get(SERVER_ID, adminToken)).json().editLock).toBeNull();
+
+    const acquiredAt = new Date();
+    dbInstance.db
+      .insert(users)
+      .values({
+        id: 'editor-id',
+        username: 'editor',
+        passwordHash: 'x',
+        role: 'admin',
+        createdAt: acquiredAt,
+      })
+      .run();
+    dbInstance.db
+      .insert(configEditLocks)
+      .values({
+        serverId: SERVER_ID,
+        fileKind: 'server_dz',
+        sessionToken: '55555555-5555-4555-a555-555555555555',
+        userId: 'editor-id',
+        acquiredAt,
+        expiresAt: new Date(acquiredAt.getTime() + 60_000),
+      })
+      .run();
+    try {
+      const body = launchCommandPreviewSchema.parse((await get(SERVER_ID, adminToken)).json());
+      expect(body.editLock).toEqual({ holderName: 'editor', acquiredAt: acquiredAt.toISOString() });
+    } finally {
+      dbInstance.db.delete(configEditLocks).run();
+    }
   });
 
   it('returns 401 without a token', async () => {

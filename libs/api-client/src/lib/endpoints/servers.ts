@@ -43,5 +43,9 @@ export function createServersEndpoint(client: HttpClient) {
 
     getLaunchCommand: (id: string): Promise<LaunchCommandPreviewDto> =>
       client.get(`/api/v1/servers/${id}/launch-command`, launchCommandPreviewSchema),
+
+    /** Starts the server process (DSM-00162); resolves with the server as `starting`. */
+    start: (id: string): Promise<ServerDetailDto> =>
+      client.post(`/api/v1/servers/${id}/start`, serverDetailSchema),
   };
 }

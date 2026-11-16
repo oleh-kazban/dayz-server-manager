@@ -2,7 +2,7 @@ import { forwardRef, useImperativeHandle } from 'react';
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { apiClient, ApiError } from '@aegis/api-client';
 import {
@@ -222,6 +222,12 @@ function renderCard(
 }
 
 describe('ServerConfigCard', () => {
+  // The editor is a React.lazy chunk (CodeMirror). Load it once up front so its cold import is
+  // not charged to the first test's 1 s findBy timeout (flaky on slower CI runners).
+  beforeAll(async () => {
+    await import('./code-editor.lazy');
+  });
+
   let queryClient: QueryClient;
 
   beforeEach(() => {

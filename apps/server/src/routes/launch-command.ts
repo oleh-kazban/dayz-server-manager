@@ -1,9 +1,10 @@
 import { eq } from 'drizzle-orm';
 import type { FastifyPluginAsync } from 'fastify';
 
-import { serverIdParamSchema } from '@aegis/api-contracts';
+import { CONFIG_FILE_KIND, serverIdParamSchema } from '@aegis/api-contracts';
 import { servers } from '@aegis/database';
 
+import { ConfigEditLockService } from '../services/server/config-edit-lock.service';
 import { buildLaunchCommandPreview } from '../services/server/launch-command.service';
 import { formatZodFieldErrors, sendApiError } from '../utils/api-error';
 
@@ -43,7 +44,17 @@ export const registerLaunchCommandRoutes: FastifyPluginAsync = async fastify => 
         });
       }
 
-      return reply.send(buildLaunchCommandPreview(server, listServerModRows(fastify, id)));
+      // Start readiness for the UI (DSM-00169): an active serverDZ.cfg edit lock blocks starting.
+      const lock = new ConfigEditLockService(fastify.db, fastify.sqlite).getActive(
+        id,
+        CONFIG_FILE_KIND.SERVER_DZ,
+      );
+      return reply.send({
+        ...buildLaunchCommandPreview(server, listServerModRows(fastify, id)),
+        editLock: lock
+          ? { holderName: lock.holderName, acquiredAt: lock.acquiredAt.toISOString() }
+          : null,
+      });
     },
   );
 };

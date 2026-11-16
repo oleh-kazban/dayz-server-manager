@@ -137,10 +137,19 @@ export const launchModContextSchema = z.object({
 });
 export type LaunchModContextDto = z.infer<typeof launchModContextSchema>;
 
+/** A serverDZ.cfg edit lock that blocks starting the server (DSM-00124 / DSM-00169). */
+export const launchEditLockSchema = z.object({
+  holderName: z.string().min(1),
+  acquiredAt: z.string().datetime(),
+});
+export type LaunchEditLockDto = z.infer<typeof launchEditLockSchema>;
+
 export const launchCommandPreviewSchema = z.object({
   serverId: z.string().uuid(),
   platform: launchPlatformSchema,
   mods: launchModContextSchema,
   command: launchCommandSchema,
+  /** Active serverDZ.cfg edit lock: while set, a start is refused (409). */
+  editLock: launchEditLockSchema.nullable(),
 });
 export type LaunchCommandPreviewDto = z.infer<typeof launchCommandPreviewSchema>;

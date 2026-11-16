@@ -38,6 +38,7 @@ function context(overrides: Partial<LaunchCommandPreviewDto> = {}): LaunchComman
       segments: [],
       issues: [],
     },
+    editLock: null,
     ...overrides,
   };
 }

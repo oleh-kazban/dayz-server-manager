@@ -204,6 +204,7 @@ describe('Servers Endpoint', () => {
       const mockResponse = {
         serverId: validUuid,
         platform: 'linux',
+        editLock: null,
         mods: { modFolders: ['@CF'], serverModFolders: [], missingFolderCount: 0 },
         command: {
           ready: true,

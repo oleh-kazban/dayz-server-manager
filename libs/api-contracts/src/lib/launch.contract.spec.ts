@@ -57,6 +57,7 @@ describe('launchCommandPreviewSchema', () => {
     const payload = {
       serverId: '7f0c6a52-1d5c-4c3e-9b4b-0c6f1f7f6e10',
       platform: 'linux',
+      editLock: null,
       mods: { modFolders: ['@CF'], serverModFolders: [], missingFolderCount: 0 },
       command: {
         ready: true,
