@@ -38,6 +38,23 @@ Sequence numbering (0–255 wrap), acknowledgement matching, multi-part reassemb
 
 ---
 
+## [DSM-00164] Show live server status in the shell
+
+- **Type**: `Story`
+- **Priority**: `P1 (High)`
+- **Status**: `DONE`
+- **Dependencies**: `DSM-00162, DSM-00173`
+
+### Summary
+
+The shell shows the active server's lifecycle status (`stopped`, `starting`, `running`, `stopping`, `failed`) and, after an unexpected exit, the last-exit reason, updated live from `server.status.changed` without reloading.
+
+### Delivered Capabilities
+
+Status presentation in the shell header / server selector; last-exit reason; cache update via the shared SSE subscription; tests.
+
+---
+
 ## [DSM-00163] Gracefully stop a running server via RCON #shutdown
 
 - **Type**: `Story`
