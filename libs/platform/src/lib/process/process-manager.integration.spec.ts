@@ -15,11 +15,23 @@ const FIXTURE = path.join(
 const manager = createProcessManager();
 const leftovers: number[] = [];
 
-async function waitForFile(file: string, timeoutMs = 10_000): Promise<string> {
+interface FixturePids {
+  parent: number;
+  grandchild: number;
+}
+
+/**
+ * Polls until the fixture has written its PID file. Reads and parses in one step (no separate
+ * existence check, so nothing can change between check and use); a missing or partially written
+ * file is simply retried.
+ */
+async function waitForPids(file: string, timeoutMs = 10_000): Promise<FixturePids> {
   const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {
-    if (fs.existsSync(file) && fs.statSync(file).size > 0) {
-      return fs.readFileSync(file, 'utf8');
+    try {
+      return JSON.parse(fs.readFileSync(file, 'utf8')) as FixturePids;
+    } catch {
+      // Not written yet, or caught mid-write: retry.
     }
     await new Promise(resolve => setTimeout(resolve, 50));
   }
@@ -47,7 +59,7 @@ describe(`ProcessManager integration (${process.platform})`, () => {
       args: [FIXTURE, pidFile],
       cwd: tempDir,
     });
-    const pids = JSON.parse(await waitForFile(pidFile)) as { parent: number; grandchild: number };
+    const pids = await waitForPids(pidFile);
     leftovers.push(pids.parent, pids.grandchild);
 
     expect(managed.identity.pid).toBe(pids.parent);
@@ -68,9 +80,13 @@ describe(`ProcessManager integration (${process.platform})`, () => {
       await new Promise(resolve => setTimeout(resolve, 50));
     }
     expect(manager.isPidRunning(pids.grandchild)).toBe(false);
-    await expect(managed.exited).resolves.toEqual(
-      expect.objectContaining({ code: expect.anything() }),
-    );
+    // Linux reports the terminating signal (code null); Windows taskkill reports an exit code.
+    const exit = await managed.exited;
+    if (process.platform === 'win32') {
+      expect(exit.code).not.toBeNull();
+    } else {
+      expect(exit).toEqual({ code: null, signal: expect.stringMatching(/^SIG(TERM|KILL)$/) });
+    }
 
     expect(await manager.isAlive(managed.identity)).toBe(false);
     expect(await manager.readIdentity(pids.parent)).toBeNull();
