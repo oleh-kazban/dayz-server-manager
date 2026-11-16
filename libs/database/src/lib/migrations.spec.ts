@@ -341,6 +341,8 @@ describe('Database Migrations — 0006_server_config_and_vault_secrets', () => {
 
 const MIGRATION_0007_ID = '0007_server_config_editor';
 const MIGRATION_0008_ID = '0008_admin_only_and_relative_profile_path';
+const MIGRATION_0009_ID = '0009_structured_launch_options';
+const MIGRATION_0010_ID = '0010_server_runtime_state';
 
 function findMigration(id: string) {
   const migration = migrations.find(m => m.id === id);
@@ -674,6 +676,7 @@ describe('Database Migrations — 0007_server_config_editor', () => {
           MIGRATION_0007_ID,
           MIGRATION_0008_ID,
           MIGRATION_0009_ID,
+          MIGRATION_0010_ID,
         ]);
 
         expect(
@@ -790,8 +793,6 @@ describe('Database Migrations — 0008_admin_only_and_relative_profile_path', ()
     }
   });
 });
-
-const MIGRATION_0009_ID = '0009_structured_launch_options';
 
 describe('convertLegacyLaunchParameters', () => {
   it('maps supported flags case-insensitively and drops everything else', () => {
@@ -939,6 +940,105 @@ describe('Database Migrations — 0009_structured_launch_options', () => {
           limitFPS: 60,
         },
       );
+    } finally {
+      instance.close();
+      fs.rmSync(tempDir, { recursive: true, force: true });
+    }
+  });
+});
+
+describe('Database Migrations — 0010_server_runtime_state', () => {
+  it('adds runtime columns, resets stale active statuses, and is idempotent', () => {
+    const sqlite = new Database(':memory:');
+    try {
+      sqlite.exec(`
+        CREATE TABLE IF NOT EXISTS _dsm_migrations (
+          id TEXT PRIMARY KEY,
+          name TEXT NOT NULL,
+          applied_at INTEGER NOT NULL
+        );
+      `);
+      const insertMigration = sqlite.prepare(
+        'INSERT INTO _dsm_migrations (id, name, applied_at) VALUES (?, ?, ?)',
+      );
+      for (const migration of migrations.filter(m => m.id < MIGRATION_0010_ID)) {
+        migration.up(sqlite);
+        insertMigration.run(migration.id, migration.name, 1_700_000_000_000);
+      }
+      const insertServer = sqlite.prepare(
+        `INSERT INTO servers (id, name, status, install_path, profile_path, mission_path, created_at, updated_at)
+         VALUES (?, ?, ?, '/opt/dayz', 'profiles', 'mpmissions/x', 1, 1)`,
+      );
+      for (const status of ['stopped', 'starting', 'running', 'stopping', 'failed']) {
+        insertServer.run(`srv-${status}`, status, status);
+      }
+
+      runMigrations(sqlite);
+
+      const columns = (sqlite.pragma('table_info(servers)') as { name: string }[]).map(c => c.name);
+      expect(columns).toEqual(
+        expect.arrayContaining([
+          'process_pid',
+          'process_start_token',
+          'process_started_at',
+          'last_exit_reason',
+          'last_exit_code',
+          'last_exit_signal',
+          'last_exit_at',
+        ]),
+      );
+      expect(sqlite.prepare('SELECT id, status FROM servers ORDER BY id').all()).toEqual([
+        { id: 'srv-failed', status: 'failed' },
+        { id: 'srv-running', status: 'stopped' },
+        { id: 'srv-starting', status: 'stopped' },
+        { id: 'srv-stopped', status: 'stopped' },
+        { id: 'srv-stopping', status: 'stopped' },
+      ]);
+
+      expect(() => findMigration(MIGRATION_0010_ID).up(sqlite)).not.toThrow();
+    } finally {
+      sqlite.close();
+    }
+  });
+
+  it('round-trips runtime and last-exit fields through drizzle', () => {
+    const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'dsm-0010-'));
+    const instance = initDatabase({
+      dbPath: path.join(tempDir, 'fresh.sqlite'),
+      vaultKeyDir: path.join(tempDir, 'vault'),
+    });
+    try {
+      const now = new Date(1_763_300_000_123);
+      instance.db
+        .insert(servers)
+        .values({
+          id: 'srv-rt',
+          name: 'Runtime',
+          installPath: '/opt/rt',
+          profilePath: 'profiles',
+          missionPath: 'm',
+          processPid: 4242,
+          processStartToken: 'linux:987',
+          processStartedAt: now,
+          lastExitReason: 'crashed',
+          lastExitCode: null,
+          lastExitSignal: 'SIGSEGV',
+          lastExitAt: now,
+          createdAt: now,
+          updatedAt: now,
+        })
+        .run();
+      expect(
+        instance.db.select().from(servers).where(eq(servers.id, 'srv-rt')).get(),
+      ).toMatchObject({
+        processPid: 4242,
+        processStartToken: 'linux:987',
+        processStartedAt: now,
+        lastExitReason: 'crashed',
+        lastExitCode: null,
+        lastExitSignal: 'SIGSEGV',
+        lastExitAt: now,
+      });
     } finally {
       instance.close();
       fs.rmSync(tempDir, { recursive: true, force: true });
