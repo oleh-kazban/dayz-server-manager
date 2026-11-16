@@ -4,6 +4,91 @@ This document records all completed product backlog items and operational featur
 
 ---
 
+## [DSM-00165] Send an RCON command and receive its full response
+
+- **Type**: `Story`
+- **Priority**: `P1 (High)`
+- **Status**: `DONE`
+- **Dependencies**: `DSM-00161`
+
+### Summary
+
+After login, the client sends a command with a sequence number and resolves with the complete response text, reassembling multi-part responses. An unacknowledged command is retried a bounded number of times and then fails with a typed timeout.
+
+### Delivered Capabilities
+
+Sequence numbering (0–255 wrap), acknowledgement matching, multi-part reassembly, bounded retry and timeout; fake-server tests including dropped packets.
+
+---
+
+## [DSM-00163] Gracefully stop a running server via RCON #shutdown
+
+- **Type**: `Story`
+- **Priority**: `P1 (High)`
+- **Status**: `DONE`
+- **Dependencies**: `DSM-00162, DSM-00165`
+
+### Summary
+
+`POST /api/v1/servers/:id/stop` sends RCON `#shutdown` so persistence is flushed, waits for exit, and force-kills through `ProcessManager` only when the watchdog timeout expires; the fallback is recorded in the last-exit record. If RCON is unreachable the request fails with a dedicated error code and nothing is killed.
+
+### Delivered Capabilities
+
+Stop route and error codes; watchdog timeout setting; last-exit reason distinguishing graceful exit from fallback kill; tests with a fake RCON server and fake `ProcessManager`.
+
+---
+
+## [DSM-00162] Server Lifecycle State Machine, Start, and Force-Stop
+
+- **Type**: `Story`
+- **Priority**: `P1 (High)`
+- **Status**: `DONE`
+- **Dependencies**: `DSM-00124, DSM-00125, DSM-00160`
+
+### Summary
+
+Own the server status machine (`stopped → starting → running → stopping → stopped`, plus `crashed` on unexpected exit) with serialized transitions per server. `POST /api/v1/servers/:id/start` compiles the launch command (`DSM-00125`, refusing when `ready` is false), calls `assertNoActiveEditLock` (`DSM-00124`) and spawns via `ProcessManager`. Persist PID and start time; on DSM startup reconcile stored state with the OS (adopt, or mark crashed/stopped). `POST /api/v1/servers/:id/force-stop` kills the process tree.
+
+### Delivered Capabilities
+
+Status contract change (`crashed`), migration for PID / timestamps, lifecycle service, start and force-stop routes with error codes, startup reconciliation, concurrency guards (double start, start during stop).
+
+---
+
+## [DSM-00161] BattlEye RCON packet codec and login handshake
+
+- **Type**: `Story`
+- **Priority**: `P1 (High)`
+- **Status**: `DONE`
+- **Dependencies**: `DSM-00104`
+
+### Summary
+
+A BattlEye RCON (BE RCon v2, UDP) client library frames and parses packets with CRC32 and logs in to a server, returning a typed result for success, wrong password, and no answer. The RCON password is never logged.
+
+### Delivered Capabilities
+
+Packet encode/decode with CRC32 validation; login request/response; typed errors (`login_failed`, `timeout`, `unreachable`); tests against an in-process fake BattlEye UDP server.
+
+---
+
+## [DSM-00160] ProcessManager Platform Adapter (Windows Process Tree / Linux Process Groups)
+
+- **Type**: `Story`
+- **Priority**: `P1 (High)`
+- **Status**: `DONE`
+- **Dependencies**: `DSM-00104`
+
+### Summary
+
+Provide the `ProcessManager` interface and its Windows and Linux implementations (`BACKEND_SPEC.md` §3). Spawn an executable from an argument array with `shell: false` and an explicit working directory, expose the PID, exit code / signal and exit events, capture or discard stdio without blocking, and terminate the whole process tree on demand. Linux: dedicated process group (`detached: true`) and group signalling (`SIGTERM`, then `SIGKILL`). Windows: tree termination that holds even if DSM crashes (Job Object with kill-on-close, or a documented fallback).
+
+### Delivered Capabilities
+
+Interface, two adapters and a platform factory; process-tree force-kill; liveness check by PID; integration tests spawning a real child Node process (with a grandchild) on the CI platform.
+
+---
+
 ## [DSM-00138] Unsaved-Changes Navigation Guard for Create/Update Forms
 
 - **Type**: `Story`
@@ -217,6 +302,23 @@ Deliver the dedicated Steam integration workbench at `/settings/steam` in `apps/
 - Fastify REST controllers in `apps/server` (`GET /api/v1/settings/steam`, `PATCH /api/v1/settings/steam`, `POST /api/v1/settings/steam/session/login`, `POST /api/v1/settings/steam/session/clear`, `POST /api/v1/settings/steam/challenge/respond`, `POST /api/v1/settings/steam/challenge/abort`, `POST /api/v1/settings/steam/diagnostics`).
 - Headless SteamCMD runner (`apps/server/src/services/steam/steam-runner.service.ts`) with cached session ticket prioritization, bidirectional `stdin`/`stdout` streams, timeout guards (90s challenge extension), process tree termination, and dual Steam Guard detection (5-character OTP vs Mobile App push).
 - Real-time Server-Sent Events (`/api/v1/realtime/sse`) broadcasting Steam challenge and session status events to the reactive Steam Guard modal and diagnostics/toast notifications in `apps/web`.
+
+---
+
+## [DSM-00125] DayZ CLI Launch Parameter Compiler and Process Execution Contract
+
+- **Type**: `Story`
+- **Priority**: `P1 (High)`
+- **Status**: `DONE`
+- **Dependencies**: `DSM-00104, DSM-00124`
+
+### Summary
+
+Construct a sanitized, OS-agnostic command-line argument compiler that transforms server configuration, port allocations, profile paths, engine flags (`-doLogs`, `-adminLog`, `-freezeCheck`, `-scriptDebug`), and CPU/FPS clamps into a clean argument array (`string[]`) ready for `child_process.spawn()`. Enforce strict input validation preventing shell parameter injection, path traversal, or unescaped characters, and expose an inspection endpoint/helper allowing administrators to preview the exact compiled command line before launching.
+
+### Delivered Capabilities
+
+Strongly typed launch argument compiler; sanitization against argument injection; compilation of standard Bohemia server flags (`-config=`, `-port=`, `-profiles=`, `-cpuCount=`, `-limitFPS=`); CLI preview DTO and REST endpoint.
 
 ---
 

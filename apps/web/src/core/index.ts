@@ -7,6 +7,7 @@ export * from './markdown';
 export * from './navigation';
 export * from './notifications';
 export * from './query/query-client';
+export * from './realtime';
 export * from './server';
 export * from './server-status';
 export * from './storage';
