@@ -12,6 +12,7 @@ import Fastify, {
 
 import { type UserRole } from '@aegis/api-contracts';
 import { type DatabaseInstance, initDatabase, sessions } from '@aegis/database';
+import { createProcessManager, type ProcessManager } from '@aegis/platform';
 
 import { type EnvConfig } from '../config/env';
 import { registerAuthRoutes } from '../routes/auth';
@@ -20,18 +21,25 @@ import { registerLaunchCommandRoutes } from '../routes/launch-command';
 import { registerProfileRoutes } from '../routes/profile';
 import { registerRealtimeRoutes } from '../routes/realtime';
 import { registerServerConfigRoutes } from '../routes/server-config';
+import { registerServerLifecycleRoutes } from '../routes/server-lifecycle';
 import { registerServerModsRoutes } from '../routes/server-mods';
 import { registerServersRoutes } from '../routes/servers';
 import { registerSessionsRoutes } from '../routes/sessions';
 import { registerSteamRoutes } from '../routes/steam';
 import { registerWorkshopRoutes } from '../routes/workshop';
 import { sseHub } from '../services/realtime/sse-hub';
+import { ConfigEditLockService } from '../services/server/config-edit-lock.service';
+import { ServerLifecycleService } from '../services/server/server-lifecycle.service';
 import { sendApiError } from '../utils/api-error';
 
 export interface BuildAppOptions {
   config: EnvConfig;
   serverOptions?: FastifyServerOptions;
   db?: DatabaseInstance;
+  /** OS process adapter; defaults to the platform implementation (DSM-00160). */
+  processManager?: ProcessManager;
+  /** Skip reconciling stored server processes on startup (tests that seed state later). */
+  skipLifecycleReconcile?: boolean;
 }
 
 export function buildApp(options: BuildAppOptions): FastifyInstance {
@@ -47,6 +55,34 @@ export function buildApp(options: BuildAppOptions): FastifyInstance {
   app.decorate('sqlite', dbInstance.sqlite);
   app.decorate('closeDb', () => dbInstance.close());
   app.decorate('sseHub', sseHub);
+
+  const lifecycle = new ServerLifecycleService(
+    {
+      db: dbInstance.db,
+      sqlite: dbInstance.sqlite,
+      processes: options.processManager ?? createProcessManager(),
+      locks: new ConfigEditLockService(dbInstance.db, dbInstance.sqlite),
+    },
+    {
+      startupWindowMs: options.config.DSM_SERVER_STARTUP_WINDOW_MS,
+      pollIntervalMs: options.config.DSM_SERVER_POLL_INTERVAL_MS,
+      logger: app.log,
+      broadcast: (event, data) => sseHub.broadcast(event, data),
+    },
+  );
+  app.decorate('lifecycle', lifecycle);
+  if (!options.skipLifecycleReconcile) {
+    // A failed reconciliation must not keep DSM from booting (health then reports the cause).
+    app.addHook('onReady', async () => {
+      try {
+        await lifecycle.reconcile();
+      } catch (error) {
+        app.log.error(error, 'Failed to reconcile server processes on startup');
+      }
+    });
+  }
+  // Only timers stop; DayZ processes keep running across DSM restarts (DSM-00160 D1).
+  app.addHook('onClose', async () => lifecycle.close());
 
   // Allow empty bodies when Content-Type: application/json is sent on DELETE/GET requests
   app.addContentTypeParser('application/json', { parseAs: 'string' }, (_req, body, defaultDone) => {
@@ -167,6 +203,7 @@ export function buildApp(options: BuildAppOptions): FastifyInstance {
   app.register(registerServerModsRoutes, { prefix: '/api/v1/servers' });
   app.register(registerServerConfigRoutes, { prefix: '/api/v1/servers' });
   app.register(registerLaunchCommandRoutes, { prefix: '/api/v1/servers' });
+  app.register(registerServerLifecycleRoutes, { prefix: '/api/v1/servers' });
   app.register(registerRealtimeRoutes, { prefix: '/api/v1/realtime' });
   app.register(registerSteamRoutes, { prefix: '/api/v1/settings/steam' });
   app.register(registerWorkshopRoutes, { prefix: '/api/v1/workshop' });

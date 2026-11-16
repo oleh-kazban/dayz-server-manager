@@ -1,0 +1,255 @@
+import { eq } from 'drizzle-orm';
+import type { FastifyInstance } from 'fastify';
+import { afterEach, describe, expect, it } from 'vitest';
+
+import { apiErrorResponseSchema, serverDetailSchema } from '@aegis/api-contracts';
+import {
+  configEditLocks,
+  type DatabaseInstance,
+  initDatabase,
+  servers,
+  users,
+} from '@aegis/database';
+
+import { buildApp } from '../app/app';
+import { loadEnv } from '../config/env';
+import { FakeProcessManager } from '../services/server/__fixtures__/fake-process-manager';
+
+const SERVER_ID = '44444444-4444-4444-a444-444444444444';
+const INSTALL_PATH = process.platform === 'win32' ? 'C:\\DayZServer' : '/opt/dayz';
+
+interface Harness {
+  app: FastifyInstance;
+  db: DatabaseInstance;
+  processes: FakeProcessManager;
+  adminToken: string;
+  viewerToken: string;
+}
+
+const open: Harness[] = [];
+
+async function createHarness(
+  seed?: (db: DatabaseInstance) => void,
+  options: { skipLifecycleReconcile?: boolean } = {},
+): Promise<Harness> {
+  const db = initDatabase({ dbPath: ':memory:' });
+  const now = new Date();
+  db.db
+    .insert(servers)
+    .values({
+      id: SERVER_ID,
+      name: 'Lifecycle Target',
+      installPath: INSTALL_PATH,
+      profilePath: 'profiles',
+      missionPath: 'mpmissions/dayzOffline.chernarusplus',
+      createdAt: now,
+      updatedAt: now,
+    })
+    .run();
+  seed?.(db);
+
+  const processes = new FakeProcessManager();
+  processes.alive.set(4242, 'token-4242');
+  const app = buildApp({
+    config: loadEnv({
+      SESSION_SECRET: 'test-session-secret-at-least-32-chars-long!',
+      LOG_LEVEL: 'silent',
+      DSM_SERVER_STARTUP_WINDOW_MS: '60000',
+    }),
+    db,
+    processManager: processes,
+    ...options,
+  });
+  await app.ready();
+
+  const harness: Harness = {
+    app,
+    db,
+    processes,
+    adminToken: app.jwt.sign({ sub: 'admin-id', role: 'admin', type: 'access' }),
+    viewerToken: app.jwt.sign({ sub: 'viewer-id', role: 'viewer', type: 'access' }),
+  };
+  open.push(harness);
+  return harness;
+}
+
+afterEach(async () => {
+  for (const harness of open.splice(0)) {
+    await harness.app.close();
+    harness.db.close();
+  }
+});
+
+const post = (h: Harness, action: string, token = h.adminToken, id = SERVER_ID) =>
+  h.app.inject({
+    method: 'POST',
+    url: `/api/v1/servers/${id}/${action}`,
+    headers: { authorization: `Bearer ${token}` },
+  });
+
+const statusOf = (h: Harness) =>
+  h.db.db.select().from(servers).where(eq(servers.id, SERVER_ID)).get()?.status;
+
+describe('Server lifecycle routes', () => {
+  it('starts a server and exposes runtime in the detail, then force-stops it', async () => {
+    const h = await createHarness();
+
+    const started = await post(h, 'start');
+    expect(started.statusCode).toBe(200);
+    const detail = serverDetailSchema.parse(started.json());
+    expect(detail).toMatchObject({
+      status: 'starting',
+      runtime: { pid: 1000, startedAt: new Date(5_000).toISOString() },
+      lastExit: null,
+    });
+    expect(h.processes.spawnCalls[0]).toMatchObject({ cwd: INSTALL_PATH });
+
+    const fetched = await h.app.inject({
+      method: 'GET',
+      url: `/api/v1/servers/${SERVER_ID}`,
+      headers: { authorization: `Bearer ${h.adminToken}` },
+    });
+    expect(fetched.json().runtime).toEqual(detail.runtime);
+
+    const again = await post(h, 'start');
+    expect(again.statusCode).toBe(409);
+    expect(again.json().errorCode).toBe('SERVER_TRANSITION_IN_PROGRESS');
+
+    const stopped = await post(h, 'force-stop');
+    expect(stopped.statusCode).toBe(200);
+    expect(serverDetailSchema.parse(stopped.json())).toMatchObject({
+      status: 'stopped',
+      runtime: null,
+      lastExit: { reason: 'force_stopped', exitCode: null, signal: null },
+    });
+
+    const notRunning = await post(h, 'force-stop');
+    expect(notRunning.statusCode).toBe(409);
+    expect(apiErrorResponseSchema.safeParse(notRunning.json()).success).toBe(true);
+    expect(notRunning.json()).toMatchObject({
+      errorCode: 'SERVER_NOT_RUNNING',
+      params: { name: 'Lifecycle Target' },
+    });
+  });
+
+  it('refuses to start while a serverDZ.cfg edit lock is held', async () => {
+    const h = await createHarness(db => {
+      const now = new Date();
+      db.db
+        .insert(users)
+        .values({
+          id: 'editor-id',
+          username: 'editor',
+          passwordHash: 'x',
+          role: 'admin',
+          createdAt: now,
+        })
+        .run();
+      db.db
+        .insert(configEditLocks)
+        .values({
+          serverId: SERVER_ID,
+          fileKind: 'server_dz',
+          sessionToken: '55555555-5555-4555-a555-555555555555',
+          userId: 'editor-id',
+          acquiredAt: now,
+          expiresAt: new Date(now.getTime() + 60_000),
+        })
+        .run();
+    });
+
+    const response = await post(h, 'start');
+    expect(response.statusCode).toBe(409);
+    expect(response.json()).toMatchObject({
+      errorCode: 'SERVER_CONFIG_EDIT_IN_PROGRESS',
+      params: { holderName: 'editor' },
+    });
+    expect(statusOf(h)).toBe('stopped');
+    expect(h.processes.spawnCalls).toEqual([]);
+  });
+
+  it('returns 422 SERVER_START_FAILED and records failed when the process cannot start', async () => {
+    const h = await createHarness();
+    h.processes.spawnError = new Error("Failed to start 'DayZServer' (ENOENT).");
+
+    const response = await post(h, 'start');
+    expect(response.statusCode).toBe(422);
+    expect(response.json()).toMatchObject({
+      errorCode: 'SERVER_START_FAILED',
+      params: { reason: "Failed to start 'DayZServer' (ENOENT)." },
+    });
+    const detail = await h.app.inject({
+      method: 'GET',
+      url: `/api/v1/servers/${SERVER_ID}`,
+      headers: { authorization: `Bearer ${h.adminToken}` },
+    });
+    expect(detail.json()).toMatchObject({
+      status: 'failed',
+      lastExit: { reason: 'start_failed' },
+    });
+  });
+
+  it('returns 500 SERVER_STOP_FAILED when the kill fails', async () => {
+    const h = await createHarness();
+    await post(h, 'start');
+    h.processes.killError = new Error('Access is denied.');
+
+    const response = await post(h, 'force-stop');
+    expect(response.statusCode).toBe(500);
+    expect(response.json().errorCode).toBe('SERVER_STOP_FAILED');
+    expect(statusOf(h)).toBe('starting');
+  });
+
+  it('enforces admin role, id format and existence on both actions', async () => {
+    const h = await createHarness();
+    for (const action of ['start', 'force-stop']) {
+      expect((await post(h, action, h.viewerToken)).statusCode).toBe(403);
+      expect((await post(h, action, h.adminToken, 'not-a-uuid')).statusCode).toBe(400);
+      const missing = await post(h, action, h.adminToken, '66666666-6666-4666-a666-666666666666');
+      expect(missing.statusCode).toBe(404);
+      expect(missing.json().errorCode).toBe('SERVER_NOT_FOUND');
+    }
+    const unauthenticated = await h.app.inject({
+      method: 'POST',
+      url: `/api/v1/servers/${SERVER_ID}/start`,
+    });
+    expect(unauthenticated.statusCode).toBe(401);
+  });
+
+  it('re-adopts a surviving process on startup', async () => {
+    const h = await createHarness(db => {
+      db.db
+        .update(servers)
+        .set({
+          status: 'running',
+          processPid: 4242,
+          processStartToken: 'token-4242',
+          processStartedAt: new Date(1_000),
+        })
+        .where(eq(servers.id, SERVER_ID))
+        .run();
+    });
+    expect(statusOf(h)).toBe('running');
+    expect(h.app.lifecycle.watchedCount).toBe(1);
+  });
+
+  it('can skip reconciliation for tests that seed state after startup', async () => {
+    const h = await createHarness(
+      db => {
+        db.db.update(servers).set({ status: 'running' }).where(eq(servers.id, SERVER_ID)).run();
+      },
+      { skipLifecycleReconcile: true },
+    );
+    expect(statusOf(h)).toBe('running');
+  });
+
+  it('rethrows unexpected errors to the global handler', async () => {
+    const h = await createHarness();
+    h.app.lifecycle.start = async () => {
+      throw new Error('unexpected');
+    };
+    const response = await post(h, 'start');
+    expect(response.statusCode).toBe(500);
+    expect(response.json().errorCode).toBe('INTERNAL_SERVER_ERROR');
+  });
+});
