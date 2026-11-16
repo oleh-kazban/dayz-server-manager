@@ -101,7 +101,10 @@ export const SERVER_EXIT_REASON = {
   CRASHED: 'crashed',
   EXITED_WHILE_OFFLINE: 'exited_while_offline',
   FORCE_STOPPED: 'force_stopped',
+  /** Graceful stop: the process exited after RCON #shutdown. */
   STOPPED: 'stopped',
+  /** Graceful stop: the process did not exit in time after #shutdown and was force-killed. */
+  SHUTDOWN_TIMEOUT: 'shutdown_timeout',
 } as const;
 
 export const SERVER_EXIT_REASON_VALUES = [
@@ -110,6 +113,7 @@ export const SERVER_EXIT_REASON_VALUES = [
   SERVER_EXIT_REASON.EXITED_WHILE_OFFLINE,
   SERVER_EXIT_REASON.FORCE_STOPPED,
   SERVER_EXIT_REASON.STOPPED,
+  SERVER_EXIT_REASON.SHUTDOWN_TIMEOUT,
 ] as const;
 
 export const serverExitReasonSchema = z.enum(SERVER_EXIT_REASON_VALUES);

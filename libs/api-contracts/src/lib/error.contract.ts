@@ -60,6 +60,9 @@ export const apiErrorCodeSchema = z.enum([
   'SERVER_LAUNCH_NOT_READY',
   'SERVER_START_FAILED',
   'SERVER_STOP_FAILED',
+  'SERVER_RCON_NOT_CONFIGURED',
+  'SERVER_RCON_UNREACHABLE',
+  'SERVER_RCON_LOGIN_FAILED',
 ]);
 export type ApiErrorCode = z.infer<typeof apiErrorCodeSchema>;
 
