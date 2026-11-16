@@ -1,5 +1,7 @@
 import { z } from 'zod';
 
+import { launchOptionsSchema } from './launch.contract';
+
 export const SERVER_STATUS = {
   STOPPED: 'stopped',
   STARTING: 'starting',
@@ -61,11 +63,6 @@ export const safePathSchema = z
     return colonIndex === 1 && /^[a-zA-Z]/.test(val) && val.indexOf(':', 2) === -1;
   }, 'Colons are only permitted in Windows drive letter prefixes');
 
-export const launchParametersSchema = z
-  .string()
-  .max(1024)
-  .refine(val => !val.includes('\0'), 'Null bytes are forbidden');
-
 const IPV4_REGEX =
   /^(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]\d|\d)(?:\.(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]\d|\d)){3}$/;
 const RCON_PASSWORD_ASCII_REGEX = /^[\x21\x23-\x26\x28-\x5b\x5d-\x7e]+$/;
@@ -102,7 +99,7 @@ export const serverDetailSchema = serverSummarySchema.extend({
   installPath: safePathSchema,
   profilePath: safePathSchema,
   missionPath: safePathSchema,
-  launchParameters: launchParametersSchema.nullable().optional(),
+  launchOptions: launchOptionsSchema,
   maxPlayers: z.number().int().min(1).max(200),
   rconIp: rconIpSchema,
   rconPassword: z.string().nullable(),
@@ -127,7 +124,7 @@ export const createServerSchema = z
       .max(200, 'Max players must be between 1 and 200')
       .optional(),
     rconPassword: rconPasswordSchema.optional(),
-    launchParameters: launchParametersSchema.optional(),
+    launchOptions: launchOptionsSchema.optional(),
     isDefault: z.boolean().optional(),
   })
   .refine(
@@ -157,7 +154,7 @@ export const updateServerSchema = z
     rconPort: z.number().int().min(1024).max(65535).optional(),
     rconIp: rconIpSchema.optional(),
     rconPassword: rconPasswordSchema.nullable().optional(),
-    launchParameters: launchParametersSchema.nullable().optional(),
+    launchOptions: launchOptionsSchema.optional(),
     isDefault: z.boolean().optional(),
   })
   .refine(
