@@ -4,6 +4,8 @@ import { index, integer, primaryKey, sqliteTable, text } from 'drizzle-orm/sqlit
 import {
   CONFIG_FILE_KIND_VALUES,
   CONFIG_REVISION_SOURCE_VALUES,
+  EMPTY_LAUNCH_OPTIONS,
+  type LaunchOptionsDto,
   MOD_LOAD_TARGET,
   MOD_LOAD_TARGET_VALUES,
   MOD_SOURCE_TYPE,
@@ -62,7 +64,10 @@ export const servers = sqliteTable('servers', {
   maxPlayers: integer('max_players').notNull().default(60),
   rconPassword: text('rcon_password'),
   rconPasswordEncrypted: text('rcon_password_encrypted'),
-  launchParameters: text('launch_parameters'),
+  launchOptions: text('launch_options', { mode: 'json' })
+    .$type<LaunchOptionsDto>()
+    .notNull()
+    .default(EMPTY_LAUNCH_OPTIONS),
   isDefault: integer('is_default', { mode: 'boolean' }).notNull().default(false),
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
   updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),

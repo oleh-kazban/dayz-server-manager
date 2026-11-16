@@ -16,9 +16,11 @@ vi.mock('./crypto', async importOriginal => {
 import { eq, getTableName } from 'drizzle-orm';
 import { getTableConfig } from 'drizzle-orm/sqlite-core';
 
+import { EMPTY_LAUNCH_OPTIONS } from '@aegis/api-contracts';
+
 import * as actualCrypto from './crypto';
 import { initDatabase } from './db';
-import { migrations, runMigrations } from './migrations';
+import { convertLegacyLaunchParameters, migrations, runMigrations } from './migrations';
 import { configEditLocks, serverConfigRevisions, servers, users } from './schema';
 
 function seedPre0006Database(sqlite: Database.Database): void {
@@ -668,7 +670,11 @@ describe('Database Migrations — 0007_server_config_editor', () => {
             applied_at: number;
           }[]
         ).filter(row => row.applied_at !== 1_700_000_000_000);
-        expect(newlyApplied.map(row => row.id)).toEqual([MIGRATION_0007_ID, MIGRATION_0008_ID]);
+        expect(newlyApplied.map(row => row.id)).toEqual([
+          MIGRATION_0007_ID,
+          MIGRATION_0008_ID,
+          MIGRATION_0009_ID,
+        ]);
 
         expect(
           sqlite
@@ -781,6 +787,161 @@ describe('Database Migrations — 0008_admin_only_and_relative_profile_path', ()
       ).toEqual({ count: 1 });
     } finally {
       sqlite.close();
+    }
+  });
+});
+
+const MIGRATION_0009_ID = '0009_structured_launch_options';
+
+describe('convertLegacyLaunchParameters', () => {
+  it('maps supported flags case-insensitively and drops everything else', () => {
+    expect(
+      convertLegacyLaunchParameters(
+        '-config=serverDZ.cfg -CPUCOUNT=8 -limitFPS=120 -doLogs -adminlog -NetLog -freezeCheck -scriptDebug=true -filePatching -mod=@CF -cpuCount=abc -limitFPS -unknown',
+      ),
+    ).toEqual({
+      options: {
+        cpuCount: 8,
+        limitFPS: 120,
+        doLogs: true,
+        adminLog: true,
+        netLog: true,
+        freezeCheck: true,
+        scriptDebug: true,
+        filePatching: true,
+      },
+      droppedTokens: ['-config=serverDZ.cfg', '-mod=@CF', '-cpuCount=abc', '-limitFPS', '-unknown'],
+    });
+  });
+
+  it('drops out-of-range numeric values', () => {
+    expect(convertLegacyLaunchParameters('-cpuCount=0 -cpuCount=65 -limitFPS=201')).toEqual({
+      options: EMPTY_LAUNCH_OPTIONS,
+      droppedTokens: ['-cpuCount=0', '-cpuCount=65', '-limitFPS=201'],
+    });
+  });
+
+  it.each([null, undefined, '', '   '])('converts %j to no flags', text => {
+    expect(convertLegacyLaunchParameters(text)).toEqual({
+      options: EMPTY_LAUNCH_OPTIONS,
+      droppedTokens: [],
+    });
+  });
+});
+
+describe('Database Migrations — 0009_structured_launch_options', () => {
+  function seedPre0009Database(sqlite: Database.Database): void {
+    sqlite.exec(`
+      CREATE TABLE IF NOT EXISTS _dsm_migrations (
+        id TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        applied_at INTEGER NOT NULL
+      );
+    `);
+    const insertMigration = sqlite.prepare(
+      'INSERT INTO _dsm_migrations (id, name, applied_at) VALUES (?, ?, ?)',
+    );
+    for (const migration of migrations.filter(m => m.id < MIGRATION_0009_ID)) {
+      migration.up(sqlite);
+      insertMigration.run(migration.id, migration.name, 1_700_000_000_000);
+    }
+  }
+
+  it('converts legacy launch_parameters, drops the column, logs dropped tokens and is idempotent', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const sqlite = new Database(':memory:');
+    try {
+      seedPre0009Database(sqlite);
+      const insertServer = sqlite.prepare(
+        `INSERT INTO servers (id, name, install_path, profile_path, mission_path, launch_parameters, created_at, updated_at)
+         VALUES (?, ?, '/opt/dayz', 'profiles', 'mpmissions/dayzOffline.chernarusplus', ?, 1, 1)`,
+      );
+      insertServer.run('srv-default', 'Default', '-cpuCount=4 -doLogs -adminLog -netLog');
+      insertServer.run('srv-null', 'Null', null);
+      insertServer.run('srv-managed', 'Managed', '-port=2302 -freezeCheck');
+
+      runMigrations(sqlite);
+
+      const columns = (sqlite.pragma('table_info(servers)') as { name: string }[]).map(c => c.name);
+      expect(columns).toContain('launch_options');
+      expect(columns).not.toContain('launch_parameters');
+
+      const rows = sqlite.prepare('SELECT id, launch_options FROM servers ORDER BY id').all() as {
+        id: string;
+        launch_options: string;
+      }[];
+      expect(Object.fromEntries(rows.map(r => [r.id, JSON.parse(r.launch_options)]))).toEqual({
+        'srv-default': {
+          ...EMPTY_LAUNCH_OPTIONS,
+          cpuCount: 4,
+          doLogs: true,
+          adminLog: true,
+          netLog: true,
+        },
+        'srv-managed': { ...EMPTY_LAUNCH_OPTIONS, freezeCheck: true },
+        'srv-null': EMPTY_LAUNCH_OPTIONS,
+      });
+      expect(warn).toHaveBeenCalledTimes(1);
+      expect(warn).toHaveBeenCalledWith(expect.stringContaining("'srv-managed'"));
+      expect(warn).toHaveBeenCalledWith(expect.stringContaining('-port=2302'));
+
+      expect(() => findMigration(MIGRATION_0009_ID).up(sqlite)).not.toThrow();
+      runMigrations(sqlite);
+      expect(
+        sqlite
+          .prepare('SELECT count(*) AS count FROM _dsm_migrations WHERE id = ?')
+          .get(MIGRATION_0009_ID),
+      ).toEqual({ count: 1 });
+    } finally {
+      sqlite.close();
+      warn.mockRestore();
+    }
+  });
+
+  it('lets drizzle round-trip launch options on a fresh database', () => {
+    const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'dsm-0009-'));
+    const instance = initDatabase({
+      dbPath: path.join(tempDir, 'fresh.sqlite'),
+      vaultKeyDir: path.join(tempDir, 'vault'),
+    });
+    try {
+      const { db } = instance;
+      const now = new Date();
+      db.insert(servers)
+        .values({
+          id: 'srv-a',
+          name: 'A',
+          installPath: '/opt/a',
+          profilePath: 'profiles',
+          missionPath: 'm',
+          createdAt: now,
+          updatedAt: now,
+        })
+        .run();
+      db.insert(servers)
+        .values({
+          id: 'srv-b',
+          name: 'B',
+          installPath: '/opt/b',
+          profilePath: 'profiles',
+          missionPath: 'm',
+          launchOptions: { ...EMPTY_LAUNCH_OPTIONS, limitFPS: 60 },
+          createdAt: now,
+          updatedAt: now,
+        })
+        .run();
+      expect(db.select().from(servers).where(eq(servers.id, 'srv-a')).get()?.launchOptions).toEqual(
+        EMPTY_LAUNCH_OPTIONS,
+      );
+      expect(db.select().from(servers).where(eq(servers.id, 'srv-b')).get()?.launchOptions).toEqual(
+        {
+          ...EMPTY_LAUNCH_OPTIONS,
+          limitFPS: 60,
+        },
+      );
+    } finally {
+      instance.close();
+      fs.rmSync(tempDir, { recursive: true, force: true });
     }
   });
 });
