@@ -1,50 +1,43 @@
 import react from '@vitejs/plugin-react';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { defineConfig } from 'vitest/config';
+import { defineConfig, mergeConfig } from 'vitest/config';
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const workspaceRoot = path.resolve(__dirname, '../..');
+import { coverageDirectory, sharedVitestConfig, workspaceRoot } from '../../vitest.shared';
 
-export default defineConfig({
-  root: __dirname,
-  plugins: [react()],
-  resolve: {
-    alias: {
-      '@aegis/api-contracts': path.resolve(workspaceRoot, 'libs/api-contracts/src'),
-      '@aegis/api-client': path.resolve(workspaceRoot, 'libs/api-client/src'),
-      '@aegis/dayz-config': path.resolve(workspaceRoot, 'libs/dayz-config/src'),
-      '@aegis/ui': path.resolve(workspaceRoot, 'libs/ui/src'),
-      '@aegis/web': path.resolve(__dirname, 'src'),
-    },
-  },
-  test: {
-    pool: 'threads',
-    globals: true,
-    environment: 'jsdom',
-    setupFiles: [path.resolve(__dirname, 'test-setup.ts')],
-    include: ['src/**/*.{test,spec}.{ts,tsx}'],
-    coverage: {
-      provider: 'v8',
-      reporter: ['text', 'html', 'lcov'],
-      reportsDirectory: path.resolve(workspaceRoot, 'coverage/apps/web'),
-      include: ['src/**/*.{ts,tsx}'],
-      exclude: [
-        'src/**/index.ts',
-        'src/**/*.types.ts',
-        'src/**/*.schema.ts',
-        'src/main.tsx',
-        'src/router.tsx',
-        'src/styles/**',
-        'src/**/*.{test,spec}.{ts,tsx}',
-        'src/**/*.d.ts',
-      ],
-      thresholds: {
-        statements: 80,
-        branches: 80,
-        functions: 80,
-        lines: 80,
+const projectDir = path.dirname(fileURLToPath(import.meta.url));
+
+export default mergeConfig(
+  sharedVitestConfig,
+  defineConfig({
+    root: projectDir,
+    plugins: [react()],
+    resolve: {
+      alias: {
+        '@aegis/api-contracts': path.join(workspaceRoot, 'libs/api-contracts/src'),
+        '@aegis/api-client': path.join(workspaceRoot, 'libs/api-client/src'),
+        '@aegis/dayz-config': path.join(workspaceRoot, 'libs/dayz-config/src'),
+        '@aegis/ui': path.join(workspaceRoot, 'libs/ui/src'),
+        '@aegis/web': path.join(projectDir, 'src'),
       },
     },
-  },
-});
+    test: {
+      environment: 'jsdom',
+      setupFiles: [path.join(projectDir, 'test-setup.ts')],
+      include: ['src/**/*.{test,spec}.tsx'],
+      coverage: {
+        reportsDirectory: coverageDirectory(projectDir),
+        include: ['src/**/*.tsx'],
+        exclude: [
+          'src/**/*.types.ts',
+          'src/**/*.schema.ts',
+          'src/main.tsx',
+          'src/router.tsx',
+          'src/styles/**',
+          'src/**/*.{test,spec}.tsx',
+          'src/**/*.d.ts',
+        ],
+      },
+    },
+  }),
+);

@@ -161,6 +161,14 @@ export default tseslint.config(
       'react-refresh/only-export-components': ['warn', { allowConstantExport: true }],
     },
   },
+  {
+    // Test tooling, not part of the project graph: each project's config extends the shared
+    // workspace-root base (vitest.shared.ts) through a relative import.
+    files: ['**/vitest.config.ts'],
+    rules: {
+      '@nx/enforce-module-boundaries': 'off',
+    },
+  },
   eslintConfigPrettier,
   storybook.configs['flat/recommended'],
 );
