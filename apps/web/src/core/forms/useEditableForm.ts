@@ -2,10 +2,12 @@ import { type SyntheticEvent, useEffect, useRef, useState } from 'react';
 
 import { extractApiFieldErrors, resolveFieldErrors } from '../i18n';
 
-import { focusFirstInvalidField, isStructurallyEqual } from './forms.utils';
+import { focusFirstInvalidField, isStructurallyEqual, readFieldValue } from './forms.utils';
 import { useUnsavedChangesGuard } from './unsaved-changes';
 
-export type FormErrors<TValues> = Partial<Record<keyof TValues & string, string>>;
+/** Messages keyed by field name, or by a dotted path into nested values (`launchOptions.cpuCount`). */
+export type FormErrors<TValues> = Partial<Record<keyof TValues & string, string>> &
+  Record<string, string | undefined>;
 
 export interface UseEditableFormOptions<TValues extends Record<string, unknown>> {
   /** Current field values, owned by the form component. */
@@ -68,7 +70,7 @@ export function useEditableForm<TValues extends Record<string, unknown>>({
   const visibleServerErrors: Record<string, string> = {};
   if (serverErrors) {
     for (const [field, message] of Object.entries(serverErrors.errors)) {
-      if (Object.is(values[field], serverErrors.snapshot[field])) {
+      if (Object.is(readFieldValue(values, field), readFieldValue(serverErrors.snapshot, field))) {
         visibleServerErrors[field] = message;
       }
     }

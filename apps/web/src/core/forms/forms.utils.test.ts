@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { focusFirstInvalidField, isStructurallyEqual } from './forms.utils';
+import { focusFirstInvalidField, isStructurallyEqual, readFieldValue } from './forms.utils';
 
 describe('isStructurallyEqual', () => {
   it('compares primitives, arrays and nested plain objects by value', () => {
@@ -18,6 +18,18 @@ describe('isStructurallyEqual', () => {
   it('treats undefined-valued keys as absent, like JSON payloads', () => {
     expect(isStructurallyEqual({ a: 1, b: undefined }, { a: 1 })).toBe(true);
     expect(isStructurallyEqual({ a: 1, b: null }, { a: 1 })).toBe(false);
+  });
+});
+
+describe('readFieldValue', () => {
+  it('reads top-level keys, dotted paths into nested values, and missing paths', () => {
+    const values = { name: 'A', 'flat.key': 1, launchOptions: { cpuCount: '4' } };
+    expect(readFieldValue(values, 'name')).toBe('A');
+    expect(readFieldValue(values, 'flat.key')).toBe(1);
+    expect(readFieldValue(values, 'launchOptions.cpuCount')).toBe('4');
+    expect(readFieldValue(values, 'launchOptions.missing')).toBeUndefined();
+    expect(readFieldValue(values, 'name.length')).toBeUndefined();
+    expect(readFieldValue(values, 'absent.child')).toBeUndefined();
   });
 });
 

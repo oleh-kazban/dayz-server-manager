@@ -30,6 +30,24 @@ export function isStructurallyEqual(a: unknown, b: unknown): boolean {
   return true;
 }
 
+/**
+ * Reads a form field by API field-error key: a top-level key, or a dotted path into nested
+ * values (`launchOptions.cpuCount`). Returns `undefined` when the path does not exist.
+ */
+export function readFieldValue(values: Record<string, unknown>, field: string): unknown {
+  if (field in values) {
+    return values[field];
+  }
+  let current: unknown = values;
+  for (const segment of field.split('.')) {
+    if (typeof current !== 'object' || current === null) {
+      return undefined;
+    }
+    current = (current as Record<string, unknown>)[segment];
+  }
+  return current;
+}
+
 /** Focuses and scrolls to the first control marked `aria-invalid="true"` inside `root`. */
 export function focusFirstInvalidField(root: HTMLElement | null): void {
   const target = root?.querySelector<HTMLElement>('[aria-invalid="true"]');
