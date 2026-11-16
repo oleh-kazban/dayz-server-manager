@@ -26,6 +26,8 @@
       "@aegis/dayz-config/*": ["libs/dayz-config/src/*"],
       "@aegis/platform": ["libs/platform/src/index.ts"],
       "@aegis/platform/*": ["libs/platform/src/*"],
+      "@aegis/rcon": ["libs/rcon/src/index.ts"],
+      "@aegis/rcon/*": ["libs/rcon/src/*"],
       "@aegis/ui": ["libs/ui/src/index.ts"],
       "@aegis/ui/*": ["libs/ui/src/*"],
       "@aegis/web/*": ["apps/web/src/*"]

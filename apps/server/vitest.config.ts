@@ -13,6 +13,7 @@ export default defineConfig({
       '@aegis/database': path.resolve(workspaceRoot, 'libs/database/src/index.ts'),
       '@aegis/dayz-config': path.resolve(workspaceRoot, 'libs/dayz-config/src/index.ts'),
       '@aegis/platform': path.resolve(workspaceRoot, 'libs/platform/src/index.ts'),
+      '@aegis/rcon': path.resolve(workspaceRoot, 'libs/rcon/src/index.ts'),
       '@aegis/server': path.resolve(__dirname, 'src'),
     },
   },
