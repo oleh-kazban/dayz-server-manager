@@ -3,6 +3,7 @@ import { fireEvent, render, screen, waitFor, within } from '@testing-library/rea
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { apiClient, ApiError } from '@aegis/api-client';
+import { DEFAULT_LAUNCH_OPTIONS } from '@aegis/api-contracts';
 import { showToast } from '@aegis/ui';
 import { serverQueryKeys, UnsavedChangesScope } from '@aegis/web/core';
 
@@ -85,7 +86,7 @@ describe('CreateServerModal', () => {
       installPath: 'C:\\DayZ',
       profilePath: 'profiles',
       missionPath: 'mpmissions\\dayzOffline.chernarusplus',
-      launchParameters: '-cpuCount=4',
+      launchOptions: DEFAULT_LAUNCH_OPTIONS,
       isDefault: true,
       ...serverDetailDefaults,
       maxPlayers: 80,
@@ -100,6 +101,7 @@ describe('CreateServerModal', () => {
     expect(screen.queryByLabelText(/Max Players/i)).not.toBeInTheDocument();
     expect(screen.queryByLabelText(/Profile Path/i)).not.toBeInTheDocument();
     expect(screen.queryByLabelText(/Mission Path/i)).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(/Launch Parameters/i)).not.toBeInTheDocument();
 
     // Type into inputs
     fireEvent.change(screen.getByLabelText(/Server Name/i), {
@@ -120,9 +122,6 @@ describe('CreateServerModal', () => {
     fireEvent.change(screen.getByLabelText(/Installation Path/i), {
       target: { value: 'C:\\DayZ' },
     });
-    fireEvent.change(screen.getByLabelText(/Launch Parameters/i), {
-      target: { value: '-cpuCount=4' },
-    });
 
     // Toggle isDefault
     const defaultToggle = screen.getByLabelText(/Default Instance/i);
@@ -139,7 +138,6 @@ describe('CreateServerModal', () => {
         rconPort: 2310,
         rconPassword: 'secretpass',
         installPath: 'C:\\DayZ',
-        launchParameters: '-cpuCount=4',
         isDefault: true,
       });
       expect(showToast.success).toHaveBeenCalledWith(
@@ -461,7 +459,7 @@ describe('CreateServerModal', () => {
       installPath: 'C:\\DayZServer',
       profilePath: 'profiles',
       missionPath: 'mpmissions\\dayzOffline.chernarusplus',
-      launchParameters: '-cpuCount=4 -doLogs -adminLog -netLog',
+      launchOptions: DEFAULT_LAUNCH_OPTIONS,
       isDefault: false,
       ...serverDetailDefaults,
       rconPassword: null,
@@ -486,7 +484,7 @@ describe('CreateServerModal', () => {
       installPath: 'C:\\DayZServer',
       profilePath: 'profiles',
       missionPath: 'mpmissions\\dayzOffline.chernarusplus',
-      launchParameters: '-cpuCount=4 -doLogs -adminLog -netLog',
+      launchOptions: DEFAULT_LAUNCH_OPTIONS,
       isDefault: false,
       ...serverDetailDefaults,
       rconPassword: null,
@@ -509,7 +507,6 @@ describe('CreateServerModal', () => {
         rconPort: 2310,
         rconPassword: undefined,
         installPath: 'C:\\DayZServer',
-        launchParameters: '-cpuCount=4 -doLogs -adminLog -netLog',
         isDefault: false,
       });
     });
@@ -563,7 +560,7 @@ describe('CreateServerModal', () => {
         installPath: 'C:\\DayZServer',
         profilePath: 'profiles',
         missionPath: 'mpmissions\\dayzOffline.chernarusplus',
-        launchParameters: null,
+        launchOptions: DEFAULT_LAUNCH_OPTIONS,
         isDefault: false,
         ...serverDetailDefaults,
         createdAt: new Date().toISOString(),

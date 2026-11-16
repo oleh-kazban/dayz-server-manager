@@ -1,0 +1,49 @@
+import { eq } from 'drizzle-orm';
+import type { FastifyPluginAsync } from 'fastify';
+
+import { serverIdParamSchema } from '@aegis/api-contracts';
+import { servers } from '@aegis/database';
+
+import { buildLaunchCommandPreview } from '../services/server/launch-command.service';
+import { formatZodFieldErrors, sendApiError } from '../utils/api-error';
+
+import { listServerModRows } from './server-mods';
+
+export const registerLaunchCommandRoutes: FastifyPluginAsync = async fastify => {
+  // GET /api/v1/servers/:id/launch-command - Non-mutating compiled launch command preview (DSM-00125)
+  fastify.get<{ Params: { id: string } }>(
+    '/:id/launch-command',
+    {
+      onRequest: [fastify.authenticate],
+    },
+    async (request, reply) => {
+      if (request.user?.role !== 'admin') {
+        return sendApiError(
+          reply,
+          403,
+          'AUTH_FORBIDDEN_ADMIN_REQUIRED',
+          'Admin role required to view the server launch command',
+        );
+      }
+
+      const paramResult = serverIdParamSchema.safeParse(request.params);
+      if (!paramResult.success) {
+        return sendApiError(reply, 400, 'VALIDATION_FAILED', {
+          message: paramResult.error.issues[0].message,
+          fieldErrors: formatZodFieldErrors(paramResult.error),
+        });
+      }
+
+      const { id } = paramResult.data;
+      const server = fastify.db.select().from(servers).where(eq(servers.id, id)).get();
+      if (!server) {
+        return sendApiError(reply, 404, 'SERVER_NOT_FOUND', {
+          message: `Server with ID '${id}' not found`,
+          params: { id },
+        });
+      }
+
+      return reply.send(buildLaunchCommandPreview(server, listServerModRows(fastify, id)));
+    },
+  );
+};

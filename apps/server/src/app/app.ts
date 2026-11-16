@@ -16,6 +16,7 @@ import { type DatabaseInstance, initDatabase, sessions } from '@aegis/database';
 import { type EnvConfig } from '../config/env';
 import { registerAuthRoutes } from '../routes/auth';
 import { registerHealthRoutes } from '../routes/health';
+import { registerLaunchCommandRoutes } from '../routes/launch-command';
 import { registerProfileRoutes } from '../routes/profile';
 import { registerRealtimeRoutes } from '../routes/realtime';
 import { registerServerConfigRoutes } from '../routes/server-config';
@@ -165,6 +166,7 @@ export function buildApp(options: BuildAppOptions): FastifyInstance {
   app.register(registerServersRoutes, { prefix: '/api/v1/servers' });
   app.register(registerServerModsRoutes, { prefix: '/api/v1/servers' });
   app.register(registerServerConfigRoutes, { prefix: '/api/v1/servers' });
+  app.register(registerLaunchCommandRoutes, { prefix: '/api/v1/servers' });
   app.register(registerRealtimeRoutes, { prefix: '/api/v1/realtime' });
   app.register(registerSteamRoutes, { prefix: '/api/v1/settings/steam' });
   app.register(registerWorkshopRoutes, { prefix: '/api/v1/workshop' });

@@ -1,5 +1,12 @@
 import type Database from 'better-sqlite3';
 
+import {
+  EMPTY_LAUNCH_OPTIONS,
+  LAUNCH_CPU_COUNT_RANGE,
+  LAUNCH_FPS_RANGE,
+  type LaunchOptionsDto,
+} from '@aegis/api-contracts';
+
 import { decryptVaultSecret, encryptVaultSecret, resolveVaultKey, verifyVaultKey } from './crypto';
 
 export interface MigrationOptions {
@@ -56,6 +63,93 @@ function backfillLegacyRconSecrets(sqlite: Database.Database, options?: Migratio
     }
     updateStmt.run(encrypted, row.id);
   }
+}
+
+type BooleanLaunchOption = Exclude<keyof LaunchOptionsDto, 'cpuCount' | 'limitFPS'>;
+
+const LEGACY_BOOLEAN_LAUNCH_FLAGS: Readonly<Record<string, BooleanLaunchOption | undefined>> = {
+  '-dologs': 'doLogs',
+  '-adminlog': 'adminLog',
+  '-netlog': 'netLog',
+  '-freezecheck': 'freezeCheck',
+  '-filepatching': 'filePatching',
+  '-scriptdebug=true': 'scriptDebug',
+};
+
+const LEGACY_NUMERIC_LAUNCH_FLAGS: Readonly<
+  Record<string, { key: 'cpuCount' | 'limitFPS'; min: number; max: number } | undefined>
+> = {
+  '-cpucount': { key: 'cpuCount', ...LAUNCH_CPU_COUNT_RANGE },
+  '-limitfps': { key: 'limitFPS', ...LAUNCH_FPS_RANGE },
+};
+
+export interface LegacyLaunchParametersConversion {
+  options: LaunchOptionsDto;
+  droppedTokens: string[];
+}
+
+/**
+ * Converts a legacy free-text `launch_parameters` value (pre DSM-00125) into structured launch
+ * options. Recognition is case-insensitive; tokens that do not map to a supported option
+ * (including DSM-managed flags such as `-config=`, `-port=`, `-mod=`) are dropped.
+ */
+export function convertLegacyLaunchParameters(
+  text: string | null | undefined,
+): LegacyLaunchParametersConversion {
+  const options: LaunchOptionsDto = { ...EMPTY_LAUNCH_OPTIONS };
+  const droppedTokens: string[] = [];
+
+  for (const token of (text ?? '').split(/\s+/).filter(Boolean)) {
+    const lower = token.toLowerCase();
+    const booleanKey = LEGACY_BOOLEAN_LAUNCH_FLAGS[lower];
+    if (booleanKey) {
+      options[booleanKey] = true;
+      continue;
+    }
+
+    const [flag, value] = lower.split('=', 2);
+    const numeric = LEGACY_NUMERIC_LAUNCH_FLAGS[flag];
+    const parsed = value !== undefined && /^\d+$/.test(value) ? Number(value) : Number.NaN;
+    if (numeric && parsed >= numeric.min && parsed <= numeric.max) {
+      options[numeric.key] = parsed;
+      continue;
+    }
+
+    droppedTokens.push(token);
+  }
+
+  return { options, droppedTokens };
+}
+
+function migrateLegacyLaunchParameters(sqlite: Database.Database): void {
+  const columns = new Set(
+    (sqlite.pragma('table_info(servers)') as { name: string }[]).map(column => column.name),
+  );
+
+  if (!columns.has('launch_options')) {
+    sqlite.exec(`ALTER TABLE servers ADD COLUMN launch_options TEXT NOT NULL DEFAULT '{}';`);
+  }
+  if (!columns.has('launch_parameters')) {
+    return;
+  }
+
+  const rows = sqlite.prepare('SELECT id, launch_parameters FROM servers').all() as {
+    id: string;
+    launch_parameters: string | null;
+  }[];
+  const update = sqlite.prepare('UPDATE servers SET launch_options = ? WHERE id = ?');
+
+  for (const row of rows) {
+    const { options, droppedTokens } = convertLegacyLaunchParameters(row.launch_parameters);
+    update.run(JSON.stringify(options), row.id);
+    if (droppedTokens.length > 0) {
+      console.warn(
+        `[migration 0009] Server '${row.id}': dropped unsupported launch parameters: ${droppedTokens.join(' ')}`,
+      );
+    }
+  }
+
+  sqlite.exec('ALTER TABLE servers DROP COLUMN launch_parameters;');
 }
 
 export const migrations: DsmMigration[] = [
@@ -314,6 +408,11 @@ export const migrations: DsmMigration[] = [
       sqlite.exec("UPDATE users SET role = 'admin' WHERE role != 'admin';");
       sqlite.exec("UPDATE servers SET profile_path = 'profiles' WHERE profile_path != 'profiles';");
     },
+  },
+  {
+    id: '0009_structured_launch_options',
+    name: 'Replace free-text launch_parameters with structured launch_options JSON',
+    up: migrateLegacyLaunchParameters,
   },
 ];
 

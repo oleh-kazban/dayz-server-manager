@@ -4,6 +4,42 @@ This document records all completed product backlog items and operational featur
 
 ---
 
+## [DSM-00138] Unsaved-Changes Navigation Guard for Create/Update Forms
+
+- **Type**: `Story`
+- **Priority**: `P2 (Medium)`
+- **Status**: `DONE`
+- **Dependencies**: `DSM-00137`
+
+### Summary
+
+When an update form has unsaved changes (as defined by `DSM-00137` change tracking), warn the admin before the change is lost: a confirmation dialog on in-app route changes (TanStack Router blocker) and the browser's native prompt on tab close/reload (`beforeunload`).
+
+### Delivered Capabilities
+
+Route-change blocking with a `Confirmation` dialog; `beforeunload` for tab close; reuse of the `DSM-00137` change state.
+
+---
+
+## [DSM-00137] Form UX Conventions: Change-Aware Save, Submit-Time Validation, Inline Errors, and Result Toasts
+
+- **Type**: `Story`
+- **Priority**: `P1 (High)`
+- **Status**: `DONE`
+- **Dependencies**: `DSM-00105, DSM-00108`
+
+### Summary
+
+Make every create/update form behave consistently: the save/update control is disabled while the form has no changes relative to the last saved values; validation runs when the admin tries to save and then re-validates live; every invalid field (client or server `fieldErrors`) is highlighted with a specific message and the first one receives focus; every server-side create/update/save ends in a green or red toast. The conventions are enforced by QA via `GEMINI.md` §5.
+
+### Delivered Capabilities
+
+- Shared change-tracking / submit-validation / focus-first-invalid hook in `apps/web/src/core`.
+- Adoption in `ServerSettingsForm`, `SteamSettingsView`, `ProfileIdentityCard`, `PasswordRotationCard`, `EditModModal`, `CreateServerModal`, `AddModModal` (Local Mod); verification of `ServerConfigCard`.
+- "No changes to save" tooltip on disabled submit controls; tests per form.
+
+---
+
 ## [DSM-00136] Shared CodeMirror 6 `CodeEditor` with Inline Diagnostics and Read-Only Ranges
 
 - **Type**: `Story`

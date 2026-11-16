@@ -5,10 +5,13 @@ import { fireEvent, render, screen, waitFor, within } from '@testing-library/rea
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { apiClient, ApiError } from '@aegis/api-client';
-import type {
-  ServerDetailDto,
-  ServerSummaryDto,
-  ValidateServerPathsResponseDto,
+import {
+  DEFAULT_LAUNCH_OPTIONS,
+  EMPTY_LAUNCH_OPTIONS,
+  type LaunchCommandPreviewDto,
+  type ServerDetailDto,
+  type ServerSummaryDto,
+  type ValidateServerPathsResponseDto,
 } from '@aegis/api-contracts';
 import { showToast } from '@aegis/ui';
 import { enUSTranslations, serverQueryKeys } from '@aegis/web/core';
@@ -49,11 +52,28 @@ const mockServerDetail: ServerDetailDto = {
   installPath: 'C:\\DayZServer\\Namalsk',
   profilePath: 'profiles',
   missionPath: 'mpmissions\\dayzOffline.namalsk',
-  launchParameters: '-cpuCount=4 -doLogs',
+  launchOptions: { ...EMPTY_LAUNCH_OPTIONS, cpuCount: 4, doLogs: true },
   maxPlayers: 60,
   rconIp: '127.0.0.1',
   rconPassword: 'current-rcon-secret',
 };
+
+function buildLaunchContext(serverId: string): LaunchCommandPreviewDto {
+  return {
+    serverId,
+    platform: 'win32',
+    mods: { modFolders: ['@CF'], serverModFolders: [], missingFolderCount: 0 },
+    command: {
+      ready: true,
+      executable: 'C:\\DayZServer\\Namalsk\\DayZServer_x64.exe',
+      cwd: 'C:\\DayZServer\\Namalsk',
+      args: [],
+      commandLine: '',
+      segments: [],
+      issues: [],
+    },
+  };
+}
 
 let mockServers: ServerSummaryDto[] = [mockDefaultServerSummary, mockActiveServerSummary];
 let currentActiveSummary: ServerSummaryDto | null = mockActiveServerSummary;
@@ -115,6 +135,7 @@ vi.mock('@aegis/api-client', async importOriginal => {
         delete: vi.fn(),
         create: vi.fn(),
         validatePaths: vi.fn(),
+        getLaunchCommand: vi.fn(),
       },
     },
   };
@@ -139,13 +160,16 @@ describe('ServerSettingsView', () => {
 
     vi.mocked(apiClient.servers.get).mockImplementation(async () => currentDetail!);
     vi.mocked(apiClient.servers.update).mockImplementation(async () => currentDetail!);
+    vi.mocked(apiClient.servers.getLaunchCommand).mockImplementation(async serverId =>
+      buildLaunchContext(serverId),
+    );
     vi.mocked(apiClient.servers.delete).mockImplementation(async () => ({ success: true }));
     vi.mocked(apiClient.servers.create).mockImplementation(async dto => ({
       ...mockServerDetail,
       ...dto,
       id: '33333333-3333-4333-8333-333333333333',
       description: dto.description ?? null,
-      launchParameters: dto.launchParameters ?? null,
+      launchOptions: DEFAULT_LAUNCH_OPTIONS,
       status: 'stopped',
       isDefault: dto.isDefault ?? false,
       createdAt: new Date().toISOString(),
@@ -288,7 +312,28 @@ describe('ServerSettingsView', () => {
     expect(screen.getByDisplayValue('2410')).toBeInTheDocument();
     expect(screen.getByDisplayValue('current-rcon-secret')).toBeInTheDocument();
     expect(screen.getByDisplayValue('C:\\DayZServer\\Namalsk')).toBeInTheDocument();
-    expect(screen.getByDisplayValue('-cpuCount=4 -doLogs')).toBeInTheDocument();
+    expect(screen.getByLabelText(/CPU Count/i)).toHaveValue(4);
+    expect(screen.getByLabelText(/FPS Limit/i)).toHaveValue(null);
+    expect(screen.getByLabelText(/Server logs/i)).toBeChecked();
+    expect(screen.getByLabelText(/Admin log/i)).not.toBeChecked();
+
+    const preview = await screen.findByRole('region', { name: /Compiled launch command/i });
+    const args = within(preview)
+      .getAllByRole('listitem')
+      .map(item => item.querySelector('code')?.textContent);
+    expect(args).toEqual([
+      '-config=serverDZ.cfg',
+      '-port=2402',
+      '-profiles=profiles',
+      '-BEpath=profiles\\BattlEye',
+      '-mod=@CF',
+      '-cpuCount=4',
+      '-doLogs',
+    ]);
+    expect(
+      within(preview).getByText('C:\\DayZServer\\Namalsk\\DayZServer_x64.exe'),
+    ).toBeInTheDocument();
+    expect(within(preview).queryByText('Unsaved')).not.toBeInTheDocument();
     expect(screen.getByTestId('derived-profile-path')).toHaveTextContent(
       'C:\\DayZServer\\Namalsk\\profiles',
     );
@@ -755,9 +800,9 @@ describe('ServerSettingsView', () => {
     const installInput = screen.getByDisplayValue(mockServerDetail.installPath);
     fireEvent.change(installInput, { target: { value: 'D:\\DayZServer' } });
 
-    // Update CLI args
-    const cliInput = screen.getByDisplayValue(mockServerDetail.launchParameters!);
-    fireEvent.change(cliInput, { target: { value: '-cpuCount=8' } });
+    // Update launch options
+    fireEvent.change(screen.getByLabelText(/CPU Count/i), { target: { value: '8' } });
+    fireEvent.click(screen.getByLabelText(/Freeze check/i));
 
     // Toggle default instance
     const toggle = screen.getByLabelText(/Default Server Instance/i);
@@ -777,7 +822,12 @@ describe('ServerSettingsView', () => {
           rconPort: 2312,
           rconPassword: 'newpassword123',
           installPath: 'D:\\DayZServer',
-          launchParameters: '-cpuCount=8',
+          launchOptions: {
+            ...EMPTY_LAUNCH_OPTIONS,
+            cpuCount: 8,
+            doLogs: true,
+            freezeCheck: true,
+          },
           isDefault: true,
         }),
       );
@@ -786,6 +836,95 @@ describe('ServerSettingsView', () => {
         'Configuration for "Updated Chernarus" has been updated successfully.',
         undefined,
       );
+    });
+  });
+
+  describe('engine launch options (DSM-00125)', () => {
+    it('marks the compiled preview unsaved while launch options differ and blocks invalid values on save without a request or toast', async () => {
+      renderView();
+      const preview = await screen.findByRole('region', { name: /Compiled launch command/i });
+
+      fireEvent.click(screen.getByLabelText(/Network log/i));
+      expect(within(preview).getByText('Unsaved')).toBeInTheDocument();
+      expect(within(preview).getByText('-netLog')).toBeInTheDocument();
+
+      const cpuInput = screen.getByLabelText(/CPU Count/i);
+      fireEvent.change(cpuInput, { target: { value: '99' } });
+      fireEvent.click(screen.getByRole('button', { name: /Save changes/i }));
+
+      const message =
+        'CPU count must be a whole number between 1 and 64, or empty for the engine default.';
+      expect(await screen.findByText(message)).toBeInTheDocument();
+      await waitFor(() => expect(cpuInput).toHaveFocus());
+      expect(apiClient.servers.update).not.toHaveBeenCalled();
+      expect(showToast.error).not.toHaveBeenCalled();
+
+      fireEvent.change(cpuInput, { target: { value: '4' } });
+      expect(screen.queryByText(message)).not.toBeInTheDocument();
+      fireEvent.click(screen.getByLabelText(/Network log/i));
+      expect(within(preview).queryByText('Unsaved')).not.toBeInTheDocument();
+    });
+
+    it('shows an API launchOptions field error inline with a red toast and hides it once the value is edited', async () => {
+      vi.mocked(apiClient.servers.update).mockRejectedValueOnce(
+        new ApiError('Validation failed', 400, {
+          statusCode: 400,
+          error: 'Bad Request',
+          errorCode: 'VALIDATION_FAILED',
+          message: 'CPU count must be between 1 and 64',
+          fieldErrors: {
+            'launchOptions.cpuCount': {
+              code: 'INVALID_VALUE',
+              message: 'CPU count must be between 1 and 64',
+            },
+          },
+        }),
+      );
+      renderView();
+      await screen.findByRole('region', { name: /Compiled launch command/i });
+
+      const cpuInput = screen.getByLabelText(/CPU Count/i);
+      fireEvent.change(cpuInput, { target: { value: '8' } });
+      fireEvent.click(screen.getByRole('button', { name: /Save changes/i }));
+
+      await waitFor(() => expect(apiClient.servers.update).toHaveBeenCalled());
+      await waitFor(() => expect(showToast.error).toHaveBeenCalled());
+      expect(await screen.findByText('CPU count must be between 1 and 64')).toBeInTheDocument();
+      expect(showToast.error).toHaveBeenCalledWith(
+        'Validation Error',
+        'Please review the highlighted fields and correct any invalid values.',
+        undefined,
+      );
+      await waitFor(() => expect(cpuInput).toHaveFocus());
+
+      fireEvent.change(cpuInput, { target: { value: '6' } });
+      expect(screen.queryByText('CPU count must be between 1 and 64')).not.toBeInTheDocument();
+    });
+
+    it('saves launch options with a green toast and resets the preview to saved', async () => {
+      vi.mocked(apiClient.servers.update).mockImplementationOnce(async (_id, dto) => ({
+        ...currentDetail!,
+        launchOptions: dto.launchOptions!,
+      }));
+      renderView();
+      const preview = await screen.findByRole('region', { name: /Compiled launch command/i });
+
+      fireEvent.change(screen.getByLabelText(/FPS Limit/i), { target: { value: '120' } });
+      fireEvent.click(screen.getByRole('button', { name: /Save changes/i }));
+
+      await waitFor(() => {
+        expect(apiClient.servers.update).toHaveBeenCalledWith(
+          mockServerDetail.id,
+          expect.objectContaining({
+            launchOptions: { ...EMPTY_LAUNCH_OPTIONS, cpuCount: 4, doLogs: true, limitFPS: 120 },
+          }),
+        );
+      });
+      await waitFor(() => expect(showToast.success).toHaveBeenCalled());
+      expect(within(preview).getByText('-limitFPS=120')).toBeInTheDocument();
+      await waitFor(() => {
+        expect(within(preview).queryByText('Unsaved')).not.toBeInTheDocument();
+      });
     });
   });
 
@@ -954,7 +1093,9 @@ describe('ServerSettingsView', () => {
     expect(screen.getByLabelText(/BattlEye RCON Bind IP/i)).toBeDisabled();
     expect(screen.getByLabelText(/BattlEye RCON Password/i)).toBeDisabled();
     expect(screen.getByLabelText(/Installation Path/i)).toBeDisabled();
-    expect(screen.getByLabelText(/CLI Arguments/i)).toBeDisabled();
+    expect(screen.getByLabelText(/CPU Count/i)).toBeDisabled();
+    expect(screen.getByLabelText(/FPS Limit/i)).toBeDisabled();
+    expect(screen.getByLabelText(/Server logs/i)).toBeDisabled();
 
     const descriptionInput = screen.getByLabelText(/Description/i);
     fireEvent.change(descriptionInput, { target: { value: 'Live maintenance note' } });

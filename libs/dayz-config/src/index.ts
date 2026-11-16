@@ -1,4 +1,5 @@
 export * from './lib/encoding';
+export * from './lib/launch';
 export * from './lib/parser';
 export * from './lib/projection';
 export * from './lib/query';

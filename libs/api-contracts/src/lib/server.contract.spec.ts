@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest';
 
+import { EMPTY_LAUNCH_OPTIONS } from './launch.contract';
 import {
   ACTIVE_SERVER_STATUSES,
   createServerSchema,
   discoveredMissionSchema,
   isServerActiveStatus,
-  launchParametersSchema,
   rconIpSchema,
   rconPasswordSchema,
   safePathSchema,
@@ -172,29 +172,6 @@ describe('Server Contracts (@aegis/api-contracts)', () => {
     });
   });
 
-  describe('launchParametersSchema', () => {
-    it('accepts valid parameter strings', () => {
-      expect(
-        launchParametersSchema.safeParse('-config=serverDZ.cfg -port=2302 -BEpath=battleye')
-          .success,
-      ).toBe(true);
-      expect(launchParametersSchema.safeParse('').success).toBe(true);
-      expect(launchParametersSchema.safeParse('a'.repeat(1024)).success).toBe(true);
-    });
-
-    it('rejects strings exceeding 1024 characters', () => {
-      expect(launchParametersSchema.safeParse('a'.repeat(1025)).success).toBe(false);
-    });
-
-    it('rejects strings containing null bytes', () => {
-      const res = launchParametersSchema.safeParse('-param=val\0');
-      expect(res.success).toBe(false);
-      if (!res.success) {
-        expect(res.error.issues[0].message).toBe('Null bytes are forbidden');
-      }
-    });
-  });
-
   describe('serverIdParamSchema', () => {
     it('accepts valid UUID v4', () => {
       const validUuid = '123e4567-e89b-12d3-a456-426614174000';
@@ -303,7 +280,7 @@ describe('Server Contracts (@aegis/api-contracts)', () => {
       installPath: 'C:/DayZServer',
       profilePath: 'C:/DayZServer/profiles',
       missionPath: 'C:/DayZServer/mpmissions/dayzOffline.chernarusplus',
-      launchParameters: '-config=serverDZ.cfg -cpuCount=4',
+      launchOptions: { ...EMPTY_LAUNCH_OPTIONS, cpuCount: 4 },
       maxPlayers: 60,
       rconIp: '127.0.0.1',
       rconPassword: 'secretPassword123',
@@ -351,13 +328,16 @@ describe('Server Contracts (@aegis/api-contracts)', () => {
       expect(nullRcon.success).toBe(true);
     });
 
-    it('accepts null or omitted launchParameters', () => {
-      expect(serverDetailSchema.safeParse({ ...validDetail, launchParameters: null }).success).toBe(
-        true,
-      );
-      const withoutParams = { ...validDetail };
-      delete (withoutParams as Record<string, unknown>).launchParameters;
-      expect(serverDetailSchema.safeParse(withoutParams).success).toBe(true);
+    it('requires launchOptions and rejects unknown option keys', () => {
+      const withoutOptions = { ...validDetail } as Record<string, unknown>;
+      delete withoutOptions.launchOptions;
+      expect(serverDetailSchema.safeParse(withoutOptions).success).toBe(false);
+      expect(
+        serverDetailSchema.safeParse({
+          ...validDetail,
+          launchOptions: { ...EMPTY_LAUNCH_OPTIONS, extra: true },
+        }).success,
+      ).toBe(false);
     });
 
     it('rejects invalid path fields in detail schema', () => {
@@ -382,7 +362,7 @@ describe('Server Contracts (@aegis/api-contracts)', () => {
       queryPort: 27016,
       rconPort: 2310,
       rconPassword: 'secretPassword123',
-      launchParameters: '-adminlog -freezecheck',
+      launchOptions: { adminLog: true, freezeCheck: true },
       isDefault: false,
     };
 
@@ -627,7 +607,7 @@ describe('Server Contracts (@aegis/api-contracts)', () => {
       const res = updateServerSchema.safeParse({
         description: null,
         rconPassword: null,
-        launchParameters: null,
+        launchOptions: EMPTY_LAUNCH_OPTIONS,
       });
       expect(res.success).toBe(true);
 
