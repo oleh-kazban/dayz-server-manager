@@ -76,6 +76,7 @@ function buildLaunchContext(serverId: string): LaunchCommandPreviewDto {
       segments: [],
       issues: [],
     },
+    editLock: null,
   };
 }
 
