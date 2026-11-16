@@ -1,3 +1,5 @@
+import path from 'node:path';
+
 import { BaseProcessManager, KILL_CONFIRM_TIMEOUT_MS } from './base-process-manager';
 import { type KillResult, type ProcessIdentity, ProcessKillError } from './process-manager.types';
 import { nodeProcessSystem, type ProcessSystem } from './process-system';
@@ -7,13 +9,25 @@ const TASKKILL_TIMEOUT_MS = 15_000;
 /** `taskkill` exit code when no process matches the PID. */
 const TASKKILL_NOT_FOUND = 128;
 
+/** Absolute paths to the System32 tools, so a hijacked PATH can never substitute them. */
+export function windowsSystemTools(systemRoot = process.env['SystemRoot'] ?? 'C:\\Windows') {
+  const system32 = path.win32.join(systemRoot, 'System32');
+  return {
+    powershell: path.win32.join(system32, 'WindowsPowerShell', 'v1.0', 'powershell.exe'),
+    taskkill: path.win32.join(system32, 'taskkill.exe'),
+  };
+}
+
 /**
  * Windows adapter. Processes are not bound to a Job Object, so they survive DSM restarts (D1);
  * trees are terminated with `taskkill /T /F`. Identity is the process creation time read through
  * CIM (`wmic` is deprecated and not used).
  */
 export class WindowsProcessManager extends BaseProcessManager {
-  constructor(system: ProcessSystem = nodeProcessSystem) {
+  constructor(
+    system: ProcessSystem = nodeProcessSystem,
+    private readonly tools = windowsSystemTools(),
+  ) {
     super(system);
   }
 
@@ -24,7 +38,7 @@ export class WindowsProcessManager extends BaseProcessManager {
     // `pid` is a validated positive integer, so interpolating it into the filter is safe.
     const script = `$p = Get-CimInstance Win32_Process -Filter 'ProcessId=${pid}'; if ($p) { $p.CreationDate.ToUniversalTime().ToString('o') }`;
     const result = await this.system.execFile(
-      'powershell.exe',
+      this.tools.powershell,
       ['-NoProfile', '-NonInteractive', '-Command', script],
       POWERSHELL_TIMEOUT_MS,
     );
@@ -44,7 +58,7 @@ export class WindowsProcessManager extends BaseProcessManager {
     }
 
     const result = await this.system.execFile(
-      'taskkill',
+      this.tools.taskkill,
       ['/PID', String(identity.pid), '/T', '/F'],
       TASKKILL_TIMEOUT_MS,
     );
