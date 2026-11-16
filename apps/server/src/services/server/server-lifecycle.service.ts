@@ -28,13 +28,22 @@ import {
   type ProcessManager,
   ProcessSpawnError,
 } from '@aegis/platform';
+import { BattlEyeRconClient, type RconCommandResult, type RconLoginResult } from '@aegis/rcon';
 
 import { buildLaunchCommandPreview, resolveLaunchPlatform } from './launch-command.service';
+import { decryptServerSecrets } from './server-secrets';
 
 /** Default time a new process must survive before `starting` becomes `running` (D2). */
 export const DEFAULT_STARTUP_WINDOW_MS = 60_000;
 /** Default liveness poll for tracked processes (catches exits of re-adopted processes). */
 export const DEFAULT_POLL_INTERVAL_MS = 5_000;
+/**
+ * Default watchdog after RCON #shutdown before the process is force-killed (DSM-00163). Long on
+ * purpose: DayZ saves its persistence while shutting down, and a kill mid-save rolls it back.
+ */
+export const DEFAULT_STOP_TIMEOUT_MS = 60_000;
+/** RCON command that makes DayZ save persistence and exit. */
+export const RCON_SHUTDOWN_COMMAND = '#shutdown';
 
 const ACTIVE: ServerStatus[] = [
   SERVER_STATUS.STARTING,
@@ -47,6 +56,8 @@ export type LifecycleLogger = Pick<FastifyBaseLogger, 'info' | 'warn' | 'error'>
 
 export interface ServerLifecycleOptions {
   startupWindowMs?: number;
+  /** Watchdog after #shutdown before force-killing (default 60 s). */
+  stopTimeoutMs?: number;
   pollIntervalMs?: number;
   platform?: LaunchPlatform;
   clock?: () => number;
@@ -59,11 +70,31 @@ export interface EditLockGuard {
   assertNoActiveEditLock(serverId: string): void;
 }
 
+/** The part of an RCON client the graceful stop needs (BattlEyeRconClient implements it). */
+export interface RconSession {
+  login(): Promise<RconLoginResult>;
+  command(text: string): Promise<RconCommandResult>;
+  close(): Promise<void>;
+}
+
+export type RconSessionFactory = (target: {
+  host: string;
+  port: number;
+  password: string;
+}) => RconSession;
+
 export interface ServerLifecycleDeps {
   db: DsmDatabase;
   sqlite: DatabaseInstance['sqlite'];
   processes: ProcessManager;
   locks: EditLockGuard;
+  /** Defaults to a real BattlEye RCON client. */
+  rcon?: RconSessionFactory;
+}
+
+/** RCON bound to all interfaces is reached through loopback (DSM runs on the game host). */
+export function rconConnectHost(rconIp: string): string {
+  return rconIp === '0.0.0.0' ? '127.0.0.1' : rconIp;
 }
 
 const LIFECYCLE_STATUS_CODES: Partial<Record<ApiErrorCode, number>> = {
@@ -74,6 +105,9 @@ const LIFECYCLE_STATUS_CODES: Partial<Record<ApiErrorCode, number>> = {
   SERVER_LAUNCH_NOT_READY: 422,
   SERVER_START_FAILED: 422,
   SERVER_STOP_FAILED: 500,
+  SERVER_RCON_NOT_CONFIGURED: 409,
+  SERVER_RCON_UNREACHABLE: 502,
+  SERVER_RCON_LOGIN_FAILED: 502,
 };
 
 export class LifecycleError extends Error {
@@ -132,6 +166,8 @@ function sameIdentity(a: ProcessIdentity, b: ProcessIdentity): boolean {
 interface WatchEntry {
   identity: ProcessIdentity;
   startupTimer: ReturnType<typeof setTimeout> | null;
+  /** Graceful-stop watchdog (DSM-00163). */
+  stopTimer: ReturnType<typeof setTimeout> | null;
 }
 
 /**
@@ -145,6 +181,7 @@ export class ServerLifecycleService {
   private pollTimer: ReturnType<typeof setInterval> | null = null;
   private polling = false;
   private readonly startupWindowMs: number;
+  private readonly stopTimeoutMs: number;
   private readonly pollIntervalMs: number;
   private readonly platform: LaunchPlatform;
   private readonly clock: () => number;
@@ -153,13 +190,16 @@ export class ServerLifecycleService {
   private readonly sqlite: DatabaseInstance['sqlite'];
   private readonly processes: ProcessManager;
   private readonly locks: EditLockGuard;
+  private readonly rcon: RconSessionFactory;
 
   constructor(
     deps: ServerLifecycleDeps,
     private readonly options: ServerLifecycleOptions = {},
   ) {
     ({ db: this.db, sqlite: this.sqlite, processes: this.processes, locks: this.locks } = deps);
+    this.rcon = deps.rcon ?? (target => new BattlEyeRconClient(target));
     this.startupWindowMs = options.startupWindowMs ?? DEFAULT_STARTUP_WINDOW_MS;
+    this.stopTimeoutMs = options.stopTimeoutMs ?? DEFAULT_STOP_TIMEOUT_MS;
     this.pollIntervalMs = options.pollIntervalMs ?? DEFAULT_POLL_INTERVAL_MS;
     this.platform = options.platform ?? resolveLaunchPlatform();
     this.clock = options.clock ?? Date.now;
@@ -233,6 +273,73 @@ export class ServerLifecycleService {
       { serverId, processPid: managed.identity.pid },
       'DayZ server process started',
     );
+    return this.requireServer(serverId);
+  }
+
+  /**
+   * DSM-00163: asks DayZ to save and exit through RCON #shutdown, then returns with status
+   * `stopping`. The exit is applied by the regular exit handling (`stopped`); if the process is
+   * still alive after `stopTimeoutMs`, the watchdog force-kills it (`shutdown_timeout`).
+   * Nothing changes when RCON cannot be reached or rejects the password.
+   */
+  async gracefulStop(serverId: string): Promise<Server> {
+    const current = this.requireServer(serverId);
+    const identity = identityOf(current);
+    if (current.status === SERVER_STATUS.STARTING || current.status === SERVER_STATUS.STOPPING) {
+      throw this.busy(current);
+    }
+    if (current.status !== SERVER_STATUS.RUNNING || !identity) {
+      throw new LifecycleError('SERVER_NOT_RUNNING', `"${current.name}" has no running process.`, {
+        name: current.name,
+      });
+    }
+
+    const secrets = decryptServerSecrets(current);
+    if (!secrets.ok) {
+      throw new LifecycleError(secrets.errorCode, secrets.message);
+    }
+    const password = secrets.secrets.rconPassword;
+    if (!password) {
+      throw new LifecycleError(
+        'SERVER_RCON_NOT_CONFIGURED',
+        `"${current.name}" has no BattlEye RCON password.`,
+        { name: current.name },
+      );
+    }
+
+    const session = this.rcon({
+      host: rconConnectHost(current.rconIp),
+      port: current.rconPort,
+      password,
+    });
+    try {
+      const login = await session.login();
+      if (!login.ok) {
+        const code =
+          login.error === 'login_failed' ? 'SERVER_RCON_LOGIN_FAILED' : 'SERVER_RCON_UNREACHABLE';
+        throw new LifecycleError(code, login.message, {
+          name: current.name,
+          reason: login.message,
+        });
+      }
+      if (!this.transition(serverId, [SERVER_STATUS.RUNNING], { status: SERVER_STATUS.STOPPING })) {
+        throw this.busy(this.requireServer(serverId));
+      }
+      this.armStopWatchdog(serverId, identity);
+
+      const shutdown = await session.command(RCON_SHUTDOWN_COMMAND);
+      if (!shutdown.ok) {
+        // DayZ may have received it anyway; the watchdog guarantees the stop either way.
+        this.options.logger?.warn(
+          { serverId, error: shutdown.error },
+          'RCON #shutdown was not acknowledged; waiting for the watchdog',
+        );
+      }
+    } finally {
+      await session.close();
+    }
+
+    this.options.logger?.info({ serverId }, 'Graceful stop requested via RCON #shutdown');
     return this.requireServer(serverId);
   }
 
@@ -323,7 +430,7 @@ export class ServerLifecycleService {
         }, this.startupWindowMs)
       : null;
     startupTimer?.unref();
-    this.watched.set(serverId, { identity, startupTimer });
+    this.watched.set(serverId, { identity, startupTimer, stopTimer: null });
 
     void options.exited?.then(exit => this.handleExit(serverId, identity, exit));
 
@@ -340,6 +447,9 @@ export class ServerLifecycleService {
     if (entry?.startupTimer) {
       clearTimeout(entry.startupTimer);
     }
+    if (entry?.stopTimer) {
+      clearTimeout(entry.stopTimer);
+    }
     this.watched.delete(serverId);
     if (this.watched.size === 0 && this.pollTimer) {
       clearInterval(this.pollTimer);
@@ -350,6 +460,44 @@ export class ServerLifecycleService {
   private isWatching(serverId: string, identity: ProcessIdentity): boolean {
     const entry = this.watched.get(serverId);
     return entry !== undefined && sameIdentity(entry.identity, identity);
+  }
+
+  /** Starts the graceful-stop watchdog on the tracked process (tracking it first if needed). */
+  private armStopWatchdog(serverId: string, identity: ProcessIdentity): void {
+    if (!this.isWatching(serverId, identity)) {
+      this.watch(serverId, identity, { startupWindow: false });
+    }
+    const entry = this.watched.get(serverId) as WatchEntry;
+    entry.stopTimer = setTimeout(() => {
+      void this.onStopTimeout(serverId, identity);
+    }, this.stopTimeoutMs);
+    entry.stopTimer.unref();
+  }
+
+  /**
+   * The process ignored #shutdown for `stopTimeoutMs`: force-kill it and record why. No staleness
+   * check is needed because an exit (or a force-stop) unwatches and clears this timer first.
+   */
+  private async onStopTimeout(serverId: string, identity: ProcessIdentity): Promise<void> {
+    this.unwatch(serverId);
+    try {
+      await this.processes.killTree(identity);
+    } catch (error) {
+      const reason = error instanceof Error ? error.message : 'Unknown kill error.';
+      this.options.logger?.error({ serverId, reason }, 'Watchdog kill after #shutdown failed');
+      // Keep tracking so a later exit is still detected; the admin can force-stop.
+      this.watch(serverId, identity, { startupWindow: false });
+      return;
+    }
+    this.transition(serverId, [SERVER_STATUS.STOPPING], {
+      status: SERVER_STATUS.STOPPED,
+      ...CLEARED_RUNTIME,
+      ...this.lastExit(SERVER_EXIT_REASON.SHUTDOWN_TIMEOUT),
+    });
+    this.options.logger?.warn(
+      { serverId, stopTimeoutMs: this.stopTimeoutMs },
+      'DayZ did not exit after #shutdown; force-killed by the watchdog',
+    );
   }
 
   /** REQ-02: `starting` → `running` once the process survived the startup window. */

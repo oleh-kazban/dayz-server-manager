@@ -39,6 +39,26 @@ export const registerServerLifecycleRoutes: FastifyPluginAsync = async fastify =
     },
   );
 
+  // POST /api/v1/servers/:id/stop - Graceful stop via RCON #shutdown with a watchdog (DSM-00163)
+  fastify.post<IdParams>(
+    '/:id/stop',
+    { onRequest: [fastify.authenticate] },
+    async (request, reply) => {
+      if (!ensureAdminRole(request, reply, 'Admin role required to stop servers')) {
+        return;
+      }
+      const server = resolveServerByIdOrSendError(fastify, request.params, reply);
+      if (!server) {
+        return;
+      }
+      try {
+        return sendServerDetail(reply, await fastify.lifecycle.gracefulStop(server.id));
+      } catch (error) {
+        return sendLifecycleError(reply, error);
+      }
+    },
+  );
+
   // POST /api/v1/servers/:id/force-stop - Kill the process tree without RCON shutdown (DSM-00162)
   fastify.post<IdParams>(
     '/:id/force-stop',

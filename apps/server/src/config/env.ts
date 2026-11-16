@@ -15,6 +15,8 @@ export const envSchema = z
     // Time a new DayZ process must survive before it counts as running (DSM-00162).
     DSM_SERVER_STARTUP_WINDOW_MS: z.coerce.number().int().min(0).default(60_000),
     DSM_SERVER_POLL_INTERVAL_MS: z.coerce.number().int().min(250).default(5_000),
+    // Watchdog after RCON #shutdown before the DayZ process is force-killed (DSM-00163).
+    DSM_SERVER_STOP_TIMEOUT_MS: z.coerce.number().int().min(1_000).default(60_000),
   })
   .refine(
     data => {

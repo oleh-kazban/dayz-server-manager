@@ -29,7 +29,10 @@ import { registerSteamRoutes } from '../routes/steam';
 import { registerWorkshopRoutes } from '../routes/workshop';
 import { sseHub } from '../services/realtime/sse-hub';
 import { ConfigEditLockService } from '../services/server/config-edit-lock.service';
-import { ServerLifecycleService } from '../services/server/server-lifecycle.service';
+import {
+  type RconSessionFactory,
+  ServerLifecycleService,
+} from '../services/server/server-lifecycle.service';
 import { sendApiError } from '../utils/api-error';
 
 export interface BuildAppOptions {
@@ -38,6 +41,8 @@ export interface BuildAppOptions {
   db?: DatabaseInstance;
   /** OS process adapter; defaults to the platform implementation (DSM-00160). */
   processManager?: ProcessManager;
+  /** RCON client factory for the graceful stop; defaults to the BattlEye client (DSM-00163). */
+  rconSessionFactory?: RconSessionFactory;
   /** Skip reconciling stored server processes on startup (tests that seed state later). */
   skipLifecycleReconcile?: boolean;
 }
@@ -62,9 +67,11 @@ export function buildApp(options: BuildAppOptions): FastifyInstance {
       sqlite: dbInstance.sqlite,
       processes: options.processManager ?? createProcessManager(),
       locks: new ConfigEditLockService(dbInstance.db, dbInstance.sqlite),
+      rcon: options.rconSessionFactory,
     },
     {
       startupWindowMs: options.config.DSM_SERVER_STARTUP_WINDOW_MS,
+      stopTimeoutMs: options.config.DSM_SERVER_STOP_TIMEOUT_MS,
       pollIntervalMs: options.config.DSM_SERVER_POLL_INTERVAL_MS,
       logger: app.log,
       broadcast: (event, data) => sseHub.broadcast(event, data),
