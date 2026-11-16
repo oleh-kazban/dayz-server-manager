@@ -126,6 +126,7 @@ describe('Router Topology & Navigation', () => {
         queryPort: 27016,
         rconPort: 2310,
         isDefault: true,
+        lastExit: null,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       },

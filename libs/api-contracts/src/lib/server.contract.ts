@@ -33,6 +33,45 @@ export function isServerActiveStatus(status: ServerStatus): boolean {
   return ACTIVE_SERVER_STATUS_SET.has(status);
 }
 
+/** Why the server process last ended (DSM-00162). Unexpected exits leave status `failed`. */
+export const SERVER_EXIT_REASON = {
+  START_FAILED: 'start_failed',
+  CRASHED: 'crashed',
+  EXITED_WHILE_OFFLINE: 'exited_while_offline',
+  FORCE_STOPPED: 'force_stopped',
+  /** Graceful stop: the process exited after RCON #shutdown. */
+  STOPPED: 'stopped',
+  /** Graceful stop: the process did not exit in time after #shutdown and was force-killed. */
+  SHUTDOWN_TIMEOUT: 'shutdown_timeout',
+} as const;
+
+export const SERVER_EXIT_REASON_VALUES = [
+  SERVER_EXIT_REASON.START_FAILED,
+  SERVER_EXIT_REASON.CRASHED,
+  SERVER_EXIT_REASON.EXITED_WHILE_OFFLINE,
+  SERVER_EXIT_REASON.FORCE_STOPPED,
+  SERVER_EXIT_REASON.STOPPED,
+  SERVER_EXIT_REASON.SHUTDOWN_TIMEOUT,
+] as const;
+
+export const serverExitReasonSchema = z.enum(SERVER_EXIT_REASON_VALUES);
+export type ServerExitReason = z.infer<typeof serverExitReasonSchema>;
+
+/** The running DayZ process, when DSM tracks one. */
+export const serverRuntimeSchema = z.object({
+  pid: z.number().int().positive(),
+  startedAt: z.string().datetime(),
+});
+export type ServerRuntimeDto = z.infer<typeof serverRuntimeSchema>;
+
+export const serverLastExitSchema = z.object({
+  reason: serverExitReasonSchema,
+  exitCode: z.number().int().nullable(),
+  signal: z.string().nullable(),
+  at: z.string().datetime(),
+});
+export type ServerLastExitDto = z.infer<typeof serverLastExitSchema>;
+
 export const serverSummarySchema = z.object({
   id: z.string().uuid(),
   name: z.string().min(1).max(64),
@@ -42,6 +81,8 @@ export const serverSummarySchema = z.object({
   queryPort: z.number().int().min(1024).max(65535),
   rconPort: z.number().int().min(1024).max(65535),
   isDefault: z.boolean(),
+  /** Why the process last ended (DSM-00164: shown in the shell after an unexpected exit). */
+  lastExit: serverLastExitSchema.nullable(),
   createdAt: z.string().datetime().or(z.date()),
   updatedAt: z.string().datetime().or(z.date()),
 });
@@ -95,45 +136,6 @@ export const serverIdParamSchema = z.object({
 });
 export type ServerIdParamDto = z.infer<typeof serverIdParamSchema>;
 
-/** Why the server process last ended (DSM-00162). Unexpected exits leave status `failed`. */
-export const SERVER_EXIT_REASON = {
-  START_FAILED: 'start_failed',
-  CRASHED: 'crashed',
-  EXITED_WHILE_OFFLINE: 'exited_while_offline',
-  FORCE_STOPPED: 'force_stopped',
-  /** Graceful stop: the process exited after RCON #shutdown. */
-  STOPPED: 'stopped',
-  /** Graceful stop: the process did not exit in time after #shutdown and was force-killed. */
-  SHUTDOWN_TIMEOUT: 'shutdown_timeout',
-} as const;
-
-export const SERVER_EXIT_REASON_VALUES = [
-  SERVER_EXIT_REASON.START_FAILED,
-  SERVER_EXIT_REASON.CRASHED,
-  SERVER_EXIT_REASON.EXITED_WHILE_OFFLINE,
-  SERVER_EXIT_REASON.FORCE_STOPPED,
-  SERVER_EXIT_REASON.STOPPED,
-  SERVER_EXIT_REASON.SHUTDOWN_TIMEOUT,
-] as const;
-
-export const serverExitReasonSchema = z.enum(SERVER_EXIT_REASON_VALUES);
-export type ServerExitReason = z.infer<typeof serverExitReasonSchema>;
-
-/** The running DayZ process, when DSM tracks one. */
-export const serverRuntimeSchema = z.object({
-  pid: z.number().int().positive(),
-  startedAt: z.string().datetime(),
-});
-export type ServerRuntimeDto = z.infer<typeof serverRuntimeSchema>;
-
-export const serverLastExitSchema = z.object({
-  reason: serverExitReasonSchema,
-  exitCode: z.number().int().nullable(),
-  signal: z.string().nullable(),
-  at: z.string().datetime(),
-});
-export type ServerLastExitDto = z.infer<typeof serverLastExitSchema>;
-
 export const serverDetailSchema = serverSummarySchema.extend({
   installPath: safePathSchema,
   profilePath: safePathSchema,
@@ -143,7 +145,6 @@ export const serverDetailSchema = serverSummarySchema.extend({
   rconIp: rconIpSchema,
   rconPassword: z.string().nullable(),
   runtime: serverRuntimeSchema.nullable(),
-  lastExit: serverLastExitSchema.nullable(),
 });
 export type ServerDetailDto = z.infer<typeof serverDetailSchema>;
 

@@ -59,6 +59,7 @@ describe('RealtimeProvider', () => {
         queryPort: 27016,
         rconPort: 2310,
         isDefault: false,
+        lastExit: null,
         createdAt: '2026-11-17T10:00:00.000Z',
         updatedAt: '2026-11-17T10:00:00.000Z',
       },

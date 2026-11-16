@@ -30,6 +30,7 @@ const mockActiveServerSummary: ServerSummaryDto = {
   queryPort: 27018,
   rconPort: 2410,
   isDefault: false,
+  lastExit: null,
   createdAt: new Date().toISOString(),
   updatedAt: new Date().toISOString(),
 };
@@ -43,6 +44,7 @@ const mockDefaultServerSummary: ServerSummaryDto = {
   queryPort: 27016,
   rconPort: 2310,
   isDefault: true,
+  lastExit: null,
   createdAt: new Date().toISOString(),
   updatedAt: new Date().toISOString(),
 };
