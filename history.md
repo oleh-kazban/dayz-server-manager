@@ -4,6 +4,23 @@ This document records all completed product backlog items and operational featur
 
 ---
 
+## [DSM-00173] Shared web SSE subscription that updates the query cache
+
+- **Type**: `Task`
+- **Priority**: `P1 (High)`
+- **Status**: `DONE`
+- **Dependencies**: `None`
+
+### Summary
+
+The web app opens one authenticated EventSource to `/api/v1/realtime/sse` per tab, reconnects with backoff, and routes typed events into the TanStack Query cache, starting with `server.status.changed`. It closes on sign-out.
+
+### Delivered Capabilities
+
+Subscription provider/hook; event-to-cache mapping for server status; reconnect backoff; close on sign-out; tests with a fake EventSource.
+
+---
+
 ## [DSM-00165] Send an RCON command and receive its full response
 
 - **Type**: `Story`
