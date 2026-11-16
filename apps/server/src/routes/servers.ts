@@ -437,6 +437,7 @@ export const registerServersRoutes: FastifyPluginAsync = async fastify => {
           queryPort: s.queryPort,
           rconPort: s.rconPort,
           isDefault: s.isDefault,
+          lastExit: toServerLastExit(s),
           createdAt: s.createdAt.toISOString(),
           updatedAt: s.updatedAt.toISOString(),
         }),

@@ -1,10 +1,14 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 
 import { Link } from '@tanstack/react-router';
 import { Check, ChevronsUpDown, Plus, Search, Server as ServerIcon } from 'lucide-react';
 
 import type { ServerSummaryDto } from '@aegis/api-contracts';
-import { getServerStatusPresentation, useActiveServer } from '@aegis/web/core';
+import {
+  getServerExitPresentation,
+  getServerStatusPresentation,
+  useActiveServer,
+} from '@aegis/web/core';
 
 export function ServerSelector() {
   const { servers, activeServer, setActiveServerId, isLoading } = useActiveServer();
@@ -12,6 +16,7 @@ export function ServerSelector() {
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const containerRef = useRef<HTMLDivElement>(null);
+  const statusDescriptionId = useId();
 
   // Close popover on click outside
   useEffect(() => {
@@ -48,6 +53,10 @@ export function ServerSelector() {
   );
 
   const activeBadge = activeServer ? getServerStatusPresentation(activeServer.status) : null;
+  // Live via the shared SSE subscription (DSM-00173), which updates the server list cache.
+  const activeExit = activeServer
+    ? getServerExitPresentation(activeServer.status, activeServer.lastExit)
+    : null;
 
   return (
     <div ref={containerRef} className="relative select-none">
@@ -57,6 +66,7 @@ export function ServerSelector() {
         aria-label="Select DayZ server instance"
         aria-haspopup="listbox"
         aria-expanded={isOpen}
+        aria-describedby={activeBadge ? statusDescriptionId : undefined}
         onClick={() => setIsOpen(prev => !prev)}
         className="w-full flex items-center justify-between p-2.5 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-subtle)] hover:border-[var(--color-primary-border)] hover:bg-[var(--color-surface-hover)] transition-colors text-left focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]"
       >
@@ -72,10 +82,21 @@ export function ServerSelector() {
             )}
             {activeBadge && (
               <span
+                title={activeExit?.description}
                 className={`text-[10px] ${activeBadge.textClass} truncate flex items-center gap-1`}
               >
-                <span className={`w-1.5 h-1.5 rounded-full ${activeBadge.dotClass}`} />
-                {activeBadge.label}
+                <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${activeBadge.dotClass}`} />
+                <span className="truncate">
+                  {activeBadge.label}
+                  {activeExit && ` · ${activeExit.label}`}
+                </span>
+              </span>
+            )}
+            {activeBadge && (
+              <span id={statusDescriptionId} className="sr-only">
+                {activeExit
+                  ? `Status: ${activeBadge.label}. ${activeExit.description}.`
+                  : `Status: ${activeBadge.label}.`}
               </span>
             )}
           </div>

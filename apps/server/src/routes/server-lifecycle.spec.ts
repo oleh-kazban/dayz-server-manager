@@ -128,6 +128,19 @@ describe('Server lifecycle routes', () => {
       lastExit: { reason: 'force_stopped', exitCode: null, signal: null },
     });
 
+    const list = await h.app.inject({
+      method: 'GET',
+      url: '/api/v1/servers',
+      headers: { authorization: `Bearer ${h.adminToken}` },
+    });
+    expect(list.json()).toEqual([
+      expect.objectContaining({
+        id: SERVER_ID,
+        status: 'stopped',
+        lastExit: expect.objectContaining({ reason: 'force_stopped' }),
+      }),
+    ]);
+
     const notRunning = await post(h, 'force-stop');
     expect(notRunning.statusCode).toBe(409);
     expect(apiErrorResponseSchema.safeParse(notRunning.json()).success).toBe(true);

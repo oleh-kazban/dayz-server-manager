@@ -204,6 +204,7 @@ describe('Server Contracts (@aegis/api-contracts)', () => {
       queryPort: 27016,
       rconPort: 2310,
       isDefault: false,
+      lastExit: null,
       createdAt: '2026-11-01T12:00:00.000Z',
       updatedAt: '2026-11-02T15:30:00.000Z',
     };

@@ -23,6 +23,7 @@ const summary = (id: string, status: ServerSummaryDto['status']): ServerSummaryD
   queryPort: 27016,
   rconPort: 2310,
   isDefault: false,
+  lastExit: null,
   createdAt: AT,
   updatedAt: AT,
 });
@@ -60,8 +61,13 @@ describe('applyServerStatusChanged', () => {
     applyServerStatusChanged(queryClient, { serverId: ID, status: 'failed', lastExit });
 
     expect(
-      queryClient.getQueryData<ServerSummaryDto[]>(serverQueryKeys.list())?.map(s => s.status),
-    ).toEqual(['failed', 'running']);
+      queryClient
+        .getQueryData<ServerSummaryDto[]>(serverQueryKeys.list())
+        ?.map(s => [s.status, s.lastExit]),
+    ).toEqual([
+      ['failed', lastExit],
+      ['running', null],
+    ]);
     expect(queryClient.getQueryData<ServerDetailDto>(serverQueryKeys.detail(ID))).toMatchObject({
       status: 'failed',
       lastExit,

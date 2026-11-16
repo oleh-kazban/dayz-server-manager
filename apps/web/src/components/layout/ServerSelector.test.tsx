@@ -32,6 +32,7 @@ describe('ServerSelector', () => {
       queryPort: 27016,
       rconPort: 2310,
       isDefault: true,
+      lastExit: null,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     },
@@ -44,6 +45,7 @@ describe('ServerSelector', () => {
       queryPort: 27017,
       rconPort: 2311,
       isDefault: false,
+      lastExit: null,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     },
@@ -56,6 +58,7 @@ describe('ServerSelector', () => {
       queryPort: 27018,
       rconPort: 2312,
       isDefault: false,
+      lastExit: null,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     },
@@ -68,6 +71,7 @@ describe('ServerSelector', () => {
       queryPort: 27019,
       rconPort: 2313,
       isDefault: false,
+      lastExit: null,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     },
@@ -93,6 +97,73 @@ describe('ServerSelector', () => {
     expect(screen.getByText('DayZ Chernarus')).toBeInTheDocument();
     expect(screen.getByText('Running')).toBeInTheDocument();
     expect(screen.queryByText('Connected')).not.toBeInTheDocument();
+  });
+
+  it('describes the status to assistive technology without changing the trigger name', () => {
+    render(<ServerSelector />);
+    const trigger = screen.getByRole('button', { name: 'Select DayZ server instance' });
+    expect(trigger).toHaveAccessibleDescription('Status: Running.');
+  });
+
+  it('explains an unexpected exit with reason, exit code and time (DSM-00164)', () => {
+    const at = '2026-11-17T10:00:00.000Z';
+    const failed: ServerSummaryDto = {
+      ...mockServers[0],
+      status: 'failed',
+      lastExit: { reason: 'crashed', exitCode: 1, signal: null, at },
+    };
+    vi.mocked(useActiveServer).mockReturnValue({
+      servers: [failed],
+      activeServer: failed,
+      activeServerId: failed.id,
+      setActiveServerId: setActiveServerIdMock,
+      isLoading: false,
+      error: null,
+    });
+    render(<ServerSelector />);
+
+    const status = screen.getByText('Failed · Crashed (exit 1)');
+    const description = `Crashed (exit 1) at ${new Date(at).toLocaleString()}`;
+    expect(status.closest('[title]')).toHaveAttribute('title', description);
+    expect(
+      screen.getByRole('button', { name: 'Select DayZ server instance' }),
+    ).toHaveAccessibleDescription(`Status: Failed. ${description}.`);
+  });
+
+  it('does not show a reason for a regular stop', () => {
+    const stopped: ServerSummaryDto = {
+      ...mockServers[0],
+      status: 'stopped',
+      lastExit: { reason: 'stopped', exitCode: 0, signal: null, at: '2026-11-17T10:00:00.000Z' },
+    };
+    vi.mocked(useActiveServer).mockReturnValue({
+      servers: [stopped],
+      activeServer: stopped,
+      activeServerId: stopped.id,
+      setActiveServerId: setActiveServerIdMock,
+      isLoading: false,
+      error: null,
+    });
+    render(<ServerSelector />);
+    expect(screen.getByText('Stopped')).toBeInTheDocument();
+    expect(screen.queryByText(/·/)).not.toBeInTheDocument();
+  });
+
+  it('re-renders with the new status when the server list changes (live updates)', () => {
+    const { rerender } = render(<ServerSelector />);
+    expect(screen.getByText('Running')).toBeInTheDocument();
+
+    const stopping: ServerSummaryDto = { ...mockServers[0], status: 'stopping' };
+    vi.mocked(useActiveServer).mockReturnValue({
+      servers: [stopping, ...mockServers.slice(1)],
+      activeServer: stopping,
+      activeServerId: stopping.id,
+      setActiveServerId: setActiveServerIdMock,
+      isLoading: false,
+      error: null,
+    });
+    rerender(<ServerSelector />);
+    expect(screen.getByText('Stopping')).toBeInTheDocument();
   });
 
   it('toggles dropdown popover on trigger click', () => {

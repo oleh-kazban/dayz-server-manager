@@ -23,7 +23,7 @@ export function applyServerStatusChanged(queryClient: QueryClient, data: unknown
   const processGone = status === SERVER_STATUS.STOPPED || status === SERVER_STATUS.FAILED;
 
   queryClient.setQueryData<ServerSummaryDto[]>(serverQueryKeys.list(), servers =>
-    servers?.map(server => (server.id === serverId ? { ...server, status } : server)),
+    servers?.map(server => (server.id === serverId ? { ...server, status, lastExit } : server)),
   );
 
   const detailKey = serverQueryKeys.detail(serverId);

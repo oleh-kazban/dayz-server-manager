@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import {
   ACTIVE_SERVER_STATUSES,
   isServerActiveStatus,
+  SERVER_EXIT_REASON_VALUES,
   SERVER_STATUS_VALUES,
   type ServerStatus,
   serverStatusSchema,
@@ -11,6 +12,7 @@ import {
 import { enUSTranslations } from '../i18n';
 
 import {
+  getServerExitPresentation,
   getServerStatusPresentation,
   SERVER_STATUS_VISUAL_META,
   type ServerStatusPresentation,
@@ -110,6 +112,49 @@ describe('Server Status Model & Presentation', () => {
       const translationKeys = Object.keys(enUSTranslations.serverStatus).sort();
       const expectedKeys = [...SERVER_STATUS_VALUES].sort();
       expect(translationKeys).toEqual(expectedKeys);
+    });
+  });
+
+  describe('getServerExitPresentation (DSM-00164)', () => {
+    const at = '2026-11-17T10:00:00.000Z';
+    const localAt = new Date(at).toLocaleString();
+
+    it('explains a failed server with reason, exit code or signal, and time', () => {
+      expect(
+        getServerExitPresentation('failed', { reason: 'crashed', exitCode: 1, signal: null, at }),
+      ).toEqual({
+        label: 'Crashed (exit 1)',
+        description: `Crashed (exit 1) at ${localAt}`,
+      });
+      expect(
+        getServerExitPresentation('failed', {
+          reason: 'crashed',
+          exitCode: null,
+          signal: 'SIGSEGV',
+          at,
+        }),
+      ).toMatchObject({ label: 'Crashed (SIGSEGV)' });
+      expect(
+        getServerExitPresentation('failed', {
+          reason: 'exited_while_offline',
+          exitCode: null,
+          signal: null,
+          at,
+        }),
+      ).toMatchObject({ label: 'Exited while DSM was offline' });
+    });
+
+    it('returns null for other statuses or without a recorded exit', () => {
+      const lastExit = { reason: 'force_stopped', exitCode: null, signal: null, at } as const;
+      expect(getServerExitPresentation('stopped', lastExit)).toBeNull();
+      expect(getServerExitPresentation('running', lastExit)).toBeNull();
+      expect(getServerExitPresentation('failed', null)).toBeNull();
+    });
+
+    it('has an en-US label for every exit reason', () => {
+      expect(Object.keys(enUSTranslations.serverExitReason).sort()).toEqual(
+        [...SERVER_EXIT_REASON_VALUES].sort(),
+      );
     });
   });
 
