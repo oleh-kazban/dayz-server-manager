@@ -37,6 +37,13 @@ import {
   useEditableForm,
 } from '@aegis/web/core';
 
+import {
+  type LaunchOptionsFormState,
+  toLaunchOptionsDto,
+  toLaunchOptionsFormState,
+  validateLaunchOptions,
+} from './components/launch-options/launch-options.utils';
+import { LaunchOptionsCard } from './components/launch-options/LaunchOptionsCard';
 import { ServerConfigCard } from './components/server-config/ServerConfigCard';
 import { StoragePathsCard } from './components/StoragePathsCard';
 import { CreateServerModal } from './CreateServerModal';
@@ -114,7 +121,7 @@ interface ServerSettingsValues extends Record<string, unknown> {
   rconPassword: string;
   installPath: string;
   missionPath: string;
-  launchParameters: string;
+  launchOptions: LaunchOptionsFormState;
   isDefault: boolean;
 }
 
@@ -128,7 +135,7 @@ function toServerSettingsValues(detail: ServerDetailDto): ServerSettingsValues {
     rconPassword: detail.rconPassword ?? '',
     installPath: detail.installPath,
     missionPath: detail.missionPath,
-    launchParameters: detail.launchParameters ?? '',
+    launchOptions: toLaunchOptionsFormState(detail.launchOptions),
     isDefault: detail.isDefault,
   };
 }
@@ -144,7 +151,7 @@ function normalizeServerSettings(values: ServerSettingsValues) {
     rconPassword: values.rconPassword || null,
     installPath: values.installPath.trim(),
     missionPath: values.missionPath.trim().replaceAll('\\', '/'),
-    launchParameters: values.launchParameters.trim() || null,
+    launchOptions: toLaunchOptionsDto(values.launchOptions),
     isDefault: values.isDefault,
   };
 }
@@ -175,7 +182,9 @@ function ServerSettingsForm({
   const [rconPassword, setRconPassword] = useState(detail.rconPassword ?? '');
   const [installPath, setInstallPath] = useState(detail.installPath);
   const [missionPath, setMissionPath] = useState(detail.missionPath);
-  const [launchParameters, setLaunchParameters] = useState(detail.launchParameters ?? '');
+  const [launchOptions, setLaunchOptions] = useState(() =>
+    toLaunchOptionsFormState(detail.launchOptions),
+  );
   const [isDefault, setIsDefault] = useState(detail.isDefault);
   const [validationResult, setValidationResult] = useState<ValidateServerPathsResponseDto | null>(
     null,
@@ -195,7 +204,7 @@ function ServerSettingsForm({
     rconPassword,
     installPath,
     missionPath,
-    launchParameters,
+    launchOptions,
     isDefault,
   };
   const {
@@ -211,7 +220,12 @@ function ServerSettingsForm({
     baseline: toServerSettingsValues(detail),
     toPayload: normalizeServerSettings,
     validate: v =>
-      validateServerSettingsForm({ ...v, isServerLocked, queryPort: detail.queryPort }),
+      isServerLocked
+        ? {}
+        : {
+            ...validateServerSettingsForm({ ...v, isServerLocked, queryPort: detail.queryPort }),
+            ...validateLaunchOptions(v.launchOptions),
+          },
     isPending: isSaving,
   });
 
@@ -305,7 +319,7 @@ function ServerSettingsForm({
       if (trimmedMission) {
         payload.missionPath = trimmedMission;
       }
-      payload.launchParameters = normalized.launchParameters;
+      payload.launchOptions = normalized.launchOptions;
 
       if (normalized.rconPassword !== (detail.rconPassword ?? null)) {
         payload.rconPassword = normalized.rconPassword;
@@ -320,8 +334,10 @@ function ServerSettingsForm({
         setRconPassword(nextRcon);
         prevDetailMissionRef.current = saved.missionPath;
         setMissionPath(saved.missionPath);
+        setLaunchOptions(toLaunchOptionsFormState(saved.launchOptions));
       },
-      onError: reportServerErrors,
+      // Wrap: mutate passes the request payload as a 2nd argument, which is not the form values.
+      onError: err => reportServerErrors(err),
     });
   };
 
@@ -457,25 +473,18 @@ function ServerSettingsForm({
         onValidatePaths={handleValidatePaths}
       />
 
-      {/* Engine Launch Flags */}
-      <Card
-        title="Engine Launch Parameters"
-        subtitle="Command-line flags passed directly to DayZServer_x64 on startup"
-      >
-        <div className="p-6 space-y-4">
-          <Input
-            label="CLI Arguments"
-            value={launchParameters}
-            disabled={isServerLocked}
-            placeholder="-cpuCount=4 -doLogs -adminLog -netLog"
-            onChange={e => setLaunchParameters(e.target.value)}
-          />
-          <p className="text-xs text-[var(--color-text-muted)]">
-            Specify system flags such as <code className="font-mono text-xs">-cpuCount=4</code>,{' '}
-            <code className="font-mono text-xs">-doLogs</code>, or custom memory limit flags.
-          </p>
-        </div>
-      </Card>
+      {/* Engine Launch Flags (DSM-00125) */}
+      <LaunchOptionsCard
+        serverId={detail.id}
+        installPath={installPath.trim()}
+        profilePath={detail.profilePath}
+        gamePort={Number(gamePort)}
+        value={launchOptions}
+        onChange={setLaunchOptions}
+        errors={errors}
+        disabled={isServerLocked}
+        hasUnsavedChanges={hasChanges}
+      />
     </form>
   );
 }

@@ -93,7 +93,6 @@ function CreateServerDialog({ onClose }: { onClose: () => void }) {
   const [rconPort, setRconPort] = useState(2310);
   const [rconPassword, setRconPassword] = useState('');
   const [installPath, setInstallPath] = useState('C:\\DayZServer');
-  const [launchParameters, setLaunchParameters] = useState('-cpuCount=4 -doLogs -adminLog -netLog');
   const [isDefault, setIsDefault] = useState(false);
 
   const createMutation = useMutation({
@@ -135,7 +134,6 @@ function CreateServerDialog({ onClose }: { onClose: () => void }) {
       gamePort,
       rconPort,
       rconPassword,
-      launchParameters,
       isDefault,
     },
     baseline: null,
@@ -161,7 +159,6 @@ function CreateServerDialog({ onClose }: { onClose: () => void }) {
       gamePort: Number(gamePort),
       rconPort: Number(rconPort),
       rconPassword: rconPassword || undefined,
-      launchParameters: launchParameters.trim() || undefined,
       isDefault,
     });
   };
@@ -277,14 +274,11 @@ function CreateServerDialog({ onClose }: { onClose: () => void }) {
             />
           </div>
 
-          <div className="pt-2 border-t border-[var(--color-border)]">
-            <Input
-              label="Launch Parameters"
-              placeholder="-cpuCount=4 -doLogs -adminLog -netLog"
-              value={launchParameters}
-              onChange={e => setLaunchParameters(e.target.value)}
-            />
-          </div>
+          <p className="text-xs text-[var(--color-text-muted)]">
+            New servers start with the default engine launch options (
+            <code className="font-mono">-cpuCount=4 -doLogs -adminLog -netLog</code>). Adjust them
+            in Server Settings after creation.
+          </p>
 
           <div className="pt-2">
             <Toggle

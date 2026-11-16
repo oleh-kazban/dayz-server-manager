@@ -5,14 +5,15 @@ import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testi
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { apiClient, ApiError } from '@aegis/api-client';
-import type {
-  ApiErrorParams,
-  ConfigDiagnosticDto,
-  ConfigRevisionDetailDto,
-  ConfigRevisionSummaryDto,
-  SaveServerDzConfigResponseDto,
-  ServerDetailDto,
-  ServerDzConfigResponseDto,
+import {
+  type ApiErrorParams,
+  type ConfigDiagnosticDto,
+  type ConfigRevisionDetailDto,
+  type ConfigRevisionSummaryDto,
+  EMPTY_LAUNCH_OPTIONS,
+  type SaveServerDzConfigResponseDto,
+  type ServerDetailDto,
+  type ServerDzConfigResponseDto,
 } from '@aegis/api-contracts';
 import { renderServerDzTemplate } from '@aegis/dayz-config';
 import { showToast } from '@aegis/ui';
@@ -180,7 +181,7 @@ function buildServerDetail(overrides: Partial<ServerDetailDto> = {}): ServerDeta
     installPath: 'C:\\DayZServer\\Namalsk',
     profilePath: 'profiles',
     missionPath: 'mpmissions/dayzOffline.chernarusplus',
-    launchParameters: null,
+    launchOptions: EMPTY_LAUNCH_OPTIONS,
     maxPlayers: 60,
     rconIp: '127.0.0.1',
     rconPassword: 'rcon-secret-value',
