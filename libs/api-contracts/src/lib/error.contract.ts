@@ -54,6 +54,12 @@ export const apiErrorCodeSchema = z.enum([
   'CONFIG_FILE_MISSING',
   'CONFIG_REVISION_NOT_FOUND',
   'SERVER_CONFIG_EDIT_IN_PROGRESS',
+  'SERVER_ALREADY_RUNNING',
+  'SERVER_TRANSITION_IN_PROGRESS',
+  'SERVER_NOT_RUNNING',
+  'SERVER_LAUNCH_NOT_READY',
+  'SERVER_START_FAILED',
+  'SERVER_STOP_FAILED',
 ]);
 export type ApiErrorCode = z.infer<typeof apiErrorCodeSchema>;
 

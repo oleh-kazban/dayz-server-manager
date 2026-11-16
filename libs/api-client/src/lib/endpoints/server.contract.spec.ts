@@ -88,6 +88,8 @@ describe('Server Contracts', () => {
       profilePath: 'C:\\DayZServer\\profiles',
       missionPath: 'mpmissions\\dayzOffline.enoch',
       launchOptions: DEFAULT_LAUNCH_OPTIONS,
+      runtime: null,
+      lastExit: null,
       maxPlayers: 60,
       rconIp: '127.0.0.1',
       rconPassword: null,

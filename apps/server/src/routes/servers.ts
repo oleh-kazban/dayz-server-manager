@@ -44,6 +44,7 @@ import {
   findFirstValidMissionTemplate,
   serverFsInspectorService,
 } from '../services/server/server-fs-inspector.service';
+import { toServerLastExit, toServerRuntime } from '../services/server/server-lifecycle.service';
 import {
   decryptServerSecrets,
   resolveEncryptedServerSecrets,
@@ -324,7 +325,7 @@ function hasRconSettingsChanged(existing: Server, data: UpdateServerDto): boolea
   );
 }
 
-function sendServerDetail(reply: FastifyReply, s: Server, statusCode: 200 | 201 = 200) {
+export function sendServerDetail(reply: FastifyReply, s: Server, statusCode: 200 | 201 = 200) {
   const decrypted = decryptServerSecrets(s);
   if (!decrypted.ok) {
     return sendApiError(reply, 500, decrypted.errorCode, decrypted.message);
@@ -347,6 +348,8 @@ function sendServerDetail(reply: FastifyReply, s: Server, statusCode: 200 | 201 
       profilePath: s.profilePath,
       missionPath: s.missionPath,
       launchOptions: readLaunchOptions(s),
+      runtime: toServerRuntime(s),
+      lastExit: toServerLastExit(s),
       createdAt: s.createdAt.toISOString(),
       updatedAt: s.updatedAt.toISOString(),
     }),
@@ -374,7 +377,7 @@ function sendSavedServer(
   return sendServerDetail(reply, saved, options.statusCode);
 }
 
-function resolveServerByIdOrSendError(
+export function resolveServerByIdOrSendError(
   fastify: FastifyInstance,
   params: unknown,
   reply: FastifyReply,
@@ -402,7 +405,7 @@ function resolveServerByIdOrSendError(
   return server;
 }
 
-function ensureAdminRole(
+export function ensureAdminRole(
   request: FastifyRequest,
   reply: FastifyReply,
   actionMessage: string,

@@ -4,6 +4,7 @@ import type { UserRole } from '@aegis/api-contracts';
 import type { DatabaseInstance, DsmDatabase } from '@aegis/database';
 
 import type { SseHub } from '../services/realtime/sse-hub';
+import type { ServerLifecycleService } from '../services/server/server-lifecycle.service';
 
 declare module 'fastify' {
   interface FastifyInstance {
@@ -12,6 +13,7 @@ declare module 'fastify' {
     sqlite: DatabaseInstance['sqlite'];
     closeDb: () => void;
     sseHub: SseHub;
+    lifecycle: ServerLifecycleService;
   }
 }
 

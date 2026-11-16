@@ -26,7 +26,13 @@ export default defineConfig({
       reporter: ['text', 'html', 'lcov'],
       reportsDirectory: path.resolve(workspaceRoot, 'coverage/apps/server'),
       include: ['src/**/*.ts'],
-      exclude: ['src/main.ts', 'src/**/index.ts', 'src/**/*.{test,spec}.ts', 'src/types/**'],
+      exclude: [
+        'src/main.ts',
+        'src/**/index.ts',
+        'src/**/*.{test,spec}.ts',
+        'src/types/**',
+        'src/**/__fixtures__/**',
+      ],
       thresholds: {
         statements: 80,
         branches: 80,

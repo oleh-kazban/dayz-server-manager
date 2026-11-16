@@ -25,15 +25,32 @@ const SERVER_CONFIG_MIGRATION_COLUMNS: readonly [string, string][] = [
   ['rcon_password_encrypted', 'TEXT'],
 ];
 
-function ensureServerConfigColumns(sqlite: Database.Database): void {
-  const columns = sqlite.pragma('table_info(servers)') as { name: string }[];
-  const columnNames = new Set(columns.map(column => column.name));
+const SERVER_RUNTIME_COLUMNS: readonly [string, string][] = [
+  ['process_pid', 'INTEGER'],
+  ['process_start_token', 'TEXT'],
+  ['process_started_at', 'INTEGER'],
+  ['last_exit_reason', 'TEXT'],
+  ['last_exit_code', 'INTEGER'],
+  ['last_exit_signal', 'TEXT'],
+  ['last_exit_at', 'INTEGER'],
+];
 
-  for (const [columnName, columnDef] of SERVER_CONFIG_MIGRATION_COLUMNS) {
-    if (!columnNames.has(columnName)) {
+function addMissingServerColumns(
+  sqlite: Database.Database,
+  definitions: readonly [string, string][],
+): void {
+  const existing = new Set(
+    (sqlite.pragma('table_info(servers)') as { name: string }[]).map(column => column.name),
+  );
+  for (const [columnName, columnDef] of definitions) {
+    if (!existing.has(columnName)) {
       sqlite.exec(`ALTER TABLE servers ADD COLUMN ${columnName} ${columnDef};`);
     }
   }
+}
+
+function ensureServerConfigColumns(sqlite: Database.Database): void {
+  addMissingServerColumns(sqlite, SERVER_CONFIG_MIGRATION_COLUMNS);
 }
 
 function backfillLegacyRconSecrets(sqlite: Database.Database, options?: MigrationOptions): void {
@@ -413,6 +430,17 @@ export const migrations: DsmMigration[] = [
     id: '0009_structured_launch_options',
     name: 'Replace free-text launch_parameters with structured launch_options JSON',
     up: migrateLegacyLaunchParameters,
+  },
+  {
+    id: '0010_server_runtime_state',
+    name: 'Track the running server process and the reason it last exited',
+    up: (sqlite: Database.Database) => {
+      addMissingServerColumns(sqlite, SERVER_RUNTIME_COLUMNS);
+      // Status was never driven by a real process before DSM-00162: reset stale active states.
+      sqlite.exec(
+        "UPDATE servers SET status = 'stopped' WHERE status IN ('starting', 'running', 'stopping');",
+      );
+    },
   },
 ];
 

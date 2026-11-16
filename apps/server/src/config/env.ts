@@ -12,6 +12,9 @@ export const envSchema = z
     SESSION_SECRET: z.string().min(16).default('super-secret-dev-session-key-32-chars-long'),
     DSM_ADMIN_PASSWORD: z.string().min(8).optional(),
     DATABASE_PATH: z.string().optional(),
+    // Time a new DayZ process must survive before it counts as running (DSM-00162).
+    DSM_SERVER_STARTUP_WINDOW_MS: z.coerce.number().int().min(0).default(60_000),
+    DSM_SERVER_POLL_INTERVAL_MS: z.coerce.number().int().min(250).default(5_000),
   })
   .refine(
     data => {

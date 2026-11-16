@@ -10,6 +10,7 @@ import {
   MOD_LOAD_TARGET_VALUES,
   MOD_SOURCE_TYPE,
   MOD_SOURCE_TYPE_VALUES,
+  SERVER_EXIT_REASON_VALUES,
   SERVER_STATUS,
   SERVER_STATUS_VALUES,
 } from '@aegis/api-contracts';
@@ -68,6 +69,14 @@ export const servers = sqliteTable('servers', {
     .$type<LaunchOptionsDto>()
     .notNull()
     .default(EMPTY_LAUNCH_OPTIONS),
+  // Tracked DayZ process (DSM-00162): identity used to re-adopt it after DSM restarts.
+  processPid: integer('process_pid'),
+  processStartToken: text('process_start_token'),
+  processStartedAt: integer('process_started_at', { mode: 'timestamp_ms' }),
+  lastExitReason: text('last_exit_reason', { enum: SERVER_EXIT_REASON_VALUES }),
+  lastExitCode: integer('last_exit_code'),
+  lastExitSignal: text('last_exit_signal'),
+  lastExitAt: integer('last_exit_at', { mode: 'timestamp_ms' }),
   isDefault: integer('is_default', { mode: 'boolean' }).notNull().default(false),
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
   updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),

@@ -182,6 +182,8 @@ function buildServerDetail(overrides: Partial<ServerDetailDto> = {}): ServerDeta
     profilePath: 'profiles',
     missionPath: 'mpmissions/dayzOffline.chernarusplus',
     launchOptions: EMPTY_LAUNCH_OPTIONS,
+    runtime: null,
+    lastExit: null,
     maxPlayers: 60,
     rconIp: '127.0.0.1',
     rconPassword: 'rcon-secret-value',

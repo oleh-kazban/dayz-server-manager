@@ -95,6 +95,41 @@ export const serverIdParamSchema = z.object({
 });
 export type ServerIdParamDto = z.infer<typeof serverIdParamSchema>;
 
+/** Why the server process last ended (DSM-00162). Unexpected exits leave status `failed`. */
+export const SERVER_EXIT_REASON = {
+  START_FAILED: 'start_failed',
+  CRASHED: 'crashed',
+  EXITED_WHILE_OFFLINE: 'exited_while_offline',
+  FORCE_STOPPED: 'force_stopped',
+  STOPPED: 'stopped',
+} as const;
+
+export const SERVER_EXIT_REASON_VALUES = [
+  SERVER_EXIT_REASON.START_FAILED,
+  SERVER_EXIT_REASON.CRASHED,
+  SERVER_EXIT_REASON.EXITED_WHILE_OFFLINE,
+  SERVER_EXIT_REASON.FORCE_STOPPED,
+  SERVER_EXIT_REASON.STOPPED,
+] as const;
+
+export const serverExitReasonSchema = z.enum(SERVER_EXIT_REASON_VALUES);
+export type ServerExitReason = z.infer<typeof serverExitReasonSchema>;
+
+/** The running DayZ process, when DSM tracks one. */
+export const serverRuntimeSchema = z.object({
+  pid: z.number().int().positive(),
+  startedAt: z.string().datetime(),
+});
+export type ServerRuntimeDto = z.infer<typeof serverRuntimeSchema>;
+
+export const serverLastExitSchema = z.object({
+  reason: serverExitReasonSchema,
+  exitCode: z.number().int().nullable(),
+  signal: z.string().nullable(),
+  at: z.string().datetime(),
+});
+export type ServerLastExitDto = z.infer<typeof serverLastExitSchema>;
+
 export const serverDetailSchema = serverSummarySchema.extend({
   installPath: safePathSchema,
   profilePath: safePathSchema,
@@ -103,8 +138,19 @@ export const serverDetailSchema = serverSummarySchema.extend({
   maxPlayers: z.number().int().min(1).max(200),
   rconIp: rconIpSchema,
   rconPassword: z.string().nullable(),
+  runtime: serverRuntimeSchema.nullable(),
+  lastExit: serverLastExitSchema.nullable(),
 });
 export type ServerDetailDto = z.infer<typeof serverDetailSchema>;
+
+/** SSE `server.status.changed` payload, broadcast on every lifecycle transition. */
+export const SERVER_STATUS_CHANGED_EVENT = 'server.status.changed';
+export const serverStatusChangedEventSchema = z.object({
+  serverId: z.string().uuid(),
+  status: serverStatusSchema,
+  lastExit: serverLastExitSchema.nullable(),
+});
+export type ServerStatusChangedEventDto = z.infer<typeof serverStatusChangedEventSchema>;
 
 export const createServerSchema = z
   .object({
