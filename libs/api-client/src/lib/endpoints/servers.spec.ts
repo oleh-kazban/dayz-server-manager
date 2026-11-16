@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { type ValidateServerPathsResponseDto } from '@aegis/api-contracts';
+import { EMPTY_LAUNCH_OPTIONS, type ValidateServerPathsResponseDto } from '@aegis/api-contracts';
 
 import { ApiError, HttpClient, ValidationError } from '../http-client';
 
@@ -73,7 +73,7 @@ describe('Servers Endpoint', () => {
       installPath: 'C:\\DayZServer',
       profilePath: 'C:\\DayZServer\\profiles',
       missionPath: 'mpmissions\\dayzOffline.chernarusplus',
-      launchParameters: null,
+      launchOptions: EMPTY_LAUNCH_OPTIONS,
       ...serverDetailDefaults,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
@@ -114,7 +114,7 @@ describe('Servers Endpoint', () => {
       description: null,
       status: 'stopped',
       isDefault: false,
-      launchParameters: null,
+      launchOptions: EMPTY_LAUNCH_OPTIONS,
       ...serverDetailDefaults,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
@@ -151,7 +151,7 @@ describe('Servers Endpoint', () => {
       installPath: '/opt/dayz',
       profilePath: '/opt/dayz/profiles',
       missionPath: 'mpmissions/dayzOffline.chernarusplus',
-      launchParameters: null,
+      launchOptions: EMPTY_LAUNCH_OPTIONS,
       ...serverDetailDefaults,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
@@ -190,6 +190,53 @@ describe('Servers Endpoint', () => {
       `https://test-server/api/v1/servers/${validUuid}`,
       expect.objectContaining({ method: 'DELETE' }),
     );
+  });
+
+  describe('getLaunchCommand', () => {
+    it('fetches and validates the compiled launch command preview', async () => {
+      const mockResponse = {
+        serverId: validUuid,
+        platform: 'linux',
+        mods: { modFolders: ['@CF'], serverModFolders: [], missingFolderCount: 0 },
+        command: {
+          ready: true,
+          executable: '/opt/dayz/DayZServer',
+          cwd: '/opt/dayz',
+          args: ['-config=serverDZ.cfg', '-mod=@CF'],
+          commandLine: '/opt/dayz/DayZServer -config=serverDZ.cfg -mod=@CF',
+          segments: [
+            { arg: '-config=serverDZ.cfg', source: 'managed' },
+            { arg: '-mod=@CF', source: 'mods' },
+          ],
+          issues: [],
+        },
+      };
+      const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(
+        new Response(JSON.stringify(mockResponse), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        }),
+      );
+
+      const result = await servers.getLaunchCommand(validUuid);
+
+      expect(result).toEqual(mockResponse);
+      expect(fetchSpy).toHaveBeenCalledWith(
+        `https://test-server/api/v1/servers/${validUuid}/launch-command`,
+        expect.objectContaining({ method: 'GET' }),
+      );
+    });
+
+    it('rejects a malformed preview payload', async () => {
+      vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(
+        new Response(JSON.stringify({ serverId: validUuid, platform: 'darwin' }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        }),
+      );
+
+      await expect(servers.getLaunchCommand(validUuid)).rejects.toBeInstanceOf(ValidationError);
+    });
   });
 
   describe('validatePaths', () => {

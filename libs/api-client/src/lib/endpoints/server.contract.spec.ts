@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   createServerSchema,
+  DEFAULT_LAUNCH_OPTIONS,
   safePathSchema,
   serverDetailSchema,
   serverIdParamSchema,
@@ -86,7 +87,7 @@ describe('Server Contracts', () => {
       installPath: 'C:\\DayZServer',
       profilePath: 'C:\\DayZServer\\profiles',
       missionPath: 'mpmissions\\dayzOffline.enoch',
-      launchParameters: '-cpuCount=4',
+      launchOptions: DEFAULT_LAUNCH_OPTIONS,
       maxPlayers: 60,
       rconIp: '127.0.0.1',
       rconPassword: null,

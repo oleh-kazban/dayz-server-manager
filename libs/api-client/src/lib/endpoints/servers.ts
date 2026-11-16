@@ -2,6 +2,8 @@ import { z } from 'zod';
 
 import {
   type CreateServerDto,
+  type LaunchCommandPreviewDto,
+  launchCommandPreviewSchema,
   type ServerDetailDto,
   serverDetailSchema,
   type ServerSummaryDto,
@@ -38,5 +40,8 @@ export function createServersEndpoint(client: HttpClient) {
       dto?: ValidateServerPathsRequestDto,
     ): Promise<ValidateServerPathsResponseDto> =>
       client.post(`/api/v1/servers/${id}/validate-paths`, validateServerPathsResponseSchema, dto),
+
+    getLaunchCommand: (id: string): Promise<LaunchCommandPreviewDto> =>
+      client.get(`/api/v1/servers/${id}/launch-command`, launchCommandPreviewSchema),
   };
 }
