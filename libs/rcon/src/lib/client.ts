@@ -1,13 +1,29 @@
 import dgram from 'node:dgram';
 
-import { decodePacket, encodeLoginPacket } from './packet';
+import {
+  decodePacket,
+  encodeCommandPacket,
+  encodeLoginPacket,
+  MAX_SEQUENCE,
+  parseCommandResponse,
+} from './packet';
 
 export const DEFAULT_RCON_TIMEOUT_MS = 5_000;
+/** Wait per command attempt before the same packet is sent again. */
+export const DEFAULT_COMMAND_ATTEMPT_TIMEOUT_MS = 2_000;
+/** Resends after the first attempt (3 attempts in total by default). */
+export const DEFAULT_COMMAND_RETRIES = 2;
 
 export type RconLoginError = 'login_failed' | 'timeout' | 'unreachable';
 
 /** Network outcomes are values, not exceptions. Messages never contain the password. */
 export type RconLoginResult = { ok: true } | { ok: false; error: RconLoginError; message: string };
+
+export type RconCommandError = 'not_logged_in' | 'timeout' | 'connection_lost' | 'busy';
+
+/** The complete response text (multi-part responses already reassembled), or a typed failure. */
+export type RconCommandResult =
+  { ok: true; response: string } | { ok: false; error: RconCommandError; message: string };
 
 export interface BattlEyeRconClientOptions {
   host: string;
@@ -17,6 +33,22 @@ export interface BattlEyeRconClientOptions {
   timeoutMs?: number;
   /** Socket factory (defaults to `dgram.createSocket('udp4')`). */
   createSocket?: () => dgram.Socket;
+  /** How long to wait for a command response before resending the same packet. */
+  commandAttemptTimeoutMs?: number;
+  /** How many times an unanswered command is resent before it fails with `timeout`. */
+  commandRetries?: number;
+}
+
+interface PendingCommand {
+  packet: Buffer;
+  attempts: number;
+  timer: ReturnType<typeof setTimeout>;
+  /**
+   * Received parts of a multi-part response, grouped by the announced part count so a stray part
+   * with a different count can never block the genuine set.
+   */
+  partsByTotal: Map<number, (Buffer | undefined)[]>;
+  resolve: (result: RconCommandResult) => void;
 }
 
 // BattlEye passwords are ASCII; DSM stores printable ASCII only (rconPasswordSchema).
@@ -32,7 +64,8 @@ function osCode(error: unknown): string {
 }
 
 /**
- * BattlEye RCon v2 client over UDP (DSM-00161: login handshake). The socket is connected, so the
+ * BattlEye RCon v2 client over UDP: login handshake (DSM-00161) and commands with sequence
+ * numbers, bounded retries and multi-part reassembly (DSM-00165). The socket is connected, so the
  * OS reports ICMP "port unreachable" as a socket error. The password is kept outside the instance
  * and is never logged or returned.
  */
@@ -40,7 +73,11 @@ export class BattlEyeRconClient {
   readonly host: string;
   readonly port: number;
   readonly timeoutMs: number;
+  readonly commandAttemptTimeoutMs: number;
+  readonly commandRetries: number;
   private readonly createSocket: () => dgram.Socket;
+  private readonly pending = new Map<number, PendingCommand>();
+  private nextSequence = 0;
   private socket: dgram.Socket | null = null;
   private loggedIn = false;
   private closed = false;
@@ -60,6 +97,9 @@ export class BattlEyeRconClient {
     this.timeoutMs = options.timeoutMs ?? DEFAULT_RCON_TIMEOUT_MS;
     passwords.set(this, options.password);
     this.createSocket = options.createSocket ?? (() => dgram.createSocket('udp4'));
+    this.commandAttemptTimeoutMs =
+      options.commandAttemptTimeoutMs ?? DEFAULT_COMMAND_ATTEMPT_TIMEOUT_MS;
+    this.commandRetries = options.commandRetries ?? DEFAULT_COMMAND_RETRIES;
   }
 
   get isLoggedIn(): boolean {
@@ -93,6 +133,7 @@ export class BattlEyeRconClient {
         socket.removeListener('message', onMessage);
         if (result.ok) {
           this.loggedIn = true;
+          socket.on('message', datagram => this.onSessionMessage(datagram));
         } else {
           this.releaseSocket();
         }
@@ -126,6 +167,10 @@ export class BattlEyeRconClient {
       socket.on('error', error => {
         this.loggedIn = false;
         unreachable(error);
+        this.failAll(
+          'connection_lost',
+          `RCON connection to ${endpoint} was lost (${osCode(error)}).`,
+        );
       });
       socket.on('message', onMessage);
 
@@ -156,11 +201,137 @@ export class BattlEyeRconClient {
     });
   }
 
-  /** Releases the socket. Idempotent; the client cannot be reused afterwards. */
+  /**
+   * Sends a command and resolves with its complete response. An unanswered command is resent with
+   * the same sequence number up to `commandRetries` times; BattlEye answers a resend again.
+   */
+  command(command: string): Promise<RconCommandResult> {
+    const socket = this.socket;
+    if (!this.loggedIn || !socket) {
+      return Promise.resolve({
+        ok: false,
+        error: 'not_logged_in',
+        message: 'RCON command sent before a successful login.',
+      });
+    }
+    const sequence = this.allocateSequence();
+    if (sequence === null) {
+      return Promise.resolve({
+        ok: false,
+        error: 'busy',
+        message: 'All 256 RCON sequence numbers are waiting for a response.',
+      });
+    }
+
+    return new Promise(resolve => {
+      const packet = encodeCommandPacket(sequence, command);
+      const entry: PendingCommand = {
+        packet,
+        attempts: 1,
+        timer: this.armAttemptTimer(sequence),
+        partsByTotal: new Map(),
+        resolve,
+      };
+      this.pending.set(sequence, entry);
+      socket.send(packet);
+    });
+  }
+
+  /** Releases the socket and fails pending commands. Idempotent; the client cannot be reused. */
   async close(): Promise<void> {
     this.closed = true;
     this.loggedIn = false;
+    this.failAll('connection_lost', 'RCON client was closed.');
     this.releaseSocket();
+  }
+
+  /** Number of commands waiting for a response (diagnostics and tests). */
+  get pendingCommands(): number {
+    return this.pending.size;
+  }
+
+  /** Next sequence number not in use, wrapping 255 → 0; `null` when all are in flight. */
+  private allocateSequence(): number | null {
+    for (let offset = 0; offset <= MAX_SEQUENCE; offset++) {
+      const sequence = (this.nextSequence + offset) % (MAX_SEQUENCE + 1);
+      if (!this.pending.has(sequence)) {
+        this.nextSequence = (sequence + 1) % (MAX_SEQUENCE + 1);
+        return sequence;
+      }
+    }
+    return null;
+  }
+
+  private armAttemptTimer(sequence: number): ReturnType<typeof setTimeout> {
+    return setTimeout(() => this.onAttemptTimeout(sequence), this.commandAttemptTimeoutMs);
+  }
+
+  private onAttemptTimeout(sequence: number): void {
+    // Timers are cleared whenever an entry settles, and close() / socket errors settle every entry
+    // before the socket goes away, so a firing timer always has its entry and an open socket.
+    const entry = this.pending.get(sequence) as PendingCommand;
+    const socket = this.socket as dgram.Socket;
+    if (entry.attempts > this.commandRetries) {
+      this.settle(sequence, {
+        ok: false,
+        error: 'timeout',
+        message: `No complete RCON response after ${entry.attempts} attempts of ${this.commandAttemptTimeoutMs} ms.`,
+      });
+      return;
+    }
+    entry.attempts += 1;
+    entry.timer = this.armAttemptTimer(sequence);
+    socket.send(entry.packet);
+  }
+
+  /** Routes datagrams received after login. Malformed and unrelated packets are ignored. */
+  private onSessionMessage(datagram: Buffer): void {
+    const decoded = decodePacket(datagram);
+    if (!decoded.ok || decoded.packet.type !== 'command') {
+      return;
+    }
+    const { sequence, data } = decoded.packet;
+    const entry = this.pending.get(sequence);
+    if (!entry) {
+      return; // Late duplicate of an already completed command.
+    }
+
+    const body = parseCommandResponse(data);
+    if (body.kind === 'invalid') {
+      return;
+    }
+    if (body.kind === 'single') {
+      this.settle(sequence, { ok: true, response: body.data.toString('utf8') });
+      return;
+    }
+
+    let parts = entry.partsByTotal.get(body.total);
+    if (!parts) {
+      parts = new Array<Buffer | undefined>(body.total).fill(undefined);
+      entry.partsByTotal.set(body.total, parts);
+    }
+    // Resends deliver the same parts again; keeping the latest copy is harmless.
+    parts[body.index] = body.data;
+    if (parts.every(part => part !== undefined)) {
+      this.settle(sequence, {
+        ok: true,
+        response: Buffer.concat(parts as Buffer[]).toString('utf8'),
+      });
+    }
+  }
+
+  /** Callers only settle sequences they just found in `pending`. */
+  private settle(sequence: number, result: RconCommandResult): void {
+    const entry = this.pending.get(sequence) as PendingCommand;
+    clearTimeout(entry.timer);
+    this.pending.delete(sequence);
+    entry.resolve(result);
+  }
+
+  private failAll(error: RconCommandError, message: string): void {
+    for (const sequence of [...this.pending.keys()]) {
+      this.settle(sequence, { ok: false, error, message });
+    }
   }
 
   private releaseSocket(): void {
