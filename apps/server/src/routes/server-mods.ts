@@ -7,7 +7,6 @@ import {
   batchAddServerModsSchema,
   isServerActiveStatus,
   type LaunchParamsPreviewDto,
-  MOD_LOAD_TARGET,
   MOD_SOURCE_TYPE,
   modIdParamSchema,
   type ModSyncStatus,
@@ -20,6 +19,7 @@ import {
   updateServerModSchema,
 } from '@aegis/api-contracts';
 import { type Server, type ServerMod, serverMods, servers } from '@aegis/database';
+import { collectModLaunchFolders, formatModFlags } from '@aegis/dayz-config';
 
 import { SteamWorkshopError, steamWorkshopService } from '../services/steam/steam-workshop.service';
 import { formatZodFieldErrors, sendApiError } from '../utils/api-error';
@@ -45,38 +45,14 @@ export function computeModSyncStatus(
 export function compileModLaunchParams(
   mods: readonly Pick<ServerMod, 'enabled' | 'loadTarget' | 'folderName' | 'loadOrder'>[],
 ): LaunchParamsPreviewDto {
-  const ordered = [...mods].sort((a, b) => a.loadOrder - b.loadOrder);
-  const clientServerFolders: string[] = [];
-  const serverOnlyFolders: string[] = [];
-  let missingFolderCount = 0;
-
-  for (const mod of ordered) {
-    if (!mod.enabled || mod.loadTarget === MOD_LOAD_TARGET.CLIENT_OPTIONAL) {
-      continue;
-    }
-
-    const folder = mod.folderName.trim();
-    if (!folder) {
-      missingFolderCount += 1;
-      continue;
-    }
-
-    if (mod.loadTarget === MOD_LOAD_TARGET.CLIENT_SERVER) {
-      clientServerFolders.push(folder);
-    } else if (mod.loadTarget === MOD_LOAD_TARGET.SERVER_ONLY) {
-      serverOnlyFolders.push(folder);
-    }
-  }
-
-  const modFlag = clientServerFolders.length > 0 ? `-mod=${clientServerFolders.join(';')}` : '';
-  const serverModFlag =
-    serverOnlyFolders.length > 0 ? `-serverMod=${serverOnlyFolders.join(';')}` : '';
+  const context = collectModLaunchFolders(mods);
+  const { modFlag, serverModFlag } = formatModFlags(context);
 
   return {
     modFlag,
     serverModFlag,
     combinedArgs: [modFlag, serverModFlag].filter(Boolean),
-    missingFolderCount,
+    missingFolderCount: context.missingFolderCount,
   };
 }
 
@@ -116,7 +92,7 @@ function buildModsListPayload(rows: ServerMod[]): ServerModsListResponseDto {
   });
 }
 
-function listServerModRows(fastify: FastifyInstance, serverId: string): ServerMod[] {
+export function listServerModRows(fastify: FastifyInstance, serverId: string): ServerMod[] {
   return fastify.db
     .select()
     .from(serverMods)

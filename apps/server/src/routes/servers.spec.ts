@@ -16,7 +16,12 @@ vi.mock('@aegis/database', async importOriginal => {
   };
 });
 
-import { apiErrorResponseSchema, validateServerPathsResponseSchema } from '@aegis/api-contracts';
+import {
+  apiErrorResponseSchema,
+  DEFAULT_LAUNCH_OPTIONS,
+  EMPTY_LAUNCH_OPTIONS,
+  validateServerPathsResponseSchema,
+} from '@aegis/api-contracts';
 import * as databaseModule from '@aegis/database';
 import {
   configEditLocks,
@@ -424,6 +429,7 @@ describe('Servers Routes (/api/v1/servers)', () => {
       const created = response.json();
       expect(created.name).toBe('Livonia Hardcore');
       expect(created.isDefault).toBe(true);
+      expect(created.launchOptions).toEqual(DEFAULT_LAUNCH_OPTIONS);
 
       // Verify previous default server is no longer default
       const defaultServer = dbInstance.db
@@ -804,6 +810,71 @@ describe('Servers Routes (/api/v1/servers)', () => {
       expect(afterSecond!.isDefault).toBe(true);
       expect(afterDefault!.isDefault).toBe(false);
       expect(afterDefault!.name).toBe('DayZ (Local)');
+    });
+
+    it('creates with explicit launch options and rejects invalid or unknown launch option keys', async () => {
+      const created = await app.inject({
+        method: 'POST',
+        url: '/api/v1/servers',
+        headers: { authorization: `Bearer ${adminToken}` },
+        payload: {
+          name: 'Launch Options Explicit',
+          installPath: '/opt/dayz-launch',
+          gamePort: 2502,
+          queryPort: 27517,
+          rconPort: 2511,
+          launchOptions: { limitFPS: 90, freezeCheck: true },
+        },
+      });
+      expect(created.statusCode).toBe(201);
+      expect(created.json().launchOptions).toEqual({
+        ...EMPTY_LAUNCH_OPTIONS,
+        limitFPS: 90,
+        freezeCheck: true,
+      });
+
+      const id = created.json().id;
+      const outOfRange = await app.inject({
+        method: 'PATCH',
+        url: `/api/v1/servers/${id}`,
+        headers: { authorization: `Bearer ${adminToken}` },
+        payload: { launchOptions: { ...EMPTY_LAUNCH_OPTIONS, cpuCount: 99 } },
+      });
+      expect(outOfRange.statusCode).toBe(400);
+      expect(outOfRange.json().errorCode).toBe('VALIDATION_FAILED');
+      expect(outOfRange.json().fieldErrors?.['launchOptions.cpuCount']).toEqual(
+        expect.objectContaining({
+          code: 'INVALID_VALUE',
+          message: 'CPU count must be between 1 and 64',
+        }),
+      );
+
+      const smuggled = await app.inject({
+        method: 'PATCH',
+        url: `/api/v1/servers/${id}`,
+        headers: { authorization: `Bearer ${adminToken}` },
+        payload: { launchOptions: { ...EMPTY_LAUNCH_OPTIONS, extraArgs: '-evil' } },
+      });
+      expect(smuggled.statusCode).toBe(400);
+
+      const updated = await app.inject({
+        method: 'PATCH',
+        url: `/api/v1/servers/${id}`,
+        headers: { authorization: `Bearer ${adminToken}` },
+        payload: { launchOptions: { ...EMPTY_LAUNCH_OPTIONS, cpuCount: 2 } },
+      });
+      expect(updated.statusCode).toBe(200);
+      expect(updated.json().launchOptions).toEqual({ ...EMPTY_LAUNCH_OPTIONS, cpuCount: 2 });
+
+      const untouched = await app.inject({
+        method: 'PATCH',
+        url: `/api/v1/servers/${id}`,
+        headers: { authorization: `Bearer ${adminToken}` },
+        payload: { description: 'keeps launch options' },
+      });
+      expect(untouched.json().launchOptions).toEqual({ ...EMPTY_LAUNCH_OPTIONS, cpuCount: 2 });
+
+      dbInstance.db.delete(servers).where(eq(servers.id, id)).run();
     });
 
     it('returns 200 and updates server fields cleanly', async () => {
@@ -1413,7 +1484,10 @@ describe('Servers Routes (/api/v1/servers)', () => {
         return response.json();
       };
 
-      await expectPatchSync({ description: 'metadata only', launchParameters: '-doLogs' }, false);
+      await expectPatchSync(
+        { description: 'metadata only', launchOptions: { ...EMPTY_LAUNCH_OPTIONS, doLogs: true } },
+        false,
+      );
       const nextMissionPath = 'mpmissions/dayzOffline.enoch';
       const missionUpdated = await expectPatchSync({ missionPath: nextMissionPath }, false);
       expect(missionUpdated.missionPath).toBe(nextMissionPath);
@@ -1430,7 +1504,7 @@ describe('Servers Routes (/api/v1/servers)', () => {
       expect(fs.readFileSync(bePath, 'utf8')).toContain(`RConPassword ${rotatedRcon}`);
 
       const row = rowOf(id)!;
-      expect(row.launchParameters).toBe('-doLogs');
+      expect(row.launchOptions).toEqual({ ...EMPTY_LAUNCH_OPTIONS, doLogs: true });
       expect(row.queryPort).toBe(28316);
       expect(row.maxPlayers).toBe(12);
 
@@ -1544,7 +1618,7 @@ describe('Servers Routes (/api/v1/servers)', () => {
         { rconPassword: null },
         { rconIp: '0.0.0.0' },
         { name: 'Renamed While Running' },
-        { launchParameters: '-doLogs' },
+        { launchOptions: { ...DEFAULT_LAUNCH_OPTIONS, freezeCheck: true } },
       ]) {
         const response = await patch(id, payload);
         expect(response.statusCode, JSON.stringify(payload)).toBe(409);
@@ -1554,6 +1628,7 @@ describe('Servers Routes (/api/v1/servers)', () => {
 
       const unchanged = await patch(id, {
         rconIp: '127.0.0.1',
+        launchOptions: DEFAULT_LAUNCH_OPTIONS,
         name: 'Running Guard',
         description: 'live note',
       });

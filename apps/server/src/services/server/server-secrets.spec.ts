@@ -11,6 +11,7 @@ vi.mock('@aegis/database', async importOriginal => {
   };
 });
 
+import { EMPTY_LAUNCH_OPTIONS } from '@aegis/api-contracts';
 import * as databaseModule from '@aegis/database';
 import { decryptVaultSecret, resolveVaultKey, type Server } from '@aegis/database';
 
@@ -43,7 +44,7 @@ function serverRow(overrides: Partial<Server> = {}): Server {
     maxPlayers: 60,
     rconPassword: null,
     rconPasswordEncrypted: null,
-    launchParameters: null,
+    launchOptions: EMPTY_LAUNCH_OPTIONS,
     isDefault: false,
     createdAt: now,
     updatedAt: now,

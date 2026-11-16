@@ -7,6 +7,7 @@ import {
   type ApiErrorParams,
   type ApiFieldErrorsMap,
   createServerSchema,
+  DEFAULT_LAUNCH_OPTIONS,
   isServerActiveStatus,
   SERVER_STATUS,
   serverDetailSchema,
@@ -31,6 +32,10 @@ import {
 } from '../services/server/battleye-config.service';
 import { ConfigStorageError } from '../services/server/config-atomic-writer';
 import {
+  areLaunchOptionsEqual,
+  readLaunchOptions,
+} from '../services/server/launch-command.service';
+import {
   type DecodedConfigFile,
   readServerDzConfig,
   resolveInstallRoot,
@@ -54,7 +59,6 @@ const LOCKED_CONFIG_KEYS = [
   'gamePort',
   'rconPort',
   'rconIp',
-  'launchParameters',
 ] as const;
 
 const DEFAULT_PROFILE_PATH = 'profiles';
@@ -285,6 +289,13 @@ function checkRunningMutationViolation(existing: Server, data: UpdateServerDto):
     return true;
   }
 
+  if (
+    data.launchOptions !== undefined &&
+    !areLaunchOptionsEqual(data.launchOptions, readLaunchOptions(existing))
+  ) {
+    return true;
+  }
+
   return LOCKED_CONFIG_KEYS.some(key => data[key] !== undefined && data[key] !== existing[key]);
 }
 
@@ -335,7 +346,7 @@ function sendServerDetail(reply: FastifyReply, s: Server, statusCode: 200 | 201 
       installPath: s.installPath,
       profilePath: s.profilePath,
       missionPath: s.missionPath,
-      launchParameters: s.launchParameters,
+      launchOptions: readLaunchOptions(s),
       createdAt: s.createdAt.toISOString(),
       updatedAt: s.updatedAt.toISOString(),
     }),
@@ -535,7 +546,7 @@ export const registerServersRoutes: FastifyPluginAsync = async fastify => {
             maxPlayers,
             rconPassword: secretOutcome.rconPassword,
             rconPasswordEncrypted: secretOutcome.rconPasswordEncrypted,
-            launchParameters: data.launchParameters ?? null,
+            launchOptions: data.launchOptions ?? DEFAULT_LAUNCH_OPTIONS,
             isDefault: data.isDefault ?? false,
             createdAt: now,
             updatedAt: now,
@@ -655,10 +666,7 @@ export const registerServersRoutes: FastifyPluginAsync = async fastify => {
             rconIp: data.rconIp ?? existing.rconIp,
             rconPassword: secretOutcome.rconPassword,
             rconPasswordEncrypted: secretOutcome.rconPasswordEncrypted,
-            launchParameters:
-              data.launchParameters !== undefined
-                ? data.launchParameters
-                : existing.launchParameters,
+            launchOptions: data.launchOptions ?? readLaunchOptions(existing),
             isDefault: data.isDefault !== undefined ? data.isDefault : existing.isDefault,
             updatedAt: new Date(),
           })
