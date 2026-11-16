@@ -38,6 +38,44 @@ export function encodeLoginPacket(password: string): Buffer {
   return encodePacket(PACKET_TYPE.LOGIN, Buffer.from(password, 'ascii'));
 }
 
+/** Highest sequence number; sequences wrap from 255 back to 0. */
+export const MAX_SEQUENCE = 0xff;
+
+/** Command request: type `0x01`, a sequence byte (0–255) and the command text (UTF-8). */
+export function encodeCommandPacket(sequence: number, command: string): Buffer {
+  if (!Number.isInteger(sequence) || sequence < 0 || sequence > MAX_SEQUENCE) {
+    throw new RangeError('RCON sequence must be an integer between 0 and 255.');
+  }
+  return encodePacket(
+    PACKET_TYPE.COMMAND,
+    Buffer.concat([Buffer.from([sequence]), Buffer.from(command, 'utf8')]),
+  );
+}
+
+/**
+ * Body of a command response (the bytes after the sequence number). Long responses are split into
+ * parts, each prefixed with `0x00`, the part count and the zero-based part index.
+ */
+export type CommandResponseBody =
+  | { kind: 'single'; data: Buffer }
+  | { kind: 'part'; total: number; index: number; data: Buffer }
+  | { kind: 'invalid' };
+
+export function parseCommandResponse(data: Buffer): CommandResponseBody {
+  if (data.length === 0 || data[0] !== 0x00) {
+    return { kind: 'single', data };
+  }
+  if (data.length < 3) {
+    return { kind: 'invalid' };
+  }
+  const total = data[1];
+  const index = data[2];
+  if (total === 0 || index >= total) {
+    return { kind: 'invalid' };
+  }
+  return { kind: 'part', total, index, data: data.subarray(3) };
+}
+
 /** Decodes one datagram. Never throws: every byte comes from the network. */
 export function decodePacket(datagram: Uint8Array): PacketDecodeResult {
   const buffer = Buffer.from(datagram.buffer, datagram.byteOffset, datagram.byteLength);

@@ -2,7 +2,14 @@ import zlib from 'node:zlib';
 import { describe, expect, it } from 'vitest';
 
 import { crc32 } from './crc32';
-import { decodePacket, encodeLoginPacket, encodePacket, PACKET_TYPE } from './packet';
+import {
+  decodePacket,
+  encodeCommandPacket,
+  encodeLoginPacket,
+  encodePacket,
+  PACKET_TYPE,
+  parseCommandResponse,
+} from './packet';
 
 /** Builds a packet by hand (independent of encodePacket) with a correct or forged checksum. */
 function rawPacket(body: number[], checksum?: number): Buffer {
@@ -88,5 +95,50 @@ describe('decodePacket', () => {
     ['message without sequence', rawPacket([0xff, 0x02]), 'TOO_SHORT'],
   ])('rejects %s without throwing', (_name, datagram, error) => {
     expect(decodePacket(datagram)).toEqual({ ok: false, error });
+  });
+});
+
+describe('encodeCommandPacket', () => {
+  it('frames type 0x01, the sequence byte and the UTF-8 command', () => {
+    expect(encodeCommandPacket(7, '#say -1 Ä')).toEqual(
+      rawPacket([0xff, 0x01, 0x07, ...Buffer.from('#say -1 Ä', 'utf8')]),
+    );
+    expect(encodeCommandPacket(255, '')).toEqual(rawPacket([0xff, 0x01, 0xff]));
+  });
+
+  it.each([-1, 256, 1.5, Number.NaN])('rejects sequence %p', sequence => {
+    expect(() => encodeCommandPacket(sequence, 'players')).toThrow(
+      'RCON sequence must be an integer between 0 and 255.',
+    );
+  });
+});
+
+describe('parseCommandResponse', () => {
+  it('treats empty and text bodies as single responses', () => {
+    expect(parseCommandResponse(Buffer.alloc(0))).toEqual({
+      kind: 'single',
+      data: Buffer.alloc(0),
+    });
+    expect(parseCommandResponse(Buffer.from('ok'))).toEqual({
+      kind: 'single',
+      data: Buffer.from('ok'),
+    });
+  });
+
+  it('reads the multi-part header', () => {
+    expect(parseCommandResponse(Buffer.from([0x00, 3, 2, ...Buffer.from('end')]))).toEqual({
+      kind: 'part',
+      total: 3,
+      index: 2,
+      data: Buffer.from('end'),
+    });
+  });
+
+  it.each([
+    ['truncated header', [0x00, 3]],
+    ['zero parts', [0x00, 0, 0]],
+    ['index out of range', [0x00, 2, 2]],
+  ])('rejects a %s', (_label, bytes) => {
+    expect(parseCommandResponse(Buffer.from(bytes))).toEqual({ kind: 'invalid' });
   });
 });
