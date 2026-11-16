@@ -9,6 +9,7 @@ import {
   rconIpSchema,
   rconPasswordSchema,
   safePathSchema,
+  SERVER_EXIT_REASON_VALUES,
   SERVER_FS_CHECK_STATUS,
   SERVER_FS_CHECK_STATUS_VALUES,
   SERVER_FS_ISSUE_CODE_VALUES,
@@ -26,8 +27,11 @@ import {
   serverFsPathStatusSchema,
   serverFsPathTargetSchema,
   serverIdParamSchema,
+  serverLastExitSchema,
   serverNameSchema,
+  serverRuntimeSchema,
   ServerStatus,
+  serverStatusChangedEventSchema,
   serverStatusSchema,
   serverSummarySchema,
   updateServerSchema,
@@ -281,6 +285,8 @@ describe('Server Contracts (@aegis/api-contracts)', () => {
       profilePath: 'C:/DayZServer/profiles',
       missionPath: 'C:/DayZServer/mpmissions/dayzOffline.chernarusplus',
       launchOptions: { ...EMPTY_LAUNCH_OPTIONS, cpuCount: 4 },
+      runtime: null,
+      lastExit: null,
       maxPlayers: 60,
       rconIp: '127.0.0.1',
       rconPassword: 'secretPassword123',
@@ -844,5 +850,56 @@ describe('Server Contracts (@aegis/api-contracts)', () => {
         }).success,
       ).toBe(false);
     });
+  });
+});
+
+describe('server runtime contracts (DSM-00162)', () => {
+  const at = '2026-11-16T17:58:30.052Z';
+
+  it('accepts every exit reason with nullable code and signal', () => {
+    expect(SERVER_EXIT_REASON_VALUES).toEqual([
+      'start_failed',
+      'crashed',
+      'exited_while_offline',
+      'force_stopped',
+      'stopped',
+    ]);
+    for (const reason of SERVER_EXIT_REASON_VALUES) {
+      expect(
+        serverLastExitSchema.safeParse({ reason, exitCode: null, signal: null, at }).success,
+      ).toBe(true);
+    }
+    expect(
+      serverLastExitSchema.safeParse({ reason: 'crashed', exitCode: 1, signal: 'SIGSEGV', at })
+        .success,
+    ).toBe(true);
+    expect(
+      serverLastExitSchema.safeParse({ reason: 'exploded', exitCode: null, signal: null, at })
+        .success,
+    ).toBe(false);
+    expect(
+      serverLastExitSchema.safeParse({ reason: 'crashed', exitCode: 1.5, signal: null, at })
+        .success,
+    ).toBe(false);
+  });
+
+  it('requires a positive integer PID and an ISO start time', () => {
+    expect(serverRuntimeSchema.safeParse({ pid: 4242, startedAt: at }).success).toBe(true);
+    expect(serverRuntimeSchema.safeParse({ pid: 0, startedAt: at }).success).toBe(false);
+    expect(serverRuntimeSchema.safeParse({ pid: 4242, startedAt: 'yesterday' }).success).toBe(
+      false,
+    );
+  });
+
+  it('validates the server.status.changed event payload', () => {
+    const event = {
+      serverId: '7f0c6a52-1d5c-4c3e-9b4b-0c6f1f7f6e10',
+      status: 'failed',
+      lastExit: { reason: 'crashed', exitCode: 1, signal: null, at },
+    };
+    expect(serverStatusChangedEventSchema.parse(event)).toEqual(event);
+    expect(serverStatusChangedEventSchema.safeParse({ ...event, status: 'crashed' }).success).toBe(
+      false,
+    );
   });
 });

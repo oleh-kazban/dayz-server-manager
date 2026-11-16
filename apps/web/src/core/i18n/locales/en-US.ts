@@ -264,6 +264,30 @@ export const enUSTranslations: TranslationCatalog = {
       title: 'Configuration Being Edited',
       description: 'serverDZ.cfg is being edited by {{holderName}}. Wait until editing ends.',
     },
+    SERVER_ALREADY_RUNNING: {
+      title: 'Server Already Running',
+      description: '"{{name}}" is already running.',
+    },
+    SERVER_TRANSITION_IN_PROGRESS: {
+      title: 'Server Busy',
+      description: '"{{name}}" is {{status}}. Wait until it finishes.',
+    },
+    SERVER_NOT_RUNNING: {
+      title: 'Server Not Running',
+      description: '"{{name}}" has no running process to stop.',
+    },
+    SERVER_LAUNCH_NOT_READY: {
+      title: 'Cannot Start Server',
+      description: '{{reason}}',
+    },
+    SERVER_START_FAILED: {
+      title: 'Server Failed to Start',
+      description: '{{reason}}',
+    },
+    SERVER_STOP_FAILED: {
+      title: 'Server Failed to Stop',
+      description: '{{reason}}',
+    },
   },
   validation: {
     REQUIRED: 'This field is required.',
