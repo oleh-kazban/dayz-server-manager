@@ -50,5 +50,6 @@ export function buildLaunchCommandPreview(
     platform,
     mods: modContext,
     command,
+    editLock: null,
   });
 }
