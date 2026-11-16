@@ -288,6 +288,21 @@ export const enUSTranslations: TranslationCatalog = {
       title: 'Server Failed to Stop',
       description: '{{reason}}',
     },
+    SERVER_RCON_NOT_CONFIGURED: {
+      title: 'RCON Not Configured',
+      description:
+        '"{{name}}" has no BattlEye RCON password, so it cannot be stopped safely. Set one in Server Settings or use force-stop.',
+    },
+    SERVER_RCON_UNREACHABLE: {
+      title: 'RCON Unreachable',
+      description:
+        'Could not reach BattlEye RCON for "{{name}}" ({{reason}}). Nothing was stopped.',
+    },
+    SERVER_RCON_LOGIN_FAILED: {
+      title: 'RCON Login Failed',
+      description:
+        'BattlEye rejected the RCON password for "{{name}}". Nothing was stopped; check the RCON password.',
+    },
   },
   validation: {
     REQUIRED: 'This field is required.',

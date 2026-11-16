@@ -863,6 +863,7 @@ describe('server runtime contracts (DSM-00162)', () => {
       'exited_while_offline',
       'force_stopped',
       'stopped',
+      'shutdown_timeout',
     ]);
     for (const reason of SERVER_EXIT_REASON_VALUES) {
       expect(

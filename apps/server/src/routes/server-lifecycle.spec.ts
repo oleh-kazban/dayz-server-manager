@@ -14,12 +14,14 @@ import {
 import { buildApp } from '../app/app';
 import { loadEnv } from '../config/env';
 import { FakeProcessManager } from '../services/server/__fixtures__/fake-process-manager';
+import { FakeRconSessions } from '../services/server/__fixtures__/fake-rcon-session';
 
 const SERVER_ID = '44444444-4444-4444-a444-444444444444';
 const INSTALL_PATH = process.platform === 'win32' ? 'C:\\DayZServer' : '/opt/dayz';
 
 interface Harness {
   app: FastifyInstance;
+  rcon: FakeRconSessions;
   db: DatabaseInstance;
   processes: FakeProcessManager;
   adminToken: string;
@@ -50,6 +52,7 @@ async function createHarness(
 
   const processes = new FakeProcessManager();
   processes.alive.set(4242, 'token-4242');
+  const rcon = new FakeRconSessions();
   const app = buildApp({
     config: loadEnv({
       SESSION_SECRET: 'test-session-secret-at-least-32-chars-long!',
@@ -58,12 +61,14 @@ async function createHarness(
     }),
     db,
     processManager: processes,
+    rconSessionFactory: rcon.factory,
     ...options,
   });
   await app.ready();
 
   const harness: Harness = {
     app,
+    rcon,
     db,
     processes,
     adminToken: app.jwt.sign({ sub: 'admin-id', role: 'admin', type: 'access' }),
@@ -251,5 +256,75 @@ describe('Server lifecycle routes', () => {
     const response = await post(h, 'start');
     expect(response.statusCode).toBe(500);
     expect(response.json().errorCode).toBe('INTERNAL_SERVER_ERROR');
+  });
+
+  describe('POST /:id/stop (DSM-00163)', () => {
+    const runningWithRcon = (db: DatabaseInstance) => {
+      db.db
+        .update(servers)
+        .set({
+          status: 'running',
+          rconPassword: 'Rcon!Pass_42',
+          processPid: 4242,
+          processStartToken: 'token-4242',
+          processStartedAt: new Date(1_000),
+        })
+        .where(eq(servers.id, SERVER_ID))
+        .run();
+    };
+
+    it('sends #shutdown and returns the server as stopping', async () => {
+      const h = await createHarness(runningWithRcon);
+      const response = await post(h, 'stop');
+      expect(response.statusCode).toBe(200);
+      expect(serverDetailSchema.parse(response.json())).toMatchObject({
+        status: 'stopping',
+        runtime: { pid: 4242 },
+      });
+      expect(h.rcon.commands).toEqual(['#shutdown']);
+      expect(h.processes.killCalls).toEqual([]);
+    });
+
+    it('maps RCON failures to 502 without changing anything', async () => {
+      const h = await createHarness(runningWithRcon);
+      h.rcon.loginResult = { ok: false, error: 'login_failed', message: 'rejected' };
+      const rejected = await post(h, 'stop');
+      expect(rejected.statusCode).toBe(502);
+      expect(apiErrorResponseSchema.safeParse(rejected.json()).success).toBe(true);
+      expect(rejected.json()).toMatchObject({
+        errorCode: 'SERVER_RCON_LOGIN_FAILED',
+        params: { name: 'Lifecycle Target', reason: 'rejected' },
+      });
+
+      h.rcon.loginResult = { ok: false, error: 'unreachable', message: 'ECONNREFUSED' };
+      const unreachable = await post(h, 'stop');
+      expect(unreachable.statusCode).toBe(502);
+      expect(unreachable.json().errorCode).toBe('SERVER_RCON_UNREACHABLE');
+      expect(statusOf(h)).toBe('running');
+    });
+
+    it('returns 409 when no RCON password is configured or the server is not running', async () => {
+      const h = await createHarness(db => {
+        runningWithRcon(db);
+        db.db.update(servers).set({ rconPassword: null }).where(eq(servers.id, SERVER_ID)).run();
+      });
+      const missing = await post(h, 'stop');
+      expect(missing.statusCode).toBe(409);
+      expect(missing.json().errorCode).toBe('SERVER_RCON_NOT_CONFIGURED');
+
+      const idle = await createHarness();
+      const notRunning = await post(idle, 'stop');
+      expect(notRunning.statusCode).toBe(409);
+      expect(notRunning.json().errorCode).toBe('SERVER_NOT_RUNNING');
+    });
+
+    it('enforces admin role, id format and existence', async () => {
+      const h = await createHarness();
+      expect((await post(h, 'stop', h.viewerToken)).statusCode).toBe(403);
+      expect((await post(h, 'stop', h.adminToken, 'not-a-uuid')).statusCode).toBe(400);
+      expect(
+        (await post(h, 'stop', h.adminToken, '66666666-6666-4666-a666-666666666666')).statusCode,
+      ).toBe(404);
+    });
   });
 });
