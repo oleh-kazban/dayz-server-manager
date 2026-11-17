@@ -11,6 +11,7 @@ import {
 import { formatRuntime } from '../maintenance.utils';
 
 import { ForceStopServerTile } from './ForceStopServerTile';
+import { RestartServerTile } from './RestartServerTile';
 import { StartServerTile } from './StartServerTile';
 import { StopServerTile } from './StopServerTile';
 
@@ -45,6 +46,7 @@ export function ServerLifecycleCard({ server }: ServerLifecycleCardProps) {
       <div className="grid grid-cols-1 divide-y divide-[var(--color-border)] md:grid-cols-2 md:divide-x md:divide-y-0 xl:grid-cols-4">
         <StartServerTile server={server} />
         <StopServerTile server={server} />
+        <RestartServerTile server={server} />
         <ForceStopServerTile server={server} />
       </div>
     </Card>

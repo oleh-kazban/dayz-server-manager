@@ -7,8 +7,9 @@ import {
   formatDelayPreset,
   formatRuntime,
   getForceStopBlocker,
+  getGracefulStopBlocker,
   getStartBlocker,
-  getStopBlocker,
+  ownsPendingStop,
 } from './maintenance.utils';
 
 const ready: LaunchCommandPreviewDto = {
@@ -104,30 +105,50 @@ describe('getForceStopBlocker', () => {
   });
 });
 
-describe('getStopBlocker', () => {
+describe('getGracefulStopBlocker', () => {
   const pendingStop = {
     executeAt: '2026-11-17T18:05:00.000Z',
     requestedAt: '2026-11-17T18:00:00.000Z',
   };
+  const blocker = (overrides: Partial<Parameters<typeof getGracefulStopBlocker>[0]>) =>
+    getGracefulStopBlocker({
+      kind: 'stop',
+      status: 'running',
+      pendingStop: null,
+      restartRequested: false,
+      ...overrides,
+    });
 
-  it('allows a running server without a scheduled stop', () => {
-    expect(getStopBlocker('running', null)).toBeNull();
-    expect(getStopBlocker('running', undefined)).toBeNull();
+  it('allows a running server without anything scheduled', () => {
+    expect(blocker({})).toBeNull();
+    expect(blocker({ kind: 'restart', pendingStop: undefined })).toBeNull();
   });
 
   it.each([
-    ['starting', 'The server is still starting. Wait until it is running.'],
-    ['stopping', 'The server is already stopping.'],
-    ['stopped', 'The server is not running.'],
-    ['failed', 'The server is not running.'],
-  ] as const)('explains a %s server', (status, reason) => {
-    expect(getStopBlocker(status, null)).toBe(reason);
+    [{ status: 'starting' }, 'The server is still starting. Wait until it is running.'],
+    [{ status: 'stopping' }, 'The server is already stopping.'],
+    [
+      { status: 'stopping', restartRequested: true },
+      'The server is restarting. It starts again once it has stopped.',
+    ],
+    [{ status: 'stopped' }, 'The server is not running.'],
+    [{ status: 'failed', kind: 'restart' }, 'The server is not running. Use Start instead.'],
+    [{ pendingStop }, 'A stop is already scheduled. Cancel it to choose another time.'],
+    [
+      { pendingStop, restartRequested: true, kind: 'restart' },
+      'A restart is already scheduled. Cancel it to choose another time.',
+    ],
+  ] as const)('explains %j', (state, reason) => {
+    expect(blocker(state)).toBe(reason);
   });
+});
 
-  it('asks to cancel a scheduled stop first', () => {
-    expect(getStopBlocker('running', pendingStop)).toBe(
-      'A stop is already scheduled. Cancel it to choose another time.',
-    );
+describe('ownsPendingStop', () => {
+  it('gives a scheduled restart to Restart and a scheduled stop to Stop', () => {
+    expect(ownsPendingStop('restart', true)).toBe(true);
+    expect(ownsPendingStop('stop', false)).toBe(true);
+    expect(ownsPendingStop('stop', true)).toBe(false);
+    expect(ownsPendingStop('restart', false)).toBe(false);
   });
 });
 

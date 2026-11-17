@@ -5,6 +5,8 @@ import {
   type ServerStatus,
 } from '@aegis/api-contracts';
 
+import type { GracefulStopKind } from './graceful-stop.copy';
+
 export interface StartReadinessInput {
   status: ServerStatus;
   /** Launch command preview with the edit lock; `undefined` while it loads. */
@@ -60,27 +62,48 @@ export function getForceStopBlocker(status: ServerStatus): string | null {
   return null;
 }
 
+export interface GracefulStopState {
+  kind: GracefulStopKind;
+  status: ServerStatus;
+  pendingStop: ServerPendingStopDto | null | undefined;
+  /** The pending stop / current stop is part of a restart (DSM-00168). */
+  restartRequested: boolean;
+}
+
 /**
- * Why the server cannot be stopped gracefully (DSM-00171), or `null` when it can. A scheduled
- * stop has to be cancelled before another one is chosen.
+ * Why the server cannot be stopped or restarted gracefully (DSM-00171/00172), or `null` when it
+ * can. A scheduled stop or restart has to be cancelled before another one is chosen.
  */
-export function getStopBlocker(
-  status: ServerStatus,
-  pendingStop: ServerPendingStopDto | null | undefined,
-): string | null {
+export function getGracefulStopBlocker({
+  kind,
+  status,
+  pendingStop,
+  restartRequested,
+}: GracefulStopState): string | null {
   if (status === SERVER_STATUS.STARTING) {
     return 'The server is still starting. Wait until it is running.';
   }
   if (status === SERVER_STATUS.STOPPING) {
-    return 'The server is already stopping.';
+    return restartRequested
+      ? 'The server is restarting. It starts again once it has stopped.'
+      : 'The server is already stopping.';
   }
   if (status !== SERVER_STATUS.RUNNING) {
-    return 'The server is not running.';
+    return kind === 'restart'
+      ? 'The server is not running. Use Start instead.'
+      : 'The server is not running.';
   }
   if (pendingStop) {
-    return 'A stop is already scheduled. Cancel it to choose another time.';
+    return restartRequested
+      ? 'A restart is already scheduled. Cancel it to choose another time.'
+      : 'A stop is already scheduled. Cancel it to choose another time.';
   }
   return null;
+}
+
+/** Whether a pending stop belongs to this tile: a scheduled restart to Restart, else to Stop. */
+export function ownsPendingStop(kind: GracefulStopKind, restartRequested: boolean): boolean {
+  return (kind === 'restart') === restartRequested;
 }
 
 /** "4:05" or "1:00:00" until a scheduled stop; never negative. */
