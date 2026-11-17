@@ -1,14 +1,15 @@
-import { type MouseEvent, useId, useRef } from 'react';
+import { type MouseEvent, useId } from 'react';
 
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { Play } from 'lucide-react';
 
 import { apiClient } from '@aegis/api-client';
-import type { ServerDetailDto, ServerSummaryDto } from '@aegis/api-contracts';
+import type { ServerSummaryDto } from '@aegis/api-contracts';
 import { Button, Tooltip } from '@aegis/ui';
-import { notifyApiError, notifySuccess, serverQueries, serverQueryKeys } from '@aegis/web/core';
+import { serverQueries } from '@aegis/web/core';
 
 import { getStartBlocker } from '../maintenance.utils';
+import { useServerLifecycleAction } from '../useServerLifecycleAction';
 
 import { LifecycleActionTile } from './LifecycleActionTile';
 
@@ -24,31 +25,18 @@ export interface StartServerTileProps {
  * (`aria-disabled`) and says why, both in a tooltip and as visible text under it.
  */
 export function StartServerTile({ server }: StartServerTileProps) {
-  const queryClient = useQueryClient();
   const hintId = useId();
-  const inFlightRef = useRef(false);
 
   const readiness = useQuery({
     ...serverQueries.launchCommand(server.id),
     refetchInterval: READINESS_REFRESH_MS,
   });
 
-  const startMutation = useMutation({
-    mutationFn: (serverId: string) => apiClient.servers.start(serverId),
-    onSuccess: (detail: ServerDetailDto) => {
-      queryClient.setQueryData(serverQueryKeys.detail(detail.id), detail);
-      queryClient.setQueryData<ServerSummaryDto[]>(serverQueryKeys.list(), servers =>
-        servers?.map(item => (item.id === detail.id ? { ...item, status: detail.status } : item)),
-      );
-      notifySuccess('SERVER_START_REQUESTED', { name: detail.name });
-    },
-    onError: (error: Error) => {
-      notifyApiError(error, 'Start Failed');
-    },
-    onSettled: () => {
-      inFlightRef.current = false;
-      void queryClient.invalidateQueries({ queryKey: serverQueryKeys.launchCommand(server.id) });
-    },
+  const start = useServerLifecycleAction({
+    serverId: server.id,
+    request: apiClient.servers.start,
+    successCode: 'SERVER_START_REQUESTED',
+    errorTitle: 'Start Failed',
   });
 
   const blocker = getStartBlocker({
@@ -56,15 +44,14 @@ export function StartServerTile({ server }: StartServerTileProps) {
     preview: readiness.data,
     previewFailed: readiness.isError,
   });
-  const isInert = blocker !== null || startMutation.isPending;
+  const isInert = blocker !== null || start.isPending;
 
   const handleClick = (event: MouseEvent<HTMLButtonElement>) => {
-    if (isInert || inFlightRef.current) {
+    if (isInert) {
       event.preventDefault();
       return;
     }
-    inFlightRef.current = true;
-    startMutation.mutate(server.id);
+    start.run();
   };
 
   return (
@@ -78,7 +65,7 @@ export function StartServerTile({ server }: StartServerTileProps) {
           <Button
             variant="primary"
             leftIcon={Play}
-            isLoading={startMutation.isPending}
+            isLoading={start.isPending}
             aria-disabled={isInert || undefined}
             aria-describedby={blocker ? hintId : undefined}
             onClick={handleClick}
