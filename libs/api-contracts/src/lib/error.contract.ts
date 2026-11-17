@@ -3,6 +3,7 @@ import { z } from 'zod';
 export const apiErrorCodeSchema = z.enum([
   'AUTH_INVALID_CREDENTIALS',
   'AUTH_TOKEN_MISSING_OR_INVALID',
+  'AUTH_SSE_TICKET_INVALID',
   'AUTH_TOKEN_TYPE_INVALID',
   'AUTH_REFRESH_TOKEN_INVALID',
   'AUTH_USER_NOT_FOUND',
