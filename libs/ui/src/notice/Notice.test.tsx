@@ -118,4 +118,10 @@ describe('Notice', () => {
     expect(ref.current).toBeInstanceOf(HTMLDivElement);
     expect(ref.current).toHaveAttribute('role', 'status');
   });
+
+  it('lets long unbroken text (e.g. a file path) wrap inside the notice', () => {
+    const path = 'servers/dayz/profiles/'.repeat(12) + 'DayZServer_x64.exe';
+    render(<Notice title="Failed">{path}</Notice>);
+    expect(screen.getByText(path).parentElement).toHaveClass('[overflow-wrap:anywhere]');
+  });
 });
