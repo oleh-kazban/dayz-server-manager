@@ -71,6 +71,10 @@ export type {
 } from './empty-state';
 export { EmptyState } from './empty-state';
 
+// File Uploader
+export type { FileUploaderError, FileUploaderErrorType, FileUploaderProps } from './file-uploader';
+export { FileUploader, formatFileSize, validateFileSize, validateFileType } from './file-uploader';
+
 // Hero Banner
 export type {
   HeroBannerActionsProps,
