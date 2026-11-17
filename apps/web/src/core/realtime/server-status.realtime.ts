@@ -10,16 +10,17 @@ import {
 import { serverQueryKeys } from '../server/server.queries';
 
 /**
- * Applies `server.status.changed` (DSM-00162/00163) to the query cache: status in the list,
- * status and last exit in the detail (runtime cleared once the process is gone), then refetches
- * the detail for the exact runtime. Invalid payloads and caches never loaded are left alone.
+ * Applies `server.status.changed` (DSM-00162/00163/00167) to the query cache: status in the list,
+ * status, last exit and pending stop in the detail (runtime cleared once the process is gone),
+ * then refetches the detail for the exact runtime. Invalid payloads and caches never loaded are
+ * left alone.
  */
 export function applyServerStatusChanged(queryClient: QueryClient, data: unknown): void {
   const parsed = serverStatusChangedEventSchema.safeParse(data);
   if (!parsed.success) {
     return;
   }
-  const { serverId, status, lastExit } = parsed.data;
+  const { serverId, status, lastExit, pendingStop } = parsed.data;
   const processGone = status === SERVER_STATUS.STOPPED || status === SERVER_STATUS.FAILED;
 
   queryClient.setQueryData<ServerSummaryDto[]>(serverQueryKeys.list(), servers =>
@@ -28,7 +29,9 @@ export function applyServerStatusChanged(queryClient: QueryClient, data: unknown
 
   const detailKey = serverQueryKeys.detail(serverId);
   queryClient.setQueryData<ServerDetailDto>(detailKey, detail =>
-    detail ? { ...detail, status, lastExit, runtime: processGone ? null : detail.runtime } : detail,
+    detail
+      ? { ...detail, status, lastExit, pendingStop, runtime: processGone ? null : detail.runtime }
+      : detail,
   );
   void queryClient.invalidateQueries({ queryKey: detailKey, exact: true });
 }

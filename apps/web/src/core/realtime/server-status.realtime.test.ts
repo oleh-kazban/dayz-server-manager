@@ -39,6 +39,7 @@ const detail = (status: ServerDetailDto['status']): ServerDetailDto => ({
   rconIp: '127.0.0.1',
   rconPassword: null,
   runtime: { pid: 4242, startedAt: AT },
+  pendingStop: null,
   lastExit: null,
 });
 
@@ -58,7 +59,12 @@ describe('applyServerStatusChanged', () => {
     const invalidate = vi.spyOn(queryClient, 'invalidateQueries');
     const lastExit = { reason: 'crashed', exitCode: 1, signal: null, at: AT } as const;
 
-    applyServerStatusChanged(queryClient, { serverId: ID, status: 'failed', lastExit });
+    applyServerStatusChanged(queryClient, {
+      serverId: ID,
+      status: 'failed',
+      lastExit,
+      pendingStop: null,
+    });
 
     expect(
       queryClient
@@ -80,16 +86,51 @@ describe('applyServerStatusChanged', () => {
     'keeps the runtime while the process is %s',
     status => {
       const queryClient = seededClient();
-      applyServerStatusChanged(queryClient, { serverId: ID, status, lastExit: null });
+      applyServerStatusChanged(queryClient, {
+        serverId: ID,
+        status,
+        lastExit: null,
+        pendingStop: null,
+      });
       expect(
         queryClient.getQueryData<ServerDetailDto>(serverQueryKeys.detail(ID))?.runtime,
       ).toEqual({ pid: 4242, startedAt: AT });
     },
   );
 
+  it('applies a scheduled and a cancelled stop to the detail (DSM-00167)', () => {
+    const queryClient = seededClient();
+    const pendingStop = { executeAt: AT, requestedAt: AT };
+
+    applyServerStatusChanged(queryClient, {
+      serverId: ID,
+      status: 'running',
+      lastExit: null,
+      pendingStop,
+    });
+    expect(
+      queryClient.getQueryData<ServerDetailDto>(serverQueryKeys.detail(ID))?.pendingStop,
+    ).toEqual(pendingStop);
+
+    applyServerStatusChanged(queryClient, {
+      serverId: ID,
+      status: 'running',
+      lastExit: null,
+      pendingStop: null,
+    });
+    expect(
+      queryClient.getQueryData<ServerDetailDto>(serverQueryKeys.detail(ID))?.pendingStop,
+    ).toBeNull();
+  });
+
   it('leaves never-loaded caches untouched', () => {
     const queryClient = new QueryClient();
-    applyServerStatusChanged(queryClient, { serverId: ID, status: 'stopped', lastExit: null });
+    applyServerStatusChanged(queryClient, {
+      serverId: ID,
+      status: 'stopped',
+      lastExit: null,
+      pendingStop: null,
+    });
     expect(queryClient.getQueryData(serverQueryKeys.list())).toBeUndefined();
     expect(queryClient.getQueryData(serverQueryKeys.detail(ID))).toBeUndefined();
   });

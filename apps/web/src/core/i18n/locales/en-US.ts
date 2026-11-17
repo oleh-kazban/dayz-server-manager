@@ -296,6 +296,15 @@ export const enUSTranslations: TranslationCatalog = {
       title: 'Server Failed to Stop',
       description: '{{reason}}',
     },
+    SERVER_STOP_ALREADY_PENDING: {
+      title: 'Stop Already Scheduled',
+      description:
+        'A stop is already scheduled for "{{name}}". Cancel it before scheduling another.',
+    },
+    SERVER_STOP_NOT_PENDING: {
+      title: 'No Scheduled Stop',
+      description: '"{{name}}" has no scheduled stop to cancel.',
+    },
     SERVER_RCON_NOT_CONFIGURED: {
       title: 'RCON Not Configured',
       description:
