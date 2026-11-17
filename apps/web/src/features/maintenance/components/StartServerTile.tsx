@@ -5,7 +5,7 @@ import { Play } from 'lucide-react';
 
 import { apiClient } from '@aegis/api-client';
 import type { ServerSummaryDto } from '@aegis/api-contracts';
-import { Button, Tooltip } from '@aegis/ui';
+import { Button } from '@aegis/ui';
 import { serverQueries } from '@aegis/web/core';
 
 import { getStartBlocker } from '../maintenance.utils';
@@ -22,7 +22,7 @@ export interface StartServerTileProps {
 
 /**
  * Start control (DSM-00169). When starting is impossible the button stays focusable but inert
- * (`aria-disabled`) and says why, both in a tooltip and as visible text under it.
+ * (`aria-disabled`) and says why as visible text above it.
  */
 export function StartServerTile({ server }: StartServerTileProps) {
   const hintId = useId();
@@ -61,18 +61,16 @@ export function StartServerTile({ server }: StartServerTileProps) {
       hint={blocker}
       hintId={hintId}
       action={
-        <Tooltip content={blocker} disabled={!blocker}>
-          <Button
-            variant="primary"
-            leftIcon={Play}
-            isLoading={start.isPending}
-            aria-disabled={isInert || undefined}
-            aria-describedby={blocker ? hintId : undefined}
-            onClick={handleClick}
-          >
-            Start server
-          </Button>
-        </Tooltip>
+        <Button
+          variant="primary"
+          leftIcon={Play}
+          isLoading={start.isPending}
+          aria-disabled={isInert || undefined}
+          aria-describedby={blocker ? hintId : undefined}
+          onClick={handleClick}
+        >
+          Start server
+        </Button>
       }
     />
   );

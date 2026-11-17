@@ -4,7 +4,7 @@ import { OctagonX } from 'lucide-react';
 
 import { apiClient } from '@aegis/api-client';
 import type { ServerSummaryDto } from '@aegis/api-contracts';
-import { Button, Confirmation, Tooltip } from '@aegis/ui';
+import { Button, Confirmation } from '@aegis/ui';
 
 import { getForceStopBlocker } from '../maintenance.utils';
 import { useServerLifecycleAction } from '../useServerLifecycleAction';
@@ -54,19 +54,17 @@ export function ForceStopServerTile({ server }: ForceStopServerTileProps) {
         hint={blocker}
         hintId={hintId}
         action={
-          <Tooltip content={blocker} disabled={!blocker}>
-            <Button
-              variant="secondary"
-              destructive
-              leftIcon={OctagonX}
-              isLoading={forceStop.isPending}
-              aria-disabled={isInert || undefined}
-              aria-describedby={blocker ? hintId : undefined}
-              onClick={handleClick}
-            >
-              Force-stop
-            </Button>
-          </Tooltip>
+          <Button
+            variant="secondary"
+            destructive
+            leftIcon={OctagonX}
+            isLoading={forceStop.isPending}
+            aria-disabled={isInert || undefined}
+            aria-describedby={blocker ? hintId : undefined}
+            onClick={handleClick}
+          >
+            Force-stop
+          </Button>
         }
       />
 
