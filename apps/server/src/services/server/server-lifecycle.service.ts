@@ -4,6 +4,7 @@ import type { FastifyBaseLogger } from 'fastify';
 import {
   type ApiErrorCode,
   type ApiErrorParams,
+  defaultStopWarning,
   type LaunchPlatform,
   SERVER_EXIT_REASON,
   SERVER_STATUS,
@@ -51,27 +52,6 @@ export const RCON_SHUTDOWN_COMMAND = '#shutdown';
 export const RCON_SAY_ALL_COMMAND = '#say -1';
 /** Told to players when a pending stop is cancelled (DSM-00167). */
 export const STOP_CANCELLED_MESSAGE = 'The server shutdown has been cancelled.';
-
-function plural(count: number, unit: string): string {
-  return `${count} ${unit}${count === 1 ? '' : 's'}`;
-}
-
-/** "5 minutes", "45 seconds", "1 minute 30 seconds" for the in-game warning. */
-export function formatStopDelay(delaySec: number): string {
-  const minutes = Math.floor(delaySec / 60);
-  const seconds = delaySec % 60;
-  if (minutes === 0) {
-    return plural(seconds, 'second');
-  }
-  return seconds === 0
-    ? plural(minutes, 'minute')
-    : `${plural(minutes, 'minute')} ${plural(seconds, 'second')}`;
-}
-
-/** Default in-game warning for a delayed stop (DSM-00167). */
-export function defaultStopWarning(delaySec: number): string {
-  return `Server is shutting down in ${formatStopDelay(delaySec)}. Please find a safe place and log out.`;
-}
 
 const ACTIVE: ServerStatus[] = [
   SERVER_STATUS.STARTING,

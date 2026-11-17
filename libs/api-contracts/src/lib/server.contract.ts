@@ -83,6 +83,29 @@ export type ServerPendingStopDto = z.infer<typeof serverPendingStopSchema>;
 export const STOP_DELAY_MAX_SEC = 3600;
 /** Longest custom in-game warning a stop request may carry (DSM-00167). */
 export const STOP_MESSAGE_MAX_LENGTH = 120;
+/** Delays the Stop dialog offers, in seconds; 0 stops now (DSM-00171). */
+export const STOP_DELAY_PRESETS_SEC = [0, 60, 300, 600, 900, 1800] as const;
+
+function plural(count: number, unit: string): string {
+  return `${count} ${unit}${count === 1 ? '' : 's'}`;
+}
+
+/** "5 minutes", "45 seconds", "1 minute 30 seconds" for the in-game warning. */
+export function formatStopDelay(delaySec: number): string {
+  const minutes = Math.floor(delaySec / 60);
+  const seconds = delaySec % 60;
+  if (minutes === 0) {
+    return plural(seconds, 'second');
+  }
+  return seconds === 0
+    ? plural(minutes, 'minute')
+    : `${plural(minutes, 'minute')} ${plural(seconds, 'second')}`;
+}
+
+/** Default in-game warning for a delayed stop (DSM-00167). */
+export function defaultStopWarning(delaySec: number): string {
+  return `Server is shutting down in ${formatStopDelay(delaySec)}. Please find a safe place and log out.`;
+}
 
 /**
  * Body of `POST /servers/:id/stop` (DSM-00167). `delaySec` 0 stops now; otherwise players are

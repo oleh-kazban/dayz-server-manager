@@ -1,6 +1,7 @@
 import {
   type LaunchCommandPreviewDto,
   SERVER_STATUS,
+  type ServerPendingStopDto,
   type ServerStatus,
 } from '@aegis/api-contracts';
 
@@ -57,6 +58,48 @@ export function getForceStopBlocker(status: ServerStatus): string | null {
     return 'The server is not running.';
   }
   return null;
+}
+
+/**
+ * Why the server cannot be stopped gracefully (DSM-00171), or `null` when it can. A scheduled
+ * stop has to be cancelled before another one is chosen.
+ */
+export function getStopBlocker(
+  status: ServerStatus,
+  pendingStop: ServerPendingStopDto | null | undefined,
+): string | null {
+  if (status === SERVER_STATUS.STARTING) {
+    return 'The server is still starting. Wait until it is running.';
+  }
+  if (status === SERVER_STATUS.STOPPING) {
+    return 'The server is already stopping.';
+  }
+  if (status !== SERVER_STATUS.RUNNING) {
+    return 'The server is not running.';
+  }
+  if (pendingStop) {
+    return 'A stop is already scheduled. Cancel it to choose another time.';
+  }
+  return null;
+}
+
+/** "4:05" or "1:00:00" until a scheduled stop; never negative. */
+export function formatCountdown(remainingMs: number): string {
+  const total = Math.max(0, Math.ceil(remainingMs / 1000));
+  const hours = Math.floor(total / 3600);
+  const minutes = Math.floor((total % 3600) / 60);
+  const seconds = String(total % 60).padStart(2, '0');
+  return hours > 0
+    ? `${hours}:${String(minutes).padStart(2, '0')}:${seconds}`
+    : `${minutes}:${seconds}`;
+}
+
+/** Label of a delay preset in the Stop dialog. */
+export function formatDelayPreset(delaySec: number): string {
+  if (delaySec === 0) {
+    return 'Now';
+  }
+  return `${delaySec / 60} min`;
 }
 
 /** "PID 4242 · started 17 Nov 2026, 10:00" for the process summary line. */

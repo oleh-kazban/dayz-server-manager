@@ -6,8 +6,6 @@ import { type DatabaseInstance, initDatabase, type Server, servers } from '@aegi
 import { FakeProcessManager } from './__fixtures__/fake-process-manager';
 import { FakeRconSessions } from './__fixtures__/fake-rcon-session';
 import {
-  defaultStopWarning,
-  formatStopDelay,
   LifecycleError,
   ServerLifecycleService,
   STOP_CANCELLED_MESSAGE,
@@ -428,18 +426,6 @@ describe('ServerLifecycleService delayed stop (DSM-00167)', () => {
       expect(rcon.commands).not.toContain('#shutdown');
       expect(row().pendingStopAt).toEqual(new Date(START + 10 + 60_000));
     });
-  });
-
-  it('formats the delay for the in-game warning', () => {
-    expect(formatStopDelay(1)).toBe('1 second');
-    expect(formatStopDelay(45)).toBe('45 seconds');
-    expect(formatStopDelay(60)).toBe('1 minute');
-    expect(formatStopDelay(90)).toBe('1 minute 30 seconds');
-    expect(formatStopDelay(121)).toBe('2 minutes 1 second');
-    expect(formatStopDelay(3600)).toBe('60 minutes');
-    expect(defaultStopWarning(600)).toBe(
-      'Server is shutting down in 10 minutes. Please find a safe place and log out.',
-    );
   });
 
   it('maps the pending stop only when complete', () => {

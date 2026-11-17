@@ -34,7 +34,7 @@ export function StartServerTile({ server }: StartServerTileProps) {
 
   const start = useServerLifecycleAction({
     serverId: server.id,
-    request: apiClient.servers.start,
+    request: id => apiClient.servers.start(id),
     successCode: 'SERVER_START_REQUESTED',
     errorTitle: 'Start Failed',
   });
