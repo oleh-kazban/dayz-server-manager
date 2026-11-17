@@ -4,6 +4,7 @@ import type { UserRole } from '@aegis/api-contracts';
 import type { DatabaseInstance, DsmDatabase } from '@aegis/database';
 
 import type { SseHub } from '../services/realtime/sse-hub';
+import type { SseTicketStore } from '../services/realtime/sse-ticket-store';
 import type { ServerLifecycleService } from '../services/server/server-lifecycle.service';
 
 declare module 'fastify' {
@@ -13,6 +14,10 @@ declare module 'fastify' {
     sqlite: DatabaseInstance['sqlite'];
     closeDb: () => void;
     sseHub: SseHub;
+    /** Single-use SSE tickets (DSM-00348). */
+    sseTickets: SseTicketStore;
+    /** Whether a session exists and has not expired; records activity. */
+    isSessionActive: (sid: string) => boolean;
     lifecycle: ServerLifecycleService;
   }
 }
