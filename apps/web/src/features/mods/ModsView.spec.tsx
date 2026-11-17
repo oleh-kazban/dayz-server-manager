@@ -630,7 +630,6 @@ describe('ModsView', () => {
       expect(importBtn).toBeDisabled();
     });
   });
-
   describe('Export Preset Integration (DSM-00356)', () => {
     it('renders "Export Preset" button in header and opens ExportPresetModal dialog on click', async () => {
       renderView();
