@@ -4,13 +4,21 @@ import {
   addServerModSchema,
   batchAddServerModsResponseSchema,
   batchAddServerModsSchema,
+  exportServerModsQuerySchema,
+  importServerModsResponseSchema,
+  importServerModsSchema,
   launchParamsPreviewSchema,
+  MOD_IMPORT_MODE,
   MOD_LOAD_TARGET,
+  MOD_PRESET_MAX_TOTAL_ITEMS,
   MOD_SOURCE_TYPE,
   MOD_SYNC_STATUS,
   modFolderNameSchema,
   modIdParamSchema,
+  modImportModeSchema,
   modLoadTargetSchema,
+  modPresetItemSchema,
+  modPresetSchema,
   modSourceTypeSchema,
   modSyncStatusSchema,
   reorderServerModsSchema,
@@ -312,6 +320,191 @@ describe('Mod Contracts (libs/api-contracts)', () => {
           pageSize: 20,
         }).total,
       ).toBe(1);
+    });
+  });
+
+  describe('Community Mod Preset & Import/Export Contracts (DSM-00354)', () => {
+    describe('modPresetItemSchema', () => {
+      it('accepts valid workshopId and mod name, trimming whitespace', () => {
+        const item = modPresetItemSchema.parse({
+          workshopId: '1559212036',
+          name: '  Community Framework  ',
+        });
+        expect(item.workshopId).toBe('1559212036');
+        expect(item.name).toBe('Community Framework');
+      });
+
+      it('rejects empty or whitespace-only mod name', () => {
+        expect(() => modPresetItemSchema.parse({ workshopId: '1559212036', name: '' })).toThrow(
+          /Mod name is required/i,
+        );
+        expect(() => modPresetItemSchema.parse({ workshopId: '1559212036', name: '   ' })).toThrow(
+          /Mod name is required/i,
+        );
+      });
+
+      it('rejects mod names exceeding 200 characters', () => {
+        expect(() =>
+          modPresetItemSchema.parse({
+            workshopId: '1559212036',
+            name: 'a'.repeat(201),
+          }),
+        ).toThrow();
+      });
+
+      it('rejects malformed or non-numeric workshopId', () => {
+        expect(() => modPresetItemSchema.parse({ workshopId: 'invalid-id', name: 'CF' })).toThrow();
+      });
+    });
+
+    describe('modPresetSchema', () => {
+      it('accepts valid preset with client and server mods and defaults empty lists', () => {
+        const emptyParsed = modPresetSchema.parse({});
+        expect(emptyParsed.steamWsMods).toEqual([]);
+        expect(emptyParsed.steamWsServerMods).toEqual([]);
+
+        const fullParsed = modPresetSchema.parse({
+          steamWsMods: [{ workshopId: '1559212036', name: 'CF' }],
+          steamWsServerMods: [{ workshopId: '2288070966', name: 'VPPAdminTools' }],
+        });
+        expect(fullParsed.steamWsMods).toHaveLength(1);
+        expect(fullParsed.steamWsServerMods).toHaveLength(1);
+      });
+
+      it('accepts presets up to MOD_PRESET_MAX_TOTAL_ITEMS (300)', () => {
+        const steamWsMods = Array.from({ length: 150 }, (_, i) => ({
+          workshopId: String(1000 + i),
+          name: `Mod ${i}`,
+        }));
+        const steamWsServerMods = Array.from({ length: 150 }, (_, i) => ({
+          workshopId: String(2000 + i),
+          name: `ServerMod ${i}`,
+        }));
+
+        const parsed = modPresetSchema.parse({ steamWsMods, steamWsServerMods });
+        expect(parsed.steamWsMods.length + parsed.steamWsServerMods.length).toBe(
+          MOD_PRESET_MAX_TOTAL_ITEMS,
+        );
+      });
+
+      it('rejects presets exceeding MOD_PRESET_MAX_TOTAL_ITEMS (300) with descriptive error', () => {
+        const steamWsMods = Array.from({ length: 200 }, (_, i) => ({
+          workshopId: String(1000 + i),
+          name: `Mod ${i}`,
+        }));
+        const steamWsServerMods = Array.from({ length: 101 }, (_, i) => ({
+          workshopId: String(2000 + i),
+          name: `ServerMod ${i}`,
+        }));
+
+        expect(() => modPresetSchema.parse({ steamWsMods, steamWsServerMods })).toThrow(
+          /Total preset mods cannot exceed 300/i,
+        );
+      });
+    });
+
+    describe('modImportModeSchema & importServerModsSchema', () => {
+      it('validates merge and replace import modes and defaults to merge', () => {
+        expect(modImportModeSchema.parse(MOD_IMPORT_MODE.MERGE)).toBe('merge');
+        expect(modImportModeSchema.parse(MOD_IMPORT_MODE.REPLACE)).toBe('replace');
+        expect(() => modImportModeSchema.parse('append')).toThrow();
+
+        const defaultModeParsed = importServerModsSchema.parse({
+          preset: { steamWsMods: [{ workshopId: '1559212036', name: 'CF' }] },
+        });
+        expect(defaultModeParsed.mode).toBe('merge');
+
+        const explicitReplaceParsed = importServerModsSchema.parse({
+          preset: { steamWsMods: [{ workshopId: '1559212036', name: 'CF' }] },
+          mode: 'replace',
+        });
+        expect(explicitReplaceParsed.mode).toBe('replace');
+      });
+
+      it('rejects invalid preset payload inside importServerModsSchema', () => {
+        expect(() =>
+          importServerModsSchema.parse({
+            preset: {
+              steamWsMods: Array.from({ length: 301 }, (_, i) => ({
+                workshopId: String(1000 + i),
+                name: `Mod ${i}`,
+              })),
+            },
+          }),
+        ).toThrow(/Total preset mods cannot exceed 300/i);
+      });
+    });
+
+    describe('exportServerModsQuerySchema', () => {
+      it('defaults includeDisabled to false when omitted or empty', () => {
+        expect(exportServerModsQuerySchema.parse({})).toEqual({ includeDisabled: false });
+      });
+
+      it('coerces boolean and string representations for includeDisabled', () => {
+        expect(exportServerModsQuerySchema.parse({ includeDisabled: true })).toEqual({
+          includeDisabled: true,
+        });
+        expect(exportServerModsQuerySchema.parse({ includeDisabled: 'true' })).toEqual({
+          includeDisabled: true,
+        });
+        expect(exportServerModsQuerySchema.parse({ includeDisabled: '1' })).toEqual({
+          includeDisabled: true,
+        });
+
+        expect(exportServerModsQuerySchema.parse({ includeDisabled: false })).toEqual({
+          includeDisabled: false,
+        });
+        expect(exportServerModsQuerySchema.parse({ includeDisabled: 'false' })).toEqual({
+          includeDisabled: false,
+        });
+        expect(exportServerModsQuerySchema.parse({ includeDisabled: '0' })).toEqual({
+          includeDisabled: false,
+        });
+      });
+    });
+
+    describe('importServerModsResponseSchema', () => {
+      it('parses valid import response structure', () => {
+        const nowIso = new Date().toISOString();
+        const modDto = {
+          id: MOD_UUID,
+          serverId: SERVER_UUID,
+          sourceType: 'workshop' as const,
+          loadTarget: 'client_server' as const,
+          workshopId: '1559212036',
+          workshopUrl: 'https://steamcommunity.com/sharedfiles/filedetails/?id=1559212036',
+          folderName: '@CF',
+          name: 'CF',
+          sizeBytes: 1048576,
+          remoteUpdatedAt: nowIso,
+          syncedWorkshopUpdatedAt: null,
+          lastSyncedAt: null,
+          syncStatus: 'not_synced' as const,
+          enabled: true,
+          loadOrder: 0,
+          createdAt: nowIso,
+          updatedAt: nowIso,
+        };
+
+        const res = importServerModsResponseSchema.parse({
+          added: [modDto],
+          skippedCount: 1,
+          removedCount: 2,
+          mods: [modDto],
+          launchPreview: {
+            modFlag: '-mod=@CF',
+            serverModFlag: '',
+            combinedArgs: ['-mod=@CF'],
+            missingFolderCount: 0,
+          },
+          updateAvailableCount: 0,
+        });
+
+        expect(res.added).toHaveLength(1);
+        expect(res.skippedCount).toBe(1);
+        expect(res.removedCount).toBe(2);
+        expect(res.launchPreview.combinedArgs).toEqual(['-mod=@CF']);
+      });
     });
   });
 });

@@ -224,4 +224,72 @@ describe('Mods Endpoint (libs/api-client)', () => {
     mockJsonFetch({ mods: 'not-an-array' });
     await expect(mods.list(SERVER_ID)).rejects.toThrow(ValidationError);
   });
+
+  describe('Preset Import and Export (DSM-00354)', () => {
+    const sampleImportResponse = {
+      added: [sampleModDto],
+      skippedCount: 1,
+      removedCount: 0,
+      mods: [sampleModDto],
+      launchPreview: sampleLaunchPreview,
+      updateAvailableCount: 0,
+    };
+
+    it('imports preset via POST /api/v1/servers/:id/mods/import', async () => {
+      const fetchSpy = mockJsonFetch(sampleImportResponse, 201);
+      const importDto = {
+        preset: {
+          steamWsMods: [{ workshopId: '1559212036', name: 'CF' }],
+          steamWsServerMods: [],
+        },
+        mode: 'merge' as const,
+      };
+
+      const res = await mods.importPreset(SERVER_ID, importDto);
+      expect(res.added).toHaveLength(1);
+      expect(res.skippedCount).toBe(1);
+      expect(fetchSpy).toHaveBeenCalledWith(
+        `https://test-server/api/v1/servers/${SERVER_ID}/mods/import`,
+        expect.objectContaining({
+          method: 'POST',
+          body: JSON.stringify(importDto),
+        }),
+      );
+    });
+
+    it('exports preset via GET /api/v1/servers/:id/mods/export-preset with and without query params', async () => {
+      const samplePreset = {
+        steamWsMods: [{ workshopId: '1559212036', name: 'CF' }],
+        steamWsServerMods: [{ workshopId: '2288070966', name: 'VPPAdminTools' }],
+      };
+
+      // 1. Without query params
+      const fetchSpyNoQuery = mockJsonFetch(samplePreset);
+      const resNoQuery = await mods.exportPreset(SERVER_ID);
+      expect(resNoQuery.steamWsMods).toHaveLength(1);
+      expect(fetchSpyNoQuery).toHaveBeenCalledWith(
+        `https://test-server/api/v1/servers/${SERVER_ID}/mods/export-preset`,
+        expect.objectContaining({ method: 'GET' }),
+      );
+
+      // 2. With includeDisabled: true
+      vi.restoreAllMocks();
+      const fetchSpyWithQuery = mockJsonFetch(samplePreset);
+      const resWithQuery = await mods.exportPreset(SERVER_ID, { includeDisabled: true });
+      expect(resWithQuery.steamWsServerMods).toHaveLength(1);
+      expect(fetchSpyWithQuery).toHaveBeenCalledWith(
+        `https://test-server/api/v1/servers/${SERVER_ID}/mods/export-preset?includeDisabled=true`,
+        expect.objectContaining({ method: 'GET' }),
+      );
+
+      // 3. With includeDisabled: false
+      vi.restoreAllMocks();
+      const fetchSpyDisabledFalse = mockJsonFetch(samplePreset);
+      await mods.exportPreset(SERVER_ID, { includeDisabled: false });
+      expect(fetchSpyDisabledFalse).toHaveBeenCalledWith(
+        `https://test-server/api/v1/servers/${SERVER_ID}/mods/export-preset?includeDisabled=false`,
+        expect.objectContaining({ method: 'GET' }),
+      );
+    });
+  });
 });

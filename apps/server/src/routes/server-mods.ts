@@ -5,10 +5,18 @@ import crypto from 'node:crypto';
 import {
   addServerModSchema,
   batchAddServerModsSchema,
+  type ExportServerModsQueryDto,
+  exportServerModsQuerySchema,
+  importServerModsSchema,
   isServerActiveStatus,
   type LaunchParamsPreviewDto,
+  MOD_IMPORT_MODE,
+  MOD_LOAD_TARGET,
   MOD_SOURCE_TYPE,
   modIdParamSchema,
+  type ModLoadTarget,
+  type ModPresetDto,
+  type ModPresetItemDto,
   type ModSyncStatus,
   reorderServerModsSchema,
   serverIdParamSchema,
@@ -21,7 +29,11 @@ import {
 import { type Server, type ServerMod, serverMods, servers } from '@aegis/database';
 import { collectModLaunchFolders, formatModFlags } from '@aegis/dayz-config';
 
-import { SteamWorkshopError, steamWorkshopService } from '../services/steam/steam-workshop.service';
+import {
+  SteamWorkshopError,
+  steamWorkshopService,
+  suggestModFolderName,
+} from '../services/steam/steam-workshop.service';
 import { formatZodFieldErrors, sendApiError } from '../utils/api-error';
 
 export function computeModSyncStatus(
@@ -208,6 +220,245 @@ function resolveUniqueBatchFolder(
   return disambiguated;
 }
 
+function parseDetailFileSize(rawSize: number | string | undefined): number | null {
+  if (rawSize === undefined || rawSize === null || rawSize === '') {
+    return null;
+  }
+  const numeric = Number(rawSize);
+  if (!Number.isFinite(numeric) || numeric < 0) {
+    return null;
+  }
+  return Math.trunc(numeric);
+}
+
+interface PreparedPresetItem {
+  workshopId: string;
+  presetName: string;
+  loadTarget: ModLoadTarget;
+}
+
+interface HydratedImportItem {
+  workshopId: string;
+  name: string;
+  suggestedFolder: string;
+  sizeBytes: number | null;
+  remoteUpdatedAt: Date | null;
+  loadTarget: ModLoadTarget;
+}
+
+function deduplicatePresetItems(preset: ModPresetDto): {
+  preparedItems: PreparedPresetItem[];
+  duplicateCount: number;
+} {
+  const seenPresetWorkshopIds = new Set<string>();
+  const preparedItems: PreparedPresetItem[] = [];
+  let duplicateCount = 0;
+
+  const combinedPresetList: { item: ModPresetItemDto; loadTarget: ModLoadTarget }[] = [
+    ...preset.steamWsMods.map(item => ({ item, loadTarget: MOD_LOAD_TARGET.CLIENT_SERVER })),
+    ...preset.steamWsServerMods.map(item => ({ item, loadTarget: MOD_LOAD_TARGET.SERVER_ONLY })),
+  ];
+
+  for (const { item, loadTarget } of combinedPresetList) {
+    if (seenPresetWorkshopIds.has(item.workshopId)) {
+      duplicateCount += 1;
+      continue;
+    }
+    seenPresetWorkshopIds.add(item.workshopId);
+    preparedItems.push({
+      workshopId: item.workshopId,
+      presetName: item.name,
+      loadTarget,
+    });
+  }
+
+  return { preparedItems, duplicateCount };
+}
+
+async function fetchSteamHydrationMap(
+  workshopIds: string[],
+): Promise<
+  Map<string, { title: string | null; sizeBytes: number | null; remoteUpdatedAt: Date | null }>
+> {
+  const map = new Map<
+    string,
+    { title: string | null; sizeBytes: number | null; remoteUpdatedAt: Date | null }
+  >();
+  if (workshopIds.length === 0) return map;
+
+  try {
+    const details = await steamWorkshopService.getPublishedFileDetailsBatched(workshopIds);
+    for (const detail of details) {
+      if (detail.result === 1 && detail.publishedfileid) {
+        const remoteUpdatedAt = detail.time_updated ? new Date(detail.time_updated * 1000) : null;
+        const sizeBytes = parseDetailFileSize(detail.file_size);
+        const title = detail.title?.trim() || null;
+        map.set(String(detail.publishedfileid), {
+          title,
+          sizeBytes,
+          remoteUpdatedAt,
+        });
+      }
+    }
+  } catch {
+    // Graceful fallback on network errors, timeouts, or Steam outage
+  }
+  return map;
+}
+
+function buildHydratedImportItems(
+  preparedItems: PreparedPresetItem[],
+  steamDetailsMap: Map<
+    string,
+    { title: string | null; sizeBytes: number | null; remoteUpdatedAt: Date | null }
+  >,
+): HydratedImportItem[] {
+  return preparedItems.map(item => {
+    const steamInfo = steamDetailsMap.get(item.workshopId);
+    const name = steamInfo?.title || item.presetName;
+    const suggestedFolder = suggestModFolderName(name, item.workshopId);
+    return {
+      workshopId: item.workshopId,
+      name,
+      suggestedFolder,
+      sizeBytes: steamInfo?.sizeBytes ?? null,
+      remoteUpdatedAt: steamInfo?.remoteUpdatedAt ?? null,
+      loadTarget: item.loadTarget,
+    };
+  });
+}
+
+interface ImportExecutionContext {
+  fastify: FastifyInstance;
+  serverId: string;
+  hydratedItems: HydratedImportItem[];
+  existingMods: ServerMod[];
+  now: Date;
+}
+
+function executeReplaceImport(ctx: ImportExecutionContext): {
+  addedRows: ServerMod[];
+  removedCount: number;
+} {
+  const { fastify, serverId, hydratedItems, existingMods, now } = ctx;
+  const workshopModsToDelete = existingMods.filter(m => m.sourceType === MOD_SOURCE_TYPE.WORKSHOP);
+  const removedCount = workshopModsToDelete.length;
+
+  if (removedCount > 0) {
+    fastify.db
+      .delete(serverMods)
+      .where(
+        and(eq(serverMods.serverId, serverId), eq(serverMods.sourceType, MOD_SOURCE_TYPE.WORKSHOP)),
+      )
+      .run();
+  }
+
+  const remainingLocalMods = existingMods.filter(m => m.sourceType === MOD_SOURCE_TYPE.LOCAL);
+
+  const existingFoldersLower = new Set(
+    remainingLocalMods.map(m => m.folderName.trim().toLowerCase()).filter(Boolean),
+  );
+
+  const addedRows: ServerMod[] = [];
+  let currentOrder = 0;
+  for (const item of hydratedItems) {
+    const folderName = resolveUniqueBatchFolder(
+      item.suggestedFolder,
+      item.workshopId,
+      existingFoldersLower,
+    );
+    const modId = crypto.randomUUID();
+    const values: ServerMod = {
+      id: modId,
+      serverId,
+      sourceType: MOD_SOURCE_TYPE.WORKSHOP,
+      loadTarget: item.loadTarget,
+      workshopId: item.workshopId,
+      folderName,
+      name: item.name,
+      sizeBytes: item.sizeBytes,
+      remoteUpdatedAt: item.remoteUpdatedAt,
+      syncedWorkshopUpdatedAt: null,
+      lastSyncedAt: null,
+      enabled: true,
+      loadOrder: currentOrder,
+      createdAt: now,
+      updatedAt: now,
+    };
+    fastify.db.insert(serverMods).values(values).run();
+    addedRows.push(values);
+    currentOrder += 1;
+  }
+
+  for (let i = 0; i < remainingLocalMods.length; i++) {
+    const localMod = remainingLocalMods[i];
+    const newOrder = currentOrder + i;
+    if (localMod.loadOrder !== newOrder) {
+      fastify.db
+        .update(serverMods)
+        .set({ loadOrder: newOrder, updatedAt: now })
+        .where(eq(serverMods.id, localMod.id))
+        .run();
+    }
+  }
+
+  return { addedRows, removedCount };
+}
+
+function executeMergeImport(ctx: ImportExecutionContext): {
+  addedRows: ServerMod[];
+  skippedCount: number;
+} {
+  const { fastify, serverId, hydratedItems, existingMods, now } = ctx;
+  const existingWorkshopIds = new Set(
+    existingMods.map(m => m.workshopId).filter((id): id is string => Boolean(id)),
+  );
+  const existingFoldersLower = new Set(
+    existingMods.map(m => m.folderName.trim().toLowerCase()).filter(Boolean),
+  );
+
+  let nextOrder = existingMods.length > 0 ? Math.max(...existingMods.map(m => m.loadOrder)) + 1 : 0;
+  let skippedCount = 0;
+  const addedRows: ServerMod[] = [];
+
+  for (const item of hydratedItems) {
+    if (existingWorkshopIds.has(item.workshopId)) {
+      skippedCount += 1;
+      continue;
+    }
+    existingWorkshopIds.add(item.workshopId);
+
+    const folderName = resolveUniqueBatchFolder(
+      item.suggestedFolder,
+      item.workshopId,
+      existingFoldersLower,
+    );
+    const modId = crypto.randomUUID();
+    const values: ServerMod = {
+      id: modId,
+      serverId,
+      sourceType: MOD_SOURCE_TYPE.WORKSHOP,
+      loadTarget: item.loadTarget,
+      workshopId: item.workshopId,
+      folderName,
+      name: item.name,
+      sizeBytes: item.sizeBytes,
+      remoteUpdatedAt: item.remoteUpdatedAt,
+      syncedWorkshopUpdatedAt: null,
+      lastSyncedAt: null,
+      enabled: true,
+      loadOrder: nextOrder,
+      createdAt: now,
+      updatedAt: now,
+    };
+    fastify.db.insert(serverMods).values(values).run();
+    addedRows.push(values);
+    nextOrder += 1;
+  }
+
+  return { addedRows, skippedCount };
+}
+
 export const registerServerModsRoutes: FastifyPluginAsync = async fastify => {
   fastify.get<{ Params: { id: string } }>(
     '/:id/mods',
@@ -218,6 +469,56 @@ export const registerServerModsRoutes: FastifyPluginAsync = async fastify => {
 
       const rows = listServerModRows(fastify, server.id);
       return reply.send(buildModsListPayload(rows));
+    },
+  );
+
+  fastify.get<{ Params: { id: string }; Querystring: ExportServerModsQueryDto }>(
+    '/:id/mods/export-preset',
+    { onRequest: [fastify.authenticate] },
+    async (request, reply) => {
+      const server = resolveServerOrSendError(fastify, request.params, reply);
+      if (!server) return;
+
+      const parseResult = exportServerModsQuerySchema.safeParse(request.query);
+      if (!parseResult.success) {
+        return sendApiError(reply, 400, 'VALIDATION_FAILED', {
+          message: parseResult.error.issues[0].message,
+          fieldErrors: formatZodFieldErrors(parseResult.error),
+        });
+      }
+
+      const { includeDisabled } = parseResult.data;
+      const allMods = listServerModRows(fastify, server.id);
+
+      // Local mods (sourceType === 'local') are strictly omitted
+      const workshopMods = allMods.filter(
+        m => m.sourceType === MOD_SOURCE_TYPE.WORKSHOP && Boolean(m.workshopId),
+      );
+
+      // Filter disabled mods unless includeDisabled is true
+      const eligibleMods = includeDisabled ? workshopMods : workshopMods.filter(m => m.enabled);
+
+      const steamWsMods: ModPresetItemDto[] = [];
+      const steamWsServerMods: ModPresetItemDto[] = [];
+
+      for (const mod of eligibleMods) {
+        const item: ModPresetItemDto = {
+          workshopId: mod.workshopId!,
+          name: mod.name,
+        };
+        if (mod.loadTarget === MOD_LOAD_TARGET.SERVER_ONLY) {
+          steamWsServerMods.push(item);
+        } else {
+          steamWsMods.push(item);
+        }
+      }
+
+      const preset: ModPresetDto = {
+        steamWsMods,
+        steamWsServerMods,
+      };
+
+      return reply.send(preset);
     },
   );
 
@@ -392,6 +693,65 @@ export const registerServerModsRoutes: FastifyPluginAsync = async fastify => {
       });
 
       const result = runBatch();
+      return reply.status(201).send(result);
+    },
+  );
+
+  fastify.post<{ Params: { id: string } }>(
+    '/:id/mods/import',
+    { onRequest: [fastify.authenticate] },
+    async (request, reply) => {
+      if (!ensureAdminRole(request, reply, 'Admin role required to import server mods')) return;
+
+      const server = resolveServerOrSendError(fastify, request.params, reply);
+      if (!server || !guardServerConfigUnlocked(server, reply)) return;
+
+      const parseResult = importServerModsSchema.safeParse(request.body);
+      if (!parseResult.success) {
+        return sendApiError(reply, 400, 'VALIDATION_FAILED', {
+          message: parseResult.error.issues[0].message,
+          fieldErrors: formatZodFieldErrors(parseResult.error),
+        });
+      }
+
+      const { preset, mode } = parseResult.data;
+      const { preparedItems, duplicateCount } = deduplicatePresetItems(preset);
+      const steamDetailsMap = await fetchSteamHydrationMap(preparedItems.map(p => p.workshopId));
+      const hydratedItems = buildHydratedImportItems(preparedItems, steamDetailsMap);
+
+      const runImport = fastify.sqlite.transaction(() => {
+        const existingMods = listServerModRows(fastify, server.id);
+        const now = new Date();
+        const ctx: ImportExecutionContext = {
+          fastify,
+          serverId: server.id,
+          hydratedItems,
+          existingMods,
+          now,
+        };
+
+        if (mode === MOD_IMPORT_MODE.REPLACE) {
+          const { addedRows, removedCount } = executeReplaceImport(ctx);
+          const allRows = listServerModRows(fastify, server.id);
+          return {
+            added: addedRows.map(mapServerModDto),
+            skippedCount: duplicateCount,
+            removedCount,
+            ...buildModsListPayload(allRows),
+          };
+        }
+
+        const { addedRows, skippedCount: mergeSkipped } = executeMergeImport(ctx);
+        const allRows = listServerModRows(fastify, server.id);
+        return {
+          added: addedRows.map(mapServerModDto),
+          skippedCount: duplicateCount + mergeSkipped,
+          removedCount: 0,
+          ...buildModsListPayload(allRows),
+        };
+      });
+
+      const result = runImport();
       return reply.status(201).send(result);
     },
   );

@@ -217,3 +217,61 @@ export const workshopSearchResponseSchema = z.object({
   pageSize: z.number().int().positive(),
 });
 export type WorkshopSearchResponseDto = z.infer<typeof workshopSearchResponseSchema>;
+
+export const modPresetItemSchema = z.object({
+  workshopId: workshopIdSchema,
+  name: z.string().trim().min(1, 'Mod name is required').max(200),
+});
+export type ModPresetItemDto = z.infer<typeof modPresetItemSchema>;
+
+export const MOD_PRESET_MAX_TOTAL_ITEMS = 300;
+
+export const modPresetSchema = z
+  .object({
+    steamWsMods: z.array(modPresetItemSchema).default([]),
+    steamWsServerMods: z.array(modPresetItemSchema).default([]),
+  })
+  .refine(
+    preset =>
+      preset.steamWsMods.length + preset.steamWsServerMods.length <= MOD_PRESET_MAX_TOTAL_ITEMS,
+    {
+      message: `Total preset mods cannot exceed ${MOD_PRESET_MAX_TOTAL_ITEMS}`,
+      path: ['steamWsMods'],
+    },
+  );
+export type ModPresetDto = z.infer<typeof modPresetSchema>;
+
+export const MOD_IMPORT_MODE = {
+  MERGE: 'merge',
+  REPLACE: 'replace',
+} as const;
+
+export const MOD_IMPORT_MODE_VALUES = [MOD_IMPORT_MODE.MERGE, MOD_IMPORT_MODE.REPLACE] as const;
+
+export const modImportModeSchema = z.enum(MOD_IMPORT_MODE_VALUES);
+export type ModImportMode = z.infer<typeof modImportModeSchema>;
+
+export const importServerModsSchema = z.object({
+  preset: modPresetSchema,
+  mode: modImportModeSchema.default(MOD_IMPORT_MODE.MERGE),
+});
+export type ImportServerModsDto = z.input<typeof importServerModsSchema>;
+
+export const exportServerModsQuerySchema = z.object({
+  includeDisabled: z
+    .union([z.boolean(), z.enum(['true', 'false', '1', '0'])])
+    .optional()
+    .default(false)
+    .transform(val => val === true || val === 'true' || val === '1'),
+});
+export type ExportServerModsQueryDto = z.input<typeof exportServerModsQuerySchema>;
+
+export const importServerModsResponseSchema = z.object({
+  added: z.array(serverModSchema),
+  skippedCount: z.number().int().nonnegative(),
+  removedCount: z.number().int().nonnegative(),
+  mods: z.array(serverModSchema),
+  launchPreview: launchParamsPreviewSchema,
+  updateAvailableCount: z.number().int().nonnegative(),
+});
+export type ImportServerModsResponseDto = z.infer<typeof importServerModsResponseSchema>;
