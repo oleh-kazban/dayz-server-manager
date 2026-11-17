@@ -4,12 +4,14 @@ import { EMPTY_LAUNCH_OPTIONS } from './launch.contract';
 import {
   ACTIVE_SERVER_STATUSES,
   createServerSchema,
+  defaultRestartWarning,
   defaultStopWarning,
   discoveredMissionSchema,
   formatStopDelay,
   isServerActiveStatus,
   rconIpSchema,
   rconPasswordSchema,
+  restartServerRequestSchema,
   safePathSchema,
   SERVER_EXIT_REASON_VALUES,
   SERVER_FS_CHECK_STATUS,
@@ -19,6 +21,7 @@ import {
   SERVER_FS_ISSUE_SEVERITY_VALUES,
   SERVER_FS_PATH_TARGET,
   SERVER_FS_PATH_TARGET_VALUES,
+  SERVER_RESTART_FAILED_EVENT,
   SERVER_STATUS,
   SERVER_STATUS_VALUES,
   SERVER_STOP_FAILED_EVENT,
@@ -33,6 +36,7 @@ import {
   serverLastExitSchema,
   serverNameSchema,
   serverPendingStopSchema,
+  serverRestartFailedEventSchema,
   serverRuntimeSchema,
   ServerStatus,
   serverStatusChangedEventSchema,
@@ -297,6 +301,7 @@ describe('Server Contracts (@aegis/api-contracts)', () => {
       launchOptions: { ...EMPTY_LAUNCH_OPTIONS, cpuCount: 4 },
       runtime: null,
       pendingStop: null,
+      restartRequested: false,
       lastExit: null,
       maxPlayers: 60,
       rconIp: '127.0.0.1',
@@ -909,6 +914,7 @@ describe('server runtime contracts (DSM-00162)', () => {
       status: 'failed',
       lastExit: { reason: 'crashed', exitCode: 1, signal: null, at },
       pendingStop: null,
+      restartRequested: false,
     };
     expect(serverStatusChangedEventSchema.parse(event)).toEqual(event);
     expect(serverStatusChangedEventSchema.safeParse({ ...event, status: 'crashed' }).success).toBe(
@@ -979,6 +985,7 @@ describe('delayed stop contracts (DSM-00167)', () => {
         status: 'running',
         lastExit: null,
         pendingStop,
+        restartRequested: false,
       }).success,
     ).toBe(true);
     expect(SERVER_STOP_FAILED_EVENT).toBe('server.stop.failed');
@@ -989,5 +996,40 @@ describe('delayed stop contracts (DSM-00167)', () => {
         message: 'timeout',
       }).success,
     ).toBe(true);
+  });
+});
+
+describe('restart contracts (DSM-00168)', () => {
+  it('uses the stop body and its own warning wording', () => {
+    expect(restartServerRequestSchema.parse({ delaySec: 300 })).toEqual({ delaySec: 300 });
+    expect(restartServerRequestSchema.safeParse({ delaySec: 3601 }).success).toBe(false);
+    expect(defaultRestartWarning(300)).toBe(
+      'Server is restarting in 5 minutes. Please find a safe place and log out.',
+    );
+  });
+
+  it('validates the server.restart.failed event with its phase', () => {
+    const event = {
+      serverId: '7f0c6a52-1d5c-4c3e-9b4b-0c6f1f7f6e10',
+      phase: 'start',
+      errorCode: 'SERVER_START_FAILED',
+      message: 'ENOENT',
+    };
+    expect(SERVER_RESTART_FAILED_EVENT).toBe('server.restart.failed');
+    expect(serverRestartFailedEventSchema.parse(event)).toEqual(event);
+    expect(serverRestartFailedEventSchema.safeParse({ ...event, phase: 'boot' }).success).toBe(
+      false,
+    );
+  });
+
+  it('requires restartRequested on the status event', () => {
+    expect(
+      serverStatusChangedEventSchema.safeParse({
+        serverId: '7f0c6a52-1d5c-4c3e-9b4b-0c6f1f7f6e10',
+        status: 'stopping',
+        lastExit: null,
+        pendingStop: null,
+      }).success,
+    ).toBe(false);
   });
 });

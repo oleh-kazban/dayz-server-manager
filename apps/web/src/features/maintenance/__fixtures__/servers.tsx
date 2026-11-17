@@ -41,6 +41,7 @@ export const serverDetail = (overrides: Partial<ServerDetailDto> = {}): ServerDe
   rconPassword: null,
   runtime: null,
   pendingStop: null,
+  restartRequested: false,
   ...overrides,
 });
 
