@@ -500,6 +500,31 @@ describe('Servers Endpoint', () => {
     );
   });
 
+  it('gets the tail of a server log (DSM-00206)', async () => {
+    const body = {
+      kind: 'rpt',
+      file: { name: 'x.RPT', size: 6, modifiedAt: '2026-11-17T10:00:00.000Z' },
+      lines: ['hello'],
+      offset: 6,
+      truncated: false,
+      firstLineNumber: 1,
+      totalLines: 1,
+      live: true,
+    };
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(JSON.stringify(body), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      }),
+    );
+
+    await expect(servers.getLog(validUuid, 'rpt')).resolves.toEqual(body);
+    expect(globalThis.fetch).toHaveBeenCalledWith(
+      `https://test-server/api/v1/servers/${validUuid}/logs/rpt`,
+      expect.objectContaining({ method: 'GET' }),
+    );
+  });
+
   it('no longer exposes the removed serverDZ.cfg sync-config call', () => {
     expect(servers).not.toHaveProperty('syncConfig');
   });
