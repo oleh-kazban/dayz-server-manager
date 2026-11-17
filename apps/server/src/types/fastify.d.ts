@@ -10,6 +10,8 @@ import type { ServerLifecycleService } from '../services/server/server-lifecycle
 declare module 'fastify' {
   interface FastifyInstance {
     authenticate: (request: FastifyRequest, reply: FastifyReply) => Promise<void>;
+    /** Ticket (`?ticket=`, DSM-00348) or Authorization header, for SSE streams. */
+    authenticateSse: (request: FastifyRequest, reply: FastifyReply) => Promise<void>;
     db: DsmDatabase;
     sqlite: DatabaseInstance['sqlite'];
     closeDb: () => void;

@@ -4,6 +4,23 @@ This document records all completed product backlog items and operational featur
 
 ---
 
+## [DSM-00348] Keep access tokens out of SSE URLs and request logs
+
+- **Type**: `Story`
+- **Priority**: `P1 (High)`
+- **Status**: `DONE`
+- **Dependencies**: `DSM-00173`
+
+### Summary
+
+EventSource cannot send an `Authorization` header, so the web app passes the access token as `?token=` on `GET /api/v1/realtime/sse`. Fastify's request logging records the full URL, so every SSE connection writes the operator's JWT in clear text to DSM's request log (verified in `DSM-00173` QA); URLs can also persist in proxy and browser history. Replace the token in the URL with a short-lived, single-use SSE ticket, and make sure no credential appears in request logs.
+
+### Delivered Capabilities
+
+`POST /api/v1/realtime/ticket` (authenticated) returning a single-use ticket valid for seconds; `/realtime/sse?ticket=` accepting it once; the web realtime connection (`DSM-00173`) and the Steam challenge hook requesting a ticket per (re)connect; request-log serializer redacting `token` / `ticket` query values; removing `?token=` support from `fastify.authenticate`; tests including a log assertion.
+
+---
+
 ## [DSM-00173] Shared web SSE subscription that updates the query cache
 
 - **Type**: `Task`

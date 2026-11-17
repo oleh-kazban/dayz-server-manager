@@ -196,7 +196,7 @@ function inspectExistingBattlEyeTargets(
 }
 
 function resolveInstallAndProfile(
-  server: BattlEyeConfigSource,
+  server: Pick<BattlEyeConfigSource, 'installPath' | 'profilePath'>,
   platform: NodeJS.Platform,
 ): { installReal: string; profileSegments: string[] } {
   const pathImpl = getPlatformPathImpl(platform);
@@ -237,6 +237,19 @@ function resolveInstallAndProfile(
   );
 
   return { installReal, profileSegments };
+}
+
+/**
+ * Real path of the server's existing profiles directory, or `null` when it does not exist yet.
+ * The profile path must stay inside the installation directory (no `..`, no symlink escape);
+ * otherwise `CONFIG_PATH_INVALID` is thrown. Also used by the log reader (DSM-00206).
+ */
+export function resolveProfileDirectory(
+  server: Pick<BattlEyeConfigSource, 'installPath' | 'profilePath'>,
+  platform: NodeJS.Platform = process.platform,
+): string | null {
+  const { installReal, profileSegments } = resolveInstallAndProfile(server, platform);
+  return verifyExistingSegmentsContained(installReal, profileSegments, platform, 'Profile path');
 }
 
 function validateAndResolveTargets(

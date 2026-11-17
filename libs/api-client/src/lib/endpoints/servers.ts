@@ -6,6 +6,9 @@ import {
   launchCommandPreviewSchema,
   type ServerDetailDto,
   serverDetailSchema,
+  type ServerLogKind,
+  type ServerLogTailDto,
+  serverLogTailSchema,
   type ServerSummaryDto,
   serverSummarySchema,
   type StopServerRequestDto,
@@ -41,6 +44,13 @@ export function createServersEndpoint(client: HttpClient) {
       dto?: ValidateServerPathsRequestDto,
     ): Promise<ValidateServerPathsResponseDto> =>
       client.post(`/api/v1/servers/${id}/validate-paths`, validateServerPathsResponseSchema, dto),
+
+    /**
+     * End of the newest log file (DSM-00206): last lines with line numbers and the byte `offset`
+     * to continue from on `/servers/:id/logs/:kind/stream?ticket=…&file=…&from=…`.
+     */
+    getLog: (id: string, kind: ServerLogKind): Promise<ServerLogTailDto> =>
+      client.get(`/api/v1/servers/${id}/logs/${kind}`, serverLogTailSchema),
 
     getLaunchCommand: (id: string): Promise<LaunchCommandPreviewDto> =>
       client.get(`/api/v1/servers/${id}/launch-command`, launchCommandPreviewSchema),

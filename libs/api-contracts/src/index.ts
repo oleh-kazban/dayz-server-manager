@@ -2,6 +2,7 @@ export * from './lib/auth.contract';
 export * from './lib/error.contract';
 export * from './lib/health.contract';
 export * from './lib/launch.contract';
+export * from './lib/log.contract';
 export * from './lib/mod.contract';
 export * from './lib/profile.contract';
 export * from './lib/realtime.contract';
