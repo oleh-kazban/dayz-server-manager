@@ -32,6 +32,7 @@ export type NotificationCode =
   | 'MOD_MARKED_SYNCED'
   | 'MOD_ENABLED'
   | 'MOD_DISABLED'
+  | 'MOD_PRESET_EXPORTED'
   | 'SERVER_CONFIG_SAVED'
   | 'SERVER_CONFIG_CREATED'
   | 'SERVER_CONFIG_RESTORED'
@@ -479,6 +480,10 @@ export const enUSTranslations: TranslationCatalog = {
     MOD_DISABLED: {
       title: 'Mod Disabled',
       description: '"{{name}}" has been disabled.',
+    },
+    MOD_PRESET_EXPORTED: {
+      title: 'Preset Exported',
+      description: 'Exported {{count}} mod(s) to {{filename}}.',
     },
     PROFILE_UPDATED: {
       title: 'Profile Updated',
