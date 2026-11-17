@@ -344,6 +344,7 @@ const MIGRATION_0008_ID = '0008_admin_only_and_relative_profile_path';
 const MIGRATION_0009_ID = '0009_structured_launch_options';
 const MIGRATION_0010_ID = '0010_server_runtime_state';
 const MIGRATION_0011_ID = '0011_server_pending_stop';
+const MIGRATION_0012_ID = '0012_server_restart_requested';
 
 function findMigration(id: string) {
   const migration = migrations.find(m => m.id === id);
@@ -679,6 +680,7 @@ describe('Database Migrations — 0007_server_config_editor', () => {
           MIGRATION_0009_ID,
           MIGRATION_0010_ID,
           MIGRATION_0011_ID,
+          MIGRATION_0012_ID,
         ]);
 
         expect(
@@ -1117,6 +1119,80 @@ describe('Database Migrations — 0011_server_pending_stop', () => {
       expect(
         instance.db.select().from(servers).where(eq(servers.id, 'srv-ps')).get(),
       ).toMatchObject({ pendingStopAt: executeAt, pendingStopRequestedAt: requestedAt });
+    } finally {
+      instance.close();
+      fs.rmSync(tempDir, { recursive: true, force: true });
+    }
+  });
+});
+
+describe('Database Migrations — 0012_server_restart_requested', () => {
+  it('adds restart_requested (default false) to existing rows and is idempotent', () => {
+    const sqlite = new Database(':memory:');
+    try {
+      sqlite.exec(`
+        CREATE TABLE IF NOT EXISTS _dsm_migrations (
+          id TEXT PRIMARY KEY,
+          name TEXT NOT NULL,
+          applied_at INTEGER NOT NULL
+        );
+      `);
+      const insertMigration = sqlite.prepare(
+        'INSERT INTO _dsm_migrations (id, name, applied_at) VALUES (?, ?, ?)',
+      );
+      for (const migration of migrations.filter(m => m.id < MIGRATION_0012_ID)) {
+        migration.up(sqlite);
+        insertMigration.run(migration.id, migration.name, 1_700_000_000_000);
+      }
+      sqlite
+        .prepare(
+          `INSERT INTO servers (id, name, status, install_path, profile_path, mission_path, created_at, updated_at)
+           VALUES ('srv-1', 'Existing', 'running', '/opt/dayz', 'profiles', 'mpmissions/x', 1, 1)`,
+        )
+        .run();
+
+      runMigrations(sqlite);
+
+      expect(sqlite.prepare('SELECT restart_requested FROM servers').get()).toEqual({
+        restart_requested: 0,
+      });
+      expect(() => findMigration(MIGRATION_0012_ID).up(sqlite)).not.toThrow();
+    } finally {
+      sqlite.close();
+    }
+  });
+
+  it('round-trips the restart flag through drizzle', () => {
+    const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'dsm-0012-'));
+    const instance = initDatabase({
+      dbPath: path.join(tempDir, 'fresh.sqlite'),
+      vaultKeyDir: path.join(tempDir, 'vault'),
+    });
+    try {
+      const now = new Date(1_763_400_000_000);
+      instance.db
+        .insert(servers)
+        .values({
+          id: 'srv-rs',
+          name: 'Restart',
+          installPath: '/opt/rs',
+          profilePath: 'profiles',
+          missionPath: 'm',
+          createdAt: now,
+          updatedAt: now,
+        })
+        .run();
+      expect(
+        instance.db.select().from(servers).where(eq(servers.id, 'srv-rs')).get()?.restartRequested,
+      ).toBe(false);
+      instance.db
+        .update(servers)
+        .set({ restartRequested: true })
+        .where(eq(servers.id, 'srv-rs'))
+        .run();
+      expect(
+        instance.db.select().from(servers).where(eq(servers.id, 'srv-rs')).get()?.restartRequested,
+      ).toBe(true);
     } finally {
       instance.close();
       fs.rmSync(tempDir, { recursive: true, force: true });
