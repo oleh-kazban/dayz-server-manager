@@ -22,6 +22,7 @@ import { registerProfileRoutes } from '../routes/profile';
 import { registerRealtimeRoutes } from '../routes/realtime';
 import { registerServerConfigRoutes } from '../routes/server-config';
 import { registerServerLifecycleRoutes } from '../routes/server-lifecycle';
+import { registerServerLogRoutes } from '../routes/server-logs';
 import { registerServerModsRoutes } from '../routes/server-mods';
 import { registerServersRoutes } from '../routes/servers';
 import { registerSessionsRoutes } from '../routes/sessions';
@@ -205,6 +206,30 @@ export function buildApp(options: BuildAppOptions): FastifyInstance {
     }
   });
 
+  /**
+   * DSM-00348: `EventSource` cannot send an Authorization header, so a browser opens a stream
+   * with a single-use ticket instead of the access token. Other clients may still use the header.
+   */
+  app.decorate('authenticateSse', async (request: FastifyRequest, reply: FastifyReply) => {
+    const ticket = (request.query as Record<string, unknown> | undefined)?.ticket;
+    if (typeof ticket !== 'string' || ticket.length === 0) {
+      return app.authenticate(request, reply);
+    }
+    const identity = app.sseTickets.consume(ticket);
+    if (!identity) {
+      return sendApiError(
+        reply,
+        401,
+        'AUTH_SSE_TICKET_INVALID',
+        'The realtime ticket is invalid, expired or already used',
+      );
+    }
+    if (identity.sid && !app.isSessionActive(identity.sid)) {
+      return sendApiError(reply, 401, 'AUTH_SESSION_INVALID', 'Session is invalid or expired');
+    }
+    request.user = { ...identity, type: 'access' };
+  });
+
   app.register(registerHealthRoutes);
   app.register(registerAuthRoutes, { prefix: '/api/v1/auth' });
   app.register(registerProfileRoutes, { prefix: '/api/v1/profile' });
@@ -215,6 +240,7 @@ export function buildApp(options: BuildAppOptions): FastifyInstance {
   app.register(registerServerConfigRoutes, { prefix: '/api/v1/servers' });
   app.register(registerLaunchCommandRoutes, { prefix: '/api/v1/servers' });
   app.register(registerServerLifecycleRoutes, { prefix: '/api/v1/servers' });
+  app.register(registerServerLogRoutes, { prefix: '/api/v1/servers' });
   app.register(registerRealtimeRoutes, { prefix: '/api/v1/realtime' });
   app.register(registerSteamRoutes, { prefix: '/api/v1/settings/steam' });
   app.register(registerWorkshopRoutes, { prefix: '/api/v1/workshop' });
