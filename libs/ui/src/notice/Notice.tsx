@@ -103,7 +103,8 @@ export function Notice({
         <span className={`shrink-0 mt-0.5 ${theme.iconClasses}`}>{renderedIcon}</span>
       )}
 
-      <div className="flex-1 min-w-0 space-y-1">
+      {/* Long unbroken text (paths, URLs in API messages) wraps instead of overflowing. */}
+      <div className="flex-1 min-w-0 space-y-1 [overflow-wrap:anywhere]">
         {title && (
           <h5 id={titleId} className="font-semibold text-[var(--color-text-main)] leading-snug">
             {title}

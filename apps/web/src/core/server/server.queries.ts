@@ -1,6 +1,7 @@
 import { queryOptions } from '@tanstack/react-query';
 
 import { apiClient } from '@aegis/api-client';
+import type { ServerRestartFailedEventDto } from '@aegis/api-contracts';
 
 export const serverQueryKeys = {
   all: ['servers'] as const,
@@ -9,6 +10,8 @@ export const serverQueryKeys = {
   launchCommand: (id: string) => [...serverQueryKeys.all, 'launch-command', id] as const,
   /** Client-only: the last scheduled stop that failed when due (SSE, DSM-00171). */
   stopFailure: (id: string) => [...serverQueryKeys.all, 'stop-failure', id] as const,
+  /** Client-only: the last restart that failed in its stop or start phase (SSE, DSM-00172). */
+  restartFailure: (id: string) => [...serverQueryKeys.all, 'restart-failure', id] as const,
 };
 
 /** A scheduled stop that came due but could not run (`server.stop.failed`). */
@@ -16,6 +19,11 @@ export interface ServerStopFailure {
   errorCode: string;
   message: string;
   at: string;
+}
+
+/** A restart that failed in its stop or start phase (`server.restart.failed`). */
+export interface ServerRestartFailure extends ServerStopFailure {
+  phase: ServerRestartFailedEventDto['phase'];
 }
 
 export const serverQueries = {
@@ -43,6 +51,15 @@ export const serverQueries = {
   stopFailure: (id: string) =>
     queryOptions<ServerStopFailure | null>({
       queryKey: serverQueryKeys.stopFailure(id),
+      queryFn: () => null,
+      initialData: null,
+      staleTime: Infinity,
+      gcTime: Infinity,
+    }),
+  /** Filled only by the SSE handler; never fetched from the API. */
+  restartFailure: (id: string) =>
+    queryOptions<ServerRestartFailure | null>({
+      queryKey: serverQueryKeys.restartFailure(id),
       queryFn: () => null,
       initialData: null,
       staleTime: Infinity,

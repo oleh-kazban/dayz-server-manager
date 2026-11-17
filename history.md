@@ -72,6 +72,23 @@ Start control, disabled reasons, feedback contract (`GEMINI.md` §5), tests and 
 
 ---
 
+## [DSM-00168] Restart a server (graceful stop, then start)
+
+- **Type**: `Story`
+- **Priority**: `P1 (High)`
+- **Status**: `DONE`
+- **Dependencies**: `DSM-00167`
+
+### Summary
+
+`POST /api/v1/servers/:id/restart` runs the graceful stop (with optional delay) and then a start, reporting a failure in either phase with its own error code. A restart during another transition is refused.
+
+### Delivered Capabilities
+
+Restart route, phase-specific error codes, delay passthrough, tests.
+
+---
+
 ## [DSM-00167] Delay a graceful stop with an in-game warning and cancellation
 
 - **Type**: `Story`

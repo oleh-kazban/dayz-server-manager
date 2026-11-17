@@ -1,9 +1,8 @@
 import { type FormEvent, useId, useRef, useState } from 'react';
 
-import { Square, X } from 'lucide-react';
+import { X } from 'lucide-react';
 
 import {
-  defaultStopWarning,
   formatStopDelay,
   STOP_DELAY_PRESETS_SEC,
   STOP_MESSAGE_MAX_LENGTH,
@@ -13,9 +12,12 @@ import {
 import { Button, Input } from '@aegis/ui';
 import { useModalDialog } from '@aegis/web/core';
 
+import { GRACEFUL_STOP_COPY, type GracefulStopKind } from '../graceful-stop.copy';
 import { formatDelayPreset } from '../maintenance.utils';
 
 export interface StopServerDialogProps {
+  /** Stop on its own, or the stop part of a restart (wording only). @default 'stop' */
+  kind?: GracefulStopKind;
   serverName: string;
   isPending: boolean;
   /** Resolved `fieldErrors` of the last failed request (inline, feedback contract). */
@@ -25,10 +27,11 @@ export interface StopServerDialogProps {
 }
 
 /**
- * Stop dialog (DSM-00171): stop now, or after a preset delay with an in-game warning that may
- * be customised. Validates with the same schema as the API before sending.
+ * Stop / Restart dialog (DSM-00171/00172): now, or after a preset delay with an in-game warning
+ * that may be customised. Validates with the same schema as the API before sending.
  */
 export function StopServerDialog({
+  kind = 'stop',
   serverName,
   isPending,
   fieldErrors,
@@ -42,6 +45,7 @@ export function StopServerDialog({
   const [clientError, setClientError] = useState<string | null>(null);
   const { dialogRef, handleBackdropClick } = useModalDialog({ onClose, isBusy: isPending });
 
+  const copy = GRACEFUL_STOP_COPY[kind];
   const isDelayed = delaySec > 0;
   const messageError = clientError ?? fieldErrors.message;
   const delayError = fieldErrors.delaySec;
@@ -78,11 +82,9 @@ export function StopServerDialog({
         <div className="flex items-start justify-between gap-4 border-b border-[var(--color-border)] pb-4">
           <div>
             <h2 id={titleId} className="text-lg font-semibold text-[var(--color-text-main)]">
-              Stop &quot;{serverName}&quot;
+              {copy.dialogTitle(serverName)}
             </h2>
-            <p className="text-xs text-[var(--color-text-muted)]">
-              DayZ saves the world and shuts down through RCON.
-            </p>
+            <p className="text-xs text-[var(--color-text-muted)]">{copy.dialogSubtitle}</p>
           </div>
           <Button
             variant="ghost"
@@ -120,9 +122,7 @@ export function StopServerDialog({
               ))}
             </div>
             <p className="mt-2 text-xs text-[var(--color-text-secondary)]">
-              {isDelayed
-                ? `Players are warned now and the server stops in ${formatStopDelay(delaySec)}. You can cancel until then.`
-                : 'The server stops right away and players are disconnected.'}
+              {isDelayed ? copy.delayedSummary(formatStopDelay(delaySec)) : copy.nowSummary}
             </p>
             {delayError && (
               <p role="alert" className="mt-1 text-xs text-[var(--color-danger)]">
@@ -135,7 +135,7 @@ export function StopServerDialog({
             <Input
               ref={messageRef}
               label="In-game warning (optional)"
-              placeholder={defaultStopWarning(delaySec)}
+              placeholder={copy.defaultWarning(delaySec)}
               value={message}
               maxLength={STOP_MESSAGE_MAX_LENGTH}
               disabled={isPending}
@@ -155,10 +155,10 @@ export function StopServerDialog({
               type="submit"
               variant="primary"
               destructive
-              leftIcon={Square}
+              leftIcon={copy.icon}
               isLoading={isPending}
             >
-              {isDelayed ? 'Schedule stop' : 'Stop now'}
+              {isDelayed ? copy.submitDelayed : copy.submitNow}
             </Button>
           </div>
         </form>

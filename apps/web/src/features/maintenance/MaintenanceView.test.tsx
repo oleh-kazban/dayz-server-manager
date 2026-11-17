@@ -71,6 +71,7 @@ describe('MaintenanceView', () => {
       await screen.findByText(`PID 4242 · started ${new Date(AT).toLocaleString()}`),
     ).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Start server/ })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Restart server/ })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Force-stop/ })).toBeInTheDocument();
   });
 
