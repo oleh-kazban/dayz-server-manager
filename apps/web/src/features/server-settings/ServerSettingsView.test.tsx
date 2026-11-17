@@ -56,6 +56,7 @@ const mockServerDetail: ServerDetailDto = {
   missionPath: 'mpmissions\\dayzOffline.namalsk',
   launchOptions: { ...EMPTY_LAUNCH_OPTIONS, cpuCount: 4, doLogs: true },
   runtime: null,
+  pendingStop: null,
   lastExit: null,
   maxPlayers: 60,
   rconIp: '127.0.0.1',

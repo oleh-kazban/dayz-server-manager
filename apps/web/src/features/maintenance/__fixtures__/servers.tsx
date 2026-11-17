@@ -40,6 +40,7 @@ export const serverDetail = (overrides: Partial<ServerDetailDto> = {}): ServerDe
   rconIp: '127.0.0.1',
   rconPassword: null,
   runtime: null,
+  pendingStop: null,
   ...overrides,
 });
 
