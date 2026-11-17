@@ -11,6 +11,9 @@ export type NotificationCode =
   | 'SERVER_DELETED'
   | 'SERVER_START_REQUESTED'
   | 'SERVER_FORCE_STOPPED'
+  | 'SERVER_STOP_REQUESTED'
+  | 'SERVER_STOP_SCHEDULED'
+  | 'SERVER_STOP_CANCELLED'
   | 'STEAM_SETTINGS_UPDATED'
   | 'STEAM_SESSION_CLEARED'
   | 'STEAM_AUTH_SUCCESS'
@@ -313,12 +316,12 @@ export const enUSTranslations: TranslationCatalog = {
     SERVER_RCON_UNREACHABLE: {
       title: 'RCON Unreachable',
       description:
-        'Could not reach BattlEye RCON for "{{name}}" ({{reason}}). Nothing was stopped.',
+        'Could not reach BattlEye RCON for "{{name}}" ({{reason}}). Nothing was stopped; force-stop is still available.',
     },
     SERVER_RCON_LOGIN_FAILED: {
       title: 'RCON Login Failed',
       description:
-        'BattlEye rejected the RCON password for "{{name}}". Nothing was stopped; check the RCON password.',
+        'BattlEye rejected the RCON password for "{{name}}". Nothing was stopped; check the RCON password or use force-stop.',
     },
   },
   validation: {
@@ -372,6 +375,18 @@ export const enUSTranslations: TranslationCatalog = {
     SERVER_START_REQUESTED: {
       title: 'Server Starting',
       description: '"{{name}}" is starting. Its status updates live.',
+    },
+    SERVER_STOP_REQUESTED: {
+      title: 'Server Stopping',
+      description: '"{{name}}" is saving the world and shutting down. Its status updates live.',
+    },
+    SERVER_STOP_SCHEDULED: {
+      title: 'Stop Scheduled',
+      description: '"{{name}}" stops at {{time}}. Players have been warned.',
+    },
+    SERVER_STOP_CANCELLED: {
+      title: 'Scheduled Stop Cancelled',
+      description: '"{{name}}" keeps running. Players have been told.',
     },
     SERVER_FORCE_STOPPED: {
       title: 'Server Force-Stopped',

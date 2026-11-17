@@ -96,6 +96,21 @@ describe('RealtimeProvider', () => {
       'stopping',
     );
 
+    act(() =>
+      sources[0].listeners.get('server.stop.failed')?.(
+        new MessageEvent('server.stop.failed', {
+          data: JSON.stringify({
+            serverId: ID,
+            errorCode: 'SERVER_RCON_UNREACHABLE',
+            message: 'x',
+          }),
+        }),
+      ),
+    );
+    expect(queryClient.getQueryData(serverQueryKeys.stopFailure(ID))).toMatchObject({
+      errorCode: 'SERVER_RCON_UNREACHABLE',
+    });
+
     unmount();
     expect(sources[0].closed).toBe(true);
   });
