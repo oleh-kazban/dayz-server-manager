@@ -1,4 +1,4 @@
-import { and, asc, eq, inArray } from 'drizzle-orm';
+import { and, asc, eq, inArray, isNotNull, isNull } from 'drizzle-orm';
 import type { FastifyBaseLogger } from 'fastify';
 
 import {
@@ -8,11 +8,14 @@ import {
   SERVER_EXIT_REASON,
   SERVER_STATUS,
   SERVER_STATUS_CHANGED_EVENT,
+  SERVER_STOP_FAILED_EVENT,
   type ServerExitReason,
   type ServerLastExitDto,
+  type ServerPendingStopDto,
   type ServerRuntimeDto,
   type ServerStatus,
   type ServerStatusChangedEventDto,
+  type ServerStopFailedEventDto,
 } from '@aegis/api-contracts';
 import {
   type DatabaseInstance,
@@ -44,6 +47,31 @@ export const DEFAULT_POLL_INTERVAL_MS = 5_000;
 export const DEFAULT_STOP_TIMEOUT_MS = 60_000;
 /** RCON command that makes DayZ save persistence and exit. */
 export const RCON_SHUTDOWN_COMMAND = '#shutdown';
+/** RCON command prefix that broadcasts a message to every player (DSM-00167). */
+export const RCON_SAY_ALL_COMMAND = '#say -1';
+/** Told to players when a pending stop is cancelled (DSM-00167). */
+export const STOP_CANCELLED_MESSAGE = 'The server shutdown has been cancelled.';
+
+function plural(count: number, unit: string): string {
+  return `${count} ${unit}${count === 1 ? '' : 's'}`;
+}
+
+/** "5 minutes", "45 seconds", "1 minute 30 seconds" for the in-game warning. */
+export function formatStopDelay(delaySec: number): string {
+  const minutes = Math.floor(delaySec / 60);
+  const seconds = delaySec % 60;
+  if (minutes === 0) {
+    return plural(seconds, 'second');
+  }
+  return seconds === 0
+    ? plural(minutes, 'minute')
+    : `${plural(minutes, 'minute')} ${plural(seconds, 'second')}`;
+}
+
+/** Default in-game warning for a delayed stop (DSM-00167). */
+export function defaultStopWarning(delaySec: number): string {
+  return `Server is shutting down in ${formatStopDelay(delaySec)}. Please find a safe place and log out.`;
+}
 
 const ACTIVE: ServerStatus[] = [
   SERVER_STATUS.STARTING,
@@ -62,8 +90,15 @@ export interface ServerLifecycleOptions {
   platform?: LaunchPlatform;
   clock?: () => number;
   logger?: LifecycleLogger;
-  /** Status change sink, e.g. the SSE hub (`server.status.changed`). */
-  broadcast?: (event: string, data: ServerStatusChangedEventDto) => void;
+  /** Event sink, e.g. the SSE hub (`server.status.changed`, `server.stop.failed`). */
+  broadcast?: (event: string, data: ServerStatusChangedEventDto | ServerStopFailedEventDto) => void;
+}
+
+export interface GracefulStopOptions {
+  /** 0 (default) stops now; otherwise players are warned and the stop runs later (DSM-00167). */
+  delaySec?: number;
+  /** Replaces the default in-game warning. */
+  message?: string;
 }
 
 export interface EditLockGuard {
@@ -108,6 +143,8 @@ const LIFECYCLE_STATUS_CODES: Partial<Record<ApiErrorCode, number>> = {
   SERVER_RCON_NOT_CONFIGURED: 409,
   SERVER_RCON_UNREACHABLE: 502,
   SERVER_RCON_LOGIN_FAILED: 502,
+  SERVER_STOP_ALREADY_PENDING: 409,
+  SERVER_STOP_NOT_PENDING: 409,
 };
 
 export class LifecycleError extends Error {
@@ -147,6 +184,23 @@ export function toServerLastExit(
   };
 }
 
+export function toServerPendingStop(
+  server: Pick<Server, 'pendingStopAt' | 'pendingStopRequestedAt'>,
+): ServerPendingStopDto | null {
+  if (server.pendingStopAt === null || server.pendingStopRequestedAt === null) {
+    return null;
+  }
+  return {
+    executeAt: server.pendingStopAt.toISOString(),
+    requestedAt: server.pendingStopRequestedAt.toISOString(),
+  };
+}
+
+const CLEARED_PENDING_STOP = {
+  pendingStopAt: null,
+  pendingStopRequestedAt: null,
+} satisfies Partial<NewServer>;
+
 const CLEARED_RUNTIME = {
   processPid: null,
   processStartToken: null,
@@ -178,6 +232,8 @@ interface WatchEntry {
  */
 export class ServerLifecycleService {
   private readonly watched = new Map<string, WatchEntry>();
+  /** Delayed graceful stops waiting to run (DSM-00167); the row in SQLite is the source of truth. */
+  private readonly pendingStopTimers = new Map<string, ReturnType<typeof setTimeout>>();
   private pollTimer: ReturnType<typeof setInterval> | null = null;
   private polling = false;
   private readonly startupWindowMs: number;
@@ -277,51 +333,52 @@ export class ServerLifecycleService {
   }
 
   /**
+   * DSM-00163/00167: graceful stop. With no delay it asks DayZ to save and exit through RCON
+   * #shutdown right away (replacing any pending stop). With a delay it warns players once via
+   * `#say -1`, keeps the server `running` and persists the stop, which runs when the delay ends.
+   */
+  async gracefulStop(serverId: string, options: GracefulStopOptions = {}): Promise<Server> {
+    const delaySec = options.delaySec ?? 0;
+    return delaySec > 0
+      ? this.scheduleStop(serverId, delaySec, options.message)
+      : this.shutdownNow(serverId);
+  }
+
+  /** DSM-00167: cancels a pending stop and tells players (best effort, not awaited). */
+  async cancelPendingStop(serverId: string): Promise<Server> {
+    const current = this.requireServer(serverId);
+    const cleared = this.db
+      .update(servers)
+      .set({ ...CLEARED_PENDING_STOP, updatedAt: new Date(this.clock()) })
+      .where(and(eq(servers.id, serverId), isNotNull(servers.pendingStopAt)))
+      .run();
+    if (cleared.changes === 0) {
+      throw new LifecycleError(
+        'SERVER_STOP_NOT_PENDING',
+        `"${current.name}" has no pending stop.`,
+        {
+          name: current.name,
+        },
+      );
+    }
+    this.clearPendingStopTimer(serverId);
+    this.broadcastState(serverId);
+    this.options.logger?.info({ serverId }, 'Pending stop cancelled');
+    void this.announce(current, STOP_CANCELLED_MESSAGE);
+    return this.requireServer(serverId);
+  }
+
+  /**
    * DSM-00163: asks DayZ to save and exit through RCON #shutdown, then returns with status
    * `stopping`. The exit is applied by the regular exit handling (`stopped`); if the process is
    * still alive after `stopTimeoutMs`, the watchdog force-kills it (`shutdown_timeout`).
    * Nothing changes when RCON cannot be reached or rejects the password.
    */
-  async gracefulStop(serverId: string): Promise<Server> {
+  private async shutdownNow(serverId: string): Promise<Server> {
     const current = this.requireServer(serverId);
-    const identity = identityOf(current);
-    if (current.status === SERVER_STATUS.STARTING || current.status === SERVER_STATUS.STOPPING) {
-      throw this.busy(current);
-    }
-    if (current.status !== SERVER_STATUS.RUNNING || !identity) {
-      throw new LifecycleError('SERVER_NOT_RUNNING', `"${current.name}" has no running process.`, {
-        name: current.name,
-      });
-    }
+    const identity = this.requireRunning(current);
 
-    const secrets = decryptServerSecrets(current);
-    if (!secrets.ok) {
-      throw new LifecycleError(secrets.errorCode, secrets.message);
-    }
-    const password = secrets.secrets.rconPassword;
-    if (!password) {
-      throw new LifecycleError(
-        'SERVER_RCON_NOT_CONFIGURED',
-        `"${current.name}" has no BattlEye RCON password.`,
-        { name: current.name },
-      );
-    }
-
-    const session = this.rcon({
-      host: rconConnectHost(current.rconIp),
-      port: current.rconPort,
-      password,
-    });
-    try {
-      const login = await session.login();
-      if (!login.ok) {
-        const code =
-          login.error === 'login_failed' ? 'SERVER_RCON_LOGIN_FAILED' : 'SERVER_RCON_UNREACHABLE';
-        throw new LifecycleError(code, login.message, {
-          name: current.name,
-          reason: login.message,
-        });
-      }
+    await this.withRcon(current, async session => {
       if (!this.transition(serverId, [SERVER_STATUS.RUNNING], { status: SERVER_STATUS.STOPPING })) {
         throw this.busy(this.requireServer(serverId));
       }
@@ -335,12 +392,188 @@ export class ServerLifecycleService {
           'RCON #shutdown was not acknowledged; waiting for the watchdog',
         );
       }
-    } finally {
-      await session.close();
-    }
+    });
 
     this.options.logger?.info({ serverId }, 'Graceful stop requested via RCON #shutdown');
     return this.requireServer(serverId);
+  }
+
+  /**
+   * DSM-00167: reserves the pending stop first (one per server, GUARD-01), then warns players.
+   * If the warning cannot be delivered the reservation is rolled back and nothing changes.
+   */
+  private async scheduleStop(
+    serverId: string,
+    delaySec: number,
+    message: string | undefined,
+  ): Promise<Server> {
+    const current = this.requireServer(serverId);
+    this.requireRunning(current);
+
+    const requestedAt = this.clock();
+    const executeAt = requestedAt + delaySec * 1000;
+    const reserved = this.db
+      .update(servers)
+      .set({
+        pendingStopAt: new Date(executeAt),
+        pendingStopRequestedAt: new Date(requestedAt),
+        updatedAt: new Date(requestedAt),
+      })
+      .where(
+        and(
+          eq(servers.id, serverId),
+          eq(servers.status, SERVER_STATUS.RUNNING),
+          isNull(servers.pendingStopAt),
+        ),
+      )
+      .run();
+    if (reserved.changes === 0) {
+      throw this.alreadyPending(current);
+    }
+
+    const warning = `${RCON_SAY_ALL_COMMAND} ${message ?? defaultStopWarning(delaySec)}`;
+    try {
+      await this.withRcon(current, async session => {
+        const said = await session.command(warning);
+        if (!said.ok) {
+          throw new LifecycleError('SERVER_RCON_UNREACHABLE', said.message, {
+            name: current.name,
+            reason: said.message,
+          });
+        }
+      });
+    } catch (error) {
+      this.dropPendingStop(serverId, executeAt);
+      throw error;
+    }
+
+    this.armPendingStop(serverId, executeAt);
+    this.broadcastState(serverId);
+    this.options.logger?.info({ serverId, delaySec }, 'Delayed graceful stop scheduled');
+    return this.requireServer(serverId);
+  }
+
+  /** Runs a due pending stop, unless it was cancelled or replaced in the meantime. */
+  private async executePendingStop(serverId: string, executeAt: number): Promise<void> {
+    this.pendingStopTimers.delete(serverId);
+    const server = this.db.select().from(servers).where(eq(servers.id, serverId)).get();
+    if (server?.pendingStopAt?.getTime() !== executeAt) {
+      return;
+    }
+    try {
+      await this.shutdownNow(serverId);
+    } catch (error) {
+      this.dropPendingStop(serverId, executeAt);
+      this.broadcastState(serverId);
+      const errorCode = error instanceof LifecycleError ? error.errorCode : 'SERVER_STOP_FAILED';
+      const message = error instanceof Error ? error.message : 'Unknown stop error.';
+      this.options.logger?.error({ serverId, errorCode, reason: message }, 'Delayed stop failed');
+      this.options.broadcast?.(SERVER_STOP_FAILED_EVENT, { serverId, errorCode, message });
+    }
+  }
+
+  /** Clears the pending stop only while it is still the one scheduled for `executeAt`. */
+  private dropPendingStop(serverId: string, executeAt: number): void {
+    this.db
+      .update(servers)
+      .set(CLEARED_PENDING_STOP)
+      .where(and(eq(servers.id, serverId), eq(servers.pendingStopAt, new Date(executeAt))))
+      .run();
+  }
+
+  private armPendingStop(serverId: string, executeAt: number): void {
+    this.clearPendingStopTimer(serverId);
+    const timer = setTimeout(
+      () => {
+        void this.executePendingStop(serverId, executeAt);
+      },
+      Math.max(0, executeAt - this.clock()),
+    );
+    timer.unref();
+    this.pendingStopTimers.set(serverId, timer);
+  }
+
+  private clearPendingStopTimer(serverId: string): void {
+    const timer = this.pendingStopTimers.get(serverId);
+    if (timer) {
+      clearTimeout(timer);
+      this.pendingStopTimers.delete(serverId);
+    }
+  }
+
+  /** Best-effort in-game message; failures are only logged. */
+  private async announce(server: Server, message: string): Promise<void> {
+    try {
+      await this.withRcon(server, async session => {
+        const said = await session.command(`${RCON_SAY_ALL_COMMAND} ${message}`);
+        if (!said.ok) {
+          throw new Error(said.message);
+        }
+      });
+    } catch (error) {
+      this.options.logger?.warn(
+        { serverId: server.id, reason: error instanceof Error ? error.message : String(error) },
+        'In-game announcement failed',
+      );
+    }
+  }
+
+  /** The tracked process of a `running` server, or the reason it cannot be stopped. */
+  private requireRunning(server: Server): ProcessIdentity {
+    const identity = identityOf(server);
+    if (server.status === SERVER_STATUS.STARTING || server.status === SERVER_STATUS.STOPPING) {
+      throw this.busy(server);
+    }
+    if (server.status !== SERVER_STATUS.RUNNING || !identity) {
+      throw new LifecycleError('SERVER_NOT_RUNNING', `"${server.name}" has no running process.`, {
+        name: server.name,
+      });
+    }
+    return identity;
+  }
+
+  /** Opens an RCON session for `server`, maps login failures to API errors, always closes it. */
+  private async withRcon<T>(server: Server, run: (session: RconSession) => Promise<T>): Promise<T> {
+    const secrets = decryptServerSecrets(server);
+    if (!secrets.ok) {
+      throw new LifecycleError(secrets.errorCode, secrets.message);
+    }
+    const password = secrets.secrets.rconPassword;
+    if (!password) {
+      throw new LifecycleError(
+        'SERVER_RCON_NOT_CONFIGURED',
+        `"${server.name}" has no BattlEye RCON password.`,
+        { name: server.name },
+      );
+    }
+
+    const session = this.rcon({
+      host: rconConnectHost(server.rconIp),
+      port: server.rconPort,
+      password,
+    });
+    try {
+      const login = await session.login();
+      if (!login.ok) {
+        const code =
+          login.error === 'login_failed' ? 'SERVER_RCON_LOGIN_FAILED' : 'SERVER_RCON_UNREACHABLE';
+        throw new LifecycleError(code, login.message, {
+          name: server.name,
+          reason: login.message,
+        });
+      }
+      return await run(session);
+    } finally {
+      await session.close();
+    }
+  }
+
+  private alreadyPending(server: Server): LifecycleError {
+    return new LifecycleError(
+      'SERVER_STOP_ALREADY_PENDING',
+      `A stop is already scheduled for "${server.name}". Cancel it first.`,
+      { name: server.name },
+    );
   }
 
   /** REQ-04: kills the process tree without the RCON persistence flush. */
@@ -387,12 +620,7 @@ export class ServerLifecycleService {
       }
 
       if (await this.isAliveSafe(server.id, identity)) {
-        this.transition(server.id, [server.status], { status: SERVER_STATUS.RUNNING });
-        this.watch(server.id, identity, { startupWindow: false });
-        this.options.logger?.info(
-          { serverId: server.id, processPid: identity.pid },
-          'Re-adopted DayZ server',
-        );
+        this.readopt(server, identity);
       } else {
         const wasStopping = server.status === SERVER_STATUS.STOPPING;
         this.transition(server.id, [server.status], {
@@ -406,10 +634,34 @@ export class ServerLifecycleService {
     }
   }
 
-  /** Stops timers only; tracked game servers keep running (DSM-00160 D1). */
+  /** Tracks a process that survived a DSM restart and resumes its pending stop (DSM-00167). */
+  private readopt(server: Server, identity: ProcessIdentity): void {
+    this.transition(server.id, [server.status], { status: SERVER_STATUS.RUNNING });
+    this.watch(server.id, identity, { startupWindow: false });
+    this.options.logger?.info(
+      { serverId: server.id, processPid: identity.pid },
+      'Re-adopted DayZ server',
+    );
+    if (server.pendingStopAt) {
+      // Runs right away when the stop came due while DSM was down (REQ-08).
+      this.armPendingStop(server.id, server.pendingStopAt.getTime());
+      this.options.logger?.info(
+        { serverId: server.id, executeAt: server.pendingStopAt.toISOString() },
+        'Resumed pending stop',
+      );
+    }
+  }
+
+  /**
+   * Stops timers only; tracked game servers keep running (DSM-00160 D1) and pending stops stay
+   * stored, to be resumed by the next `reconcile` (DSM-00167).
+   */
   close(): void {
     for (const serverId of [...this.watched.keys()]) {
       this.unwatch(serverId);
+    }
+    for (const serverId of [...this.pendingStopTimers.keys()]) {
+      this.clearPendingStopTimer(serverId);
     }
   }
 
@@ -576,27 +828,47 @@ export class ServerLifecycleService {
     }
   }
 
-  /** Conditional status/field update (GUARD-01); broadcasts when the status changed. */
+  /**
+   * Conditional status/field update (GUARD-01); broadcasts when the status changed. Leaving
+   * `running` also drops a pending stop (DSM-00167 REQ-07).
+   */
   private transition(
     serverId: string,
     from: readonly ServerStatus[],
     set: Partial<NewServer>,
   ): boolean {
+    const leavesRunning = set.status !== undefined && set.status !== SERVER_STATUS.RUNNING;
     const result = this.db
       .update(servers)
-      .set({ ...set, updatedAt: new Date(this.clock()) })
+      .set({
+        ...set,
+        ...(leavesRunning ? CLEARED_PENDING_STOP : {}),
+        updatedAt: new Date(this.clock()),
+      })
       .where(and(eq(servers.id, serverId), inArray(servers.status, [...from])))
       .run();
     const changed = result.changes > 0;
-    if (changed && set.status && this.options.broadcast) {
-      const server = this.requireServer(serverId);
-      this.options.broadcast(SERVER_STATUS_CHANGED_EVENT, {
-        serverId,
-        status: server.status,
-        lastExit: toServerLastExit(server),
-      });
+    if (changed && leavesRunning) {
+      this.clearPendingStopTimer(serverId);
+    }
+    if (changed && set.status) {
+      this.broadcastState(serverId);
     }
     return changed;
+  }
+
+  /** `server.status.changed` with the current status, last exit and pending stop. */
+  private broadcastState(serverId: string): void {
+    if (!this.options.broadcast) {
+      return;
+    }
+    const server = this.requireServer(serverId);
+    this.options.broadcast(SERVER_STATUS_CHANGED_EVENT, {
+      serverId,
+      status: server.status,
+      lastExit: toServerLastExit(server),
+      pendingStop: toServerPendingStop(server),
+    });
   }
 
   private lastExit(reason: ServerExitReason, exit?: ProcessExit): Partial<NewServer> {

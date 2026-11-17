@@ -339,5 +339,75 @@ describe('Server lifecycle routes', () => {
         (await post(h, 'stop', h.adminToken, '66666666-6666-4666-a666-666666666666')).statusCode,
       ).toBe(404);
     });
+
+    const postJson = (h: Harness, action: string, payload: unknown) =>
+      h.app.inject({
+        method: 'POST',
+        url: `/api/v1/servers/${SERVER_ID}/${action}`,
+        headers: { authorization: `Bearer ${h.adminToken}` },
+        payload: payload as Record<string, unknown>,
+      });
+
+    it('schedules a delayed stop with a warning, refuses a second one and cancels it (DSM-00167)', async () => {
+      const h = await createHarness(runningWithRcon);
+
+      const scheduled = await postJson(h, 'stop', { delaySec: 300, message: 'Restart soon' });
+      expect(scheduled.statusCode).toBe(200);
+      const detail = serverDetailSchema.parse(scheduled.json());
+      expect(detail.status).toBe('running');
+      expect(detail.pendingStop).not.toBeNull();
+      expect(
+        Date.parse(detail.pendingStop?.executeAt ?? '') -
+          Date.parse(detail.pendingStop?.requestedAt ?? ''),
+      ).toBe(300_000);
+      expect(h.rcon.commands).toEqual(['#say -1 Restart soon']);
+
+      const fetched = await h.app.inject({
+        method: 'GET',
+        url: `/api/v1/servers/${SERVER_ID}`,
+        headers: { authorization: `Bearer ${h.adminToken}` },
+      });
+      expect(fetched.json().pendingStop).toEqual(detail.pendingStop);
+
+      const second = await postJson(h, 'stop', { delaySec: 60 });
+      expect(second.statusCode).toBe(409);
+      expect(second.json()).toMatchObject({
+        errorCode: 'SERVER_STOP_ALREADY_PENDING',
+        params: { name: 'Lifecycle Target' },
+      });
+
+      const cancelled = await post(h, 'stop/cancel');
+      expect(cancelled.statusCode).toBe(200);
+      expect(serverDetailSchema.parse(cancelled.json())).toMatchObject({
+        status: 'running',
+        pendingStop: null,
+      });
+
+      const again = await post(h, 'stop/cancel');
+      expect(again.statusCode).toBe(409);
+      expect(again.json().errorCode).toBe('SERVER_STOP_NOT_PENDING');
+    });
+
+    it('rejects an invalid stop body with field errors (DSM-00167)', async () => {
+      const h = await createHarness(runningWithRcon);
+      const response = await postJson(h, 'stop', { delaySec: 7200, message: 'Bye' });
+      expect(response.statusCode).toBe(400);
+      expect(response.json()).toMatchObject({
+        errorCode: 'VALIDATION_FAILED',
+        fieldErrors: { delaySec: expect.anything() },
+      });
+      expect(h.rcon.commands).toEqual([]);
+      expect(statusOf(h)).toBe('running');
+    });
+
+    it('enforces admin role, id format and existence on cancel (DSM-00167)', async () => {
+      const h = await createHarness();
+      expect((await post(h, 'stop/cancel', h.viewerToken)).statusCode).toBe(403);
+      expect((await post(h, 'stop/cancel', h.adminToken, 'not-a-uuid')).statusCode).toBe(400);
+      expect(
+        (await post(h, 'stop/cancel', h.adminToken, '66666666-6666-4666-a666-666666666666'))
+          .statusCode,
+      ).toBe(404);
+    });
   });
 });
