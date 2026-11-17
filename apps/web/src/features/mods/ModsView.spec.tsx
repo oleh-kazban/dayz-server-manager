@@ -630,4 +630,46 @@ describe('ModsView', () => {
       expect(importBtn).toBeDisabled();
     });
   });
+
+  describe('Export Preset Integration (DSM-00356)', () => {
+    it('renders "Export Preset" button in header and opens ExportPresetModal dialog on click', async () => {
+      renderView();
+
+      await waitFor(() => {
+        expect(screen.getByRole('heading', { name: 'Mods Management' })).toBeInTheDocument();
+      });
+
+      const exportBtn = screen.getByRole('button', { name: 'Export Preset' });
+      expect(exportBtn).toBeInTheDocument();
+      expect(exportBtn).toBeEnabled();
+
+      fireEvent.click(exportBtn);
+
+      expect(await screen.findByRole('heading', { name: 'Export Mod Preset' })).toBeInTheDocument();
+      expect(screen.getByRole('dialog', { name: 'Export Mod Preset' })).toBeInTheDocument();
+
+      // Close modal via Cancel button (covers line 982 onClose handler)
+      fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+      await waitFor(() => {
+        expect(screen.queryByRole('dialog', { name: 'Export Mod Preset' })).not.toBeInTheDocument();
+      });
+    });
+
+    it('AC-04: disables "Export Preset" button when server has no workshop mods', async () => {
+      vi.mocked(apiClient.mods.list).mockResolvedValue({
+        ...sampleListResponse,
+        mods: [modLocal],
+      });
+
+      renderView();
+
+      await waitFor(() => {
+        expect(screen.getByRole('heading', { name: 'Mods Management' })).toBeInTheDocument();
+      });
+
+      const exportBtn = screen.getByRole('button', { name: 'Export Preset' });
+      expect(exportBtn).toBeDisabled();
+      expect(exportBtn).toHaveAttribute('title', 'No Workshop mods configured to export');
+    });
+  });
 });

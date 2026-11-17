@@ -6,6 +6,7 @@ import {
   ArrowUp,
   Box,
   CheckCircle2,
+  Download,
   ExternalLink,
   GripVertical,
   Pencil,
@@ -64,6 +65,7 @@ import { CreateServerModal } from '../server-settings';
 
 import { AddModModal } from './components/AddModModal';
 import { EditModModal } from './components/EditModModal';
+import { ExportPresetModal } from './components/ExportPresetModal';
 import { ImportModsModal } from './components/ImportModsModal';
 import { LaunchParamsPreviewCard } from './components/LaunchParamsPreviewCard';
 import {
@@ -182,16 +184,20 @@ function ModsHeader({
   serverStatus,
   isServerLocked,
   isCheckingUpdates,
+  hasWorkshopMods,
   onCheckUpdates,
   onOpenImportModal,
+  onOpenExportModal,
   onOpenAddModal,
 }: {
   serverName: string;
   serverStatus: ServerStatus;
   isServerLocked: boolean;
   isCheckingUpdates: boolean;
+  hasWorkshopMods: boolean;
   onCheckUpdates: () => void;
   onOpenImportModal: () => void;
+  onOpenExportModal: () => void;
   onOpenAddModal: () => void;
 }) {
   const statusPresentation = getServerStatusPresentation(serverStatus);
@@ -227,6 +233,15 @@ function ModsHeader({
           onClick={onOpenImportModal}
         >
           Import Preset
+        </Button>
+        <Button
+          variant="secondary"
+          leftIcon={Download}
+          disabled={!hasWorkshopMods}
+          title={!hasWorkshopMods ? 'No Workshop mods configured to export' : undefined}
+          onClick={onOpenExportModal}
+        >
+          Export Preset
         </Button>
         <Button
           variant="primary"
@@ -606,6 +621,7 @@ export function ModsView() {
   const [isCreateServerOpen, setIsCreateServerOpen] = useState(false);
   const [isAddModOpen, setIsAddModOpen] = useState(false);
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
+  const [isExportModalOpen, setIsExportModalOpen] = useState(false);
   const [editingMod, setEditingMod] = useState<ServerModDto | null>(null);
   const [deletingMod, setDeletingMod] = useState<ServerModDto | null>(null);
 
@@ -661,6 +677,11 @@ export function ModsView() {
 
   const installedWorkshopIds = useMemo(
     () => new Set(mods.map(m => m.workshopId).filter((id): id is string => Boolean(id))),
+    [mods],
+  );
+
+  const hasWorkshopMods = useMemo(
+    () => mods.some(m => m.sourceType === 'workshop' && Boolean(m.workshopId)),
     [mods],
   );
 
@@ -822,8 +843,10 @@ export function ModsView() {
           serverStatus={activeServer.status}
           isServerLocked={isServerLocked}
           isCheckingUpdates={checkUpdatesMutation.isPending}
+          hasWorkshopMods={hasWorkshopMods}
           onCheckUpdates={() => checkUpdatesMutation.mutate()}
           onOpenImportModal={() => setIsImportModalOpen(true)}
+          onOpenExportModal={() => setIsExportModalOpen(true)}
           onOpenAddModal={() => setIsAddModOpen(true)}
         />
 
@@ -949,6 +972,14 @@ export function ModsView() {
           serverStatus={activeServer.status}
           isServerLocked={isServerLocked}
           onClose={() => setIsImportModalOpen(false)}
+        />
+
+        <ExportPresetModal
+          isOpen={isExportModalOpen}
+          serverName={activeServer.name}
+          serverId={serverId}
+          mods={modsResponse.mods}
+          onClose={() => setIsExportModalOpen(false)}
         />
 
         <EditModModal
