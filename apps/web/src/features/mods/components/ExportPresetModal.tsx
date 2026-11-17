@@ -50,7 +50,7 @@ function ExportPresetDialog({
     return { clientMods: client, serverOnlyMods: serverOnly };
   }, [eligibleMods]);
 
-  const handleDownload = () => {
+  const handleDownload = async () => {
     if (eligibleMods.length === 0) return;
 
     try {
@@ -66,9 +66,54 @@ function ExportPresetDialog({
       };
 
       const jsonString = JSON.stringify(presetPayload, null, 2);
+      const filename = sanitizePresetFilename(serverName);
+
+      if (typeof window !== 'undefined' && 'showSaveFilePicker' in window) {
+        try {
+          const handle = await (
+            window as unknown as {
+              showSaveFilePicker: (options: unknown) => Promise<{
+                createWritable: () => Promise<{
+                  write: (data: string) => Promise<void>;
+                  close: () => Promise<void>;
+                }>;
+              }>;
+            }
+          ).showSaveFilePicker({
+            suggestedName: filename,
+            types: [
+              {
+                description: 'JSON Files',
+                accept: { 'application/json': ['.json'] },
+              },
+            ],
+          });
+
+          const writable = await handle.createWritable();
+          await writable.write(jsonString);
+          await writable.close();
+
+          notifySuccess('MOD_PRESET_EXPORTED', {
+            count: String(eligibleMods.length),
+            filename,
+          });
+          onClose();
+          return;
+        } catch (err: unknown) {
+          if (
+            (err instanceof DOMException && err.name === 'AbortError') ||
+            (err as { name?: string })?.name === 'AbortError'
+          ) {
+            // User cancelled native Save dialog: do not toast, do not close modal
+            return;
+          }
+          throw err;
+        }
+      }
+
+      // Fallback for environments without File System Access API
       const blob = new Blob([jsonString], { type: 'application/json' });
       const url = URL.createObjectURL(blob);
-      const filename = sanitizePresetFilename(serverName);
 
       const anchor = document.createElement('a');
       anchor.href = url;
