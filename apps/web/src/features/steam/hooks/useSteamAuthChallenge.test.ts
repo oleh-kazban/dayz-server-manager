@@ -1,7 +1,7 @@
 import { createElement, type ReactNode } from 'react';
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { act, renderHook } from '@testing-library/react';
+import { act, renderHook, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { apiClient } from '@aegis/api-client';
@@ -62,29 +62,73 @@ describe('useSteamAuthChallenge (QA-04)', () => {
   const wrapper = ({ children }: { children: ReactNode }) =>
     createElement(QueryClientProvider, { client: queryClient }, children);
 
-  it('appends ?token= query parameter to /api/v1/realtime/sse when apiClient.client.getToken() returns a token', () => {
+  const mockTicket = (ticket = 'single-use-ticket') =>
+    vi.spyOn(apiClient.realtime, 'createTicket').mockResolvedValue({
+      ticket,
+      expiresAt: new Date(Date.now() + 30_000).toISOString(),
+    });
+
+  it('opens the stream with a single-use ticket, never the access token (DSM-00348)', async () => {
     vi.spyOn(apiClient.client, 'getToken').mockReturnValue('jwt-token-abc');
+    mockTicket('ticket/1');
 
     const { unmount } = renderHook(() => useSteamAuthChallenge(), { wrapper });
 
-    expect(MockEventSource.instances).toHaveLength(1);
-    expect(MockEventSource.instances[0].url).toBe('/api/v1/realtime/sse?token=jwt-token-abc');
+    await waitFor(() => expect(MockEventSource.instances).toHaveLength(1));
+    expect(MockEventSource.instances[0].url).toBe('/api/v1/realtime/sse?ticket=ticket%2F1');
+    expect(MockEventSource.instances[0].url).not.toContain('jwt-token-abc');
 
     unmount();
     expect(MockEventSource.instances[0].close).toHaveBeenCalledTimes(1);
   });
 
-  it('uses /api/v1/realtime/sse without query parameter when apiClient.client.getToken() returns null', () => {
+  it('opens no stream while signed out', async () => {
     vi.spyOn(apiClient.client, 'getToken').mockReturnValue(null);
+    const createTicket = vi.spyOn(apiClient.realtime, 'createTicket');
 
     renderHook(() => useSteamAuthChallenge(), { wrapper });
+    await act(async () => {
+      await Promise.resolve();
+    });
 
-    expect(MockEventSource.instances).toHaveLength(1);
-    expect(MockEventSource.instances[0].url).toBe('/api/v1/realtime/sse');
+    expect(createTicket).not.toHaveBeenCalled();
+    expect(MockEventSource.instances).toHaveLength(0);
+  });
+
+  it('opens nothing when unmounted before the ticket arrives', async () => {
+    vi.spyOn(apiClient.client, 'getToken').mockReturnValue('jwt');
+    mockTicket();
+
+    const { unmount } = renderHook(() => useSteamAuthChallenge(), { wrapper });
+    unmount();
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    expect(MockEventSource.instances).toHaveLength(0);
+  });
+
+  it('survives an EventSource that cannot be created', async () => {
+    vi.spyOn(apiClient.client, 'getToken').mockReturnValue('jwt');
+    mockTicket();
+    globalThis.EventSource = class {
+      constructor() {
+        throw new ReferenceError('EventSource is not defined');
+      }
+    } as unknown as typeof EventSource;
+
+    const { result, unmount } = renderHook(() => useSteamAuthChallenge(), { wrapper });
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    expect(result.current.isModalOpen).toBe(false);
+    unmount();
   });
 
   it('handles steam.auth.challenge, steam.auth.challenge.expired, steam.auth.status events, and respond/abort actions', async () => {
     vi.spyOn(apiClient.client, 'getToken').mockReturnValue('jwt-1');
+    mockTicket();
     vi.spyOn(apiClient.steam, 'respondChallenge').mockResolvedValue({
       success: true,
       message: 'ok',
@@ -95,6 +139,7 @@ describe('useSteamAuthChallenge (QA-04)', () => {
     });
 
     const { result } = renderHook(() => useSteamAuthChallenge(), { wrapper });
+    await waitFor(() => expect(MockEventSource.instances).toHaveLength(1));
     const es = MockEventSource.instances[0];
 
     act(() => {

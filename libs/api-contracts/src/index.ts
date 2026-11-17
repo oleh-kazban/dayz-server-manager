@@ -4,6 +4,7 @@ export * from './lib/health.contract';
 export * from './lib/launch.contract';
 export * from './lib/mod.contract';
 export * from './lib/profile.contract';
+export * from './lib/realtime.contract';
 export * from './lib/server.contract';
 export * from './lib/server-config.contract';
 export * from './lib/session.contract';

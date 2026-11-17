@@ -21,6 +21,23 @@ Subscription provider/hook; event-to-cache mapping for server status; reconnect 
 
 ---
 
+## [DSM-00172] Restart the active server from the UI
+
+- **Type**: `Story`
+- **Priority**: `P1 (High)`
+- **Status**: `DONE`
+- **Dependencies**: `DSM-00171, DSM-00168`
+
+### Summary
+
+A Restart control reuses the stop dialog's delay choice and restarts the server, telling the operator which phase failed if it does.
+
+### Delivered Capabilities
+
+Control, toasts, tests and live QA.
+
+---
+
 ## [DSM-00171] Gracefully stop the active server with a delay choice
 
 - **Type**: `Story`

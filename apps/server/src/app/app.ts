@@ -28,12 +28,14 @@ import { registerSessionsRoutes } from '../routes/sessions';
 import { registerSteamRoutes } from '../routes/steam';
 import { registerWorkshopRoutes } from '../routes/workshop';
 import { sseHub } from '../services/realtime/sse-hub';
+import { SseTicketStore } from '../services/realtime/sse-ticket-store';
 import { ConfigEditLockService } from '../services/server/config-edit-lock.service';
 import {
   type RconSessionFactory,
   ServerLifecycleService,
 } from '../services/server/server-lifecycle.service';
 import { sendApiError } from '../utils/api-error';
+import { serializeRequest } from '../utils/log-redaction';
 
 export interface BuildAppOptions {
   config: EnvConfig;
@@ -45,12 +47,17 @@ export interface BuildAppOptions {
   rconSessionFactory?: RconSessionFactory;
   /** Skip reconciling stored server processes on startup (tests that seed state later). */
   skipLifecycleReconcile?: boolean;
+  /** Log destination (tests assert on log output); defaults to stdout. */
+  logStream?: { write: (line: string) => void };
 }
 
 export function buildApp(options: BuildAppOptions): FastifyInstance {
   const app = Fastify({
     logger: {
       level: options.config.LOG_LEVEL,
+      // DSM-00348: credentials in query strings (SSE tickets) never reach the request log.
+      serializers: { req: serializeRequest },
+      ...(options.logStream ? { stream: options.logStream } : {}),
     },
     ...options.serverOptions,
   });
@@ -60,6 +67,7 @@ export function buildApp(options: BuildAppOptions): FastifyInstance {
   app.decorate('sqlite', dbInstance.sqlite);
   app.decorate('closeDb', () => dbInstance.close());
   app.decorate('sseHub', sseHub);
+  app.decorate('sseTickets', new SseTicketStore());
 
   const lifecycle = new ServerLifecycleService(
     {
@@ -144,6 +152,24 @@ export function buildApp(options: BuildAppOptions): FastifyInstance {
     },
   );
 
+  /** Whether a session exists and has not expired; records activity (throttled, ARCH-04). */
+  app.decorate('isSessionActive', (sid: string): boolean => {
+    const session = app.db.select().from(sessions).where(eq(sessions.id, sid)).get();
+    if (!session || session.expiresAt.getTime() <= Date.now()) {
+      return false;
+    }
+    // SQLite WAL Write Contention Guard (ARCH-04): throttled to 60s
+    const now = Date.now();
+    if (now - session.lastActiveAt.getTime() > 60_000) {
+      app.db
+        .update(sessions)
+        .set({ lastActiveAt: new Date(now) })
+        .where(eq(sessions.id, session.id))
+        .run();
+    }
+    return true;
+  });
+
   app.decorate('authenticate', async (request: FastifyRequest, reply: FastifyReply) => {
     try {
       type JwtPayload = {
@@ -154,17 +180,8 @@ export function buildApp(options: BuildAppOptions): FastifyInstance {
         sid?: string;
       };
 
-      const queryToken = !request.headers.authorization
-        ? (request.query as Record<string, unknown> | undefined)?.token
-        : undefined;
-
-      let payload: JwtPayload;
-      if (typeof queryToken === 'string' && queryToken.length > 0) {
-        payload = app.jwt.verify<JwtPayload>(queryToken);
-        request.user = payload;
-      } else {
-        payload = await request.jwtVerify<JwtPayload>();
-      }
+      // Header only: tokens in URLs end up in logs and proxies (DSM-00348); SSE uses tickets.
+      const payload = await request.jwtVerify<JwtPayload>();
 
       if (!payload || payload.type !== 'access') {
         return sendApiError(
@@ -175,21 +192,8 @@ export function buildApp(options: BuildAppOptions): FastifyInstance {
         );
       }
 
-      if (payload.sid) {
-        const session = app.db.select().from(sessions).where(eq(sessions.id, payload.sid)).get();
-        if (!session || session.expiresAt.getTime() <= Date.now()) {
-          return sendApiError(reply, 401, 'AUTH_SESSION_INVALID', 'Session is invalid or expired');
-        }
-
-        // SQLite WAL Write Contention Guard (ARCH-04): throttled to 60s
-        const now = Date.now();
-        if (now - session.lastActiveAt.getTime() > 60_000) {
-          app.db
-            .update(sessions)
-            .set({ lastActiveAt: new Date(now) })
-            .where(eq(sessions.id, session.id))
-            .run();
-        }
+      if (payload.sid && !app.isSessionActive(payload.sid)) {
+        return sendApiError(reply, 401, 'AUTH_SESSION_INVALID', 'Session is invalid or expired');
       }
     } catch {
       return sendApiError(
