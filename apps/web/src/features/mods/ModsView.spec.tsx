@@ -171,6 +171,8 @@ vi.mock('@aegis/api-client', async importOriginal => {
         delete: vi.fn(),
         reorder: vi.fn(),
         checkUpdates: vi.fn(),
+        importPreset: vi.fn(),
+        exportPreset: vi.fn(),
       },
     },
   };
@@ -590,5 +592,42 @@ describe('ModsView', () => {
     ]);
     expect(screen.getByRole('button', { name: 'Reorder CF' })).toBeDisabled();
     expect(screen.getByRole('button', { name: 'Reset to Load Order' })).toBeInTheDocument();
+  });
+
+  describe('Import Preset Integration (DSM-00355)', () => {
+    it('renders "Import Preset" button in header and opens ImportModsModal dialog on click', async () => {
+      renderView();
+
+      await waitFor(() => {
+        expect(screen.getByRole('heading', { name: 'Mods Management' })).toBeInTheDocument();
+      });
+
+      const importBtn = screen.getByRole('button', { name: 'Import Preset' });
+      expect(importBtn).toBeInTheDocument();
+      expect(importBtn).toBeEnabled();
+
+      fireEvent.click(importBtn);
+
+      expect(await screen.findByRole('heading', { name: 'Import Mod Preset' })).toBeInTheDocument();
+      expect(screen.getByRole('dialog', { name: 'Import Mod Preset' })).toBeInTheDocument();
+
+      // Close modal via Cancel button (covers line 951 onClose handler)
+      fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+      await waitFor(() => {
+        expect(screen.queryByRole('dialog', { name: 'Import Mod Preset' })).not.toBeInTheDocument();
+      });
+    });
+
+    it('disables "Import Preset" button when server is active or running', async () => {
+      mockActiveServer = { ...baseServer, status: 'running' };
+      renderView();
+
+      await waitFor(() => {
+        expect(screen.getByRole('heading', { name: 'Mods Management' })).toBeInTheDocument();
+      });
+
+      const importBtn = screen.getByRole('button', { name: 'Import Preset' });
+      expect(importBtn).toBeDisabled();
+    });
   });
 });

@@ -13,6 +13,7 @@ import {
   RefreshCw,
   Search,
   Trash2,
+  Upload,
 } from 'lucide-react';
 
 import { apiClient } from '@aegis/api-client';
@@ -63,6 +64,7 @@ import { CreateServerModal } from '../server-settings';
 
 import { AddModModal } from './components/AddModModal';
 import { EditModModal } from './components/EditModModal';
+import { ImportModsModal } from './components/ImportModsModal';
 import { LaunchParamsPreviewCard } from './components/LaunchParamsPreviewCard';
 import {
   compareModsByKey,
@@ -181,6 +183,7 @@ function ModsHeader({
   isServerLocked,
   isCheckingUpdates,
   onCheckUpdates,
+  onOpenImportModal,
   onOpenAddModal,
 }: {
   serverName: string;
@@ -188,6 +191,7 @@ function ModsHeader({
   isServerLocked: boolean;
   isCheckingUpdates: boolean;
   onCheckUpdates: () => void;
+  onOpenImportModal: () => void;
   onOpenAddModal: () => void;
 }) {
   const statusPresentation = getServerStatusPresentation(serverStatus);
@@ -215,6 +219,14 @@ function ModsHeader({
           onClick={onCheckUpdates}
         >
           Check for updates
+        </Button>
+        <Button
+          variant="secondary"
+          leftIcon={Upload}
+          disabled={isServerLocked}
+          onClick={onOpenImportModal}
+        >
+          Import Preset
         </Button>
         <Button
           variant="primary"
@@ -593,6 +605,7 @@ export function ModsView() {
 
   const [isCreateServerOpen, setIsCreateServerOpen] = useState(false);
   const [isAddModOpen, setIsAddModOpen] = useState(false);
+  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [editingMod, setEditingMod] = useState<ServerModDto | null>(null);
   const [deletingMod, setDeletingMod] = useState<ServerModDto | null>(null);
 
@@ -810,6 +823,7 @@ export function ModsView() {
           isServerLocked={isServerLocked}
           isCheckingUpdates={checkUpdatesMutation.isPending}
           onCheckUpdates={() => checkUpdatesMutation.mutate()}
+          onOpenImportModal={() => setIsImportModalOpen(true)}
           onOpenAddModal={() => setIsAddModOpen(true)}
         />
 
@@ -925,6 +939,16 @@ export function ModsView() {
           serverId={serverId}
           installedWorkshopIds={installedWorkshopIds}
           onClose={() => setIsAddModOpen(false)}
+        />
+
+        <ImportModsModal
+          isOpen={isImportModalOpen}
+          serverId={serverId}
+          installedMods={modsResponse.mods}
+          installedWorkshopIds={installedWorkshopIds}
+          serverStatus={activeServer.status}
+          isServerLocked={isServerLocked}
+          onClose={() => setIsImportModalOpen(false)}
         />
 
         <EditModModal
