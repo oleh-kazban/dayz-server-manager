@@ -76,6 +76,7 @@ describe('Servers Endpoint', () => {
       missionPath: 'mpmissions\\dayzOffline.chernarusplus',
       launchOptions: EMPTY_LAUNCH_OPTIONS,
       runtime: null,
+      pendingStop: null,
       lastExit: null,
       ...serverDetailDefaults,
       createdAt: new Date().toISOString(),
@@ -119,6 +120,7 @@ describe('Servers Endpoint', () => {
       isDefault: false,
       launchOptions: EMPTY_LAUNCH_OPTIONS,
       runtime: null,
+      pendingStop: null,
       lastExit: null,
       ...serverDetailDefaults,
       createdAt: new Date().toISOString(),
@@ -158,6 +160,7 @@ describe('Servers Endpoint', () => {
       missionPath: 'mpmissions/dayzOffline.chernarusplus',
       launchOptions: EMPTY_LAUNCH_OPTIONS,
       runtime: null,
+      pendingStop: null,
       lastExit: null,
       ...serverDetailDefaults,
       createdAt: new Date().toISOString(),
@@ -416,6 +419,7 @@ describe('Servers Endpoint', () => {
       missionPath: 'mpmissions/dayzOffline.chernarusplus',
       launchOptions: EMPTY_LAUNCH_OPTIONS,
       runtime,
+      pendingStop: null,
       lastExit: null,
       ...serverDetailDefaults,
       createdAt: new Date().toISOString(),
@@ -433,6 +437,7 @@ describe('Servers Endpoint', () => {
     it.each([
       ['start', 'start', detail('starting', { pid: 4242, startedAt: new Date().toISOString() })],
       ['forceStop', 'force-stop', detail('stopped', null)],
+      ['cancelStop', 'stop/cancel', detail('running', null)],
     ] as const)('%s posts to /%s and parses the server detail', async (method, path, body) => {
       respondWith(body);
 
@@ -444,6 +449,49 @@ describe('Servers Endpoint', () => {
         expect.objectContaining({ method: 'POST' }),
       );
     });
+  });
+
+  it('stop sends the optional delay body and parses the server detail', async () => {
+    const body = {
+      id: validUuid,
+      name: 'DayZ (Local)',
+      description: null,
+      status: 'running',
+      gamePort: 2302,
+      queryPort: 27016,
+      rconPort: 2310,
+      isDefault: true,
+      installPath: '/opt/dayz',
+      profilePath: 'profiles',
+      missionPath: 'mpmissions/dayzOffline.chernarusplus',
+      launchOptions: EMPTY_LAUNCH_OPTIONS,
+      runtime: null,
+      pendingStop: {
+        executeAt: '2026-11-17T18:05:00.000Z',
+        requestedAt: '2026-11-17T18:00:00.000Z',
+      },
+      lastExit: null,
+      ...serverDetailDefaults,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(JSON.stringify(body), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      }),
+    );
+
+    const result = await servers.stop(validUuid, { delaySec: 300, message: 'Restart soon' });
+
+    expect(result.pendingStop?.executeAt).toBe('2026-11-17T18:05:00.000Z');
+    expect(globalThis.fetch).toHaveBeenCalledWith(
+      `https://test-server/api/v1/servers/${validUuid}/stop`,
+      expect.objectContaining({
+        method: 'POST',
+        body: JSON.stringify({ delaySec: 300, message: 'Restart soon' }),
+      }),
+    );
   });
 
   it('no longer exposes the removed serverDZ.cfg sync-config call', () => {
