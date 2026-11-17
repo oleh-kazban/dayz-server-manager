@@ -30,6 +30,18 @@ export default defineConfig({
       '/api': {
         target: process.env.VITE_API_URL || 'http://127.0.0.1:5000',
         changeOrigin: true,
+        // When the API goes away mid-response (e.g. it restarts on a code change), end the
+        // browser's side too. Otherwise a proxied SSE stream stays open and silent, and live
+        // updates never reconnect until the page is reloaded.
+        configure: proxy => {
+          proxy.on('proxyRes', (proxyRes, _req, res) => {
+            proxyRes.on('close', () => {
+              if (!res.writableEnded) {
+                res.destroy();
+              }
+            });
+          });
+        },
       },
     },
   },
