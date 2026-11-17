@@ -306,6 +306,14 @@ export const enUSTranslations: TranslationCatalog = {
       title: 'Server Failed to Stop',
       description: '{{reason}}',
     },
+    SERVER_LOG_FILE_INVALID: {
+      title: 'Invalid Log File',
+      description: 'The requested log file is not an .RPT file in the profiles directory.',
+    },
+    SERVER_LOG_NOT_FOUND: {
+      title: 'Log File Not Found',
+      description: 'The log file "{{file}}" no longer exists for "{{name}}".',
+    },
     SERVER_STOP_ALREADY_PENDING: {
       title: 'Stop Already Scheduled',
       description:
