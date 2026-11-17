@@ -19,6 +19,7 @@ import {
   SERVER_FS_PATH_TARGET_VALUES,
   SERVER_STATUS,
   SERVER_STATUS_VALUES,
+  SERVER_STOP_FAILED_EVENT,
   serverDetailSchema,
   serverFsCheckStatusSchema,
   serverFsDiagnosticIssueSchema,
@@ -29,11 +30,16 @@ import {
   serverIdParamSchema,
   serverLastExitSchema,
   serverNameSchema,
+  serverPendingStopSchema,
   serverRuntimeSchema,
   ServerStatus,
   serverStatusChangedEventSchema,
   serverStatusSchema,
+  serverStopFailedEventSchema,
   serverSummarySchema,
+  STOP_DELAY_MAX_SEC,
+  STOP_MESSAGE_MAX_LENGTH,
+  stopServerRequestSchema,
   updateServerSchema,
   validateServerPathsRequestSchema,
   validateServerPathsResponseSchema,
@@ -287,6 +293,7 @@ describe('Server Contracts (@aegis/api-contracts)', () => {
       missionPath: 'C:/DayZServer/mpmissions/dayzOffline.chernarusplus',
       launchOptions: { ...EMPTY_LAUNCH_OPTIONS, cpuCount: 4 },
       runtime: null,
+      pendingStop: null,
       lastExit: null,
       maxPlayers: 60,
       rconIp: '127.0.0.1',
@@ -898,10 +905,69 @@ describe('server runtime contracts (DSM-00162)', () => {
       serverId: '7f0c6a52-1d5c-4c3e-9b4b-0c6f1f7f6e10',
       status: 'failed',
       lastExit: { reason: 'crashed', exitCode: 1, signal: null, at },
+      pendingStop: null,
     };
     expect(serverStatusChangedEventSchema.parse(event)).toEqual(event);
     expect(serverStatusChangedEventSchema.safeParse({ ...event, status: 'crashed' }).success).toBe(
       false,
     );
+  });
+});
+
+describe('delayed stop contracts (DSM-00167)', () => {
+  const at = '2026-11-17T18:00:00.000Z';
+
+  it('defaults to an immediate stop and accepts an empty body', () => {
+    expect(stopServerRequestSchema.parse({})).toEqual({ delaySec: 0 });
+    expect(stopServerRequestSchema.parse({ delaySec: 300, message: '  Restart soon  ' })).toEqual({
+      delaySec: 300,
+      message: 'Restart soon',
+    });
+    expect(stopServerRequestSchema.parse({ delaySec: STOP_DELAY_MAX_SEC }).delaySec).toBe(3600);
+  });
+
+  it.each([
+    [{ delaySec: -1 }, 'Delay cannot be negative'],
+    [{ delaySec: 3601 }, 'Delay can be at most 3600 seconds'],
+    [{ delaySec: 1.5 }, 'Delay must be a whole number of seconds'],
+    [{ message: '   ' }, 'Warning message cannot be empty'],
+    [
+      { message: 'x'.repeat(STOP_MESSAGE_MAX_LENGTH + 1) },
+      'Warning message can be at most 120 characters',
+    ],
+    [{ message: 'Bye\n#shutdown' }, 'Warning message cannot contain control characters'],
+    [{ message: 'Bye\u007f' }, 'Warning message cannot contain control characters'],
+  ])('rejects %j', (body, issue) => {
+    const result = stopServerRequestSchema.safeParse(body);
+    expect(result.success).toBe(false);
+    expect(result.error?.issues.map(i => i.message)).toContain(issue);
+  });
+
+  it('rejects unknown fields', () => {
+    expect(stopServerRequestSchema.safeParse({ delay: 60 }).success).toBe(false);
+  });
+
+  it('validates the pending stop, the status event with it and the stop-failed event', () => {
+    const pendingStop = { executeAt: at, requestedAt: at };
+    expect(serverPendingStopSchema.safeParse(pendingStop).success).toBe(true);
+    expect(serverPendingStopSchema.safeParse({ executeAt: 'soon', requestedAt: at }).success).toBe(
+      false,
+    );
+    expect(
+      serverStatusChangedEventSchema.safeParse({
+        serverId: '7f0c6a52-1d5c-4c3e-9b4b-0c6f1f7f6e10',
+        status: 'running',
+        lastExit: null,
+        pendingStop,
+      }).success,
+    ).toBe(true);
+    expect(SERVER_STOP_FAILED_EVENT).toBe('server.stop.failed');
+    expect(
+      serverStopFailedEventSchema.safeParse({
+        serverId: '7f0c6a52-1d5c-4c3e-9b4b-0c6f1f7f6e10',
+        errorCode: 'SERVER_RCON_UNREACHABLE',
+        message: 'timeout',
+      }).success,
+    ).toBe(true);
   });
 });

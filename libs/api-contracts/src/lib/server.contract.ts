@@ -72,6 +72,48 @@ export const serverLastExitSchema = z.object({
 });
 export type ServerLastExitDto = z.infer<typeof serverLastExitSchema>;
 
+/** A graceful stop scheduled for later (DSM-00167); the server keeps running until `executeAt`. */
+export const serverPendingStopSchema = z.object({
+  executeAt: z.string().datetime(),
+  requestedAt: z.string().datetime(),
+});
+export type ServerPendingStopDto = z.infer<typeof serverPendingStopSchema>;
+
+/** Longest delay a stop request may ask for (DSM-00167). */
+export const STOP_DELAY_MAX_SEC = 3600;
+/** Longest custom in-game warning a stop request may carry (DSM-00167). */
+export const STOP_MESSAGE_MAX_LENGTH = 120;
+
+/**
+ * Body of `POST /servers/:id/stop` (DSM-00167). `delaySec` 0 stops now; otherwise players are
+ * warned once via `#say -1` and the stop runs after the delay. The message goes into an RCON
+ * command line, so control characters are rejected.
+ */
+export const stopServerRequestSchema = z
+  .object({
+    delaySec: z
+      .number()
+      .int('Delay must be a whole number of seconds')
+      .min(0, 'Delay cannot be negative')
+      .max(STOP_DELAY_MAX_SEC, `Delay can be at most ${STOP_DELAY_MAX_SEC} seconds`)
+      .default(0),
+    message: z
+      .string()
+      .trim()
+      .min(1, 'Warning message cannot be empty')
+      .max(
+        STOP_MESSAGE_MAX_LENGTH,
+        `Warning message can be at most ${STOP_MESSAGE_MAX_LENGTH} characters`,
+      )
+      .refine(
+        val => !Array.from(val).some(c => c.charCodeAt(0) < 32 || c.charCodeAt(0) === 127),
+        'Warning message cannot contain control characters',
+      )
+      .optional(),
+  })
+  .strict();
+export type StopServerRequestDto = z.input<typeof stopServerRequestSchema>;
+
 export const serverSummarySchema = z.object({
   id: z.string().uuid(),
   name: z.string().min(1).max(64),
@@ -145,6 +187,8 @@ export const serverDetailSchema = serverSummarySchema.extend({
   rconIp: rconIpSchema,
   rconPassword: z.string().nullable(),
   runtime: serverRuntimeSchema.nullable(),
+  /** Delayed graceful stop waiting to run (DSM-00167). */
+  pendingStop: serverPendingStopSchema.nullable(),
 });
 export type ServerDetailDto = z.infer<typeof serverDetailSchema>;
 
@@ -154,8 +198,19 @@ export const serverStatusChangedEventSchema = z.object({
   serverId: z.string().uuid(),
   status: serverStatusSchema,
   lastExit: serverLastExitSchema.nullable(),
+  /** Also broadcast when a delayed stop is scheduled or cancelled (DSM-00167). */
+  pendingStop: serverPendingStopSchema.nullable(),
 });
 export type ServerStatusChangedEventDto = z.infer<typeof serverStatusChangedEventSchema>;
+
+/** SSE `server.stop.failed`: a delayed stop came due but could not run (DSM-00167). */
+export const SERVER_STOP_FAILED_EVENT = 'server.stop.failed';
+export const serverStopFailedEventSchema = z.object({
+  serverId: z.string().uuid(),
+  errorCode: z.string(),
+  message: z.string(),
+});
+export type ServerStopFailedEventDto = z.infer<typeof serverStopFailedEventSchema>;
 
 export const createServerSchema = z
   .object({

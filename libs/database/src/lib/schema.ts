@@ -77,6 +77,9 @@ export const servers = sqliteTable('servers', {
   lastExitCode: integer('last_exit_code'),
   lastExitSignal: text('last_exit_signal'),
   lastExitAt: integer('last_exit_at', { mode: 'timestamp_ms' }),
+  // Delayed graceful stop (DSM-00167): persisted so it survives a DSM restart.
+  pendingStopAt: integer('pending_stop_at', { mode: 'timestamp_ms' }),
+  pendingStopRequestedAt: integer('pending_stop_requested_at', { mode: 'timestamp_ms' }),
   isDefault: integer('is_default', { mode: 'boolean' }).notNull().default(false),
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
   updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),

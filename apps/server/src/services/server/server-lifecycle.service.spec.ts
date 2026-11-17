@@ -108,6 +108,7 @@ describe('ServerLifecycleService', () => {
         serverId: SERVER_ID,
         status: 'starting',
         lastExit: null,
+        pendingStop: null,
       });
       expect(service.watchedCount).toBe(1);
 

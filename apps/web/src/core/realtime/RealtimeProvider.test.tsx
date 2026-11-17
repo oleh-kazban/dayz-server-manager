@@ -83,7 +83,12 @@ describe('RealtimeProvider', () => {
     act(() =>
       sources[0].listeners.get('server.status.changed')?.(
         new MessageEvent('server.status.changed', {
-          data: JSON.stringify({ serverId: ID, status: 'stopping', lastExit: null }),
+          data: JSON.stringify({
+            serverId: ID,
+            status: 'stopping',
+            lastExit: null,
+            pendingStop: null,
+          }),
         }),
       ),
     );

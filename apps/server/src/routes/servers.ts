@@ -44,7 +44,11 @@ import {
   findFirstValidMissionTemplate,
   serverFsInspectorService,
 } from '../services/server/server-fs-inspector.service';
-import { toServerLastExit, toServerRuntime } from '../services/server/server-lifecycle.service';
+import {
+  toServerLastExit,
+  toServerPendingStop,
+  toServerRuntime,
+} from '../services/server/server-lifecycle.service';
 import {
   decryptServerSecrets,
   resolveEncryptedServerSecrets,
@@ -349,6 +353,7 @@ export function sendServerDetail(reply: FastifyReply, s: Server, statusCode: 200
       missionPath: s.missionPath,
       launchOptions: readLaunchOptions(s),
       runtime: toServerRuntime(s),
+      pendingStop: toServerPendingStop(s),
       lastExit: toServerLastExit(s),
       createdAt: s.createdAt.toISOString(),
       updatedAt: s.updatedAt.toISOString(),

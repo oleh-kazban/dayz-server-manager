@@ -343,6 +343,7 @@ const MIGRATION_0007_ID = '0007_server_config_editor';
 const MIGRATION_0008_ID = '0008_admin_only_and_relative_profile_path';
 const MIGRATION_0009_ID = '0009_structured_launch_options';
 const MIGRATION_0010_ID = '0010_server_runtime_state';
+const MIGRATION_0011_ID = '0011_server_pending_stop';
 
 function findMigration(id: string) {
   const migration = migrations.find(m => m.id === id);
@@ -677,6 +678,7 @@ describe('Database Migrations — 0007_server_config_editor', () => {
           MIGRATION_0008_ID,
           MIGRATION_0009_ID,
           MIGRATION_0010_ID,
+          MIGRATION_0011_ID,
         ]);
 
         expect(
@@ -1039,6 +1041,82 @@ describe('Database Migrations — 0010_server_runtime_state', () => {
         lastExitSignal: 'SIGSEGV',
         lastExitAt: now,
       });
+    } finally {
+      instance.close();
+      fs.rmSync(tempDir, { recursive: true, force: true });
+    }
+  });
+});
+
+describe('Database Migrations — 0011_server_pending_stop', () => {
+  it('adds the pending stop columns to an existing database and is idempotent', () => {
+    const sqlite = new Database(':memory:');
+    try {
+      sqlite.exec(`
+        CREATE TABLE IF NOT EXISTS _dsm_migrations (
+          id TEXT PRIMARY KEY,
+          name TEXT NOT NULL,
+          applied_at INTEGER NOT NULL
+        );
+      `);
+      const insertMigration = sqlite.prepare(
+        'INSERT INTO _dsm_migrations (id, name, applied_at) VALUES (?, ?, ?)',
+      );
+      for (const migration of migrations.filter(m => m.id < MIGRATION_0011_ID)) {
+        migration.up(sqlite);
+        insertMigration.run(migration.id, migration.name, 1_700_000_000_000);
+      }
+      sqlite
+        .prepare(
+          `INSERT INTO servers (id, name, status, install_path, profile_path, mission_path, created_at, updated_at)
+           VALUES ('srv-1', 'Existing', 'stopped', '/opt/dayz', 'profiles', 'mpmissions/x', 1, 1)`,
+        )
+        .run();
+
+      runMigrations(sqlite);
+
+      const columns = (sqlite.pragma('table_info(servers)') as { name: string }[]).map(c => c.name);
+      expect(columns).toEqual(
+        expect.arrayContaining(['pending_stop_at', 'pending_stop_requested_at']),
+      );
+      expect(
+        sqlite.prepare('SELECT pending_stop_at, pending_stop_requested_at FROM servers').get(),
+      ).toEqual({ pending_stop_at: null, pending_stop_requested_at: null });
+      expect(
+        sqlite.prepare('SELECT id FROM _dsm_migrations WHERE id = ?').get(MIGRATION_0011_ID),
+      ).toEqual({ id: MIGRATION_0011_ID });
+      expect(() => findMigration(MIGRATION_0011_ID).up(sqlite)).not.toThrow();
+    } finally {
+      sqlite.close();
+    }
+  });
+
+  it('round-trips the pending stop through drizzle', () => {
+    const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'dsm-0011-'));
+    const instance = initDatabase({
+      dbPath: path.join(tempDir, 'fresh.sqlite'),
+      vaultKeyDir: path.join(tempDir, 'vault'),
+    });
+    try {
+      const requestedAt = new Date(1_763_400_000_000);
+      const executeAt = new Date(1_763_400_300_000);
+      instance.db
+        .insert(servers)
+        .values({
+          id: 'srv-ps',
+          name: 'Pending',
+          installPath: '/opt/ps',
+          profilePath: 'profiles',
+          missionPath: 'm',
+          pendingStopAt: executeAt,
+          pendingStopRequestedAt: requestedAt,
+          createdAt: requestedAt,
+          updatedAt: requestedAt,
+        })
+        .run();
+      expect(
+        instance.db.select().from(servers).where(eq(servers.id, 'srv-ps')).get(),
+      ).toMatchObject({ pendingStopAt: executeAt, pendingStopRequestedAt: requestedAt });
     } finally {
       instance.close();
       fs.rmSync(tempDir, { recursive: true, force: true });
