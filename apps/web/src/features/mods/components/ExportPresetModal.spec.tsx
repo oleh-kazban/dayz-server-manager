@@ -111,34 +111,54 @@ const modLocal: ServerModDto = {
 };
 
 describe('sanitizePresetFilename (DSM-00356)', () => {
-  it('converts standard names to kebab-case with preset suffix', () => {
-    expect(sanitizePresetFilename('DayZ Chernarus')).toBe('dayz-chernarus-mods-preset.json');
+  const fixedDateStr = '2026-11-17';
+  const fixedDate = new Date('2026-11-17T14:30:00.000Z');
+
+  it('converts standard names to kebab-case with prefix and date suffix using default date', () => {
+    const today = new Date().toISOString().slice(0, 10);
+    expect(sanitizePresetFilename('DayZ Chernarus')).toBe(
+      `mods-preset-dayz-chernarus-${today}.json`,
+    );
+  });
+
+  it('formats filename with string exportDate parameter', () => {
+    expect(sanitizePresetFilename('DayZ Chernarus', fixedDateStr)).toBe(
+      'mods-preset-dayz-chernarus-2026-11-17.json',
+    );
+  });
+
+  it('formats filename with Date instance exportDate parameter', () => {
+    expect(sanitizePresetFilename('DayZ Chernarus', fixedDate)).toBe(
+      'mods-preset-dayz-chernarus-2026-11-17.json',
+    );
   });
 
   it('strips special characters and collapses consecutive punctuation', () => {
-    expect(sanitizePresetFilename('Server #1 [PVP/1PP] -- Chernarus!')).toBe(
-      'server-1-pvp-1pp-chernarus-mods-preset.json',
+    expect(sanitizePresetFilename('Server #1 [PVP/1PP] -- Chernarus!', fixedDateStr)).toBe(
+      'mods-preset-server-1-pvp-1pp-chernarus-2026-11-17.json',
     );
   });
 
   it('trims leading and trailing non-alphanumeric characters', () => {
-    expect(sanitizePresetFilename('   ---Namalsk Hardcore---   ')).toBe(
-      'namalsk-hardcore-mods-preset.json',
+    expect(sanitizePresetFilename('   ---Namalsk Hardcore---   ', fixedDateStr)).toBe(
+      'mods-preset-namalsk-hardcore-2026-11-17.json',
     );
   });
 
-  it('falls back to "server-mods-preset.json" for empty strings', () => {
-    expect(sanitizePresetFilename('')).toBe('server-mods-preset.json');
-    expect(sanitizePresetFilename('   ')).toBe('server-mods-preset.json');
+  it('falls back to "server" base for empty strings', () => {
+    expect(sanitizePresetFilename('', fixedDateStr)).toBe('mods-preset-server-2026-11-17.json');
+    expect(sanitizePresetFilename('   ', fixedDateStr)).toBe('mods-preset-server-2026-11-17.json');
   });
 
-  it('falls back to "server-mods-preset.json" for strings with only symbols', () => {
-    expect(sanitizePresetFilename('!@#$%^&*()_+=-~`')).toBe('server-mods-preset.json');
+  it('falls back to "server" base for strings with only symbols', () => {
+    expect(sanitizePresetFilename('!@#$%^&*()_+=-~`', fixedDateStr)).toBe(
+      'mods-preset-server-2026-11-17.json',
+    );
   });
 
   it('preserves numbers and lowercases characters', () => {
-    expect(sanitizePresetFilename('DayZ 1.26 Experimental Server')).toBe(
-      'dayz-1-26-experimental-server-mods-preset.json',
+    expect(sanitizePresetFilename('DayZ 1.26 Experimental Server', fixedDateStr)).toBe(
+      'mods-preset-dayz-1-26-experimental-server-2026-11-17.json',
     );
   });
 });
@@ -247,15 +267,17 @@ describe('ExportPresetModal (DSM-00356)', () => {
     });
 
     // Verify anchor download attributes and click trigger
+    const today = new Date().toISOString().slice(0, 10);
+    const expectedFilename = `mods-preset-dayz-chernarus-${today}.json`;
     expect(capturedAnchor.clicked).toBe(true);
-    expect(capturedAnchor.download).toBe('dayz-chernarus-mods-preset.json');
+    expect(capturedAnchor.download).toBe(expectedFilename);
     expect(capturedAnchor.href).toBe('blob:mock-preset-url');
 
     // Verify cleanup and feedback
     expect(URL.revokeObjectURL).toHaveBeenCalledWith('blob:mock-preset-url');
     expect(showToast.success).toHaveBeenCalledWith(
       'Preset Exported',
-      expect.stringContaining('dayz-chernarus-mods-preset.json'),
+      expect.stringContaining(expectedFilename),
       undefined,
     );
     expect(mockOnClose).toHaveBeenCalledTimes(1);
