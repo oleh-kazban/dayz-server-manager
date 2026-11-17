@@ -21,6 +21,23 @@ Subscription provider/hook; event-to-cache mapping for server status; reconnect 
 
 ---
 
+## [DSM-00169] Start the active server from the UI
+
+- **Type**: `Story`
+- **Priority**: `P1 (High)`
+- **Status**: `DONE`
+- **Dependencies**: `DSM-00164`
+
+### Summary
+
+A Start control starts the active server with a green toast on success and a red toast on any API error. When start is impossible the control stays focusable but disabled and says why (config edit lock held, launch command not ready, transition in progress).
+
+### Delivered Capabilities
+
+Start control, disabled reasons, feedback contract (`GEMINI.md` §5), tests and live QA.
+
+---
+
 ## [DSM-00165] Send an RCON command and receive its full response
 
 - **Type**: `Story`
