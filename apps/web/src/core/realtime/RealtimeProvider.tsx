@@ -2,7 +2,6 @@ import { type ReactNode, useEffect, useState } from 'react';
 
 import { useQueryClient } from '@tanstack/react-query';
 
-import { apiClient } from '@aegis/api-client';
 import {
   SERVER_RESTART_FAILED_EVENT,
   SERVER_STATUS_CHANGED_EVENT,
@@ -18,6 +17,7 @@ import {
 import { applyServerRestartFailed } from './server-restart-failed.realtime';
 import { applyServerStatusChanged } from './server-status.realtime';
 import { applyServerStopFailed } from './server-stop-failed.realtime';
+import { requestSseTicket } from './sse-ticket';
 
 export interface RealtimeProviderProps {
   children: ReactNode;
@@ -41,7 +41,7 @@ export function RealtimeProvider({ children, createEventSource }: RealtimeProvid
       [SERVER_RESTART_FAILED_EVENT]: data => applyServerRestartFailed(queryClient, data),
     };
     const connection = new RealtimeConnection({
-      getToken: () => apiClient.client.getToken(),
+      getTicket: requestSseTicket,
       events: Object.keys(handlers),
       onEvent: (event, data) => handlers[event]?.(data),
       onStateChange: setState,

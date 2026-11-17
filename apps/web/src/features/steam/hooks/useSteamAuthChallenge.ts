@@ -6,6 +6,8 @@ import { apiClient } from '@aegis/api-client';
 import type { SteamChallengeEventDto } from '@aegis/api-contracts';
 
 import { notifyApiError, notifyInfo, notifySuccess } from '../../../core/notifications/notify';
+import { REALTIME_SSE_PATH } from '../../../core/realtime/realtime-connection';
+import { requestSseTicket } from '../../../core/realtime/sse-ticket';
 
 export function useSteamAuthChallenge() {
   const queryClient = useQueryClient();
@@ -13,13 +15,14 @@ export function useSteamAuthChallenge() {
 
   useEffect(() => {
     let eventSource: EventSource | null = null;
+    let cancelled = false;
 
-    try {
-      const token = apiClient.client.getToken();
-      const sseUrl = token
-        ? `/api/v1/realtime/sse?token=${encodeURIComponent(token)}`
-        : '/api/v1/realtime/sse';
-      eventSource = new EventSource(sseUrl);
+    // DSM-00348: open the stream with a single-use ticket; the access token never goes in a URL.
+    const subscribe = (ticket: string | null) => {
+      if (cancelled || !ticket) {
+        return;
+      }
+      eventSource = new EventSource(`${REALTIME_SSE_PATH}?ticket=${encodeURIComponent(ticket)}`);
 
       eventSource.addEventListener('steam.auth.challenge', (e: MessageEvent) => {
         try {
@@ -63,14 +66,19 @@ export function useSteamAuthChallenge() {
           // Ignore
         }
       });
-    } catch {
-      // EventSource initialization failed (e.g. in test environment)
-    }
+    };
+
+    void requestSseTicket().then(ticket => {
+      try {
+        subscribe(ticket);
+      } catch {
+        // EventSource initialization failed (e.g. in test environment)
+      }
+    });
 
     return () => {
-      if (eventSource) {
-        eventSource.close();
-      }
+      cancelled = true;
+      eventSource?.close();
     };
   }, [queryClient]);
 

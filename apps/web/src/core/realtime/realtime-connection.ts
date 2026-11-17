@@ -13,8 +13,11 @@ export interface EventSourceLike {
 }
 
 export interface RealtimeConnectionOptions {
-  /** Current access token; read again on every (re)connect. */
-  getToken: () => string | null;
+  /**
+   * A fresh single-use SSE ticket for every (re)connect (DSM-00348), or `null` while signed out.
+   * A rejected promise counts as a failed attempt.
+   */
+  getTicket: () => Promise<string | null>;
   /** Event names to subscribe to. */
   events: readonly string[];
   /** Receives each event's parsed JSON payload; malformed payloads are dropped. */
@@ -31,13 +34,16 @@ export function reconnectDelay(attempt: number): number {
 
 /**
  * One authenticated EventSource with app-controlled reconnection (DSM-00173). A native
- * EventSource gives up after an HTTP error such as an expired token and would reuse its old URL,
- * so every error closes it and a new one is opened after a backoff, with the current token.
+ * EventSource gives up after an HTTP error and would reuse its old URL, so every error closes it
+ * and a new one is opened after a backoff, with a new single-use ticket (DSM-00348): the access
+ * token never appears in a URL.
  */
 export class RealtimeConnection {
   private source: EventSourceLike | null = null;
   private timer: ReturnType<typeof setTimeout> | null = null;
   private attempt = 0;
+  /** Bumped by every connect and stop, so a ticket that arrives late is discarded. */
+  private generation = 0;
   private stopped = true;
   private currentState: RealtimeState = 'closed';
 
@@ -60,6 +66,7 @@ export class RealtimeConnection {
   /** Closes the EventSource and cancels any pending reconnect. Idempotent. */
   stop(): void {
     this.stopped = true;
+    this.generation += 1;
     if (this.timer) {
       clearTimeout(this.timer);
       this.timer = null;
@@ -70,8 +77,18 @@ export class RealtimeConnection {
 
   private connect(): void {
     this.timer = null;
-    const token = this.options.getToken();
-    if (!token) {
+    const generation = ++this.generation;
+    this.options.getTicket().then(
+      ticket => this.open(generation, ticket),
+      () => this.open(generation, null),
+    );
+  }
+
+  private open(generation: number, ticket: string | null): void {
+    if (this.stopped || generation !== this.generation) {
+      return; // Stopped, or superseded while the ticket was being requested.
+    }
+    if (!ticket) {
       this.scheduleReconnect();
       return;
     }
@@ -80,7 +97,7 @@ export class RealtimeConnection {
     const create = this.options.createEventSource ?? (url => new EventSource(url));
     let source: EventSourceLike;
     try {
-      source = create(`${path}?token=${encodeURIComponent(token)}`);
+      source = create(`${path}?ticket=${encodeURIComponent(ticket)}`);
     } catch {
       // No EventSource support (or a test DOM): treat like a failed connection.
       this.scheduleReconnect();

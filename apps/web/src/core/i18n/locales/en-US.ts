@@ -65,6 +65,10 @@ export const enUSTranslations: TranslationCatalog = {
       title: 'Session Expired',
       description: 'Your session is missing or invalid. Please sign in again.',
     },
+    AUTH_SSE_TICKET_INVALID: {
+      title: 'Live Updates Unavailable',
+      description: 'The live updates connection was refused. It reconnects automatically.',
+    },
     AUTH_TOKEN_TYPE_INVALID: {
       title: 'Invalid Authorization Token',
       description: 'The provided token type is not valid for this operation.',
