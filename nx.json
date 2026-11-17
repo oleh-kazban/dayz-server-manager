@@ -18,15 +18,15 @@
     },
     "lint": {
       "cache": true,
-      "inputs": ["default"]
+      "inputs": ["default", "^production"]
     },
     "typecheck": {
       "cache": true,
-      "inputs": ["default"]
+      "inputs": ["default", "^production"]
     },
     "test": {
       "cache": true,
-      "inputs": ["default"]
+      "inputs": ["default", "^production"]
     }
   },
   "analytics": false
