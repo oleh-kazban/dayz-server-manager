@@ -401,6 +401,51 @@ describe('Servers Endpoint', () => {
     });
   });
 
+  describe('lifecycle actions', () => {
+    const detail = (status: string, runtime: { pid: number; startedAt: string } | null) => ({
+      id: validUuid,
+      name: 'DayZ (Local)',
+      description: null,
+      status,
+      gamePort: 2302,
+      queryPort: 27016,
+      rconPort: 2310,
+      isDefault: true,
+      installPath: '/opt/dayz',
+      profilePath: 'profiles',
+      missionPath: 'mpmissions/dayzOffline.chernarusplus',
+      launchOptions: EMPTY_LAUNCH_OPTIONS,
+      runtime,
+      lastExit: null,
+      ...serverDetailDefaults,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    });
+
+    const respondWith = (body: unknown) =>
+      vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+        new Response(JSON.stringify(body), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        }),
+      );
+
+    it.each([
+      ['start', 'start', detail('starting', { pid: 4242, startedAt: new Date().toISOString() })],
+      ['forceStop', 'force-stop', detail('stopped', null)],
+    ] as const)('%s posts to /%s and parses the server detail', async (method, path, body) => {
+      respondWith(body);
+
+      const result = await servers[method](validUuid);
+
+      expect(result.status).toBe(body.status);
+      expect(globalThis.fetch).toHaveBeenCalledWith(
+        `https://test-server/api/v1/servers/${validUuid}/${path}`,
+        expect.objectContaining({ method: 'POST' }),
+      );
+    });
+  });
+
   it('no longer exposes the removed serverDZ.cfg sync-config call', () => {
     expect(servers).not.toHaveProperty('syncConfig');
   });

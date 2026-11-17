@@ -47,5 +47,9 @@ export function createServersEndpoint(client: HttpClient) {
     /** Starts the server process (DSM-00162); resolves with the server as `starting`. */
     start: (id: string): Promise<ServerDetailDto> =>
       client.post(`/api/v1/servers/${id}/start`, serverDetailSchema),
+
+    /** Kills the process tree without a save flush (DSM-00162); resolves with the server `stopped`. */
+    forceStop: (id: string): Promise<ServerDetailDto> =>
+      client.post(`/api/v1/servers/${id}/force-stop`, serverDetailSchema),
   };
 }
