@@ -35,6 +35,11 @@ const SERVER_RUNTIME_COLUMNS: readonly [string, string][] = [
   ['last_exit_at', 'INTEGER'],
 ];
 
+const SERVER_PENDING_STOP_COLUMNS: readonly [string, string][] = [
+  ['pending_stop_at', 'INTEGER'],
+  ['pending_stop_requested_at', 'INTEGER'],
+];
+
 function addMissingServerColumns(
   sqlite: Database.Database,
   definitions: readonly [string, string][],
@@ -440,6 +445,13 @@ export const migrations: DsmMigration[] = [
       sqlite.exec(
         "UPDATE servers SET status = 'stopped' WHERE status IN ('starting', 'running', 'stopping');",
       );
+    },
+  },
+  {
+    id: '0011_server_pending_stop',
+    name: 'Persist a delayed graceful stop so it survives a DSM restart',
+    up: (sqlite: Database.Database) => {
+      addMissingServerColumns(sqlite, SERVER_PENDING_STOP_COLUMNS);
     },
   },
 ];
