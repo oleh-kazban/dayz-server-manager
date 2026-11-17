@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import type { LaunchCommandPreviewDto } from '@aegis/api-contracts';
 
-import { formatRuntime, getStartBlocker } from './maintenance.utils';
+import { formatRuntime, getForceStopBlocker, getStartBlocker } from './maintenance.utils';
 
 const ready: LaunchCommandPreviewDto = {
   serverId: '22222222-2222-4222-8222-222222222222',
@@ -84,5 +84,15 @@ describe('formatRuntime', () => {
     expect(formatRuntime({ pid: 4242, startedAt })).toBe(
       `PID 4242 · started ${new Date(startedAt).toLocaleString()}`,
     );
+  });
+});
+
+describe('getForceStopBlocker', () => {
+  it.each(['starting', 'running', 'stopping'] as const)('allows a %s server', status => {
+    expect(getForceStopBlocker(status)).toBeNull();
+  });
+
+  it.each(['stopped', 'failed'] as const)('explains a %s server', status => {
+    expect(getForceStopBlocker(status)).toBe('The server is not running.');
   });
 });

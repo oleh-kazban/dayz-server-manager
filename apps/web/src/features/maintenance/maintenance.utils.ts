@@ -48,6 +48,17 @@ export function getStartBlocker({
   return null;
 }
 
+/**
+ * Why the server cannot be force-stopped (DSM-00170), or `null` when it can. Force-stop also
+ * works while `stopping`: it is the way out of a graceful stop that does not finish.
+ */
+export function getForceStopBlocker(status: ServerStatus): string | null {
+  if (status === SERVER_STATUS.STOPPED || status === SERVER_STATUS.FAILED) {
+    return 'The server is not running.';
+  }
+  return null;
+}
+
 /** "PID 4242 · started 17 Nov 2026, 10:00" for the process summary line. */
 export function formatRuntime(runtime: { pid: number; startedAt: string }): string {
   return `PID ${runtime.pid} · started ${new Date(runtime.startedAt).toLocaleString()}`;

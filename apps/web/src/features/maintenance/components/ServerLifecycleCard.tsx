@@ -10,6 +10,7 @@ import {
 
 import { formatRuntime } from '../maintenance.utils';
 
+import { ForceStopServerTile } from './ForceStopServerTile';
 import { StartServerTile } from './StartServerTile';
 
 export interface ServerLifecycleCardProps {
@@ -42,6 +43,7 @@ export function ServerLifecycleCard({ server }: ServerLifecycleCardProps) {
       </div>
       <div className="grid grid-cols-1 divide-y divide-[var(--color-border)] md:grid-cols-2 md:divide-x md:divide-y-0 xl:grid-cols-4">
         <StartServerTile server={server} />
+        <ForceStopServerTile server={server} />
       </div>
     </Card>
   );

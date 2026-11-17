@@ -10,6 +10,7 @@ export type NotificationCode =
   | 'SERVER_UPDATED'
   | 'SERVER_DELETED'
   | 'SERVER_START_REQUESTED'
+  | 'SERVER_FORCE_STOPPED'
   | 'STEAM_SETTINGS_UPDATED'
   | 'STEAM_SESSION_CLEARED'
   | 'STEAM_AUTH_SUCCESS'
@@ -362,6 +363,10 @@ export const enUSTranslations: TranslationCatalog = {
     SERVER_START_REQUESTED: {
       title: 'Server Starting',
       description: '"{{name}}" is starting. Its status updates live.',
+    },
+    SERVER_FORCE_STOPPED: {
+      title: 'Server Force-Stopped',
+      description: '"{{name}}" was killed. Progress since its last save was not kept.',
     },
     STEAM_SETTINGS_UPDATED: {
       title: 'Steam Settings Saved',
