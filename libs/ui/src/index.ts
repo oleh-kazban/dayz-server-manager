@@ -114,6 +114,10 @@ export {
 export type { LoaderProps, LoaderSize, LoaderVariant } from './loader';
 export { Loader } from './loader';
 
+// Log Viewer
+export type { LogSeverity, LogViewerProps } from './log-viewer';
+export { detectLogSeverity, LOG_ROW_HEIGHT, LogViewer } from './log-viewer';
+
 // Menu
 export type {
   DotsFloatingMenuOption,

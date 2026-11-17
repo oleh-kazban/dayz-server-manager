@@ -140,7 +140,7 @@ export function GracefulStopTile({ kind, server }: GracefulStopTileProps) {
             )}
             {ownPending ? (
               <>
-                <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-3 py-2 text-xs">
+                <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-subtle)] px-3 py-2 text-xs">
                   <p className="font-semibold text-[var(--color-text-main)]">
                     {copy.scheduledFor} {timeOf(ownPending.executeAt)}
                   </p>
