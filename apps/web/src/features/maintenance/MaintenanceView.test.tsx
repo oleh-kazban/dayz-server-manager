@@ -1,15 +1,17 @@
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { apiClient } from '@aegis/api-client';
-import {
-  EMPTY_LAUNCH_OPTIONS,
-  type ServerDetailDto,
-  type ServerSummaryDto,
-} from '@aegis/api-contracts';
+import type { ServerSummaryDto } from '@aegis/api-contracts';
 import { useActiveServer } from '@aegis/web/core';
 
+import {
+  AT,
+  renderWithQueryClient,
+  SERVER_ID as ID,
+  serverDetail,
+  serverSummary,
+} from './__fixtures__/servers';
 import { MaintenanceView } from './MaintenanceView';
 
 const navigate = vi.fn();
@@ -31,33 +33,9 @@ vi.mock('@aegis/api-client', async importOriginal => {
   };
 });
 
-const ID = '22222222-2222-4222-8222-222222222222';
-const AT = '2026-11-17T10:00:00.000Z';
-const server: ServerSummaryDto = {
-  id: ID,
-  name: 'Namalsk',
-  status: 'running',
-  gamePort: 2302,
-  queryPort: 27016,
-  rconPort: 2310,
-  isDefault: true,
-  lastExit: null,
-  createdAt: AT,
-  updatedAt: AT,
-};
-const detail = (overrides: Partial<ServerDetailDto> = {}): ServerDetailDto => ({
-  ...server,
-  description: null,
-  installPath: '/opt/dayz',
-  profilePath: 'profiles',
-  missionPath: 'mpmissions/dayzOffline.namalsk',
-  launchOptions: EMPTY_LAUNCH_OPTIONS,
-  maxPlayers: 60,
-  rconIp: '127.0.0.1',
-  rconPassword: null,
-  runtime: { pid: 4242, startedAt: AT },
-  ...overrides,
-});
+const server = serverSummary({ status: 'running' });
+const detail: typeof serverDetail = (overrides = {}) =>
+  serverDetail({ ...server, runtime: { pid: 4242, startedAt: AT }, ...overrides });
 
 function activeServer(value: Partial<ReturnType<typeof useActiveServer>>) {
   vi.mocked(useActiveServer).mockReturnValue({
@@ -72,13 +50,7 @@ function activeServer(value: Partial<ReturnType<typeof useActiveServer>>) {
 }
 
 function renderView() {
-  render(
-    <QueryClientProvider
-      client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}
-    >
-      <MaintenanceView />
-    </QueryClientProvider>,
-  );
+  renderWithQueryClient(<MaintenanceView />);
 }
 
 describe('MaintenanceView', () => {
@@ -99,6 +71,7 @@ describe('MaintenanceView', () => {
       await screen.findByText(`PID 4242 · started ${new Date(AT).toLocaleString()}`),
     ).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Start server/ })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Force-stop/ })).toBeInTheDocument();
   });
 
   it('explains why a failed server ended', async () => {
