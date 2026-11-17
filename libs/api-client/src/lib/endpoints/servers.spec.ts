@@ -77,6 +77,7 @@ describe('Servers Endpoint', () => {
       launchOptions: EMPTY_LAUNCH_OPTIONS,
       runtime: null,
       pendingStop: null,
+      restartRequested: false,
       lastExit: null,
       ...serverDetailDefaults,
       createdAt: new Date().toISOString(),
@@ -121,6 +122,7 @@ describe('Servers Endpoint', () => {
       launchOptions: EMPTY_LAUNCH_OPTIONS,
       runtime: null,
       pendingStop: null,
+      restartRequested: false,
       lastExit: null,
       ...serverDetailDefaults,
       createdAt: new Date().toISOString(),
@@ -161,6 +163,7 @@ describe('Servers Endpoint', () => {
       launchOptions: EMPTY_LAUNCH_OPTIONS,
       runtime: null,
       pendingStop: null,
+      restartRequested: false,
       lastExit: null,
       ...serverDetailDefaults,
       createdAt: new Date().toISOString(),
@@ -420,6 +423,7 @@ describe('Servers Endpoint', () => {
       launchOptions: EMPTY_LAUNCH_OPTIONS,
       runtime,
       pendingStop: null,
+      restartRequested: false,
       lastExit: null,
       ...serverDetailDefaults,
       createdAt: new Date().toISOString(),
@@ -438,6 +442,7 @@ describe('Servers Endpoint', () => {
       ['start', 'start', detail('starting', { pid: 4242, startedAt: new Date().toISOString() })],
       ['forceStop', 'force-stop', detail('stopped', null)],
       ['cancelStop', 'stop/cancel', detail('running', null)],
+      ['restart', 'restart', detail('stopping', null)],
     ] as const)('%s posts to /%s and parses the server detail', async (method, path, body) => {
       respondWith(body);
 
@@ -470,6 +475,7 @@ describe('Servers Endpoint', () => {
         executeAt: '2026-11-17T18:05:00.000Z',
         requestedAt: '2026-11-17T18:00:00.000Z',
       },
+      restartRequested: false,
       lastExit: null,
       ...serverDetailDefaults,
       createdAt: new Date().toISOString(),
