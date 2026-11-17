@@ -25,7 +25,7 @@ export function ForceStopServerTile({ server }: ForceStopServerTileProps) {
 
   const forceStop = useServerLifecycleAction({
     serverId: server.id,
-    request: apiClient.servers.forceStop,
+    request: id => apiClient.servers.forceStop(id),
     successCode: 'SERVER_FORCE_STOPPED',
     errorTitle: 'Force-stop Failed',
   });

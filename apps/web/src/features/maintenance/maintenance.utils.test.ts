@@ -2,7 +2,14 @@ import { describe, expect, it } from 'vitest';
 
 import type { LaunchCommandPreviewDto } from '@aegis/api-contracts';
 
-import { formatRuntime, getForceStopBlocker, getStartBlocker } from './maintenance.utils';
+import {
+  formatCountdown,
+  formatDelayPreset,
+  formatRuntime,
+  getForceStopBlocker,
+  getStartBlocker,
+  getStopBlocker,
+} from './maintenance.utils';
 
 const ready: LaunchCommandPreviewDto = {
   serverId: '22222222-2222-4222-8222-222222222222',
@@ -94,5 +101,52 @@ describe('getForceStopBlocker', () => {
 
   it.each(['stopped', 'failed'] as const)('explains a %s server', status => {
     expect(getForceStopBlocker(status)).toBe('The server is not running.');
+  });
+});
+
+describe('getStopBlocker', () => {
+  const pendingStop = {
+    executeAt: '2026-11-17T18:05:00.000Z',
+    requestedAt: '2026-11-17T18:00:00.000Z',
+  };
+
+  it('allows a running server without a scheduled stop', () => {
+    expect(getStopBlocker('running', null)).toBeNull();
+    expect(getStopBlocker('running', undefined)).toBeNull();
+  });
+
+  it.each([
+    ['starting', 'The server is still starting. Wait until it is running.'],
+    ['stopping', 'The server is already stopping.'],
+    ['stopped', 'The server is not running.'],
+    ['failed', 'The server is not running.'],
+  ] as const)('explains a %s server', (status, reason) => {
+    expect(getStopBlocker(status, null)).toBe(reason);
+  });
+
+  it('asks to cancel a scheduled stop first', () => {
+    expect(getStopBlocker('running', pendingStop)).toBe(
+      'A stop is already scheduled. Cancel it to choose another time.',
+    );
+  });
+});
+
+describe('formatCountdown', () => {
+  it.each([
+    [0, '0:00'],
+    [-5_000, '0:00'],
+    [1, '0:01'],
+    [65_000, '1:05'],
+    [600_000, '10:00'],
+    [3_600_000, '1:00:00'],
+    [3_725_000, '1:02:05'],
+  ])('%i ms -> %s', (ms, text) => {
+    expect(formatCountdown(ms)).toBe(text);
+  });
+});
+
+describe('formatDelayPreset', () => {
+  it('labels the presets', () => {
+    expect([0, 60, 300, 1800].map(formatDelayPreset)).toEqual(['Now', '1 min', '5 min', '30 min']);
   });
 });
