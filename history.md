@@ -21,6 +21,23 @@ Subscription provider/hook; event-to-cache mapping for server status; reconnect 
 
 ---
 
+## [DSM-00170] Force-stop the active server with a warning confirmation
+
+- **Type**: `Story`
+- **Priority**: `P1 (High)`
+- **Status**: `DONE`
+- **Dependencies**: `DSM-00164`
+
+### Summary
+
+A Force-stop control kills the active server after a confirmation warning that unsaved world progress will be lost; results toast per the feedback contract.
+
+### Delivered Capabilities
+
+Control, confirmation dialog, toasts, tests.
+
+---
+
 ## [DSM-00169] Start the active server from the UI
 
 - **Type**: `Story`
