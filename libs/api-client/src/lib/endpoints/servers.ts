@@ -56,7 +56,15 @@ export function createServersEndpoint(client: HttpClient) {
     stop: (id: string, dto?: StopServerRequestDto): Promise<ServerDetailDto> =>
       client.post(`/api/v1/servers/${id}/stop`, serverDetailSchema, dto),
 
-    /** Cancels a pending delayed stop (DSM-00167). */
+    /**
+     * Graceful stop, then start (DSM-00168): now, or after `delaySec` with an in-game warning.
+     * Resolves once the stop is requested (`stopping`, or `running` with a `pendingStop`), with
+     * `restartRequested: true`; the start follows when the process has exited.
+     */
+    restart: (id: string, dto?: StopServerRequestDto): Promise<ServerDetailDto> =>
+      client.post(`/api/v1/servers/${id}/restart`, serverDetailSchema, dto),
+
+    /** Cancels a pending delayed stop or restart (DSM-00167). */
     cancelStop: (id: string): Promise<ServerDetailDto> =>
       client.post(`/api/v1/servers/${id}/stop/cancel`, serverDetailSchema),
 

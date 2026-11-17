@@ -184,6 +184,7 @@ function buildServerDetail(overrides: Partial<ServerDetailDto> = {}): ServerDeta
     launchOptions: EMPTY_LAUNCH_OPTIONS,
     runtime: null,
     pendingStop: null,
+    restartRequested: false,
     lastExit: null,
     maxPlayers: 60,
     rconIp: '127.0.0.1',

@@ -454,6 +454,13 @@ export const migrations: DsmMigration[] = [
       addMissingServerColumns(sqlite, SERVER_PENDING_STOP_COLUMNS);
     },
   },
+  {
+    id: '0012_server_restart_requested',
+    name: 'Persist a requested restart so it survives a DSM restart',
+    up: (sqlite: Database.Database) => {
+      addMissingServerColumns(sqlite, [['restart_requested', 'INTEGER NOT NULL DEFAULT 0']]);
+    },
+  },
 ];
 
 export function runMigrations(sqlite: Database.Database, options?: MigrationOptions): void {

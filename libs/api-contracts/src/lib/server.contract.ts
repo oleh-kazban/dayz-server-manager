@@ -107,6 +107,11 @@ export function defaultStopWarning(delaySec: number): string {
   return `Server is shutting down in ${formatStopDelay(delaySec)}. Please find a safe place and log out.`;
 }
 
+/** Default in-game warning for a delayed restart (DSM-00168). */
+export function defaultRestartWarning(delaySec: number): string {
+  return `Server is restarting in ${formatStopDelay(delaySec)}. Please find a safe place and log out.`;
+}
+
 /**
  * Body of `POST /servers/:id/stop` (DSM-00167). `delaySec` 0 stops now; otherwise players are
  * warned once via `#say -1` and the stop runs after the delay. The message goes into an RCON
@@ -136,6 +141,9 @@ export const stopServerRequestSchema = z
   })
   .strict();
 export type StopServerRequestDto = z.input<typeof stopServerRequestSchema>;
+
+/** Body of `POST /servers/:id/restart` (DSM-00168): the stop part of the restart. */
+export const restartServerRequestSchema = stopServerRequestSchema;
 
 export const serverSummarySchema = z.object({
   id: z.string().uuid(),
@@ -212,6 +220,8 @@ export const serverDetailSchema = serverSummarySchema.extend({
   runtime: serverRuntimeSchema.nullable(),
   /** Delayed graceful stop waiting to run (DSM-00167). */
   pendingStop: serverPendingStopSchema.nullable(),
+  /** The server starts again once the current or pending stop completes (DSM-00168). */
+  restartRequested: z.boolean(),
 });
 export type ServerDetailDto = z.infer<typeof serverDetailSchema>;
 
@@ -223,6 +233,7 @@ export const serverStatusChangedEventSchema = z.object({
   lastExit: serverLastExitSchema.nullable(),
   /** Also broadcast when a delayed stop is scheduled or cancelled (DSM-00167). */
   pendingStop: serverPendingStopSchema.nullable(),
+  restartRequested: z.boolean(),
 });
 export type ServerStatusChangedEventDto = z.infer<typeof serverStatusChangedEventSchema>;
 
@@ -234,6 +245,14 @@ export const serverStopFailedEventSchema = z.object({
   message: z.string(),
 });
 export type ServerStopFailedEventDto = z.infer<typeof serverStopFailedEventSchema>;
+
+/** SSE `server.restart.failed`: a restart failed in its stop or its start phase (DSM-00168). */
+export const SERVER_RESTART_FAILED_EVENT = 'server.restart.failed';
+export const SERVER_RESTART_PHASE_VALUES = ['stop', 'start'] as const;
+export const serverRestartFailedEventSchema = serverStopFailedEventSchema.extend({
+  phase: z.enum(SERVER_RESTART_PHASE_VALUES),
+});
+export type ServerRestartFailedEventDto = z.infer<typeof serverRestartFailedEventSchema>;
 
 export const createServerSchema = z
   .object({

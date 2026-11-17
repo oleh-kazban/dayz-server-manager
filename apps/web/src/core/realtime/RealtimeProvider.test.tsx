@@ -88,6 +88,7 @@ describe('RealtimeProvider', () => {
             status: 'stopping',
             lastExit: null,
             pendingStop: null,
+            restartRequested: false,
           }),
         }),
       ),

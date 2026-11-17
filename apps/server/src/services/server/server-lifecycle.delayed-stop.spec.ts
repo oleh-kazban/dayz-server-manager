@@ -69,7 +69,13 @@ describe('ServerLifecycleService delayed stop (DSM-00167)', () => {
 
   const pendingEvent = (pendingStop: { executeAt: string; requestedAt: string } | null) => [
     'server.status.changed',
-    { serverId: SERVER_ID, status: 'running', lastExit: null, pendingStop },
+    {
+      serverId: SERVER_ID,
+      status: 'running',
+      lastExit: null,
+      pendingStop,
+      restartRequested: false,
+    },
   ];
 
   beforeEach(() => {
@@ -145,6 +151,7 @@ describe('ServerLifecycleService delayed stop (DSM-00167)', () => {
         status: 'stopping',
         lastExit: null,
         pendingStop: null,
+        restartRequested: false,
       });
     });
 
@@ -241,7 +248,10 @@ describe('ServerLifecycleService delayed stop (DSM-00167)', () => {
       expect(cancelled).toMatchObject({ status: 'running', pendingStopAt: null });
       expect(broadcast).toHaveBeenLastCalledWith(...pendingEvent(null));
       expect(rcon.commands.at(-1)).toBe(`#say -1 ${STOP_CANCELLED_MESSAGE}`);
-      expect(logger.info).toHaveBeenCalledWith({ serverId: SERVER_ID }, 'Pending stop cancelled');
+      expect(logger.info).toHaveBeenCalledWith(
+        { serverId: SERVER_ID, restart: false },
+        'Pending stop cancelled',
+      );
 
       await vi.advanceTimersByTimeAsync(FIVE_MINUTES * 1000);
       expect(rcon.commands).not.toContain('#shutdown');
@@ -333,7 +343,12 @@ describe('ServerLifecycleService delayed stop (DSM-00167)', () => {
         message: 'Wrong password.',
       });
       expect(logger.error).toHaveBeenCalledWith(
-        { serverId: SERVER_ID, errorCode: 'SERVER_RCON_LOGIN_FAILED', reason: 'Wrong password.' },
+        {
+          serverId: SERVER_ID,
+          errorCode: 'SERVER_RCON_LOGIN_FAILED',
+          reason: 'Wrong password.',
+          restart: false,
+        },
         'Delayed stop failed',
       );
     });

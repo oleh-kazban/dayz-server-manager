@@ -40,6 +40,7 @@ const detail = (status: ServerDetailDto['status']): ServerDetailDto => ({
   rconPassword: null,
   runtime: { pid: 4242, startedAt: AT },
   pendingStop: null,
+  restartRequested: false,
   lastExit: null,
 });
 
@@ -64,6 +65,7 @@ describe('applyServerStatusChanged', () => {
       status: 'failed',
       lastExit,
       pendingStop: null,
+      restartRequested: false,
     });
 
     expect(
@@ -91,6 +93,7 @@ describe('applyServerStatusChanged', () => {
         status,
         lastExit: null,
         pendingStop: null,
+        restartRequested: false,
       });
       expect(
         queryClient.getQueryData<ServerDetailDto>(serverQueryKeys.detail(ID))?.runtime,
@@ -107,6 +110,7 @@ describe('applyServerStatusChanged', () => {
       status: 'running',
       lastExit: null,
       pendingStop,
+      restartRequested: false,
     });
     expect(
       queryClient.getQueryData<ServerDetailDto>(serverQueryKeys.detail(ID))?.pendingStop,
@@ -117,10 +121,25 @@ describe('applyServerStatusChanged', () => {
       status: 'running',
       lastExit: null,
       pendingStop: null,
+      restartRequested: false,
     });
     expect(
       queryClient.getQueryData<ServerDetailDto>(serverQueryKeys.detail(ID))?.pendingStop,
     ).toBeNull();
+  });
+
+  it('keeps the restart flag in the detail (DSM-00168)', () => {
+    const queryClient = seededClient();
+    applyServerStatusChanged(queryClient, {
+      serverId: ID,
+      status: 'stopping',
+      lastExit: null,
+      pendingStop: null,
+      restartRequested: true,
+    });
+    expect(
+      queryClient.getQueryData<ServerDetailDto>(serverQueryKeys.detail(ID))?.restartRequested,
+    ).toBe(true);
   });
 
   it('leaves never-loaded caches untouched', () => {
@@ -130,6 +149,7 @@ describe('applyServerStatusChanged', () => {
       status: 'stopped',
       lastExit: null,
       pendingStop: null,
+      restartRequested: false,
     });
     expect(queryClient.getQueryData(serverQueryKeys.list())).toBeUndefined();
     expect(queryClient.getQueryData(serverQueryKeys.detail(ID))).toBeUndefined();

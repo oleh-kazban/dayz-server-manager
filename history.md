@@ -21,6 +21,23 @@ Subscription provider/hook; event-to-cache mapping for server status; reconnect 
 
 ---
 
+## [DSM-00171] Gracefully stop the active server with a delay choice
+
+- **Type**: `Story`
+- **Priority**: `P1 (High)`
+- **Status**: `DONE`
+- **Dependencies**: `DSM-00164, DSM-00167`
+
+### Summary
+
+A Stop control opens a dialog to stop now or after a chosen delay with an in-game warning, and lets the operator cancel a pending delayed stop. If RCON is unreachable the error points to force-stop as the remaining option.
+
+### Delivered Capabilities
+
+Stop dialog with delay presets, pending-stop indicator with cancel, toasts, tests.
+
+---
+
 ## [DSM-00170] Force-stop the active server with a warning confirmation
 
 - **Type**: `Story`

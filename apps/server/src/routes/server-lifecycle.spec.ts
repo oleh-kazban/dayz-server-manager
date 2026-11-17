@@ -381,6 +381,7 @@ describe('Server lifecycle routes', () => {
       expect(serverDetailSchema.parse(cancelled.json())).toMatchObject({
         status: 'running',
         pendingStop: null,
+        restartRequested: false,
       });
 
       const again = await post(h, 'stop/cancel');
@@ -398,6 +399,56 @@ describe('Server lifecycle routes', () => {
       });
       expect(h.rcon.commands).toEqual([]);
       expect(statusOf(h)).toBe('running');
+    });
+
+    it('restarts now: stopping with restartRequested, #shutdown sent (DSM-00168)', async () => {
+      const h = await createHarness(runningWithRcon);
+      const response = await post(h, 'restart');
+      expect(response.statusCode).toBe(200);
+      expect(serverDetailSchema.parse(response.json())).toMatchObject({
+        status: 'stopping',
+        restartRequested: true,
+        pendingStop: null,
+      });
+      expect(h.rcon.commands).toEqual(['#shutdown']);
+    });
+
+    it('schedules a delayed restart with the restart warning (DSM-00168)', async () => {
+      const h = await createHarness(runningWithRcon);
+      const response = await postJson(h, 'restart', { delaySec: 120 });
+      expect(response.statusCode).toBe(200);
+      const detail = serverDetailSchema.parse(response.json());
+      expect(detail).toMatchObject({ status: 'running', restartRequested: true });
+      expect(detail.pendingStop).not.toBeNull();
+      expect(h.rcon.commands).toEqual([
+        '#say -1 Server is restarting in 2 minutes. Please find a safe place and log out.',
+      ]);
+    });
+
+    it('validates the restart body and maps lifecycle errors (DSM-00168)', async () => {
+      const h = await createHarness(runningWithRcon);
+      const invalid = await postJson(h, 'restart', { delaySec: -5 });
+      expect(invalid.statusCode).toBe(400);
+      expect(invalid.json()).toMatchObject({
+        errorCode: 'VALIDATION_FAILED',
+        fieldErrors: { delaySec: expect.anything() },
+      });
+
+      h.rcon.loginResult = { ok: false, error: 'unreachable', message: 'ECONNREFUSED' };
+      const unreachable = await post(h, 'restart');
+      expect(unreachable.statusCode).toBe(502);
+      expect(unreachable.json().errorCode).toBe('SERVER_RCON_UNREACHABLE');
+      expect(statusOf(h)).toBe('running');
+    });
+
+    it('enforces admin role, id format and existence on restart (DSM-00168)', async () => {
+      const h = await createHarness();
+      expect((await post(h, 'restart', h.viewerToken)).statusCode).toBe(403);
+      expect((await post(h, 'restart', h.adminToken, 'not-a-uuid')).statusCode).toBe(400);
+      expect(
+        (await post(h, 'restart', h.adminToken, '66666666-6666-4666-a666-666666666666')).statusCode,
+      ).toBe(404);
+      expect((await post(h, 'restart')).json().errorCode).toBe('SERVER_NOT_RUNNING');
     });
 
     it('enforces admin role, id format and existence on cancel (DSM-00167)', async () => {

@@ -80,6 +80,8 @@ export const servers = sqliteTable('servers', {
   // Delayed graceful stop (DSM-00167): persisted so it survives a DSM restart.
   pendingStopAt: integer('pending_stop_at', { mode: 'timestamp_ms' }),
   pendingStopRequestedAt: integer('pending_stop_requested_at', { mode: 'timestamp_ms' }),
+  // Start again once the current or pending stop completes (DSM-00168).
+  restartRequested: integer('restart_requested', { mode: 'boolean' }).notNull().default(false),
   isDefault: integer('is_default', { mode: 'boolean' }).notNull().default(false),
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
   updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),

@@ -1,6 +1,6 @@
 import type { FastifyPluginAsync, FastifyReply } from 'fastify';
 
-import { stopServerRequestSchema } from '@aegis/api-contracts';
+import { restartServerRequestSchema, stopServerRequestSchema } from '@aegis/api-contracts';
 
 import { ConfigStorageError } from '../services/server/config-atomic-writer';
 import { LifecycleError } from '../services/server/server-lifecycle.service';
@@ -63,6 +63,34 @@ export const registerServerLifecycleRoutes: FastifyPluginAsync = async fastify =
       }
       try {
         return sendServerDetail(reply, await fastify.lifecycle.gracefulStop(server.id, body.data));
+      } catch (error) {
+        return sendLifecycleError(reply, error);
+      }
+    },
+  );
+
+  // POST /api/v1/servers/:id/restart - Graceful stop (now or delayed), then start (DSM-00168).
+  // Returns once the stop is requested; the start runs when the process has exited.
+  fastify.post<IdParams & { Body: unknown }>(
+    '/:id/restart',
+    { onRequest: [fastify.authenticate] },
+    async (request, reply) => {
+      if (!ensureAdminRole(request, reply, 'Admin role required to restart servers')) {
+        return;
+      }
+      const server = resolveServerByIdOrSendError(fastify, request.params, reply);
+      if (!server) {
+        return;
+      }
+      const body = restartServerRequestSchema.safeParse(request.body ?? {});
+      if (!body.success) {
+        return sendApiError(reply, 400, 'VALIDATION_FAILED', {
+          message: body.error.issues[0].message,
+          fieldErrors: formatZodFieldErrors(body.error),
+        });
+      }
+      try {
+        return sendServerDetail(reply, await fastify.lifecycle.restart(server.id, body.data));
       } catch (error) {
         return sendLifecycleError(reply, error);
       }

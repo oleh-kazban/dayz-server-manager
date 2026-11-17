@@ -354,6 +354,7 @@ export function sendServerDetail(reply: FastifyReply, s: Server, statusCode: 200
       launchOptions: readLaunchOptions(s),
       runtime: toServerRuntime(s),
       pendingStop: toServerPendingStop(s),
+      restartRequested: s.restartRequested,
       lastExit: toServerLastExit(s),
       createdAt: s.createdAt.toISOString(),
       updatedAt: s.updatedAt.toISOString(),
