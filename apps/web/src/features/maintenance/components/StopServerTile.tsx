@@ -10,7 +10,7 @@ import type {
   ServerSummaryDto,
   StopServerRequestDto,
 } from '@aegis/api-contracts';
-import { Button, Notice, Tooltip } from '@aegis/ui';
+import { Button, Notice } from '@aegis/ui';
 import { extractApiFieldErrors, resolveFieldErrors, serverQueries } from '@aegis/web/core';
 
 import { formatCountdown, getStopBlocker } from '../maintenance.utils';
@@ -114,18 +114,16 @@ export function StopServerTile({ server }: StopServerTileProps) {
                 </Button>
               </>
             ) : (
-              <Tooltip content={blocker} disabled={!blocker}>
-                <Button
-                  variant="secondary"
-                  leftIcon={Square}
-                  isLoading={stop.isPending}
-                  aria-disabled={isInert || undefined}
-                  aria-describedby={blocker ? hintId : undefined}
-                  onClick={handleStopClick}
-                >
-                  Stop server
-                </Button>
-              </Tooltip>
+              <Button
+                variant="secondary"
+                leftIcon={Square}
+                isLoading={stop.isPending}
+                aria-disabled={isInert || undefined}
+                aria-describedby={blocker ? hintId : undefined}
+                onClick={handleStopClick}
+              >
+                Stop server
+              </Button>
             )}
           </div>
         }
