@@ -55,6 +55,23 @@ Start control, disabled reasons, feedback contract (`GEMINI.md` §5), tests and 
 
 ---
 
+## [DSM-00167] Delay a graceful stop with an in-game warning and cancellation
+
+- **Type**: `Story`
+- **Priority**: `P1 (High)`
+- **Status**: `DONE`
+- **Dependencies**: `DSM-00163`
+
+### Summary
+
+A stop request may carry `delaySec`: DSM broadcasts an in-game warning (`#say -1`), waits, then runs the graceful stop. The pending stop can be cancelled; the server stays `running` while it waits.
+
+### Delivered Capabilities
+
+`delaySec` on the stop request; warning broadcast; cancel endpoint; one pending stop per server (`409` on a second); fake-clock tests.
+
+---
+
 ## [DSM-00165] Send an RCON command and receive its full response
 
 - **Type**: `Story`
