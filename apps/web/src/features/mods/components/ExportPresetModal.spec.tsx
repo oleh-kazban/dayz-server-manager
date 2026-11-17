@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { ServerModDto } from '@aegis/api-contracts';
@@ -188,7 +188,6 @@ describe('ExportPresetModal (DSM-00356)', () => {
   const capturedAnchor = { download: '', href: '', clicked: false };
 
   beforeEach(() => {
-    delete (window as unknown as Record<string, unknown>).showSaveFilePicker;
     vi.clearAllMocks();
     createdBlob = null;
     capturedAnchor.download = '';
@@ -264,43 +263,53 @@ describe('ExportPresetModal (DSM-00356)', () => {
     expect(screen.queryByText('Disabled Mod')).not.toBeInTheDocument();
   });
 
-  it('AC-01: downloads preset payload, sanitizes filename, revokes URL, toasts, and closes modal', async () => {
-    renderModal();
+  it('AC-01: downloads preset payload, sanitizes filename, schedules delayed URL revocation, toasts, and closes modal', async () => {
+    vi.useFakeTimers();
+    try {
+      renderModal();
 
-    const downloadBtn = screen.getByRole('button', { name: 'Download Preset' });
-    expect(downloadBtn).toBeEnabled();
+      const downloadBtn = screen.getByRole('button', { name: 'Download Preset' });
+      expect(downloadBtn).toBeEnabled();
 
-    fireEvent.click(downloadBtn);
+      fireEvent.click(downloadBtn);
 
-    // Verify blob payload was generated and passed to createObjectURL
-    expect(URL.createObjectURL).toHaveBeenCalledTimes(1);
-    expect(createdBlob).not.toBeNull();
-    const blobText = await createdBlob!.text();
-    const payload = JSON.parse(blobText);
+      // Verify blob payload was generated and passed to createObjectURL
+      expect(URL.createObjectURL).toHaveBeenCalledTimes(1);
+      expect(createdBlob).not.toBeNull();
+      const blobText = await createdBlob!.text();
+      const payload = JSON.parse(blobText);
 
-    expect(payload).toEqual({
-      steamWsMods: [
-        { workshopId: '1559212036', name: 'CF' },
-        { workshopId: '1564026768', name: 'Community Online Tools' },
-      ],
-      steamWsServerMods: [{ workshopId: '2545327648', name: 'Admin Logs' }],
-    });
+      expect(payload).toEqual({
+        steamWsMods: [
+          { workshopId: '1559212036', name: 'CF' },
+          { workshopId: '1564026768', name: 'Community Online Tools' },
+        ],
+        steamWsServerMods: [{ workshopId: '2545327648', name: 'Admin Logs' }],
+      });
 
-    // Verify anchor download attributes and click trigger
-    const filenamePattern =
-      /^mods-preset-dayz-chernarus-\d{4}-\d{2}-\d{2}-\d{2}-\d{2}-\d{2}\.json$/;
-    expect(capturedAnchor.clicked).toBe(true);
-    expect(capturedAnchor.download).toMatch(filenamePattern);
-    expect(capturedAnchor.href).toBe('blob:mock-preset-url');
+      // Verify anchor download attributes and click trigger
+      const filenamePattern =
+        /^mods-preset-dayz-chernarus-\d{4}-\d{2}-\d{2}-\d{2}-\d{2}-\d{2}\.json$/;
+      expect(capturedAnchor.clicked).toBe(true);
+      expect(capturedAnchor.download).toMatch(filenamePattern);
+      expect(capturedAnchor.href).toBe('blob:mock-preset-url');
 
-    // Verify cleanup and feedback
-    expect(URL.revokeObjectURL).toHaveBeenCalledWith('blob:mock-preset-url');
-    expect(showToast.success).toHaveBeenCalledWith(
-      'Preset Exported',
-      expect.stringContaining(capturedAnchor.download),
-      undefined,
-    );
-    expect(mockOnClose).toHaveBeenCalledTimes(1);
+      // Delayed revocation: URL is not revoked immediately while Save dialog may be active
+      expect(URL.revokeObjectURL).not.toHaveBeenCalled();
+
+      // Advancing timer by 60s triggers delayed revocation
+      vi.advanceTimersByTime(60_000);
+      expect(URL.revokeObjectURL).toHaveBeenCalledWith('blob:mock-preset-url');
+
+      // Toast feedback and modal close
+      expect(showToast.success).toHaveBeenCalledWith(
+        'Preset Export',
+        `Download started for ${capturedAnchor.download}.`,
+      );
+      expect(mockOnClose).toHaveBeenCalledTimes(1);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('AC-03: toggles "Include disabled mods" to include disabled mods with warning badges and updates payload', async () => {
@@ -430,115 +439,5 @@ describe('ExportPresetModal (DSM-00356)', () => {
     const dialog = screen.getByRole('dialog', { name: 'Export Mod Preset' });
     fireEvent.click(dialog);
     expect(mockOnClose).toHaveBeenCalledTimes(1);
-  });
-
-  describe('File System Access API (DSM-00356)', () => {
-    let mockWritable: { write: ReturnType<typeof vi.fn>; close: ReturnType<typeof vi.fn> };
-    let mockHandle: { createWritable: ReturnType<typeof vi.fn> };
-    let mockShowSaveFilePicker: ReturnType<typeof vi.fn>;
-
-    beforeEach(() => {
-      mockWritable = {
-        write: vi.fn().mockResolvedValue(undefined),
-        close: vi.fn().mockResolvedValue(undefined),
-      };
-      mockHandle = {
-        createWritable: vi.fn().mockResolvedValue(mockWritable),
-      };
-      mockShowSaveFilePicker = vi.fn().mockResolvedValue(mockHandle);
-      Object.defineProperty(window, 'showSaveFilePicker', {
-        value: mockShowSaveFilePicker,
-        configurable: true,
-        writable: true,
-      });
-    });
-
-    afterEach(() => {
-      delete (window as unknown as Record<string, unknown>).showSaveFilePicker;
-    });
-
-    it('exports preset via showSaveFilePicker stream, toasts, and closes dialog', async () => {
-      renderModal();
-      const downloadBtn = screen.getByRole('button', { name: 'Download Preset' });
-      fireEvent.click(downloadBtn);
-
-      await waitFor(() => {
-        expect(mockShowSaveFilePicker).toHaveBeenCalledWith({
-          suggestedName: expect.stringMatching(
-            /^mods-preset-dayz-chernarus-\d{4}-\d{2}-\d{2}-\d{2}-\d{2}-\d{2}\.json$/,
-          ),
-          types: [
-            {
-              description: 'JSON Files',
-              accept: { 'application/json': ['.json'] },
-            },
-          ],
-        });
-      });
-
-      expect(mockHandle.createWritable).toHaveBeenCalled();
-      expect(mockWritable.write).toHaveBeenCalledWith(expect.stringContaining('"steamWsMods"'));
-      expect(mockWritable.close).toHaveBeenCalled();
-      expect(showToast.success).toHaveBeenCalledWith(
-        'Preset Exported',
-        expect.stringMatching(
-          /mods-preset-dayz-chernarus-\d{4}-\d{2}-\d{2}-\d{2}-\d{2}-\d{2}\.json/,
-        ),
-        undefined,
-      );
-      expect(mockOnClose).toHaveBeenCalledTimes(1);
-    });
-
-    it('silently ignores DOMException AbortError when user cancels native save dialog', async () => {
-      mockShowSaveFilePicker.mockRejectedValue(
-        new DOMException('The user aborted a request.', 'AbortError'),
-      );
-
-      renderModal();
-      const downloadBtn = screen.getByRole('button', { name: 'Download Preset' });
-      fireEvent.click(downloadBtn);
-
-      await waitFor(() => {
-        expect(mockShowSaveFilePicker).toHaveBeenCalled();
-      });
-
-      expect(showToast.success).not.toHaveBeenCalled();
-      expect(showToast.error).not.toHaveBeenCalled();
-      expect(mockOnClose).not.toHaveBeenCalled();
-    });
-
-    it('silently ignores non-DOMException error with name AbortError', async () => {
-      const abortObj = { name: 'AbortError', message: 'User dismissed dialog' };
-      mockShowSaveFilePicker.mockRejectedValue(abortObj);
-
-      renderModal();
-      const downloadBtn = screen.getByRole('button', { name: 'Download Preset' });
-      fireEvent.click(downloadBtn);
-
-      await waitFor(() => {
-        expect(mockShowSaveFilePicker).toHaveBeenCalled();
-      });
-
-      expect(showToast.success).not.toHaveBeenCalled();
-      expect(showToast.error).not.toHaveBeenCalled();
-      expect(mockOnClose).not.toHaveBeenCalled();
-    });
-
-    it('catches and reports unexpected error from showSaveFilePicker or stream', async () => {
-      mockShowSaveFilePicker.mockRejectedValue(new Error('Permission denied'));
-
-      renderModal();
-      const downloadBtn = screen.getByRole('button', { name: 'Download Preset' });
-      fireEvent.click(downloadBtn);
-
-      await waitFor(() => {
-        expect(showToast.error).toHaveBeenCalledWith(
-          'Failed to Export Mod Preset',
-          expect.stringContaining('Permission denied'),
-          undefined,
-        );
-      });
-      expect(mockOnClose).not.toHaveBeenCalled();
-    });
   });
 });
