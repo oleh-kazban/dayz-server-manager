@@ -112,6 +112,22 @@ describe('RealtimeProvider', () => {
       errorCode: 'SERVER_RCON_UNREACHABLE',
     });
 
+    act(() =>
+      sources[0].listeners.get('server.restart.failed')?.(
+        new MessageEvent('server.restart.failed', {
+          data: JSON.stringify({
+            serverId: ID,
+            phase: 'start',
+            errorCode: 'SERVER_START_FAILED',
+            message: 'x',
+          }),
+        }),
+      ),
+    );
+    expect(queryClient.getQueryData(serverQueryKeys.restartFailure(ID))).toMatchObject({
+      phase: 'start',
+    });
+
     unmount();
     expect(sources[0].closed).toBe(true);
   });

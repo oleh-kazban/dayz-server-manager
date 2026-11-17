@@ -14,6 +14,9 @@ export type NotificationCode =
   | 'SERVER_STOP_REQUESTED'
   | 'SERVER_STOP_SCHEDULED'
   | 'SERVER_STOP_CANCELLED'
+  | 'SERVER_RESTART_REQUESTED'
+  | 'SERVER_RESTART_SCHEDULED'
+  | 'SERVER_RESTART_CANCELLED'
   | 'STEAM_SETTINGS_UPDATED'
   | 'STEAM_SESSION_CLEARED'
   | 'STEAM_AUTH_SUCCESS'
@@ -386,6 +389,19 @@ export const enUSTranslations: TranslationCatalog = {
     },
     SERVER_STOP_CANCELLED: {
       title: 'Scheduled Stop Cancelled',
+      description: '"{{name}}" keeps running. Players have been told.',
+    },
+    SERVER_RESTART_REQUESTED: {
+      title: 'Server Restarting',
+      description:
+        '"{{name}}" is saving the world and starts again once it has stopped. Its status updates live.',
+    },
+    SERVER_RESTART_SCHEDULED: {
+      title: 'Restart Scheduled',
+      description: '"{{name}}" restarts at {{time}}. Players have been warned.',
+    },
+    SERVER_RESTART_CANCELLED: {
+      title: 'Scheduled Restart Cancelled',
       description: '"{{name}}" keeps running. Players have been told.',
     },
     SERVER_FORCE_STOPPED: {
