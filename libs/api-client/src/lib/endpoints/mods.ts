@@ -5,6 +5,12 @@ import {
   type BatchAddServerModsDto,
   type BatchAddServerModsResponseDto,
   batchAddServerModsResponseSchema,
+  type ExportServerModsQueryDto,
+  type ImportServerModsDto,
+  type ImportServerModsResponseDto,
+  importServerModsResponseSchema,
+  type ModPresetDto,
+  modPresetSchema,
   type ReorderServerModsDto,
   type ServerModDto,
   serverModSchema,
@@ -48,6 +54,26 @@ export function createModsEndpoint(client: HttpClient) {
 
     checkUpdates: (serverId: string): Promise<ServerModsListResponseDto> =>
       client.post(`/api/v1/servers/${serverId}/mods/check-updates`, serverModsListResponseSchema),
+
+    importPreset: (
+      serverId: string,
+      dto: ImportServerModsDto,
+    ): Promise<ImportServerModsResponseDto> =>
+      client.post(`/api/v1/servers/${serverId}/mods/import`, importServerModsResponseSchema, dto),
+
+    exportPreset: (serverId: string, query?: ExportServerModsQueryDto): Promise<ModPresetDto> => {
+      const params = new URLSearchParams();
+      if (query?.includeDisabled !== undefined) {
+        params.set('includeDisabled', String(query.includeDisabled));
+      }
+      const qs = params.toString();
+      return client.get(
+        qs
+          ? `/api/v1/servers/${serverId}/mods/export-preset?${qs}`
+          : `/api/v1/servers/${serverId}/mods/export-preset`,
+        modPresetSchema,
+      );
+    },
 
     lookupWorkshop: (dto: WorkshopLookupRequestDto): Promise<WorkshopLookupResponseDto> =>
       client.post('/api/v1/workshop/lookup', workshopLookupResponseSchema, dto),
