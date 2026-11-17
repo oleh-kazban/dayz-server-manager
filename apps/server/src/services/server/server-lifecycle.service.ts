@@ -4,15 +4,18 @@ import type { FastifyBaseLogger } from 'fastify';
 import {
   type ApiErrorCode,
   type ApiErrorParams,
+  defaultRestartWarning,
   defaultStopWarning,
   type LaunchPlatform,
   SERVER_EXIT_REASON,
+  SERVER_RESTART_FAILED_EVENT,
   SERVER_STATUS,
   SERVER_STATUS_CHANGED_EVENT,
   SERVER_STOP_FAILED_EVENT,
   type ServerExitReason,
   type ServerLastExitDto,
   type ServerPendingStopDto,
+  type ServerRestartFailedEventDto,
   type ServerRuntimeDto,
   type ServerStatus,
   type ServerStatusChangedEventDto,
@@ -52,6 +55,14 @@ export const RCON_SHUTDOWN_COMMAND = '#shutdown';
 export const RCON_SAY_ALL_COMMAND = '#say -1';
 /** Told to players when a pending stop is cancelled (DSM-00167). */
 export const STOP_CANCELLED_MESSAGE = 'The server shutdown has been cancelled.';
+/** Told to players when a pending restart is cancelled (DSM-00168). */
+export const RESTART_CANCELLED_MESSAGE = 'The server restart has been cancelled.';
+
+/** API error code carried by a thrown error (LifecycleError, ConfigStorageError), or `fallback`. */
+function errorCodeOf(error: unknown, fallback: string): string {
+  const code = (error as { errorCode?: unknown } | null)?.errorCode;
+  return typeof code === 'string' ? code : fallback;
+}
 
 const ACTIVE: ServerStatus[] = [
   SERVER_STATUS.STARTING,
@@ -71,7 +82,10 @@ export interface ServerLifecycleOptions {
   clock?: () => number;
   logger?: LifecycleLogger;
   /** Event sink, e.g. the SSE hub (`server.status.changed`, `server.stop.failed`). */
-  broadcast?: (event: string, data: ServerStatusChangedEventDto | ServerStopFailedEventDto) => void;
+  broadcast?: (
+    event: string,
+    data: ServerStatusChangedEventDto | ServerStopFailedEventDto | ServerRestartFailedEventDto,
+  ) => void;
 }
 
 export interface GracefulStopOptions {
@@ -320,8 +334,20 @@ export class ServerLifecycleService {
   async gracefulStop(serverId: string, options: GracefulStopOptions = {}): Promise<Server> {
     const delaySec = options.delaySec ?? 0;
     return delaySec > 0
-      ? this.scheduleStop(serverId, delaySec, options.message)
-      : this.shutdownNow(serverId);
+      ? this.scheduleStop(serverId, delaySec, options.message, false)
+      : this.shutdownNow(serverId, false);
+  }
+
+  /**
+   * DSM-00168: a graceful stop (now or delayed, as `gracefulStop`) that starts the server again
+   * once the process has exited. Returns as soon as the stop is requested; the start runs
+   * asynchronously and a failure in either phase is broadcast as `server.restart.failed`.
+   */
+  async restart(serverId: string, options: GracefulStopOptions = {}): Promise<Server> {
+    const delaySec = options.delaySec ?? 0;
+    return delaySec > 0
+      ? this.scheduleStop(serverId, delaySec, options.message, true)
+      : this.shutdownNow(serverId, true);
   }
 
   /** DSM-00167: cancels a pending stop and tells players (best effort, not awaited). */
@@ -329,7 +355,7 @@ export class ServerLifecycleService {
     const current = this.requireServer(serverId);
     const cleared = this.db
       .update(servers)
-      .set({ ...CLEARED_PENDING_STOP, updatedAt: new Date(this.clock()) })
+      .set({ ...CLEARED_PENDING_STOP, restartRequested: false, updatedAt: new Date(this.clock()) })
       .where(and(eq(servers.id, serverId), isNotNull(servers.pendingStopAt)))
       .run();
     if (cleared.changes === 0) {
@@ -343,8 +369,14 @@ export class ServerLifecycleService {
     }
     this.clearPendingStopTimer(serverId);
     this.broadcastState(serverId);
-    this.options.logger?.info({ serverId }, 'Pending stop cancelled');
-    void this.announce(current, STOP_CANCELLED_MESSAGE);
+    this.options.logger?.info(
+      { serverId, restart: current.restartRequested },
+      'Pending stop cancelled',
+    );
+    void this.announce(
+      current,
+      current.restartRequested ? RESTART_CANCELLED_MESSAGE : STOP_CANCELLED_MESSAGE,
+    );
     return this.requireServer(serverId);
   }
 
@@ -354,12 +386,16 @@ export class ServerLifecycleService {
    * still alive after `stopTimeoutMs`, the watchdog force-kills it (`shutdown_timeout`).
    * Nothing changes when RCON cannot be reached or rejects the password.
    */
-  private async shutdownNow(serverId: string): Promise<Server> {
+  private async shutdownNow(serverId: string, restart: boolean): Promise<Server> {
     const current = this.requireServer(serverId);
     const identity = this.requireRunning(current);
 
     await this.withRcon(current, async session => {
-      if (!this.transition(serverId, [SERVER_STATUS.RUNNING], { status: SERVER_STATUS.STOPPING })) {
+      const stopping = this.transition(serverId, [SERVER_STATUS.RUNNING], {
+        status: SERVER_STATUS.STOPPING,
+        restartRequested: restart,
+      });
+      if (!stopping) {
         throw this.busy(this.requireServer(serverId));
       }
       this.armStopWatchdog(serverId, identity);
@@ -374,7 +410,7 @@ export class ServerLifecycleService {
       }
     });
 
-    this.options.logger?.info({ serverId }, 'Graceful stop requested via RCON #shutdown');
+    this.options.logger?.info({ serverId, restart }, 'Graceful stop requested via RCON #shutdown');
     return this.requireServer(serverId);
   }
 
@@ -386,6 +422,7 @@ export class ServerLifecycleService {
     serverId: string,
     delaySec: number,
     message: string | undefined,
+    restart: boolean,
   ): Promise<Server> {
     const current = this.requireServer(serverId);
     this.requireRunning(current);
@@ -397,6 +434,7 @@ export class ServerLifecycleService {
       .set({
         pendingStopAt: new Date(executeAt),
         pendingStopRequestedAt: new Date(requestedAt),
+        restartRequested: restart,
         updatedAt: new Date(requestedAt),
       })
       .where(
@@ -411,7 +449,8 @@ export class ServerLifecycleService {
       throw this.alreadyPending(current);
     }
 
-    const warning = `${RCON_SAY_ALL_COMMAND} ${message ?? defaultStopWarning(delaySec)}`;
+    const defaultWarning = restart ? defaultRestartWarning(delaySec) : defaultStopWarning(delaySec);
+    const warning = `${RCON_SAY_ALL_COMMAND} ${message ?? defaultWarning}`;
     try {
       await this.withRcon(current, async session => {
         const said = await session.command(warning);
@@ -429,7 +468,7 @@ export class ServerLifecycleService {
 
     this.armPendingStop(serverId, executeAt);
     this.broadcastState(serverId);
-    this.options.logger?.info({ serverId, delaySec }, 'Delayed graceful stop scheduled');
+    this.options.logger?.info({ serverId, delaySec, restart }, 'Delayed graceful stop scheduled');
     return this.requireServer(serverId);
   }
 
@@ -440,15 +479,49 @@ export class ServerLifecycleService {
     if (server?.pendingStopAt?.getTime() !== executeAt) {
       return;
     }
+    const restart = server.restartRequested;
     try {
-      await this.shutdownNow(serverId);
+      await this.shutdownNow(serverId, restart);
     } catch (error) {
       this.dropPendingStop(serverId, executeAt);
       this.broadcastState(serverId);
-      const errorCode = error instanceof LifecycleError ? error.errorCode : 'SERVER_STOP_FAILED';
+      const errorCode = errorCodeOf(error, 'SERVER_STOP_FAILED');
       const message = error instanceof Error ? error.message : 'Unknown stop error.';
-      this.options.logger?.error({ serverId, errorCode, reason: message }, 'Delayed stop failed');
-      this.options.broadcast?.(SERVER_STOP_FAILED_EVENT, { serverId, errorCode, message });
+      this.options.logger?.error(
+        { serverId, errorCode, reason: message, restart },
+        restart ? 'Delayed restart failed to stop the server' : 'Delayed stop failed',
+      );
+      if (restart) {
+        this.options.broadcast?.(SERVER_RESTART_FAILED_EVENT, {
+          serverId,
+          phase: 'stop',
+          errorCode,
+          message,
+        });
+      } else {
+        this.options.broadcast?.(SERVER_STOP_FAILED_EVENT, { serverId, errorCode, message });
+      }
+    }
+  }
+
+  /** DSM-00168: the stop of a restart completed; start again and report a failed start. */
+  private async restartAfterStop(serverId: string): Promise<void> {
+    this.options.logger?.info({ serverId }, 'Restarting DayZ server after the graceful stop');
+    try {
+      await this.start(serverId);
+    } catch (error) {
+      const errorCode = errorCodeOf(error, 'SERVER_START_FAILED');
+      const message = error instanceof Error ? error.message : 'Unknown start error.';
+      this.options.logger?.error(
+        { serverId, errorCode, reason: message },
+        'Restart failed to start the server',
+      );
+      this.options.broadcast?.(SERVER_RESTART_FAILED_EVENT, {
+        serverId,
+        phase: 'start',
+        errorCode,
+        message,
+      });
     }
   }
 
@@ -456,7 +529,7 @@ export class ServerLifecycleService {
   private dropPendingStop(serverId: string, executeAt: number): void {
     this.db
       .update(servers)
-      .set(CLEARED_PENDING_STOP)
+      .set({ ...CLEARED_PENDING_STOP, restartRequested: false })
       .where(and(eq(servers.id, serverId), eq(servers.pendingStopAt, new Date(executeAt))))
       .run();
   }
@@ -602,15 +675,26 @@ export class ServerLifecycleService {
       if (await this.isAliveSafe(server.id, identity)) {
         this.readopt(server, identity);
       } else {
-        const wasStopping = server.status === SERVER_STATUS.STOPPING;
-        this.transition(server.id, [server.status], {
-          status: wasStopping ? SERVER_STATUS.STOPPED : SERVER_STATUS.FAILED,
-          ...CLEARED_RUNTIME,
-          ...this.lastExit(
-            wasStopping ? SERVER_EXIT_REASON.STOPPED : SERVER_EXIT_REASON.EXITED_WHILE_OFFLINE,
-          ),
-        });
+        this.recordOfflineExit(server);
       }
+    }
+  }
+
+  /**
+   * A tracked process ended while DSM was down: a stop that was in progress completed (and a
+   * requested restart starts the server again, DSM-00168); anything else is an unexpected exit.
+   */
+  private recordOfflineExit(server: Server): void {
+    const wasStopping = server.status === SERVER_STATUS.STOPPING;
+    const exited = this.transition(server.id, [server.status], {
+      status: wasStopping ? SERVER_STATUS.STOPPED : SERVER_STATUS.FAILED,
+      ...CLEARED_RUNTIME,
+      ...this.lastExit(
+        wasStopping ? SERVER_EXIT_REASON.STOPPED : SERVER_EXIT_REASON.EXITED_WHILE_OFFLINE,
+      ),
+    });
+    if (exited && wasStopping && server.restartRequested) {
+      void this.restartAfterStop(server.id);
     }
   }
 
@@ -721,7 +805,8 @@ export class ServerLifecycleService {
       this.watch(serverId, identity, { startupWindow: false });
       return;
     }
-    this.transition(serverId, [SERVER_STATUS.STOPPING], {
+    const restart = this.requireServer(serverId).restartRequested;
+    const stopped = this.transition(serverId, [SERVER_STATUS.STOPPING], {
       status: SERVER_STATUS.STOPPED,
       ...CLEARED_RUNTIME,
       ...this.lastExit(SERVER_EXIT_REASON.SHUTDOWN_TIMEOUT),
@@ -730,6 +815,9 @@ export class ServerLifecycleService {
       { serverId, stopTimeoutMs: this.stopTimeoutMs },
       'DayZ did not exit after #shutdown; force-killed by the watchdog',
     );
+    if (stopped && restart) {
+      void this.restartAfterStop(serverId);
+    }
   }
 
   /** REQ-02: `starting` → `running` once the process survived the startup window. */
@@ -784,7 +872,7 @@ export class ServerLifecycleService {
       [SERVER_STATUS.FAILED]: [SERVER_STATUS.FAILED, SERVER_EXIT_REASON.CRASHED],
     };
     const [status, reason] = outcome[server.status];
-    this.transition(serverId, [server.status], {
+    const exited = this.transition(serverId, [server.status], {
       status,
       ...CLEARED_RUNTIME,
       ...this.lastExit(reason, exit ?? undefined),
@@ -793,6 +881,10 @@ export class ServerLifecycleService {
       { serverId, reason, exitCode: exit?.code ?? null, signal: exit?.signal ?? null },
       'DayZ server process exited',
     );
+    // DSM-00168: the graceful stop of a restart completed.
+    if (exited && server.status === SERVER_STATUS.STOPPING && server.restartRequested) {
+      void this.restartAfterStop(serverId);
+    }
   }
 
   private async isAliveSafe(serverId: string, identity: ProcessIdentity): Promise<boolean> {
@@ -818,11 +910,14 @@ export class ServerLifecycleService {
     set: Partial<NewServer>,
   ): boolean {
     const leavesRunning = set.status !== undefined && set.status !== SERVER_STATUS.RUNNING;
+    // A restart lives through `stopping` only; any other new status ends it (DSM-00168 REQ-06).
+    const endsRestart = leavesRunning && set.status !== SERVER_STATUS.STOPPING;
     const result = this.db
       .update(servers)
       .set({
         ...set,
         ...(leavesRunning ? CLEARED_PENDING_STOP : {}),
+        ...(endsRestart ? { restartRequested: false } : {}),
         updatedAt: new Date(this.clock()),
       })
       .where(and(eq(servers.id, serverId), inArray(servers.status, [...from])))
@@ -848,6 +943,7 @@ export class ServerLifecycleService {
       status: server.status,
       lastExit: toServerLastExit(server),
       pendingStop: toServerPendingStop(server),
+      restartRequested: server.restartRequested,
     });
   }
 
