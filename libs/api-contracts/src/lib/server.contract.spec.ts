@@ -4,7 +4,9 @@ import { EMPTY_LAUNCH_OPTIONS } from './launch.contract';
 import {
   ACTIVE_SERVER_STATUSES,
   createServerSchema,
+  defaultStopWarning,
   discoveredMissionSchema,
+  formatStopDelay,
   isServerActiveStatus,
   rconIpSchema,
   rconPasswordSchema,
@@ -38,6 +40,7 @@ import {
   serverStopFailedEventSchema,
   serverSummarySchema,
   STOP_DELAY_MAX_SEC,
+  STOP_DELAY_PRESETS_SEC,
   STOP_MESSAGE_MAX_LENGTH,
   stopServerRequestSchema,
   updateServerSchema,
@@ -915,6 +918,23 @@ describe('server runtime contracts (DSM-00162)', () => {
 });
 
 describe('delayed stop contracts (DSM-00167)', () => {
+  it('formats the delay for the in-game warning', () => {
+    expect(formatStopDelay(1)).toBe('1 second');
+    expect(formatStopDelay(45)).toBe('45 seconds');
+    expect(formatStopDelay(60)).toBe('1 minute');
+    expect(formatStopDelay(90)).toBe('1 minute 30 seconds');
+    expect(formatStopDelay(121)).toBe('2 minutes 1 second');
+    expect(formatStopDelay(3600)).toBe('60 minutes');
+    expect(defaultStopWarning(600)).toBe(
+      'Server is shutting down in 10 minutes. Please find a safe place and log out.',
+    );
+  });
+
+  it('offers presets within the allowed delay, starting with an immediate stop', () => {
+    expect(STOP_DELAY_PRESETS_SEC[0]).toBe(0);
+    expect(Math.max(...STOP_DELAY_PRESETS_SEC)).toBeLessThanOrEqual(STOP_DELAY_MAX_SEC);
+  });
+
   const at = '2026-11-17T18:00:00.000Z';
 
   it('defaults to an immediate stop and accepts an empty body', () => {
