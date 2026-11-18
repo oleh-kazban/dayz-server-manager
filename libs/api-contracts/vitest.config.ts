@@ -2,7 +2,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { defineConfig, mergeConfig } from 'vitest/config';
 
-import { coverageDirectory, libEntry, sharedVitestConfig } from '../../vitest.shared';
+import { coverageDirectory, libEntry, sharedVitestConfig } from '../../vitest.shared.ts';
 
 const projectDir = path.dirname(fileURLToPath(import.meta.url));
 
