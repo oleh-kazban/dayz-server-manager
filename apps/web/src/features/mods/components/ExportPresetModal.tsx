@@ -1,10 +1,12 @@
 import { useMemo, useState } from 'react';
 
+import { useMutation } from '@tanstack/react-query';
 import { Download, X } from 'lucide-react';
 
+import { apiClient } from '@aegis/api-client';
 import type { ModPresetDto, ServerModDto } from '@aegis/api-contracts';
-import { Button, Checkbox, Notice, showToast, Tag } from '@aegis/ui';
-import { notifyApiError, useModalDialog } from '@aegis/web/core';
+import { Button, Checkbox, Notice, Tag } from '@aegis/ui';
+import { notifyApiError, notifySuccess, useModalDialog } from '@aegis/web/core';
 
 import { sanitizePresetFilename } from './ExportPresetModal.utils';
 
@@ -16,13 +18,52 @@ export interface ExportPresetModalProps {
   onClose: () => void;
 }
 
+function downloadPresetFile(preset: ModPresetDto, filename: string): void {
+  const blob = new Blob([JSON.stringify(preset, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+
+  const anchor = document.createElement('a');
+  anchor.href = url;
+  anchor.download = filename;
+  anchor.style.display = 'none';
+  document.body.appendChild(anchor);
+  anchor.click();
+  document.body.removeChild(anchor);
+
+  // Delayed revocation avoids destroying the blob while native "Save As" dialog is open
+  setTimeout(() => URL.revokeObjectURL(url), 60_000);
+}
+
 function ExportPresetDialog({
   serverName,
+  serverId,
   mods = [],
   onClose,
 }: Omit<ExportPresetModalProps, 'isOpen'>) {
   const [includeDisabled, setIncludeDisabled] = useState(false);
-  const { dialogRef, handleBackdropClick } = useModalDialog({ onClose });
+
+  // The server builds the preset so the downloaded file always matches what is stored.
+  const exportMutation = useMutation({
+    mutationFn: async () => {
+      const preset = await apiClient.mods.exportPreset(serverId, { includeDisabled });
+      const filename = sanitizePresetFilename(serverName);
+      downloadPresetFile(preset, filename);
+      return { preset, filename };
+    },
+    onSuccess: ({ preset, filename }) => {
+      notifySuccess('MOD_PRESET_EXPORTED', {
+        count: preset.steamWsMods.length + preset.steamWsServerMods.length,
+        filename,
+      });
+      onClose();
+    },
+    onError: err => notifyApiError(err, 'Failed to Export Mod Preset'),
+  });
+
+  const { dialogRef, handleBackdropClick } = useModalDialog({
+    onClose,
+    isBusy: exportMutation.isPending,
+  });
 
   const workshopMods = useMemo(() => {
     return mods
@@ -49,46 +90,6 @@ function ExportPresetDialog({
     }
     return { clientMods: client, serverOnlyMods: serverOnly };
   }, [eligibleMods]);
-
-  const handleDownload = () => {
-    if (eligibleMods.length === 0) return;
-
-    try {
-      const presetPayload: ModPresetDto = {
-        steamWsMods: clientMods.map(m => ({
-          workshopId: m.workshopId!,
-          name: m.name,
-        })),
-        steamWsServerMods: serverOnlyMods.map(m => ({
-          workshopId: m.workshopId!,
-          name: m.name,
-        })),
-      };
-
-      const jsonString = JSON.stringify(presetPayload, null, 2);
-      const filename = sanitizePresetFilename(serverName);
-
-      const blob = new Blob([jsonString], { type: 'application/json' });
-      const url = URL.createObjectURL(blob);
-
-      const anchor = document.createElement('a');
-      anchor.href = url;
-      anchor.download = filename;
-      anchor.style.display = 'none';
-      document.body.appendChild(anchor);
-      anchor.click();
-      document.body.removeChild(anchor);
-
-      // Delayed revocation avoids destroying the blob while native "Save As" dialog is open
-      setTimeout(() => URL.revokeObjectURL(url), 60_000);
-
-      // Use transient toast (do not pollute persistent notification bell center)
-      showToast.success('Preset Export', `Download started for ${filename}.`);
-      onClose();
-    } catch (err) {
-      notifyApiError(err, 'Failed to Export Mod Preset');
-    }
-  };
 
   return (
     <div
@@ -137,7 +138,8 @@ function ExportPresetDialog({
           />
           <p className="text-[11px] text-[var(--color-text-muted)] pl-6">
             When unchecked, only currently enabled workshop mods will be included in the exported
-            preset. Local mods are strictly omitted.
+            preset. Local mods are strictly omitted. Presets do not store the enabled state, so
+            disabled mods are imported as enabled.
           </p>
         </div>
 
@@ -214,7 +216,8 @@ function ExportPresetDialog({
             type="button"
             leftIcon={Download}
             disabled={eligibleMods.length === 0}
-            onClick={handleDownload}
+            isLoading={exportMutation.isPending}
+            onClick={() => exportMutation.mutate()}
           >
             Download Preset
           </Button>
