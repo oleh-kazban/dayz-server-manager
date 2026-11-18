@@ -7,7 +7,6 @@
   "scripts": {
     "prepare": "husky",
     "docs:sync": "tsx scripts/sync-static-content.ts",
-    "start": "nx run web:serve",
     "start:web": "nx run web:serve",
     "start:server": "nx run server:serve",
     "build": "nx run-many -t build",
