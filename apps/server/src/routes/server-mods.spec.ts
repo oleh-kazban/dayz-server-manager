@@ -811,7 +811,7 @@ describe('Server Mods Helpers & Routes (/api/v1/servers/:id/mods)', () => {
     });
 
     describe('AC-02: Replace mode', () => {
-      it('wipes existing workshop mods, leaves local mods untouched, and re-indexes local mods after preset mods', async () => {
+      it('removes workshop mods missing from the preset and keeps local mods in their load-order slot', async () => {
         const now = new Date();
         const oldWorkshopModId = 'dddddddd-dddd-4ddd-9ddd-dddddddddddd';
         const localModId = 'cccccccc-cccc-4ccc-8ccc-cccccccccccc';
@@ -894,7 +894,8 @@ describe('Server Mods Helpers & Routes (/api/v1/servers/:id/mods)', () => {
         expect(body.added).toHaveLength(2);
         expect(body.mods).toHaveLength(3);
 
-        // Check sequential ordering: preset mods at 0 and 1, local mod re-indexed to 2
+        // The old workshop slot (0) takes the first preset mod, the local mod keeps slot 1,
+        // and the extra preset mod goes after it.
         const modAlpha = body.mods.find(m => m.workshopId === '2222222222');
         const modBeta = body.mods.find(m => m.workshopId === '3333333333');
         const localMod = body.mods.find(m => m.id === localModId);
@@ -902,11 +903,11 @@ describe('Server Mods Helpers & Routes (/api/v1/servers/:id/mods)', () => {
         expect(modAlpha?.loadOrder).toBe(0);
         expect(modAlpha?.loadTarget).toBe('client_server');
 
-        expect(modBeta?.loadOrder).toBe(1);
-        expect(modBeta?.loadTarget).toBe('server_only');
-
-        expect(localMod?.loadOrder).toBe(2);
+        expect(localMod?.loadOrder).toBe(1);
         expect(localMod?.sourceType).toBe('local');
+
+        expect(modBeta?.loadOrder).toBe(2);
+        expect(modBeta?.loadTarget).toBe('server_only');
 
         // Verify Old Workshop Mod was purged from database
         const oldModInDb = dbInstance.db
@@ -916,14 +917,146 @@ describe('Server Mods Helpers & Routes (/api/v1/servers/:id/mods)', () => {
           .get();
         expect(oldModInDb).toBeUndefined();
 
-        // Verify local mod still exists in DB with new loadOrder 2
         const localModInDb = dbInstance.db
           .select()
           .from(serverMods)
           .where(eq(serverMods.id, localModId))
           .get();
         expect(localModInDb).toBeDefined();
-        expect(localModInDb?.loadOrder).toBe(2);
+        expect(localModInDb?.loadOrder).toBe(1);
+      });
+
+      it('updates mods already on the server in place, keeping folder, enabled flag and sync state', async () => {
+        const syncedAt = new Date('2026-11-01T10:00:00.000Z');
+        const keptModId = 'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee';
+        const localModId = 'cccccccc-cccc-4ccc-8ccc-cccccccccccc';
+
+        dbInstance.db
+          .insert(serverMods)
+          .values([
+            {
+              id: localModId,
+              serverId: serverAId,
+              sourceType: MOD_SOURCE_TYPE.LOCAL,
+              loadTarget: MOD_LOAD_TARGET.CLIENT_SERVER,
+              workshopId: null,
+              folderName: '@LocalFirst',
+              name: 'Local First',
+              sizeBytes: null,
+              remoteUpdatedAt: null,
+              syncedWorkshopUpdatedAt: null,
+              lastSyncedAt: null,
+              enabled: true,
+              loadOrder: 0,
+              createdAt: syncedAt,
+              updatedAt: syncedAt,
+            },
+            {
+              id: keptModId,
+              serverId: serverAId,
+              sourceType: MOD_SOURCE_TYPE.WORKSHOP,
+              loadTarget: MOD_LOAD_TARGET.CLIENT_SERVER,
+              workshopId: '1559212036',
+              folderName: '@MyCustomCF',
+              name: 'CF (renamed)',
+              sizeBytes: 1024,
+              remoteUpdatedAt: syncedAt,
+              syncedWorkshopUpdatedAt: syncedAt,
+              lastSyncedAt: syncedAt,
+              enabled: false,
+              loadOrder: 1,
+              createdAt: syncedAt,
+              updatedAt: syncedAt,
+            },
+          ])
+          .run();
+
+        vi.spyOn(steamWorkshopService, 'getPublishedFileDetailsBatched').mockResolvedValueOnce([
+          {
+            result: 1,
+            publishedfileid: '1559212036',
+            title: 'Community Framework',
+            file_size: '4096',
+            time_updated: syncedAt.getTime() / 1000,
+          },
+          {
+            result: 1,
+            publishedfileid: '2222222222',
+            title: 'Mod Alpha',
+            file_size: '2048',
+            time_updated: 1600000000,
+          },
+        ]);
+
+        const res = await app.inject({
+          method: 'POST',
+          url: `/api/v1/servers/${serverAId}/mods/import`,
+          headers: { authorization: `Bearer ${adminToken}` },
+          payload: {
+            preset: {
+              steamWsMods: [{ workshopId: '2222222222', name: 'Mod Alpha' }],
+              steamWsServerMods: [{ workshopId: '1559212036', name: 'CF' }],
+            },
+            mode: MOD_IMPORT_MODE.REPLACE,
+          },
+        });
+
+        expect(res.statusCode).toBe(201);
+        const body = importServerModsResponseSchema.parse(res.json());
+
+        expect(body.removedCount).toBe(0);
+        expect(body.added.map(m => m.workshopId)).toEqual(['2222222222']);
+        expect(body.mods.map(m => m.folderName)).toEqual([
+          '@LocalFirst',
+          '@Mod Alpha',
+          '@MyCustomCF',
+        ]);
+
+        const kept = body.mods.find(m => m.id === keptModId);
+        expect(kept).toMatchObject({
+          folderName: '@MyCustomCF',
+          name: 'CF (renamed)',
+          enabled: false,
+          loadOrder: 2,
+          loadTarget: 'server_only',
+          sizeBytes: 4096,
+          syncStatus: 'up_to_date',
+          lastSyncedAt: syncedAt.toISOString(),
+        });
+      });
+
+      it('refuses with 409 and writes nothing when the server starts during the Steam lookup', async () => {
+        vi.spyOn(steamWorkshopService, 'getPublishedFileDetailsBatched').mockImplementationOnce(
+          async () => {
+            dbInstance.db
+              .update(servers)
+              .set({ status: 'starting' })
+              .where(eq(servers.id, serverAId))
+              .run();
+            return [];
+          },
+        );
+
+        const res = await app.inject({
+          method: 'POST',
+          url: `/api/v1/servers/${serverAId}/mods/import`,
+          headers: { authorization: `Bearer ${adminToken}` },
+          payload: {
+            preset: { steamWsMods: [{ workshopId: '2222222222', name: 'Mod Alpha' }] },
+            mode: MOD_IMPORT_MODE.REPLACE,
+          },
+        });
+
+        expect(res.statusCode).toBe(409);
+        expect(apiErrorResponseSchema.parse(res.json()).errorCode).toBe(
+          'SERVER_RUNNING_CONFIG_LOCKED',
+        );
+        const rows = dbInstance.db
+          .select()
+          .from(serverMods)
+          .where(eq(serverMods.serverId, serverAId))
+          .all();
+        expect(rows).toHaveLength(0);
       });
     });
 
