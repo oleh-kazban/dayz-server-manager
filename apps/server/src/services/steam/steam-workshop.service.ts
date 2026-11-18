@@ -47,6 +47,12 @@ interface SteamCollectionDetail {
   children?: SteamCollectionChild[];
 }
 
+export interface PublishedFileMetadata {
+  title: string | null;
+  sizeBytes: number | null;
+  remoteUpdatedAt: Date | null;
+}
+
 export class SteamWorkshopError extends Error {
   constructor(
     public readonly statusCode: number,
@@ -259,9 +265,9 @@ export class SteamWorkshopService {
 
   public async fetchPublishedFileMetadataMap(
     workshopIds: string[],
-  ): Promise<Map<string, { sizeBytes: number | null; remoteUpdatedAt: Date | null }>> {
+  ): Promise<Map<string, PublishedFileMetadata>> {
     const details = await this.getPublishedFileDetailsBatched(workshopIds);
-    const map = new Map<string, { sizeBytes: number | null; remoteUpdatedAt: Date | null }>();
+    const map = new Map<string, PublishedFileMetadata>();
 
     for (const detail of details) {
       if (detail.result !== 1 || !detail.publishedfileid) {
@@ -272,6 +278,7 @@ export class SteamWorkshopService {
           ? new Date(detail.time_updated * 1000)
           : null;
       map.set(String(detail.publishedfileid), {
+        title: detail.title?.trim() || null,
         sizeBytes: parseFileSize(detail.file_size),
         remoteUpdatedAt,
       });

@@ -1,8 +1,8 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { apiClient } from '@aegis/api-client';
+import { apiClient, ApiError } from '@aegis/api-client';
 import type { ServerModDto } from '@aegis/api-contracts';
 import { showToast } from '@aegis/ui';
 import { UnsavedChangesScope } from '@aegis/web/core';
@@ -184,7 +184,7 @@ describe('ImportModsModal (DSM-00355)', () => {
       expect(submitBtn).toBeDisabled();
     });
 
-    it('falls back gracefully when file.text() read throws an error', async () => {
+    it('shows a read error (not a preset error) when file.text() throws', async () => {
       const { container } = renderModal();
 
       const badFile = new File(['bad'], 'corrupted.json', { type: 'application/json' });
@@ -193,10 +193,59 @@ describe('ImportModsModal (DSM-00355)', () => {
       const fileInput = container.querySelector('input[type="file"]') as HTMLInputElement;
       fireEvent.change(fileInput, { target: { files: [badFile] } });
 
-      await waitFor(() => {
-        expect(screen.getByRole('alert')).toBeInTheDocument();
+      const alert = await screen.findByRole('alert');
+      expect(alert).toHaveTextContent('Could not read the selected file. Try selecting it again.');
+      expect(alert).not.toHaveTextContent(/Preset contains no mods/i);
+      expect(screen.getByRole('button', { name: 'Import Preset' })).toBeDisabled();
+    });
+
+    it('keeps the most recently selected file when an earlier, slower read finishes last', async () => {
+      const { container } = renderModal();
+      const fileInput = container.querySelector('input[type="file"]') as HTMLInputElement;
+
+      let resolveSlowRead: (text: string) => void = () => {};
+      const slowFile = new File(['slow'], 'slow.json', { type: 'application/json' });
+      slowFile.text = () =>
+        new Promise<string>(resolve => {
+          resolveSlowRead = resolve;
+        });
+      const fastFile = createPresetJsonFile({
+        steamWsMods: [{ workshopId: '1565871491', name: 'Trader' }],
       });
-      expect(screen.getByRole('alert')).toHaveTextContent(/Preset contains no mods/i);
+
+      fireEvent.change(fileInput, { target: { files: [slowFile] } });
+      fireEvent.change(fileInput, { target: { files: [fastFile] } });
+      await screen.findByText('Trader');
+
+      await act(async () => {
+        resolveSlowRead(
+          JSON.stringify({ steamWsMods: [{ workshopId: '1828463567', name: 'Stale Mod' }] }),
+        );
+      });
+
+      expect(screen.getByText('Trader')).toBeInTheDocument();
+      expect(screen.queryByText('Stale Mod')).not.toBeInTheDocument();
+    });
+
+    it('ignores duplicate Workshop IDs in the preview the same way the server does', async () => {
+      renderModal({ installedMods: [], installedWorkshopIds: new Set() });
+
+      fireEvent.click(screen.getByRole('tab', { name: 'Paste JSON' }));
+      fireEvent.change(screen.getByLabelText('Preset JSON Content'), {
+        target: {
+          value: JSON.stringify({
+            steamWsMods: [{ workshopId: '1565871491', name: 'Trader' }],
+            steamWsServerMods: [{ workshopId: '1565871491', name: 'Trader (again)' }],
+          }),
+        },
+      });
+
+      await screen.findByText('Diff Preview');
+      expect(screen.getByText('To Add').nextElementSibling).toHaveTextContent('1');
+      expect(screen.getByText('Skipped').nextElementSibling).toHaveTextContent('1');
+      expect(screen.getAllByText('New')).toHaveLength(1);
+      expect(screen.queryByText('Trader (again)')).not.toBeInTheDocument();
+      expect(screen.getByText(/1 duplicate preset entry will be ignored/i)).toBeInTheDocument();
     });
   });
 
@@ -258,7 +307,7 @@ describe('ImportModsModal (DSM-00355)', () => {
   describe('AC-03: Replace mode and mutation execution', () => {
     it('surfaces absent server workshop mods as "Will be removed" in replace mode and submits mode: replace', async () => {
       const mockImportPreset = vi.mocked(apiClient.mods.importPreset).mockResolvedValue({
-        added: [sampleInstalledModCF],
+        added: [],
         skippedCount: 0,
         removedCount: 1,
         mods: [sampleInstalledModCF, sampleInstalledLocalMod],
@@ -314,9 +363,15 @@ describe('ImportModsModal (DSM-00355)', () => {
       fireEvent.click(replaceRadio);
       expect(screen.getByText('Will be removed')).toBeInTheDocument();
 
-      // Submit preset import
-      const submitBtn = screen.getByRole('button', { name: 'Import Preset' });
-      fireEvent.click(submitBtn);
+      // Submitting asks for confirmation first because a mod will be removed
+      fireEvent.click(screen.getByRole('button', { name: 'Import Preset' }));
+      const confirmDialog = screen.getByRole('alertdialog', { name: 'Replace Workshop Mods' });
+      expect(confirmDialog).toHaveTextContent(
+        '1 Workshop mod(s) not in the preset will be removed',
+      );
+      expect(mockImportPreset).not.toHaveBeenCalled();
+
+      fireEvent.click(within(confirmDialog).getByRole('button', { name: 'Replace Mods' }));
 
       await waitFor(() => {
         expect(mockImportPreset).toHaveBeenCalledWith(SERVER_ID, {
@@ -329,9 +384,118 @@ describe('ImportModsModal (DSM-00355)', () => {
       });
 
       await waitFor(() => {
-        expect(showToast.success).toHaveBeenCalled();
+        expect(showToast.success).toHaveBeenCalledWith(
+          'Workshop Mods Replaced',
+          'Added 0, kept 1 and removed 1 Workshop mod(s).',
+          undefined,
+        );
         expect(mockOnClose).toHaveBeenCalledTimes(1);
       });
+    });
+
+    it('does not import when the replace confirmation is cancelled', async () => {
+      renderModal({
+        installedMods: [sampleInstalledModCF, sampleInstalledOldWorkshop],
+        installedWorkshopIds: new Set(['1559212036', '99999']),
+      });
+
+      fireEvent.click(screen.getByRole('tab', { name: 'Paste JSON' }));
+      fireEvent.change(screen.getByLabelText('Preset JSON Content'), {
+        target: {
+          value: JSON.stringify({ steamWsMods: [{ workshopId: '1559212036', name: 'CF' }] }),
+        },
+      });
+      await screen.findByText('Diff Preview');
+      fireEvent.click(screen.getByLabelText(/Replace all workshop mods/i));
+      fireEvent.click(screen.getByRole('button', { name: 'Import Preset' }));
+
+      const confirmDialog = screen.getByRole('alertdialog', { name: 'Replace Workshop Mods' });
+      fireEvent.click(within(confirmDialog).getByRole('button', { name: 'Cancel' }));
+
+      await waitFor(() => {
+        expect(
+          screen.queryByRole('alertdialog', { name: 'Replace Workshop Mods' }),
+        ).not.toBeInTheDocument();
+      });
+      expect(apiClient.mods.importPreset).not.toHaveBeenCalled();
+      expect(mockOnClose).not.toHaveBeenCalled();
+    });
+
+    it('imports in replace mode without confirmation when nothing would be removed', async () => {
+      vi.mocked(apiClient.mods.importPreset).mockResolvedValue({
+        added: [],
+        skippedCount: 0,
+        removedCount: 0,
+        mods: [sampleInstalledModCF],
+        launchPreview: {
+          modFlag: '-mod=@CF',
+          serverModFlag: '',
+          combinedArgs: ['-mod=@CF'],
+          missingFolderCount: 0,
+        },
+        updateAvailableCount: 0,
+      });
+      renderModal();
+
+      fireEvent.click(screen.getByRole('tab', { name: 'Paste JSON' }));
+      fireEvent.change(screen.getByLabelText('Preset JSON Content'), {
+        target: {
+          value: JSON.stringify({ steamWsMods: [{ workshopId: '1559212036', name: 'CF' }] }),
+        },
+      });
+      await screen.findByText('Diff Preview');
+      fireEvent.click(screen.getByLabelText(/Replace all workshop mods/i));
+      fireEvent.click(screen.getByRole('button', { name: 'Import Preset' }));
+
+      expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
+      await waitFor(() => {
+        expect(apiClient.mods.importPreset).toHaveBeenCalledWith(
+          SERVER_ID,
+          expect.objectContaining({ mode: 'replace' }),
+        );
+      });
+    });
+
+    it('shows API field errors inline as well as in the error toast', async () => {
+      vi.mocked(apiClient.mods.importPreset).mockRejectedValueOnce(
+        new ApiError('Validation failed', 400, {
+          statusCode: 400,
+          error: 'Bad Request',
+          errorCode: 'VALIDATION_FAILED',
+          message: 'Mod name is required',
+          fieldErrors: {
+            'preset.steamWsMods.0.name': {
+              code: 'VALIDATION_FAILED',
+              message: 'Mod name is required',
+            },
+          },
+        }),
+      );
+      renderModal();
+
+      fireEvent.click(screen.getByRole('tab', { name: 'Paste JSON' }));
+      const textarea = screen.getByLabelText('Preset JSON Content');
+      fireEvent.change(textarea, {
+        target: {
+          value: JSON.stringify({ steamWsMods: [{ workshopId: '1559212036', name: 'CF' }] }),
+        },
+      });
+      await screen.findByText('Diff Preview');
+      fireEvent.click(screen.getByRole('button', { name: 'Import Preset' }));
+
+      const inlineError = await screen.findByText(/preset\.steamWsMods\.0\.name:/);
+      expect(inlineError).toHaveTextContent('Mod name is required');
+      expect(textarea).toHaveAttribute('aria-invalid', 'true');
+      expect(showToast.error).toHaveBeenCalled();
+      expect(mockOnClose).not.toHaveBeenCalled();
+
+      // Editing the preset clears the stale server error
+      fireEvent.change(textarea, {
+        target: {
+          value: JSON.stringify({ steamWsMods: [{ workshopId: '1559212036', name: 'CF 2' }] }),
+        },
+      });
+      expect(screen.queryByText(/preset\.steamWsMods\.0\.name:/)).not.toBeInTheDocument();
     });
 
     it('handles import API failure gracefully by displaying error toast and keeping modal open', async () => {
@@ -386,21 +550,20 @@ describe('ImportModsModal (DSM-00355)', () => {
       expect(screen.getByText('Already Installed')).toBeInTheDocument();
     });
 
-    it('rejects mutation when submit is triggered without a loaded preset', async () => {
+    it('sends no request when submit is triggered without a loaded preset', () => {
       renderModal();
       const submitBtn = screen.getByRole('button', { name: 'Import Preset' }) as HTMLButtonElement;
       expect(submitBtn).toBeDisabled();
 
-      // Trigger onClick directly via React props to exercise the defensive guard in mutationFn
+      // Trigger onClick directly via React props to exercise the defensive guard
       const reactPropsKey = Object.keys(submitBtn).find(k => k.startsWith('__reactProps$'));
       expect(reactPropsKey).toBeDefined();
       (submitBtn as unknown as Record<string, { onClick?: () => void }>)[
         reactPropsKey!
       ].onClick?.();
 
-      await waitFor(() => {
-        expect(showToast.error).toHaveBeenCalled();
-      });
+      expect(apiClient.mods.importPreset).not.toHaveBeenCalled();
+      expect(showToast.error).not.toHaveBeenCalled();
     });
   });
 
@@ -470,7 +633,6 @@ describe('ImportModsModal (DSM-00355)', () => {
     it('displays server locked warning banner and disables submit button when isServerLocked is true', () => {
       renderModal({
         isServerLocked: true,
-        serverStatus: 'running',
       });
 
       expect(screen.getByText(/Server is Active — Mod Configuration Locked/i)).toBeInTheDocument();

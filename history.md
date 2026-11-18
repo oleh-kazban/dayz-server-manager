@@ -4,6 +4,74 @@ This document records all completed product backlog items and operational featur
 
 ---
 
+## [DSM-00356] Export Mod Preset Action in Mods Management Console
+
+- **Type**: `Story`
+- **Priority**: `P2 (Medium)`
+- **Status**: `DONE`
+- **Dependencies**: `DSM-00354`
+
+### Summary
+
+Add an `Export Preset` action to the `Mods Management` header in `apps/web` allowing operators to download the active server's workshop mods as a community-compatible JSON file (`mods-preset-<server-name>-<YYYY-MM-DD-HH-mm-ss>.json`), strictly omitting local mods, with an option to include or exclude disabled mods.
+
+### Delivered Capabilities
+
+Export button/menu option in `ModsView.tsx`, `ExportPresetModal` preview, preset fetched from `GET /api/v1/servers/:id/mods/export-preset` (`DSM-00354`), file download trigger, notifications, and tests.
+
+---
+
+## [DSM-00355] Import Mods Modal with Dual-Input, Strategy Selector, and Diff Preview
+
+- **Type**: `Story`
+- **Priority**: `P1 (High)`
+- **Status**: `DONE`
+- **Dependencies**: `DSM-00353, DSM-00354`
+
+### Summary
+
+Add an `ImportModsModal` in `apps/web` featuring dual input (drag-and-drop `.json` file via `FileUploader` or paste raw JSON), client-side pre-validation, a client-side diff preview with status badges (`New`, `Already Installed`, `Will be removed`) that de-duplicates Workshop IDs like the server, a strategy selector (`Merge with existing` vs. `Replace all`), a confirmation before a replace that removes mods, and form discard protection.
+
+### Delivered Capabilities
+
+`apps/web/src/features/mods/components/ImportModsModal.tsx`, integration in `ModsView.tsx`, TanStack Query invalidation, explicit user feedback toasts (`notifySuccess` / `notifyApiError`), and RTL tests.
+
+---
+
+## [DSM-00354] Mod Preset Contracts, Batched Hydration, and Atomic Server Import API
+
+- **Type**: `Story`
+- **Priority**: `P1 (High)`
+- **Status**: `DONE`
+- **Dependencies**: `DSM-00119`
+
+### Summary
+
+Define Zod contracts for the standard community mod preset format (`steamWsMods` and `steamWsServerMods`). Implement `POST /api/v1/servers/:id/mods/import` on Fastify to batch-hydrate metadata via Steam Workshop API (with graceful fallback to preset name on failure) and execute atomic SQLite persistence for both `merge` (append with preserved ordering) and `replace` (Workshop mods follow the preset; mods already installed are updated in place and keep their folder, enabled flag and sync state; local mods keep their load-order slot) modes. The server lock is re-checked inside the transaction after the Steam lookup. Also exposes `GET /api/v1/servers/:id/mods/export-preset`, the single source of truth for preset export.
+
+### Delivered Capabilities
+
+`libs/api-contracts` schemas and DTOs; `libs/api-client` endpoints; Fastify route, controller, and service layer with transaction safety; tests in `apps/server`.
+
+---
+
+## [DSM-00353] FileUploader UI Kit Component with Drop Zone and Drag-and-Drop
+
+- **Type**: `Story`
+- **Priority**: `P1 (High)`
+- **Status**: `DONE`
+- **Dependencies**: `DSM-00105`
+
+### Summary
+
+Provide an accessible, theme-styled `FileUploader` component in `libs/ui` featuring a visual drop zone, drag-and-drop active state, fallback file-picker click trigger, MIME/extension filtering (`accept`), size bounds (`maxSizeBytes`), and selected file display with removal control.
+
+### Delivered Capabilities
+
+`libs/ui/src/file-uploader/FileUploader.tsx`, styles/variants, clear/remove action, keyboard trigger, invalid file/size error callbacks, Storybook story, and Vitest suite.
+
+---
+
 ## [DSM-00348] Keep access tokens out of SSE URLs and request logs
 
 - **Type**: `Story`
@@ -18,6 +86,23 @@ EventSource cannot send an `Authorization` header, so the web app passes the acc
 ### Delivered Capabilities
 
 `POST /api/v1/realtime/ticket` (authenticated) returning a single-use ticket valid for seconds; `/realtime/sse?ticket=` accepting it once; the web realtime connection (`DSM-00173`) and the Steam challenge hook requesting a ticket per (re)connect; request-log serializer redacting `token` / `ticket` query values; removing `?token=` support from `fastify.authenticate`; tests including a log assertion.
+
+---
+
+## [DSM-00206] Stream the active RPT log over SSE
+
+- **Type**: `Story`
+- **Priority**: `P1 (High)`
+- **Status**: `DONE`
+- **Dependencies**: `DSM-00162`
+
+### Summary
+
+While a server runs, the backend tails its newest `.RPT` file in the profiles directory and broadcasts new lines as `server.log` SSE events, keeping the last N lines in a bounded buffer that `GET /api/v1/servers/:id/logs/rpt` returns for the initial load.
+
+### Delivered Capabilities
+
+File locator, tail from offset, bounded buffer, event and contract, tests with temp files.
 
 ---
 

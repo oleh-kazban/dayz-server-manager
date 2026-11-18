@@ -969,7 +969,6 @@ export function ModsView() {
           serverId={serverId}
           installedMods={modsResponse.mods}
           installedWorkshopIds={installedWorkshopIds}
-          serverStatus={activeServer.status}
           isServerLocked={isServerLocked}
           onClose={() => setIsImportModalOpen(false)}
         />

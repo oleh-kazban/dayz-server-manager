@@ -25,6 +25,7 @@ export type NotificationCode =
   | 'STEAM_DIAGNOSTICS_COMPLETED'
   | 'MOD_ADDED'
   | 'MODS_BATCH_ADDED'
+  | 'MODS_PRESET_REPLACED'
   | 'MOD_UPDATED'
   | 'MOD_DELETED'
   | 'MODS_REORDERED'
@@ -452,6 +453,11 @@ export const enUSTranslations: TranslationCatalog = {
     MODS_BATCH_ADDED: {
       title: 'Mods Imported',
       description: 'Added {{addedCount}} mod(s) to the server ({{skippedCount}} skipped).',
+    },
+    MODS_PRESET_REPLACED: {
+      title: 'Workshop Mods Replaced',
+      description:
+        'Added {{addedCount}}, kept {{keptCount}} and removed {{removedCount}} Workshop mod(s).',
     },
     MOD_UPDATED: {
       title: 'Mod Updated',

@@ -1,11 +1,29 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import type { ServerModDto } from '@aegis/api-contracts';
+import { apiClient } from '@aegis/api-client';
+import type { ModPresetDto, ServerModDto } from '@aegis/api-contracts';
 import { showToast } from '@aegis/ui';
 
 import { ExportPresetModal, type ExportPresetModalProps } from './ExportPresetModal';
 import { formatExportTimestamp, sanitizePresetFilename } from './ExportPresetModal.utils';
+
+vi.mock('@aegis/api-client', async importOriginal => {
+  const actual = await importOriginal<typeof import('@aegis/api-client')>();
+  return {
+    ...actual,
+    apiClient: {
+      ...actual.apiClient,
+      mods: {
+        ...actual.apiClient.mods,
+        exportPreset: vi.fn(),
+      },
+    },
+  };
+});
+
+const mockExportPreset = vi.mocked(apiClient.mods.exportPreset);
 
 const SERVER_ID = '11111111-1111-4111-a111-111111111111';
 const NOW_ISO = '2026-11-10T10:00:00.000Z';
@@ -187,6 +205,14 @@ describe('ExportPresetModal (DSM-00356)', () => {
   let createdBlob: Blob | null = null;
   const capturedAnchor = { download: '', href: '', clicked: false };
 
+  const enabledPreset: ModPresetDto = {
+    steamWsMods: [
+      { workshopId: '1559212036', name: 'CF' },
+      { workshopId: '1564026768', name: 'Community Online Tools' },
+    ],
+    steamWsServerMods: [{ workshopId: '2545327648', name: 'Admin Logs' }],
+  };
+
   beforeEach(() => {
     vi.clearAllMocks();
     createdBlob = null;
@@ -194,6 +220,7 @@ describe('ExportPresetModal (DSM-00356)', () => {
     capturedAnchor.href = '';
     capturedAnchor.clicked = false;
 
+    mockExportPreset.mockResolvedValue(enabledPreset);
     vi.spyOn(showToast, 'success').mockReturnValue('toast-ok');
     vi.spyOn(showToast, 'error').mockReturnValue('toast-err');
 
@@ -219,17 +246,23 @@ describe('ExportPresetModal (DSM-00356)', () => {
     });
   });
 
-  const renderModal = (props: Partial<ExportPresetModalProps> = {}) =>
-    render(
-      <ExportPresetModal
-        isOpen
-        serverId={SERVER_ID}
-        serverName="DayZ Chernarus"
-        mods={[modCF, modCOT, modServerOnly, modDisabled, modLocal]}
-        onClose={mockOnClose}
-        {...props}
-      />,
+  const renderModal = (props: Partial<ExportPresetModalProps> = {}) => {
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+    });
+    return render(
+      <QueryClientProvider client={queryClient}>
+        <ExportPresetModal
+          isOpen
+          serverId={SERVER_ID}
+          serverName="DayZ Chernarus"
+          mods={[modCF, modCOT, modServerOnly, modDisabled, modLocal]}
+          onClose={mockOnClose}
+          {...props}
+        />
+      </QueryClientProvider>,
     );
+  };
 
   it('renders nothing when isOpen is false', () => {
     const { container } = renderModal({ isOpen: false });
@@ -240,7 +273,6 @@ describe('ExportPresetModal (DSM-00356)', () => {
     renderModal();
 
     expect(screen.getByRole('dialog', { name: 'Export Mod Preset' })).toBeInTheDocument();
-    expect(screen.getByText('Export Mod Preset')).toBeInTheDocument();
 
     // Breakdown counts: Total = 3 (enabled workshop only), Client & Server = 2, Server-Only = 1
     const totalCount = screen.getByText('Total to Export').nextElementSibling;
@@ -252,116 +284,81 @@ describe('ExportPresetModal (DSM-00356)', () => {
     const serverOnlyCards = screen.getAllByText('Server-Only');
     expect(serverOnlyCards[0].nextElementSibling).toHaveTextContent('1');
 
-    // List items check
     expect(screen.getByText('CF')).toBeInTheDocument();
     expect(screen.getByText('Community Online Tools')).toBeInTheDocument();
     expect(screen.getByText('Admin Logs')).toBeInTheDocument();
 
-    // AC-02: Local mods strictly excluded from preview
+    // AC-02: Local mods strictly excluded from preview; disabled mods excluded by default
     expect(screen.queryByText('Custom Scripts')).not.toBeInTheDocument();
-    // Disabled mods excluded by default
     expect(screen.queryByText('Disabled Mod')).not.toBeInTheDocument();
+    expect(screen.getByText(/disabled mods are imported as enabled/i)).toBeInTheDocument();
   });
 
-  it('AC-01: downloads preset payload, sanitizes filename, schedules delayed URL revocation, toasts, and closes modal', async () => {
-    vi.useFakeTimers();
-    try {
-      renderModal();
+  it('AC-01: downloads the server-built preset, schedules delayed URL revocation, notifies, and closes', async () => {
+    const setTimeoutSpy = vi.spyOn(globalThis, 'setTimeout');
+    renderModal();
 
-      const downloadBtn = screen.getByRole('button', { name: 'Download Preset' });
-      expect(downloadBtn).toBeEnabled();
+    fireEvent.click(screen.getByRole('button', { name: 'Download Preset' }));
 
-      fireEvent.click(downloadBtn);
+    await waitFor(() => expect(mockOnClose).toHaveBeenCalledTimes(1));
+    expect(mockExportPreset).toHaveBeenCalledWith(SERVER_ID, { includeDisabled: false });
 
-      // Verify blob payload was generated and passed to createObjectURL
-      expect(URL.createObjectURL).toHaveBeenCalledTimes(1);
-      expect(createdBlob).not.toBeNull();
-      const blobText = await createdBlob!.text();
-      const payload = JSON.parse(blobText);
+    // The file contains exactly what the server returned
+    expect(URL.createObjectURL).toHaveBeenCalledTimes(1);
+    expect(JSON.parse(await createdBlob!.text())).toEqual(enabledPreset);
 
-      expect(payload).toEqual({
-        steamWsMods: [
-          { workshopId: '1559212036', name: 'CF' },
-          { workshopId: '1564026768', name: 'Community Online Tools' },
-        ],
-        steamWsServerMods: [{ workshopId: '2545327648', name: 'Admin Logs' }],
-      });
+    expect(capturedAnchor.clicked).toBe(true);
+    expect(capturedAnchor.download).toMatch(
+      /^mods-preset-dayz-chernarus-\d{4}-\d{2}-\d{2}-\d{2}-\d{2}-\d{2}\.json$/,
+    );
+    expect(capturedAnchor.href).toBe('blob:mock-preset-url');
 
-      // Verify anchor download attributes and click trigger
-      const filenamePattern =
-        /^mods-preset-dayz-chernarus-\d{4}-\d{2}-\d{2}-\d{2}-\d{2}-\d{2}\.json$/;
-      expect(capturedAnchor.clicked).toBe(true);
-      expect(capturedAnchor.download).toMatch(filenamePattern);
-      expect(capturedAnchor.href).toBe('blob:mock-preset-url');
+    // Delayed revocation: not revoked immediately while a Save dialog may be open
+    expect(URL.revokeObjectURL).not.toHaveBeenCalled();
+    const revokeCall = setTimeoutSpy.mock.calls.find(([, delay]) => delay === 60_000);
+    expect(revokeCall).toBeDefined();
+    (revokeCall![0] as () => void)();
+    expect(URL.revokeObjectURL).toHaveBeenCalledWith('blob:mock-preset-url');
 
-      // Delayed revocation: URL is not revoked immediately while Save dialog may be active
-      expect(URL.revokeObjectURL).not.toHaveBeenCalled();
-
-      // Advancing timer by 60s triggers delayed revocation
-      vi.advanceTimersByTime(60_000);
-      expect(URL.revokeObjectURL).toHaveBeenCalledWith('blob:mock-preset-url');
-
-      // Toast feedback and modal close
-      expect(showToast.success).toHaveBeenCalledWith(
-        'Preset Export',
-        `Download started for ${capturedAnchor.download}.`,
-      );
-      expect(mockOnClose).toHaveBeenCalledTimes(1);
-    } finally {
-      vi.useRealTimers();
-    }
+    // Green toast through the notification contract
+    expect(showToast.success).toHaveBeenCalledWith(
+      'Preset Exported',
+      `Exported 3 mod(s) to ${capturedAnchor.download}.`,
+      undefined,
+    );
   });
 
-  it('AC-03: toggles "Include disabled mods" to include disabled mods with warning badges and updates payload', async () => {
+  it('AC-03: toggles "Include disabled mods", updates the preview, and requests disabled mods', async () => {
     renderModal();
 
     const checkbox = screen.getByLabelText('Include disabled mods');
     expect(checkbox).not.toBeChecked();
-
-    // Initially disabled mod is omitted
     expect(screen.queryByText('Disabled Mod')).not.toBeInTheDocument();
 
-    // Toggle include disabled mods
     fireEvent.click(checkbox);
     expect(checkbox).toBeChecked();
 
-    // Counts update: 4 total, 3 client & server, 1 server-only
-    const totalCount = screen.getByText('Total to Export').nextElementSibling;
-    expect(totalCount).toHaveTextContent('4');
-    const breakdownCards = screen.getAllByText('Client & Server');
-    expect(breakdownCards[0].nextElementSibling).toHaveTextContent('3');
-
-    // Disabled mod is now rendered with badge
+    // Counts update: 4 total, 3 client & server
+    expect(screen.getByText('Total to Export').nextElementSibling).toHaveTextContent('4');
+    expect(screen.getAllByText('Client & Server')[0].nextElementSibling).toHaveTextContent('3');
     expect(screen.getByText('Disabled Mod')).toBeInTheDocument();
     expect(screen.getByText('Disabled')).toBeInTheDocument();
 
-    // Download with disabled mods
-    const downloadBtn = screen.getByRole('button', { name: 'Download Preset' });
-    fireEvent.click(downloadBtn);
+    fireEvent.click(screen.getByRole('button', { name: 'Download Preset' }));
 
-    expect(createdBlob).not.toBeNull();
-    const payload = JSON.parse(await createdBlob!.text());
-
-    // Preserves loadOrder ascending (CF: 0, COT: 1, Disabled: 2)
-    expect(payload.steamWsMods).toEqual([
-      { workshopId: '1559212036', name: 'CF' },
-      { workshopId: '1564026768', name: 'Community Online Tools' },
-      { workshopId: '3333333333', name: 'Disabled Mod' },
-    ]);
-    expect(payload.steamWsServerMods).toEqual([{ workshopId: '2545327648', name: 'Admin Logs' }]);
+    await waitFor(() =>
+      expect(mockExportPreset).toHaveBeenCalledWith(SERVER_ID, { includeDisabled: true }),
+    );
   });
 
   it('AC-05: displays empty state notice and disables Download button when no exportable mods exist', () => {
-    // Only local mods
     renderModal({ mods: [modLocal] });
 
     expect(screen.getByText('No Exportable Mods')).toBeInTheDocument();
     expect(
       screen.getByText(/No enabled workshop mods are available to export/i),
     ).toBeInTheDocument();
-
-    const downloadBtn = screen.getByRole('button', { name: 'Download Preset' });
-    expect(downloadBtn).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Download Preset' })).toBeDisabled();
   });
 
   it('AC-05: displays empty notice when all workshop mods are disabled and toggle is off, but restores on toggle', () => {
@@ -371,9 +368,7 @@ describe('ExportPresetModal (DSM-00356)', () => {
     const downloadBtn = screen.getByRole('button', { name: 'Download Preset' });
     expect(downloadBtn).toBeDisabled();
 
-    // Toggle include disabled mods
-    const checkbox = screen.getByLabelText('Include disabled mods');
-    fireEvent.click(checkbox);
+    fireEvent.click(screen.getByLabelText('Include disabled mods'));
 
     expect(screen.queryByText('No Exportable Mods')).not.toBeInTheDocument();
     expect(downloadBtn).toBeEnabled();
@@ -386,58 +381,50 @@ describe('ExportPresetModal (DSM-00356)', () => {
     expect(screen.getByRole('button', { name: 'Download Preset' })).toBeDisabled();
   });
 
-  it('exercises defensive guard returning early if handleDownload is called when no eligible mods exist', () => {
-    renderModal({ mods: [] });
-    const downloadBtn = screen.getByRole('button', { name: 'Download Preset' });
-    expect(downloadBtn).toBeDisabled();
+  it('shows an error toast and keeps the dialog open when the export request fails', async () => {
+    mockExportPreset.mockRejectedValueOnce(new Error('Server unreachable'));
+    renderModal();
 
-    const reactPropsKey = Object.keys(downloadBtn).find(k => k.startsWith('__reactProps$'));
-    expect(reactPropsKey).toBeDefined();
-    (downloadBtn as unknown as Record<string, { onClick?: () => void }>)[
-      reactPropsKey!
-    ].onClick?.();
+    fireEvent.click(screen.getByRole('button', { name: 'Download Preset' }));
 
+    await waitFor(() =>
+      expect(showToast.error).toHaveBeenCalledWith(
+        'Failed to Export Mod Preset',
+        expect.stringContaining('Server unreachable'),
+        undefined,
+      ),
+    );
     expect(URL.createObjectURL).not.toHaveBeenCalled();
     expect(mockOnClose).not.toHaveBeenCalled();
   });
 
-  it('handles download failure by displaying error toast and keeping dialog open', () => {
+  it('shows an error toast and keeps the dialog open when the browser download fails', async () => {
     vi.spyOn(URL, 'createObjectURL').mockImplementation(() => {
       throw new Error('Disk quota exceeded');
     });
-
     renderModal();
 
-    const downloadBtn = screen.getByRole('button', { name: 'Download Preset' });
-    fireEvent.click(downloadBtn);
+    fireEvent.click(screen.getByRole('button', { name: 'Download Preset' }));
 
-    expect(showToast.error).toHaveBeenCalledWith(
-      'Failed to Export Mod Preset',
-      expect.stringContaining('Disk quota exceeded'),
-      undefined,
+    await waitFor(() =>
+      expect(showToast.error).toHaveBeenCalledWith(
+        'Failed to Export Mod Preset',
+        expect.stringContaining('Disk quota exceeded'),
+        undefined,
+      ),
     );
+    expect(showToast.success).not.toHaveBeenCalled();
     expect(mockOnClose).not.toHaveBeenCalled();
   });
 
-  it('closes dialog on Cancel button click', () => {
+  it.each([
+    ['Cancel button', () => screen.getByRole('button', { name: 'Cancel' })],
+    ['X button', () => screen.getByRole('button', { name: 'Close dialog' })],
+    ['backdrop', () => screen.getByRole('dialog', { name: 'Export Mod Preset' })],
+  ])('closes dialog on %s click', (_label, getTarget) => {
     renderModal();
 
-    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
-    expect(mockOnClose).toHaveBeenCalledTimes(1);
-  });
-
-  it('closes dialog on X button click', () => {
-    renderModal();
-
-    fireEvent.click(screen.getByRole('button', { name: 'Close dialog' }));
-    expect(mockOnClose).toHaveBeenCalledTimes(1);
-  });
-
-  it('closes dialog on backdrop click', () => {
-    renderModal();
-
-    const dialog = screen.getByRole('dialog', { name: 'Export Mod Preset' });
-    fireEvent.click(dialog);
+    fireEvent.click(getTarget());
     expect(mockOnClose).toHaveBeenCalledTimes(1);
   });
 });
