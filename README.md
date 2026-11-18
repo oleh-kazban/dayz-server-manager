@@ -101,7 +101,7 @@ DSM is designed as a standalone, self-hosted appliance that runs on the same mac
 [![NodeJS](https://img.shields.io/badge/Node.js-339933?style=for-the-badge&logo=nodedotjs&logoColor=white)](https://nodejs.org/)
 [![Fastify](https://img.shields.io/badge/Fastify-000000?style=for-the-badge&logo=fastify&logoColor=white)](https://fastify.dev/)
 [![TailwindCSS](https://img.shields.io/badge/Tailwind_CSS_v4-06B6D4?style=for-the-badge&logo=tailwindcss&logoColor=white)](https://tailwindcss.com/)
-[![Vite](https://img.shields.io/badge/Vite_6-646CFF?style=for-the-badge&logo=vite&logoColor=white)](https://vite.dev/)
+[![Vite](https://img.shields.io/badge/Vite_8-646CFF?style=for-the-badge&logo=vite&logoColor=white)](https://vite.dev/)
 [![SQLite](https://img.shields.io/badge/SQLite-07405E?style=for-the-badge&logo=sqlite&logoColor=white)](https://www.sqlite.org/)
 [![Nx](https://img.shields.io/badge/Nx-143055?style=for-the-badge&logo=nx&logoColor=white)](https://nx.dev/)
 [![pnpm](https://img.shields.io/badge/pnpm-4A4A4A?style=for-the-badge&logo=pnpm&logoColor=F69220)](https://pnpm.io/)
@@ -136,27 +136,37 @@ Built from the ground up as a modern, high-throughput monorepo:
    pnpm install
    ```
 
-3. **Start the development server:**
+3. **Start the development servers** (in two terminals):
+
    ```bash
-   pnpm dev
+   pnpm start:web      # web console on http://localhost:4200
+   pnpm start:server   # Fastify backend on http://localhost:5000
    ```
+
    Open [http://localhost:4200](http://localhost:4200) in your browser.
+
+4. **Sign in:** on first start the backend seeds the database with an `admin` user whose password is `admin`, or the value of `DSM_ADMIN_PASSWORD` if set. The seed runs only while the users table is empty, and in production (`NODE_ENV=production`) `DSM_ADMIN_PASSWORD` is required.
 
 ---
 
 ## Workspace Commands
 
-| Command             | Purpose                                                                |
-| :------------------ | :--------------------------------------------------------------------- |
-| `pnpm dev`          | Starts the web console development server (`http://localhost:4200`)    |
-| `pnpm docs:sync`    | Synchronizes static documentation and compiles backlog release history |
-| `pnpm build`        | Compiles production builds for all applications and packages           |
-| `pnpm typecheck`    | Runs project-wide TypeScript verification (`tsc --noEmit`)             |
-| `pnpm lint`         | Runs ESLint Flat Config with module boundary and import order checks   |
-| `pnpm lint:fix`     | Automatically fixes linting and import sorting violations              |
-| `pnpm format:check` | Checks code formatting against Prettier rules                          |
-| `pnpm format`       | Auto-formats all source files with Prettier                            |
-| `pnpm check:cycles` | Detects circular dependencies across apps and libraries (`madge`)      |
+| Command                | Purpose                                                                |
+| :--------------------- | :--------------------------------------------------------------------- |
+| `pnpm start:web`       | Starts the web console development server (`http://localhost:4200`)    |
+| `pnpm start:server`    | Starts the Fastify backend dev server (`http://localhost:5000`)        |
+| `pnpm docs:sync`       | Synchronizes static documentation and compiles backlog release history |
+| `pnpm build`           | Compiles production builds for all applications and packages           |
+| `pnpm typecheck`       | Runs project-wide TypeScript verification (`tsc --noEmit`)             |
+| `pnpm lint`            | Runs ESLint Flat Config with module boundary and import order checks   |
+| `pnpm lint:fix`        | Automatically fixes linting and import sorting violations              |
+| `pnpm format:check`    | Checks code formatting against Prettier rules                          |
+| `pnpm format`          | Auto-formats all source files with Prettier                            |
+| `pnpm check:cycles`    | Detects circular dependencies across apps and libraries (`madge`)      |
+| `pnpm test`            | Runs the Vitest suites of every project                                |
+| `pnpm test:coverage`   | Runs every test suite with coverage reporting                          |
+| `pnpm storybook`       | Starts Storybook for `@aegis/ui` (`http://localhost:6006`)             |
+| `pnpm build-storybook` | Builds a static Storybook for the `@aegis/ui` component kit            |
 
 ---
 
@@ -167,16 +177,24 @@ dayz-server-manager/
 ├── apps/
 │   ├── web/                     # React 19 SPA (Control Plane Console)
 │   │   ├── src/
-│   │   │   ├── api/             # Typed API client
-│   │   │   ├── components/      # UI components & layouts
-│   │   │   ├── hooks/           # Server state & telemetry hooks
-│   │   │   ├── styles/          # Tailwind CSS v4 tokens
-│   │   │   └── types/           # Domain schemas & types (Zod)
+│   │   │   ├── components/      # Shared app-level form and layout components
+│   │   │   ├── core/            # App infrastructure (forms, i18n, notifications, query, realtime …)
+│   │   │   ├── features/        # Feature slices (auth, dashboard, mods, server-settings, steam …)
+│   │   │   └── styles/          # Tailwind CSS v4 theme tokens, fonts & animations
 │   │   ├── index.html
-│   │   ├── project.json         # Nx project targets (serve, build, lint, typecheck)
-│   │   └── vite.config.ts       # Vite 6 + Tailwind v4 bundler config
+│   │   ├── project.json         # Nx targets (build, serve, lint, typecheck, test, test:coverage)
+│   │   └── vite.config.ts       # Vite 8 + Tailwind v4 bundler config
 │   │
-│   └── server/                  # Fastify REST backend daemon (Scaffold ready)
+│   └── server/                  # Fastify REST API (/api/v1) + SSE: auth, servers, mods, steam, realtime
+│
+├── libs/
+│   ├── ui/                      # @aegis/ui component kit (buttons, inputs, tables, toasts, Storybook)
+│   ├── api-client/              # Typed HTTP client with one endpoint module per API area
+│   ├── api-contracts/           # Shared Zod request/response schemas (pure TypeScript + Zod)
+│   ├── database/                # SQLite (better-sqlite3) + Drizzle ORM schema, migrations, crypto
+│   ├── dayz-config/             # serverDZ.cfg tokenizer/parser, rules and launch command compiler
+│   ├── platform/                # Cross-platform process managers (Windows and POSIX)
+│   └── rcon/                    # BattlEye RCON UDP client and packet codec
 │
 ├── .github/                     # GitHub Actions CI & PR validation pipelines
 ├── .husky/                      # Git hooks (pre-commit lint-staged, pre-push cycle check)
