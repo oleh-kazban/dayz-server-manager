@@ -15,6 +15,7 @@
     "skipDefaultLibCheck": true,
     "baseUrl": ".",
     "strict": true,
+    "rewriteRelativeImportExtensions": true,
     "paths": {
       "@aegis/api-client": ["libs/api-client/src/index.ts"],
       "@aegis/api-client/*": ["libs/api-client/src/*"],
