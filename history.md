@@ -4,6 +4,23 @@ This document records all completed product backlog items and operational featur
 
 ---
 
+## [DSM-00357] Measure `.ts` Files in Web App Coverage
+
+- **Type**: `Task`
+- **Priority**: `P1 (High)`
+- **Status**: `DONE`
+- **Dependencies**: `None`
+
+### Summary
+
+`apps/web/vitest.config.ts` sets coverage `include: ['src/**/*.tsx']`, which replaces the shared `src/**/*.ts` and leaves every `.ts` file in `apps/web/src` unmeasured (hooks, `*.utils.ts`, `*.queries.ts`, `core/forms`, `core/notifications`, `core/realtime`, …). Their tests run, but coverage never counts them, so the reported web coverage overstates what is measured, and the sdlc checks gate fails any change to a web `.ts` file with "no coverage data". - **Acceptance Criteria**: - **AC-1**: web coverage includes `src/**/*.ts` and `src/**/*.tsx`, keeping the existing excludes (`*.types.ts`, `*.schema.ts`, `main.tsx`, `router.tsx`, `styles/**`, tests, `*.d.ts`, barrels). - **AC-2**: `pnpm test:web:coverage` writes `coverage/apps/web/lcov.info` and it lists the measured `.ts` files. - **AC-3**: overall web coverage stays ≥ 80%, and the sdlc checks gate passes on `master`. - **AC-4**: the "Known gap" note in `.claude/CLAUDE.md` §2 is removed.
+
+### Delivered Capabilities
+
+the web coverage `include` setting, a fresh coverage run, the `.claude/CLAUDE.md` note.
+
+---
+
 ## [DSM-00356] Export Mod Preset Action in Mods Management Console
 
 - **Type**: `Story`

@@ -1,8 +1,9 @@
 import { useQuery } from '@tanstack/react-query';
 
-import type { ServerSummaryDto } from '@aegis/api-contracts';
+import { SERVER_STATUS, type ServerSummaryDto } from '@aegis/api-contracts';
 import { Card, StatusTag } from '@aegis/ui';
 import {
+  describeServerExit,
   getServerExitPresentation,
   getServerStatusPresentation,
   serverQueries,
@@ -29,6 +30,12 @@ export function ServerLifecycleCard({ server }: ServerLifecycleCardProps) {
   const status = getServerStatusPresentation(server.status);
   const exit = getServerExitPresentation(server.status, server.lastExit);
   const runtime = detail.data?.runtime ?? null;
+  // A deliberate stop is not an alert, so it stays out of the shell selector, but the operator
+  // still needs to see how and when the last run ended (DSM-00350).
+  const lastRun =
+    server.status === SERVER_STATUS.STOPPED && server.lastExit
+      ? describeServerExit(server.lastExit)
+      : null;
 
   return (
     <Card
@@ -37,11 +44,16 @@ export function ServerLifecycleCard({ server }: ServerLifecycleCardProps) {
     >
       <div className="flex flex-wrap items-center gap-x-4 gap-y-2 border-b border-[var(--color-border)] pb-4">
         <StatusTag status={status.tagStatus} label={status.label} />
-        <span className="text-xs text-[var(--color-text-secondary)]">
-          {runtime && formatRuntime(runtime)}
-          {!runtime && exit && <span title={exit.description}>{exit.label}</span>}
-          {!runtime && !exit && 'No server process is running.'}
-        </span>
+        <div className="flex flex-col gap-0.5 text-xs">
+          <span className="text-[var(--color-text-secondary)]">
+            {runtime && formatRuntime(runtime)}
+            {!runtime && exit && <span title={exit.description}>{exit.label}</span>}
+            {!runtime && !exit && 'No server process is running.'}
+          </span>
+          {!runtime && lastRun && (
+            <span className="text-[var(--color-text-muted)]">Last run: {lastRun.description}</span>
+          )}
+        </div>
       </div>
       <div className="grid grid-cols-1 divide-y divide-[var(--color-border)] md:grid-cols-2 md:divide-x md:divide-y-0 xl:grid-cols-4">
         <StartServerTile server={server} />
