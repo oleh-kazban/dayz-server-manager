@@ -96,6 +96,26 @@ describe('MaintenanceView', () => {
     activeServer({ servers: [stopped], activeServer: stopped, activeServerId: ID });
     renderView();
     expect(await screen.findByText('No server process is running.')).toBeInTheDocument();
+    expect(screen.queryByText(/^Last run:/)).not.toBeInTheDocument();
+  });
+
+  it.each([
+    ['force_stopped', 'Force-stopped'],
+    ['stopped', 'Stopped via RCON'],
+    ['shutdown_timeout', 'Killed after shutdown timeout'],
+  ] as const)('says how a stopped server last ended (%s)', async (reason, label) => {
+    const stopped: ServerSummaryDto = {
+      ...server,
+      status: 'stopped',
+      lastExit: { reason, exitCode: null, signal: null, at: AT },
+    };
+    vi.mocked(apiClient.servers.get).mockResolvedValue(detail({ ...stopped, runtime: null }));
+    activeServer({ servers: [stopped], activeServer: stopped, activeServerId: ID });
+    renderView();
+    expect(await screen.findByText('No server process is running.')).toBeInTheDocument();
+    expect(
+      screen.getByText(`Last run: ${label} at ${new Date(AT).toLocaleString()}`),
+    ).toBeInTheDocument();
   });
 
   it('shows a skeleton while loading and the empty state without servers', () => {

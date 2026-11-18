@@ -12,6 +12,7 @@ import {
 import { enUSTranslations } from '../i18n';
 
 import {
+  describeServerExit,
   getServerExitPresentation,
   getServerStatusPresentation,
   SERVER_STATUS_VISUAL_META,
@@ -149,6 +150,18 @@ describe('Server Status Model & Presentation', () => {
       expect(getServerExitPresentation('stopped', lastExit)).toBeNull();
       expect(getServerExitPresentation('running', lastExit)).toBeNull();
       expect(getServerExitPresentation('failed', null)).toBeNull();
+    });
+
+    it('describes any recorded exit regardless of status (DSM-00350)', () => {
+      expect(
+        describeServerExit({ reason: 'force_stopped', exitCode: null, signal: null, at }),
+      ).toEqual({ label: 'Force-stopped', description: `Force-stopped at ${localAt}` });
+      expect(
+        describeServerExit({ reason: 'shutdown_timeout', exitCode: 0, signal: null, at }),
+      ).toEqual({
+        label: 'Killed after shutdown timeout (exit 0)',
+        description: `Killed after shutdown timeout (exit 0) at ${localAt}`,
+      });
     });
 
     it('has an en-US label for every exit reason', () => {

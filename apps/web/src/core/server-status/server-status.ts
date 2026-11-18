@@ -80,6 +80,11 @@ export function getServerExitPresentation(
   if (status !== SERVER_STATUS.FAILED || !lastExit) {
     return null;
   }
+  return describeServerExit(lastExit);
+}
+
+/** How and when the last run ended, whatever the current status (DSM-00350). */
+export function describeServerExit(lastExit: ServerLastExitDto): ServerExitPresentation {
   const reason = i18n.t(`serverExitReason.${lastExit.reason}`);
   const detail = exitDetail(lastExit);
   const label = detail ? `${reason} (${detail})` : reason;
