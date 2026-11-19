@@ -89,6 +89,40 @@ Provide an accessible, theme-styled `FileUploader` component in `libs/ui` featur
 
 ---
 
+## [DSM-00351] Import the shared Vitest config with a file extension
+
+- **Type**: `Task`
+- **Priority**: `P3 (Low)`
+- **Status**: `DONE`
+- **Dependencies**: `None`
+
+### Summary
+
+All nine project `vitest.config.ts` files import `../../vitest.shared` without an extension. Every Vitest run prints: _"Your Vite config uses features that are unsupported by `configLoader: 'native'`, which is planned to become the default in a future major version of Vite: import \"../../vitest.shared\" without a file extension"_. Once the native loader is the default, the configs stop loading and every test target fails.
+
+### Delivered Capabilities
+
+Import `../../vitest.shared.ts` with its extension in `apps/server`, `apps/web`, `libs/api-client`, `libs/api-contracts`, `libs/database`, `libs/dayz-config`, `libs/platform`, `libs/rcon`, `libs/ui`; the TypeScript setting this needs (`allowImportingTsExtensions` with `noEmit`, or `rewriteRelativeImportExtensions`) in the tsconfig that type-checks the configs; confirm the warning is gone and all test, typecheck and lint targets pass.
+
+---
+
+## [DSM-00350] Show how a stopped server last ended on the Maintenance page
+
+- **Type**: `Story`
+- **Priority**: `P3 (Low)`
+- **Status**: `DONE`
+- **Dependencies**: `DSM-00164`
+
+### Summary
+
+The lifecycle status line only shows the last exit reason for a `failed` server (`getServerExitPresentation`, `DSM-00164`). After a force-stop or an RCON stop the server is `stopped` with `lastExit` (`force_stopped`, `stopped`, `exited_while_offline`, `shutdown_timeout`), but the page just says "No server process is running.", so the operator cannot see how or when the last run ended. Show it as secondary information for stopped servers too (e.g. "Force-stopped at …"), keeping the sidebar selector's failed-only emphasis.
+
+### Delivered Capabilities
+
+Maintenance status line for `stopped` + `lastExit`; tests.
+
+---
+
 ## [DSM-00348] Keep access tokens out of SSE URLs and request logs
 
 - **Type**: `Story`

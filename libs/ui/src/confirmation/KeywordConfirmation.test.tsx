@@ -4,6 +4,7 @@ import { act, fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { showModalFollowingDialogFocusingSteps } from './__fixtures__/dialogFocusingSteps';
 import { KeywordConfirmation } from './KeywordConfirmation';
 
 describe('KeywordConfirmation', () => {
@@ -12,26 +13,7 @@ describe('KeywordConfirmation', () => {
   beforeEach(() => {
     vi.useFakeTimers({ toFake: ['setInterval', 'clearInterval'] });
 
-    // Polyfill dialog showModal focusing algorithm for JSDOM
-    HTMLDialogElement.prototype.showModal = function (this: HTMLDialogElement) {
-      this.open = true;
-      const autoFocusAttrEl = this.querySelector<HTMLElement>('[autofocus]');
-      if (autoFocusAttrEl) {
-        autoFocusAttrEl.focus();
-        return;
-      }
-      const elements = this.querySelectorAll<HTMLElement>('*');
-      for (const el of elements) {
-        const reactKey = Object.keys(el).find(k => k.startsWith('__reactProps$'));
-        if (
-          reactKey &&
-          (el as unknown as Record<string, { autoFocus?: boolean }>)[reactKey]?.autoFocus
-        ) {
-          el.focus();
-          return;
-        }
-      }
-    };
+    HTMLDialogElement.prototype.showModal = showModalFollowingDialogFocusingSteps;
   });
 
   afterEach(() => {
@@ -171,6 +153,52 @@ describe('KeywordConfirmation', () => {
 
       fireEvent.click(readyConfirmBtn);
       expect(handleConfirm).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe('Initial focus', () => {
+    it('opens with focus on the Cancel button while the lockout timer runs', () => {
+      render(
+        <KeywordConfirmation
+          keyword="DELETE"
+          title="Delete Server"
+          timerValue={3}
+          onCancel={vi.fn()}
+          onConfirm={vi.fn()}
+        />,
+      );
+
+      expect(screen.getByRole('button', { name: /^cancel$/i })).toHaveFocus();
+      expect(screen.getByRole('button', { name: /close dialog/i })).not.toHaveFocus();
+    });
+
+    it('opens with a one-second lockout with focus on the Cancel button', () => {
+      render(
+        <KeywordConfirmation
+          keyword="DELETE"
+          title="Delete Server"
+          timerValue={1}
+          onCancel={vi.fn()}
+          onConfirm={vi.fn()}
+        />,
+      );
+
+      expect(screen.getByRole('textbox')).toBeDisabled();
+      expect(screen.getByRole('button', { name: /^cancel$/i })).toHaveFocus();
+    });
+
+    it('opens with focus on the keyword input when timerValue is 0', () => {
+      render(
+        <KeywordConfirmation
+          keyword="DELETE"
+          title="Delete Server"
+          timerValue={0}
+          onCancel={vi.fn()}
+          onConfirm={vi.fn()}
+        />,
+      );
+
+      expect(screen.getByRole('textbox')).toHaveFocus();
     });
   });
 

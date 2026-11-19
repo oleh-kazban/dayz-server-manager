@@ -1,4 +1,4 @@
-import { useId } from 'react';
+import { useId, useRef } from 'react';
 
 import { X } from 'lucide-react';
 
@@ -22,9 +22,10 @@ export function Confirmation({
   onCancel,
   onConfirm,
 }: ConfirmationProps) {
+  const cancelRef = useRef<HTMLButtonElement>(null);
   const { remainingTime } = useCountdownTimer(timerValue);
   const { dialogRef, closeDialog, handleClose, handleDialogClick, handleCancelEvent } =
-    useDialogLifecycle({ isLoading, onCancel, onConfirm });
+    useDialogLifecycle({ isLoading, initialFocusRef: cancelRef, onCancel, onConfirm });
 
   const isConfirmDisabled = remainingTime > 0 || isLoading;
   const titleId = useId();
@@ -74,8 +75,8 @@ export function Confirmation({
 
         <div className="mt-6 flex justify-end gap-2.5">
           <Button
+            ref={cancelRef}
             variant="secondary"
-            autoFocus
             disabled={isLoading}
             onClick={() => closeDialog('cancel')}
           >

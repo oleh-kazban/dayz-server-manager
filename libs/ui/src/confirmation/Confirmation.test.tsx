@@ -4,15 +4,89 @@ import { act, fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { showModalFollowingDialogFocusingSteps } from './__fixtures__/dialogFocusingSteps';
 import { Confirmation } from './Confirmation';
 
 describe('Confirmation', () => {
+  const originalShowModal = HTMLDialogElement.prototype.showModal;
+
   beforeEach(() => {
     vi.useFakeTimers({ toFake: ['setInterval', 'clearInterval'] });
+    HTMLDialogElement.prototype.showModal = showModalFollowingDialogFocusingSteps;
   });
 
   afterEach(() => {
+    HTMLDialogElement.prototype.showModal = originalShowModal;
     vi.useRealTimers();
+  });
+
+  it('opens with focus on the Cancel button', () => {
+    render(<Confirmation title="Force stop server?" onCancel={vi.fn()} onConfirm={vi.fn()} />);
+
+    expect(screen.getByRole('button', { name: /^cancel$/i })).toHaveFocus();
+  });
+
+  it('opens a danger confirmation with a lockout timer with focus on the Cancel button', () => {
+    render(
+      <Confirmation
+        title="Wipe Server Persistence"
+        variant="danger"
+        timerValue={3}
+        onCancel={vi.fn()}
+        onConfirm={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByRole('button', { name: /confirm \(3s\)/i })).toBeDisabled();
+    expect(screen.getByRole('button', { name: /^cancel$/i })).toHaveFocus();
+  });
+
+  it('keeps focus on the Cancel button when the lockout timer expires', () => {
+    render(
+      <Confirmation
+        title="Wipe Server Persistence"
+        variant="danger"
+        timerValue={1}
+        onCancel={vi.fn()}
+        onConfirm={vi.fn()}
+      />,
+    );
+
+    act(() => {
+      vi.advanceTimersByTime(1000);
+    });
+
+    expect(screen.getByRole('button', { name: /^confirm$/i })).toBeEnabled();
+    expect(screen.getByRole('button', { name: /^cancel$/i })).toHaveFocus();
+  });
+
+  it('opens with focus on a custom-labelled Cancel button', () => {
+    render(
+      <Confirmation
+        title="Sign out everywhere?"
+        cancelLabel="Keep sessions"
+        onCancel={vi.fn()}
+        onConfirm={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByRole('button', { name: /^keep sessions$/i })).toHaveFocus();
+  });
+
+  it('pressing Enter right after opening cancels instead of confirming', async () => {
+    vi.useRealTimers();
+    const user = userEvent.setup();
+    const handleCancel = vi.fn();
+    const handleConfirm = vi.fn();
+
+    render(
+      <Confirmation title="Force stop server?" onCancel={handleCancel} onConfirm={handleConfirm} />,
+    );
+
+    await user.keyboard('{Enter}');
+
+    expect(handleCancel).toHaveBeenCalledTimes(1);
+    expect(handleConfirm).toHaveBeenCalledTimes(0);
   });
 
   it('renders confirmation dialog with title, description, and action buttons', () => {

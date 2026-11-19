@@ -26,10 +26,11 @@ export function KeywordConfirmation({
 }: KeywordConfirmationProps) {
   const [inputValue, setInputValue] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
+  const cancelRef = useRef<HTMLButtonElement>(null);
 
   const { remainingTime } = useCountdownTimer(timerValue);
   const { dialogRef, closeDialog, handleClose, handleDialogClick, handleCancelEvent } =
-    useDialogLifecycle({ isLoading, onCancel, onConfirm });
+    useDialogLifecycle({ isLoading, initialFocusRef: cancelRef, onCancel, onConfirm });
 
   const isInputDisabled = remainingTime > 0 || isLoading;
   const isKeywordValid = inputValue === keyword;
@@ -113,8 +114,8 @@ export function KeywordConfirmation({
 
         <div className="mt-6 flex justify-end gap-2.5">
           <Button
+            ref={cancelRef}
             variant="secondary"
-            autoFocus={remainingTime > 0}
             disabled={isLoading}
             onClick={() => closeDialog('cancel')}
           >
