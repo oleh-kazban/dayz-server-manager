@@ -2,6 +2,8 @@ import { type MouseEvent, type RefObject, type SyntheticEvent, useEffect, useRef
 
 export interface UseDialogLifecycleOptions {
   isLoading?: boolean;
+  /** Focused right after showModal(); React's `autoFocus` fires while the dialog is still closed. */
+  initialFocusRef?: RefObject<HTMLElement | null>;
   onCancel: () => void;
   onConfirm: () => void;
 }
@@ -16,6 +18,7 @@ export interface UseDialogLifecycleReturn {
 
 export function useDialogLifecycle({
   isLoading = false,
+  initialFocusRef,
   onCancel,
   onConfirm,
 }: UseDialogLifecycleOptions): UseDialogLifecycleReturn {
@@ -53,6 +56,7 @@ export function useDialogLifecycle({
     const dialog = dialogRef.current;
     if (dialog && !dialog.open) {
       dialog.showModal();
+      initialFocusRef?.current?.focus();
     }
     return () => {
       isMountedRef.current = false;
@@ -60,7 +64,7 @@ export function useDialogLifecycle({
         dialog.close('cleanup');
       }
     };
-  }, []);
+  }, [initialFocusRef]);
 
   return {
     dialogRef,
