@@ -913,7 +913,7 @@
 - **Status**: `DONE`
 - **Depends On**: `DSM-00105`, `DSM-00108`
 - **High-Level Requirements**:
-  Make every create/update form behave consistently: the save/update control is disabled while the form has no changes relative to the last saved values; validation runs when the admin tries to save and then re-validates live; every invalid field (client or server `fieldErrors`) is highlighted with a specific message and the first one receives focus; every server-side create/update/save ends in a green or red toast. The conventions are enforced by QA via `GEMINI.md` §5.
+  Make every create/update form behave consistently: the save/update control is disabled while the form has no changes relative to the last saved values; validation runs when the admin tries to save and then re-validates live; every invalid field (client or server `fieldErrors`) is highlighted with a specific message and the first one receives focus; every server-side create/update/save ends in a green or red toast. The conventions are enforced by QA through the user feedback contract.
 - **Scope Boundaries**:
   - **Included**:
     - Shared change-tracking / submit-validation / focus-first-invalid hook in `apps/web/src/core`.
@@ -1207,7 +1207,7 @@
     - Inline status next to the path: _Found · v…_, _Not found_, _Not executable_ (reuse `steamCmdValid` / `steamCmdVersion` from Run Diagnostics).
     - Dependency health record populated at startup and refreshed on save / detect / install; exposed to the client.
     - Feature gating: Workshop sync and server install/update controls stay focusable but `aria-disabled` with a tooltip "SteamCMD is not configured" and a link to Steam settings (same pattern as `SaveButton`, `DSM-00137`).
-    - One notification-centre entry plus a dismissible dashboard banner when startup health fails; no repeating toasts (background reads never toast, `GEMINI.md` §5).
+    - One notification-centre entry plus a dismissible dashboard banner when startup health fails; no repeating toasts (background reads never toast, per the user feedback contract).
   - **Excluded / Deferred**:
     - Automatic SteamCMD self-update scheduling.
     - Installing SteamCMD without explicit admin consent.
@@ -1363,7 +1363,7 @@
 - **High-Level Requirements**:
   A Start control starts the active server with a green toast on success and a red toast on any API error. When start is impossible the control stays focusable but disabled and says why (config edit lock held, launch command not ready, transition in progress).
 - **Scope Boundaries**:
-  - **Included**: Start control, disabled reasons, feedback contract (`GEMINI.md` §5), tests and live QA.
+  - **Included**: Start control, disabled reasons, the user feedback contract, tests and live QA.
   - **Excluded / Deferred**: Stop, restart and force-stop controls.
 
 ---

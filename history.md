@@ -238,7 +238,7 @@ A Start control starts the active server with a green toast on success and a red
 
 ### Delivered Capabilities
 
-Start control, disabled reasons, feedback contract (`GEMINI.md` §5), tests and live QA.
+Start control, disabled reasons, the user feedback contract, tests and live QA.
 
 ---
 
@@ -404,7 +404,7 @@ Route-change blocking with a `Confirmation` dialog; `beforeunload` for tab close
 
 ### Summary
 
-Make every create/update form behave consistently: the save/update control is disabled while the form has no changes relative to the last saved values; validation runs when the admin tries to save and then re-validates live; every invalid field (client or server `fieldErrors`) is highlighted with a specific message and the first one receives focus; every server-side create/update/save ends in a green or red toast. The conventions are enforced by QA via `GEMINI.md` §5.
+Make every create/update form behave consistently: the save/update control is disabled while the form has no changes relative to the last saved values; validation runs when the admin tries to save and then re-validates live; every invalid field (client or server `fieldErrors`) is highlighted with a specific message and the first one receives focus; every server-side create/update/save ends in a green or red toast. The conventions are enforced by QA through the user feedback contract.
 
 ### Delivered Capabilities
 
