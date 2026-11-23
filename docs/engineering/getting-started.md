@@ -22,6 +22,8 @@ pnpm start:web      # web console on http://localhost:4200
 The web dev server proxies `/api` to the daemon.
 
 > **Windows:** start both servers from the path with an uppercase drive letter (`D:\Projects\...`). A lowercase `d:\` path makes Vite load some modules twice, which duplicates `AuthContext` and breaks sign-in.
+>
+> If Storybook or Nx behaves oddly on Windows, check `echo $env:NX_WORKSPACE_ROOT_PATH`. Nx prefers that variable over the real working directory, and a lowercase `d:\...` value makes Storybook build with broken story keys (every story fails with `importers[path] is not a function`). Unset it or set it with an uppercase drive letter.
 
 On first start the daemon creates the database and seeds an `admin` user. The password is `admin`, or the value of `DSM_ADMIN_PASSWORD`. In production `DSM_ADMIN_PASSWORD` is required. This seed is being replaced by a first-run setup screen that creates the root operator; see [vision and scope](../product/vision-and-scope.md#4-users).
 
