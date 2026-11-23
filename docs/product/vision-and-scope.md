@@ -38,9 +38,19 @@ These follow from the pillars and apply to every operational feature.
 
 ## 4. Users
 
-The users are **operators**: people who administer DayZ servers, such as a server owner or a community admin. Every operator has full access. Aegis has no roles and no permission model.
+The users are **operators**: people who administer DayZ servers, such as a server owner or a community admin. Aegis has two fixed roles. It is not a content management system and has no custom roles or permission bundles.
 
-Aegis is not a content management system and does not distinguish moderators, viewers or owners. Anyone with a valid sign-in is trusted with the whole console.
+| Role      | Who                                                              | Can do                                                                                                                          |
+| :-------- | :--------------------------------------------------------------- | :------------------------------------------------------------------------------------------------------------------------------ |
+| **Root**  | The person who installs Aegis. Created on first run, exactly one | Everything an admin can, plus manage operators: create, disable and delete admins, reset their passwords, revoke their sessions |
+| **Admin** | Added by root                                                    | Full access to servers, mods, configuration, Steam and maintenance. No access to operator management                            |
+
+Rules:
+
+- Root is the first account, created by a setup screen on an empty database. A one-time token printed to the server log protects that screen. There is no default password.
+- Root cannot be deleted or demoted, and root cannot be transferred for now.
+- A lost root password is reset with a CLI command run on the host. The CLI belongs to the appliance epic (`DSM-00144`). Until it exists, recovery means editing the database by hand.
+- An admin sees only their own sessions. Root sees all operators and their sessions.
 
 ## 5. Scope
 
@@ -67,7 +77,7 @@ Each area maps to epics in the [backlog](backlog.md). The [feature map](feature-
 ### Out of scope
 
 - Replacing the DayZ engine, Steam Workshop, BattlEye or third-party mod behavior.
-- Roles, permissions and multi-tenant isolation. See [Operators](#4-users).
+- Custom roles, fine-grained permissions and multi-tenant isolation. Aegis has two fixed roles; see [Users](#4-users).
 - Managing servers on other hosts. This is undecided; see open question 6. For now one installation manages the servers on its own host.
 - Simulating data a game server does not provide. Missing data is reported as unavailable.
 
@@ -79,6 +89,6 @@ These need a product decision. The old specs assumed answers that conflict with 
 2. **Game-side telemetry.** The old spec made the map, loot heatmap and server FPS depend on a separately installed DSM DayZ telemetry mod. Is that mod planned, or do these features rely on logs and RCON only?
 3. **Audit integrity.** The old spec asked for tamper-evident audit logs (hash chaining). Keep that requirement or use a plain append-only table?
 4. **Multi-factor authentication.** The old spec listed MFA as planned. In scope?
-5. **Support access.** The old spec had a temporary, audited access role for support. With one role, drop it?
+5. **Support access.** The old spec had a temporary, audited access role for support. With two fixed roles, drop it?
 6. **Multi-host.** The old spec left multi-host management and remote agents undecided. Confirm that single host is the scope for now.
 7. **Task orchestration.** The old spec required a managed task system with resource locks for long-running actions (restore, wipe, mod deployment). The `tasks` table in the old persistence draft does not exist. Confirm this is wanted before the maintenance epics start.

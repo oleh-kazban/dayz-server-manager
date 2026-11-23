@@ -108,7 +108,7 @@ Errors use one envelope built by `sendApiError` (`apps/server/src/utils/api-erro
 
 ### Authentication and sessions
 
-- One role exists: `admin` (`users.role`). There is no RBAC: every authenticated user is an admin. Route handlers still call duplicated `ensureAdminRole` helpers that can never fail; this is tracked as tech debt.
+- Two fixed roles are planned: `root` and `admin` (see [vision](../product/vision-and-scope.md#4-users)). Today `users.role` allows only `admin`, and route handlers call duplicated `ensureAdminRole` helpers that can never fail; they are tracked as tech debt.
 - Sign-in issues a 15-minute **access token** and a **refresh token** (7 days, or 30 days with "remember me"). Both are JWTs signed with `SESSION_SECRET`.
 - Every access token carries a session id (`sid`). `authenticate` rejects tokens whose session row is missing or expired.
 - Passwords are hashed with scrypt (`libs/database/src/lib/crypto.ts`).
@@ -174,7 +174,8 @@ SQLite, one file: `manager-data/database/manager.sqlite` (override with `DATABAS
 ### Decided
 
 - **Production serving.** One process: Fastify serves the built SPA (with a fallback to `index.html`) and `/api/v1` on one port, same origin. HTTPS is added by an optional reverse proxy in front, which must not buffer SSE. Not implemented yet; the work belongs to the appliance epic (`DSM-00144`).
-- **Authorization.** A valid access token is the only check. Roles will be removed (`ensureAdminRole`, `requireAdmin`, `AUTH_FORBIDDEN_ADMIN_REQUIRED`, `users.role`). Cleanup is tracked in [tech debt](../tech-debt.md) (_to be written_).
+- **Authorization.** Two fixed roles: `root` (the installer, exactly one) and `admin`. A valid access token is the check for every endpoint. Only operator-management endpoints additionally require `root`, through one central `requireRoot` check. The ~35 duplicated `ensureAdminRole` and `requireAdmin` copies and `AUTH_FORBIDDEN_ADMIN_REQUIRED` are removed; the `users.role` column gains `root` through a migration. Cleanup is tracked in [tech debt](../tech-debt.md) (_to be written_).
+- **First run.** An empty database opens a setup screen that creates the root account, protected by a one-time token printed to the server log. The `admin`/`admin` seed and `DSM_ADMIN_PASSWORD` are removed. Lost root passwords are reset by a CLI command (appliance epic `DSM-00144`).
 - **Node.js.** Target the latest LTS, currently Node 26, and pin it (`engines` in `package.json` and `.nvmrc`). Today CI runs Node 24 and `README.md` says 20 or 22; both need aligning.
 - **Testing.** Unit tests (Vitest) plus agentic manual testing with Playwright. There is no automated E2E suite, and none is planned.
 
