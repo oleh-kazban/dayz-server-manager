@@ -60,14 +60,7 @@
 | `DSM-00148` | Bidirectional Discord Bot with Role-Guarded Slash Command Execution (Epic)               | `Epic`  | `P2 (Medium)`   | `BACKLOG`     | `DSM-00291`–`DSM-00297`                                         |
 | `DSM-00149` | Scheduled RCON In-Game Chat Broadcast and Periodic Message Announcer (Epic)              | `Epic`  | `P2 (Medium)`   | `BACKLOG`     | `DSM-00298`–`DSM-00300`                                         |
 | `DSM-00150` | Tebex / Custom Storefront Integration and Automated VIP Priority Queue Billing (Epic)    | `Epic`  | `P2 (Medium)`   | `BACKLOG`     | `DSM-00301`–`DSM-00306`                                         |
-| `DSM-00151` | Cryptographic Ed25519 License Key Verification and Modular Pro Feature Toggles (Epic)    | `Epic`  | `P2 (Medium)`   | `BACKLOG`     | `DSM-00307`–`DSM-00310`                                         |
 | `DSM-00152` | AI-Powered Crash Diagnostics, Error Forensics, and Natural Language Economy (Epic)       | `Epic`  | `P2 (Medium)`   | `BACKLOG`     | `DSM-00311`–`DSM-00315`                                         |
-| `DSM-00153` | Autonomous Crash-Loop Triage, Safe Mod Quarantine, and Postmortem Dispatcher (Epic)      | `Epic`  | `P3 (Low)`      | `BACKLOG`     | `DSM-00316`                                                     |
-| `DSM-00154` | "AI Detective" Combat Telemetry, Impossible Trajectory Radar, & Cheat Dossiers (Epic)    | `Epic`  | `P3 (Low)`      | `BACKLOG`     | `DSM-00317`                                                     |
-| `DSM-00155` | Central Economy Stash Inflation Guard, Hoarding Auditor & Auto-Rebalance Diffs (Epic)    | `Epic`  | `P3 (Low)`      | `BACKLOG`     | `DSM-00318`                                                     |
-| `DSM-00156` | Spatial Desync Profiler and High-Density Base Entity Bottleneck Detector (Epic)          | `Epic`  | `P3 (Low)`      | `BACKLOG`     | `DSM-00319`                                                     |
-| `DSM-00157` | Automated Mod Update PBO Scraper, Weapon Slot Extractor & Economy XML Compiler (Epic)    | `Epic`  | `P3 (Low)`      | `BACKLOG`     | `DSM-00320`                                                     |
-| `DSM-00158` | Discord Community Support AI Agent, Incident Verification & Auto-Resolver (Epic)         | `Epic`  | `P3 (Low)`      | `BACKLOG`     | `DSM-00321`                                                     |
 | `DSM-00159` | SteamCMD Dependency Health: Auto-Detect, Guided Install, and Graceful Degradation (Epic) | `Epic`  | `P1 (High)`     | `BACKLOG`     | `DSM-00340`–`DSM-00347`                                         |
 | `DSM-00160` | ProcessManager Platform Adapter (Windows Process Tree / Linux Process Groups)            | `Story` | `P1 (High)`     | `DONE`        | `DSM-00104`                                                     |
 | `DSM-00161` | BattlEye RCON packet codec and login handshake                                           | `Story` | `P1 (High)`     | `DONE`        | `DSM-00104`                                                     |
@@ -216,21 +209,11 @@
 | `DSM-00304` | Grant whitelist from a Tebex purchase                                                    | `Story` | `P3 (Low)`      | `BACKLOG`     | `DSM-00302`, `DSM-00204`                                        |
 | `DSM-00305` | Purchase grant / revoke audit log                                                        | `Story` | `P3 (Low)`      | `BACKLOG`     | `DSM-00302`                                                     |
 | `DSM-00306` | Generic signed payment webhook                                                           | `Story` | `P3 (Low)`      | `BACKLOG`     | `DSM-00302`                                                     |
-| `DSM-00307` | Verify an Ed25519-signed license token offline                                           | `Story` | `P2 (Medium)`   | `BACKLOG`     | `None`                                                          |
-| `DSM-00308` | Enter a license key in /settings/app                                                     | `Story` | `P2 (Medium)`   | `BACKLOG`     | `DSM-00307`                                                     |
-| `DSM-00309` | Gate Pro modules by license tier                                                         | `Story` | `P2 (Medium)`   | `BACKLOG`     | `DSM-00307`                                                     |
-| `DSM-00310` | Enforce the licensed server count                                                        | `Story` | `P3 (Low)`      | `BACKLOG`     | `DSM-00307`                                                     |
 | `DSM-00311` | Configure a BYOK AI provider and test the connection                                     | `Story` | `P2 (Medium)`   | `BACKLOG`     | `None`                                                          |
 | `DSM-00312` | Explain an RPT crash with the likely faulting mod                                        | `Story` | `P2 (Medium)`   | `BACKLOG`     | `DSM-00311`, `DSM-00206`                                        |
 | `DSM-00313` | Support additional AI providers including local Ollama                                   | `Story` | `P3 (Low)`      | `BACKLOG`     | `DSM-00311`                                                     |
 | `DSM-00314` | Natural-language economy tuning as a reviewable types.xml diff                           | `Story` | `P3 (Low)`      | `BACKLOG`     | `DSM-00311`, `DSM-00228`                                        |
 | `DSM-00315` | Ask natural-language questions about ADM combat logs                                     | `Story` | `P3 (Low)`      | `BACKLOG`     | `DSM-00311`, `DSM-00212`                                        |
-| `DSM-00316` | Spike: crash-loop detection and safe mod quarantine                                      | `Spike` | `P3 (Low)`      | `BACKLOG`     | `DSM-00162`                                                     |
-| `DSM-00317` | Spike: feasibility of combat anomaly detection from ADM logs                             | `Spike` | `P3 (Low)`      | `BACKLOG`     | `DSM-00212`                                                     |
-| `DSM-00318` | Spike: reading persistence storage for item counts                                       | `Spike` | `P3 (Low)`      | `BACKLOG`     | `None`                                                          |
-| `DSM-00319` | Spike: correlating server performance drops with player positions                        | `Spike` | `P3 (Low)`      | `BACKLOG`     | `DSM-00177`, `DSM-00254`                                        |
-| `DSM-00320` | Spike: extracting classnames from mod PBO configs                                        | `Spike` | `P3 (Low)`      | `BACKLOG`     | `None`                                                          |
-| `DSM-00321` | Spike: AI support agent for Discord tickets                                              | `Spike` | `P3 (Low)`      | `BACKLOG`     | `DSM-00291`                                                     |
 | `DSM-00322` | Move shell, navigation and breadcrumb strings into the en-US dictionary                  | `Task`  | `P2 (Medium)`   | `BACKLOG`     | `None`                                                          |
 | `DSM-00323` | Ukrainian translation for shell, navigation and common actions                           | `Story` | `P2 (Medium)`   | `BACKLOG`     | `DSM-00322`                                                     |
 | `DSM-00324` | Persist the operator's interface language                                                | `Task`  | `P2 (Medium)`   | `BACKLOG`     | `None`                                                          |
@@ -558,7 +541,7 @@
 - **Scope Boundaries**:
   - **Included**: Backend log file watcher with bounded ring buffers and rotation detection; SSE log streaming endpoint; virtualized high-throughput log viewer in `apps/web` across `/logs/rpt`, `/logs/adm`, and `/logs/script`; severity filtering, timestamp parsing, regex search, and full log file download action.
   - **Excluded / Deferred**: Historical cold-storage log archiving, external Discord log forwarders (`DSM-00143`).
-- **Refinement Note (2026-11-16)**: Split on 2026-11-16 under the backlog-planning size budget (one behaviour or contract change per PBI, ≤ 5 AC, ~≤ 400 changed lines, migrations / refactors / new dependencies separate, risky operations isolated). The epic is `DONE` when all children are `DONE`; dependents reference the child they need. "Combat forensics" beyond viewing the ADM log is not specified; see `DSM-00152` / `DSM-00154`.
+- **Refinement Note (2026-11-16)**: Split on 2026-11-16 under the backlog-planning size budget (one behaviour or contract change per PBI, ≤ 5 AC, ~≤ 400 changed lines, migrations / refactors / new dependencies separate, risky operations isolated). The epic is `DONE` when all children are `DONE`; dependents reference the child they need. "Combat forensics" beyond viewing the ADM log is not specified; see `DSM-00152`.
 
 ---
 
@@ -1183,22 +1166,6 @@
 
 ---
 
-### [DSM-00151] Cryptographic Ed25519 License Key Verification and Modular Pro Feature Toggles
-
-- **Priority**: `P2 (Medium)`
-- **Type**: `Epic`
-- **Status**: `BACKLOG`
-- **Depends On**: `DSM-00307`–`DSM-00310`
-- **Child Items**: `DSM-00307` (Verify an Ed25519-signed license token offline), `DSM-00308` (Enter a license key in /settings/app), `DSM-00309` (Gate Pro modules by license tier), `DSM-00310` (Enforce the licensed server count).
-- **High-Level Requirements**:
-  Implement an offline-first cryptographic licensing subsystem using Ed25519-signed JWT license tokens for commercial / Pro distribution. Verify license tier, server capacity limits, and expiration dates locally without phoning home to external DRM servers, gating optional commercial modules (unlimited servers, Tebex billing, bidirectional Discord bot).
-- **Scope Boundaries**:
-  - **Included**: Ed25519 asymmetric token parser in `apps/server`, license status endpoint, Pro feature flags, license key input UI in `/settings/app`.
-  - **Excluded / Deferred**: Online DRM phone-home verification or hardware machine locking.
-- **Refinement Note (2026-11-16)**: Split on 2026-11-16 under the backlog-planning size budget (one behaviour or contract change per PBI, ≤ 5 AC, ~≤ 400 changed lines, migrations / refactors / new dependencies separate, risky operations isolated). The epic is `DONE` when all children are `DONE`; dependents reference the child they need.
-
----
-
 ### [DSM-00152] AI-Powered Crash Diagnostics, Error Forensics, and Natural Language Economy Tuning
 
 - **Priority**: `P2 (Medium)`
@@ -1212,102 +1179,6 @@
   - **Included**: BYOK provider settings (OpenAI/Anthropic/Gemini/Ollama), RPT crash analyzer tool with mod attribution, natural language economy balancing assistant outputting surgical XML diffs, combat log natural language query inspector.
   - **Excluded / Deferred**: Autonomous unsupervised server restarts or unconfirmed file mutations.
 - **Refinement Note (2026-11-16)**: Split on 2026-11-16 under the backlog-planning size budget (one behaviour or contract change per PBI, ≤ 5 AC, ~≤ 400 changed lines, migrations / refactors / new dependencies separate, risky operations isolated). The epic is `DONE` when all children are `DONE`; dependents reference the child they need. `.mdmp` crash-dump analysis is deferred (binary format, unclear value).
-
----
-
-### [DSM-00153] Autonomous Crash-Loop Triage, Safe Mod Quarantine, and Postmortem Dispatcher
-
-- **Priority**: `P3 (Low)`
-- **Type**: `Epic`
-- **Status**: `BACKLOG`
-- **Depends On**: `DSM-00316`
-- **Child Items**: `DSM-00316` (Spike: crash-loop detection and safe mod quarantine).
-- **High-Level Requirements**:
-  Detect DayZ server crash loops (e.g. $\ge 3$ crashes in 5 minutes) via watchdog telemetry, invoke the AI diagnostic engine on the unhandled exception stack, identify the culprit mod or corrupted persistence container, safely quarantine the offending `.pbo`, boot the server into protected safe mode, and dispatch a structured postmortem report to staff Discord channels.
-- **Scope Boundaries**:
-  - **Included**: Crash-loop threshold detector, AI mod fault attribution, temporary mod quarantine state, safe mode launch, Discord incident postmortem.
-  - **Excluded / Deferred**: Permanent uninstallation of mods without admin approval.
-- **Refinement Note (2026-11-16)**: Split on 2026-11-16 under the backlog-planning size budget (one behaviour or contract change per PBI, ≤ 5 AC, ~≤ 400 changed lines, migrations / refactors / new dependencies separate, risky operations isolated). The epic is `DONE` when all children are `DONE`; dependents reference the child they need. Incubator concept: only the spike is defined; delivery PBIs come from its ADR. Note: no automatic restart-on-crash exists in the backlog yet, and crash-loop triage presupposes one.
-
----
-
-### [DSM-00154] "AI Detective" Combat Telemetry, Impossible Trajectory Radar, and Cheat Dossiers
-
-- **Priority**: `P3 (Low)`
-- **Type**: `Epic`
-- **Status**: `BACKLOG`
-- **Depends On**: `DSM-00317`
-- **Child Items**: `DSM-00317` (Spike: feasibility of combat anomaly detection from ADM logs).
-- **High-Level Requirements**:
-  Analyze DayZ ADM combat logs, weapon muzzle velocities, spread probabilities, and Cartesian terrain/structure bounds using an AI anomaly detector. Identify impossible combat feats (e.g. shotgun headshot at 500m, bullet travel through solid concrete buildings, silent aim velocity jumps), calculate an exploit confidence score ($\ge 95\%$), and generate ready-to-act incident dossiers for moderator review.
-- **Scope Boundaries**:
-  - **Included**: Trajectory anomaly engine, bullet travel occlusion check against static map geometry, incident dossier view in `/players`, 1-click ban prep.
-  - **Excluded / Deferred**: Autonomous automated banning without human review.
-- **Refinement Note (2026-11-16)**: Split on 2026-11-16 under the backlog-planning size budget (one behaviour or contract change per PBI, ≤ 5 AC, ~≤ 400 changed lines, migrations / refactors / new dependencies separate, risky operations isolated). The epic is `DONE` when all children are `DONE`; dependents reference the child they need. Incubator concept: only the spike is defined; delivery PBIs come from its ADR.
-
----
-
-### [DSM-00155] Central Economy Stash Inflation Guard, Dynamic Hoarding Auditor, and Rebalance Patch Generator
-
-- **Priority**: `P3 (Low)`
-- **Type**: `Epic`
-- **Status**: `BACKLOG`
-- **Depends On**: `DSM-00318`
-- **Child Items**: `DSM-00318` (Spike: reading persistence storage for item counts).
-- **High-Level Requirements**:
-  Inspect world persistence storage files (`storage_1/data/`) to calculate item velocity, hoard stagnation, and tier saturation against `types.xml` spawn limits. Flag when high-tier weapons or medical items are depleted from active map circulation due to tent hoarding (`count_in_hoarder`), and generate surgical rebalance XML diffs or schedule targeted dynamic event loot injections to keep the server economy healthy.
-- **Scope Boundaries**:
-  - **Included**: Persistence storage item parser, hoard saturation metrics, AI rebalance patch generator with before/after diffs in `/economy/types`.
-  - **Excluded / Deferred**: Direct deletion of player stash containers in-game.
-- **Refinement Note (2026-11-16)**: Split on 2026-11-16 under the backlog-planning size budget (one behaviour or contract change per PBI, ≤ 5 AC, ~≤ 400 changed lines, migrations / refactors / new dependencies separate, risky operations isolated). The epic is `DONE` when all children are `DONE`; dependents reference the child they need. Incubator concept: only the spike is defined; delivery PBIs come from its ADR.
-
----
-
-### [DSM-00156] Spatial Desync Profiler and High-Density Base Entity Bottleneck Detector
-
-- **Priority**: `P3 (Low)`
-- **Type**: `Epic`
-- **Status**: `BACKLOG`
-- **Depends On**: `DSM-00319`
-- **Child Items**: `DSM-00319` (Spike: correlating server performance drops with player positions).
-- **High-Level Requirements**:
-  Correlate server simulation tickrate drops and network bubble lag with spatial player positions on the GIS Tactical Map (`/world/map`). Identify extreme entity density clusters (e.g. mega-bases with 4,000+ fences, wire, and lights within a single network bubble), plot lag hotspots on the world map, and report exact coordinate breakdowns to server operators.
-- **Scope Boundaries**:
-  - **Included**: Spatial correlation engine linking hardware FPS drops with player coordinates, entity density cluster mapping on Leaflet GIS map, base lag report.
-  - **Excluded / Deferred**: Automated base geometry pruning.
-- **Refinement Note (2026-11-16)**: Split on 2026-11-16 under the backlog-planning size budget (one behaviour or contract change per PBI, ≤ 5 AC, ~≤ 400 changed lines, migrations / refactors / new dependencies separate, risky operations isolated). The epic is `DONE` when all children are `DONE`; dependents reference the child they need. Incubator concept: only the spike is defined; delivery PBIs come from its ADR.
-
----
-
-### [DSM-00157] Automated Mod Update PBO Scraper, Weapon Slot Extractor, and Economy XML Compiler
-
-- **Priority**: `P3 (Low)`
-- **Type**: `Epic`
-- **Status**: `BACKLOG`
-- **Depends On**: `DSM-00320`
-- **Child Items**: `DSM-00320` (Spike: extracting classnames from mod PBO configs).
-- **High-Level Requirements**:
-  When SteamCMD downloads mod updates, automatically inspect unpacked `.pbo` configuration files (`config.bin` / `config.cpp`), extract newly added classnames, vehicle cargo configurations, and weapon attachments, and generate corresponding `<type name="...">` XML blocks and Expansion/Dr. Jones Trader entries ready for 1-click import into `types.xml`.
-- **Scope Boundaries**:
-  - **Included**: PBO config parser, classname extraction, automatic `types.xml` baseline template generation, Trader mod format exports.
-  - **Excluded / Deferred**: Decompiling encrypted or obfuscated PBO scripts.
-- **Refinement Note (2026-11-16)**: Split on 2026-11-16 under the backlog-planning size budget (one behaviour or contract change per PBI, ≤ 5 AC, ~≤ 400 changed lines, migrations / refactors / new dependencies separate, risky operations isolated). The epic is `DONE` when all children are `DONE`; dependents reference the child they need. Incubator concept: only the spike is defined; delivery PBIs come from its ADR.
-
----
-
-### [DSM-00158] Discord Community Support AI Agent, Telemetry Incident Verification, and Ticket Auto-Resolver
-
-- **Priority**: `P3 (Low)`
-- **Type**: `Epic`
-- **Status**: `BACKLOG`
-- **Depends On**: `DSM-00321`
-- **Child Items**: `DSM-00321` (Spike: AI support agent for Discord tickets).
-- **High-Level Requirements**:
-  Deliver an intelligent Discord support agent for community player tickets. When players submit inquiry tickets referencing their Steam64 ID (e.g. vehicle physics glitch, restart warning disputes, base desync), the agent cross-references server logs and vehicle telemetry, verifies the validity of the incident, and resolves routine informational tickets without moderator intervention.
-- **Scope Boundaries**:
-  - **Included**: Discord ticket channel webhook handler, RPT/ADM log verification engine, player claim validation, automated explanation responses.
-  - **Excluded / Deferred**: Autonomous in-game item or vehicle compensation spawning.
-- **Refinement Note (2026-11-16)**: Split on 2026-11-16 under the backlog-planning size budget (one behaviour or contract change per PBI, ≤ 5 AC, ~≤ 400 changed lines, migrations / refactors / new dependencies separate, risky operations isolated). The epic is `DONE` when all children are `DONE`; dependents reference the child they need. Incubator concept: only the spike is defined; delivery PBIs come from its ADR.
 
 ---
 
@@ -3552,66 +3423,6 @@
 
 ---
 
-### [DSM-00307] Verify an Ed25519-signed license token offline
-
-- **Priority**: `P2 (Medium)`
-- **Type**: `Story`
-- **Status**: `BACKLOG`
-- **Parent**: `DSM-00151`
-- **Depends On**: `None`
-- **High-Level Requirements**:
-  The backend verifies a license token against an embedded public key and reads tier, server limit and expiry; `GET /api/v1/license` returns valid, expired, invalid or none. No network access.
-- **Scope Boundaries**:
-  - **Included**: Verifier, endpoint, contract, tests with generated keys.
-  - **Excluded / Deferred**: Key entry UI (`DSM-00308`).
-
----
-
-### [DSM-00308] Enter a license key in /settings/app
-
-- **Priority**: `P2 (Medium)`
-- **Type**: `Story`
-- **Status**: `BACKLOG`
-- **Parent**: `DSM-00151`
-- **Depends On**: `DSM-00307`
-- **High-Level Requirements**:
-  Operators paste a license key, see its tier and expiry, and remove it.
-- **Scope Boundaries**:
-  - **Included**: Card, storage, toasts, tests.
-  - **Excluded / Deferred**: Online activation.
-
----
-
-### [DSM-00309] Gate Pro modules by license tier
-
-- **Priority**: `P2 (Medium)`
-- **Type**: `Story`
-- **Status**: `BACKLOG`
-- **Parent**: `DSM-00151`
-- **Depends On**: `DSM-00307`
-- **High-Level Requirements**:
-  Pro modules show as locked with an explanation when the license tier does not include them; the backend refuses their endpoints.
-- **Scope Boundaries**:
-  - **Included**: Flag mapping, UI locked state, backend guard, tests.
-  - **Excluded / Deferred**: Defining which modules are Pro (product decision).
-
----
-
-### [DSM-00310] Enforce the licensed server count
-
-- **Priority**: `P3 (Low)`
-- **Type**: `Story`
-- **Status**: `BACKLOG`
-- **Parent**: `DSM-00151`
-- **Depends On**: `DSM-00307`
-- **High-Level Requirements**:
-  Registering a server beyond the licensed limit is refused with an explanation; existing servers keep working.
-- **Scope Boundaries**:
-  - **Included**: Guard, tests.
-  - **Excluded / Deferred**: Hardware locking.
-
----
-
 ### [DSM-00311] Configure a BYOK AI provider and test the connection
 
 - **Priority**: `P2 (Medium)`
@@ -3684,96 +3495,6 @@
 - **Scope Boundaries**:
   - **Included**: Excerpt selection, redaction, answer view, tests.
   - **Excluded / Deferred**: Automated moderation.
-
----
-
-### [DSM-00316] Spike: crash-loop detection and safe mod quarantine
-
-- **Priority**: `P3 (Low)`
-- **Type**: `Spike`
-- **Status**: `BACKLOG`
-- **Parent**: `DSM-00153`
-- **Depends On**: `DSM-00162`
-- **High-Level Requirements**:
-  Define crash-loop thresholds, what "safe mode" means for DayZ (launch without mods or a subset), how quarantine is reversed, and whether RPT heuristics suffice without AI. Output: ADR with proposed PBIs.
-- **Scope Boundaries**:
-  - **Included**: Research, ADR.
-  - **Excluded / Deferred**: Production code.
-
----
-
-### [DSM-00317] Spike: feasibility of combat anomaly detection from ADM logs
-
-- **Priority**: `P3 (Low)`
-- **Type**: `Spike`
-- **Status**: `BACKLOG`
-- **Parent**: `DSM-00154`
-- **Depends On**: `DSM-00212`
-- **High-Level Requirements**:
-  Assess what ADM hit/kill data supports (distance, weapon, body part), whether occlusion checks are possible without map geometry, and the false-positive risk. Output: ADR with a go / no-go.
-- **Scope Boundaries**:
-  - **Included**: Research with real logs, ADR.
-  - **Excluded / Deferred**: Production code.
-
----
-
-### [DSM-00318] Spike: reading persistence storage for item counts
-
-- **Priority**: `P3 (Low)`
-- **Type**: `Spike`
-- **Status**: `BACKLOG`
-- **Parent**: `DSM-00155`
-- **Depends On**: `None`
-- **High-Level Requirements**:
-  Determine whether `storage_1/data` can be read safely to count items (format, versions, risk of reading while the server runs). Output: ADR with a go / no-go.
-- **Scope Boundaries**:
-  - **Included**: Research, ADR.
-  - **Excluded / Deferred**: Production code.
-
----
-
-### [DSM-00319] Spike: correlating server performance drops with player positions
-
-- **Priority**: `P3 (Low)`
-- **Type**: `Spike`
-- **Status**: `BACKLOG`
-- **Parent**: `DSM-00156`
-- **Depends On**: `DSM-00177`, `DSM-00254`
-- **High-Level Requirements**:
-  Assess whether available signals (process telemetry, ADM positions) are enough to locate lag hotspots without a server mod. Output: ADR with a go / no-go.
-- **Scope Boundaries**:
-  - **Included**: Research, ADR.
-  - **Excluded / Deferred**: Production code.
-
----
-
-### [DSM-00320] Spike: extracting classnames from mod PBO configs
-
-- **Priority**: `P3 (Low)`
-- **Type**: `Spike`
-- **Status**: `BACKLOG`
-- **Parent**: `DSM-00157`
-- **Depends On**: `None`
-- **High-Level Requirements**:
-  Assess parsing of PBO archives and rapified `config.bin` to list new item classnames, and the licensing implications for mod content. Output: ADR with a go / no-go.
-- **Scope Boundaries**:
-  - **Included**: Prototype, ADR.
-  - **Excluded / Deferred**: Production code.
-
----
-
-### [DSM-00321] Spike: AI support agent for Discord tickets
-
-- **Priority**: `P3 (Low)`
-- **Type**: `Spike`
-- **Status**: `BACKLOG`
-- **Parent**: `DSM-00158`
-- **Depends On**: `DSM-00291`
-- **High-Level Requirements**:
-  Define the ticket scope, the evidence the agent may read, abuse and privacy risks, and when a human must take over. Output: ADR with a go / no-go.
-- **Scope Boundaries**:
-  - **Included**: Research, ADR.
-  - **Excluded / Deferred**: Production code.
 
 ---
 
