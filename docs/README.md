@@ -17,6 +17,15 @@ Every document starts with a status block. Documents describe what the code does
 | :----------------------------------- | :------------------------------------------- |
 | [Overview](architecture/overview.md) | Stack, repository layout, runtime, decisions |
 
+## Engineering
+
+| Document                                            | Content                                                              |
+| :-------------------------------------------------- | :------------------------------------------------------------------- |
+| [Getting started](engineering/getting-started.md)   | Setup, configuration, commands                                       |
+| [Conventions](engineering/conventions.md)           | Architecture rules, TypeScript, React, user feedback contract, forms |
+| [Testing](engineering/testing.md)                   | Strategy, coverage policy, live verification                         |
+| [Git and releases](engineering/git-and-releases.md) | Branches, commits, CI, backlog, dependencies                         |
+
 ## Design
 
 | Document                                 | Content                                    |
