@@ -68,7 +68,7 @@ DayZ's `types.xml` contains anywhere from 2,000 to over 20,000 item definitions.
 ## Documentation & Operator Guides
 
 - **[Operator Cheatsheet & FAQ](faq.md):** Essential technical cheatsheet covering default network ports (`2302`, `27016`, `2310`), graceful persistence flush via BattlEye `#shutdown`, `.bikey` signature key distribution, and scoped backup geometries.
-- **[Release History & Changelog](history.md):** Structured changelog of completed product backlog items compiled directly from `.agents/BACKLOG.md`.
+- **[Release History & Changelog](history.md):** Structured changelog of completed product backlog items compiled directly from [`docs/product/backlog.md`](docs/product/backlog.md).
 - **In-App Knowledge Base:** Operators can press <kbd>Shift + ?</kbd> anywhere within the web console or click the help icon in the top navigation bar to open the live searchable documentation modal.
 
 ---

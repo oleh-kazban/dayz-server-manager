@@ -38,7 +38,7 @@ export function verifySourcesExist(
     );
   }
 
-  // Check if .agents/BACKLOG.md exists and is readable
+  // Check if docs/product/backlog.md exists and is readable
   const hasBacklog = fs.existsSync(backlogPath);
   if (hasBacklog) {
     try {
@@ -51,7 +51,7 @@ export function verifySourcesExist(
     return;
   }
 
-  // If BACKLOG.md is not present (e.g. CI environments where .agents/ is git-excluded),
+  // If the backlog file is not present,
   // fallback to the committed root history.md
   if (!fallbackHistoryPath || !fs.existsSync(fallbackHistoryPath)) {
     throw new PreconditionFailedError(
@@ -250,7 +250,7 @@ export function generateReleaseHistory(backlogSource: string, destination: strin
 export function runSync(options?: { workspaceRoot?: string }): void {
   const root = options?.workspaceRoot ?? process.cwd();
   const faqPath = path.resolve(root, 'faq.md');
-  const backlogPath = path.resolve(root, '.agents/BACKLOG.md');
+  const backlogPath = path.resolve(root, 'docs/product/backlog.md');
   const rootHistoryPath = path.resolve(root, 'history.md');
   const targetDir = path.resolve(root, 'apps/web/public/assets/content');
   const targetFaq = path.resolve(targetDir, 'faq.md');
