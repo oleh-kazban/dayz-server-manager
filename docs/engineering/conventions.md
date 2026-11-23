@@ -48,7 +48,7 @@ Reject bad input at the route with the shared schema. Reply with `sendApiError`,
 - Multi-part components use compound subcomponents (for example `KpiCard.Sparkline`).
 - Derive values during render. Never copy props or state into state through `useEffect`.
 - **Controls are 36 px high** (`h-9`). The `size` prop is retired. A component that wraps an input exposes `containerClassName`.
-- Colors come from semantic CSS variables (`var(--color-primary)`), never hardcoded values. See the [design system](../design/design-system.md).
+- Colors, font sizes, radii, shadows and fixed dimensions come from tokens (`var(--color-primary)`), never hardcoded values. See the [design system](../design/design-system.md).
 - Mutations and queries go through the `libs/api-client` facade and TanStack Query. Query keys come from factories.
 
 ## 6. User feedback contract

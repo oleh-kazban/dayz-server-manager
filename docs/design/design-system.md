@@ -62,6 +62,7 @@ The default theme uses Aegis Royal Blue (`--color-primary: #3366d6`). The status
 
 ### Rules
 
+- **No hardcoded values.** Every color, font size, spacing exception, radius, shadow and fixed dimension comes from a token. A literal such as `text-[11px]` or `#fff` in a component is a defect. Existing violations are tracked in the [tech debt register](../tech-debt.md).
 - Name tokens by role (`danger`), never by appearance (`red-500`).
 - Never rely on color alone. Pair every state color with text or an icon.
 - Add a new token to every theme or to none.
