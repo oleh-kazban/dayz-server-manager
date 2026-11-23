@@ -67,13 +67,13 @@ The cross-cutting scan covered every component for deprecated React APIs, hardco
 - **Evidence:** all 11 usages of `isIconOnly` are on self-closing buttons that have an icon, so auto-detection (no children plus an icon) already produces the same result. Ten of the eleven are `ghost`; no `secondary` or `primary` icon-only button exists. All 12 icon-only buttons have an accessible name, but nothing in the types enforces it.
 - **Problem:** the explicit prop is redundant, and an icon-only button without `aria-label` is allowed by the types.
 - **Recommendation:** remove `isIconOnly` and make icon-only a typed form: an icon plus a required `aria-label` and no children, so the accessible name is enforced at compile time.
-- **Decision:** yes, to approve the typed form.
+- **Decision (product owner):** approved as recommended.
 
 #### TD-UI-006 · Button: element-form icons are speculative · Medium
 
 - **Evidence:** `ButtonIcon` accepts a Lucide component, any component, or a React element, and `renderIcon` has a `cloneElement` branch for elements. No production call site passes an element. Only one test does.
 - **Recommendation:** accept components only and delete the branch.
-- **Decision:** yes, because it is a public API change.
+- **Decision (product owner):** approved as recommended.
 
 #### TD-UI-007 · Button: `text` and `ghost` need defined roles · Low
 
@@ -122,6 +122,47 @@ The cross-cutting scan covered every component for deprecated React APIs, hardco
 - **Evidence:** `Tabs.tsx:110` uses `h-8` for the `segmented` variant. The standard for interactive controls is 36 px (`h-9`). One call site uses the variant.
 - **Recommendation:** use `h-9`, or document tabs as a separate control class.
 - **Decision:** yes.
+
+#### TD-UI-013 · `customClassName` duplicates `containerClassName` · Medium
+
+- **Where:** `Input`, `PasswordInput`, `Autosuggest`, `Checkbox`, `DatePicker` and `FileUploader` declare both props, and `Loader` has only `customClassName`.
+- **Evidence:** `Input.tsx` resolves `containerClassName || customClassName`. No code outside the kit passes `customClassName`. The standard (`containerClassName` on the outermost wrapper) is the documented one.
+- **Impact:** two names for one hook, with an unclear winner. It breaks the consistency pillar.
+- **Recommendation:** remove `customClassName` everywhere and give `Loader` a `className`. Check each remaining control against the same rule.
+- **Decision:** no (it follows the existing standard).
+
+#### TD-UI-014 · Arbitrary font sizes across the kit · Medium
+
+- **Evidence:** about 80 hardcoded sizes in kit sources: 46 × `text-[11px]`, 28 × `text-[10px]`, 2 × `text-[9px]`, 2 × `text-[13px]`, plus `text-[27px]` and `text-[32px]`. The scale in the [design system](design/design-system.md) is 12 px (`text-xs`) upward.
+- **Impact:** type sizes drift per component, and nothing says which small size is correct for errors, badges or metadata.
+- **Decision (product owner):** the design system has no hardcoded values. Named small-text tokens are defined and the literals are replaced.
+- **Recommendation:** start from two tokens, `--text-caption` (11 px, for errors, helper text and metadata) and `--text-micro` (10 px, for badges and counters), each with a line height. Map the single `9px` and `13px` uses to the nearest token. The names and values are proposals to confirm when the work starts.
+
+#### TD-UI-018 · Hardcoded values beyond colors and font sizes · Medium
+
+- **Rule (product owner):** the design system has no hardcoded values. Every color, size, radius, shadow and font size comes from a token.
+- **Evidence from the scans so far:** raw `rgba(...)` and `white`/`black` classes (TD-UI-010, TD-UI-011), arbitrary font sizes (TD-UI-014), and fixed dimensions such as the sidebar widths (`w-[228px]`, `w-[260px]`) and hardcoded radii and shadows in individual components. A full inventory of arbitrary Tailwind values (`[...]` classes that are not `var(--...)`) is part of the audit of each component.
+- **Recommendation:** list the arbitrary values per component as the audit proceeds, then add tokens for the ones that recur, and review the rest case by case. Consider a lint rule that rejects arbitrary values outside `var(--...)`, once the inventory is down.
+- **Decision:** yes, to approve the lint rule when the time comes.
+
+#### TD-UI-015 · `PasswordInput` toggle is a hand-built 20 px button · Medium
+
+- **Where:** `libs/ui/src/input/PasswordInput.tsx`.
+- **Evidence:** measured in Storybook: the show or hide button is 20 × 20 px, below the WCAG 2.2 target size minimum of 24 px. The spacing exception may not apply, because the input field sits 10 px away. It is a raw `<button>` with its own focus ring (`ring-1`) instead of the kit's icon-only `Button`.
+- **Recommendation:** use the kit's icon-only `Button` (ghost) at a compliant size, which also gives it the standard focus ring.
+- **Decision:** no.
+
+#### TD-UI-016 · `PasswordInput` API duplicates `Input` · Low
+
+- **Evidence:** `PasswordInputProps` is a hand copy of `InputProps` without `rightAction`. `showToggle` is never passed by any consumer, only by a test.
+- **Recommendation:** derive the props from `InputProps`, and remove `showToggle` (the toggle is the point of the component).
+- **Decision:** no.
+
+#### TD-UI-017 · `Input` small cleanups · Low
+
+- **Evidence:** the input sets both `disabled` and `aria-disabled`, and renders `aria-disabled="false"` when enabled. The ref merge uses a type assertion. The Storybook story text cites a section of the old specification ("§2.2.1") that no longer exists.
+- **Recommendation:** drop `aria-disabled`, simplify the ref handling, and remove the reference.
+- **Decision:** no.
 
 ## 2. Other known items (not yet audited)
 
