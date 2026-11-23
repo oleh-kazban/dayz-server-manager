@@ -560,7 +560,7 @@ Upgrade critical runtime, security, Storybook 10.x, ESLint, and Vitest dependenc
 
 ### Summary
 
-Rebrand the workspace and runtime console from `@dsm/*` / Outlive to `@aegis/*` / Aegis Console across `apps/web`, `apps/server`, `libs/*`, TypeScript path mappings, Vite/Vitest/Storybook resolvers, and agent documentation. Clean up the footer layout by removing the duplicate animated logo and elevate the brand header lockup into a `/dashboard` navigation link featuring an SVG-isolated 3D hover animation easter egg.
+Rebrand the workspace and runtime console from `@dsm/*` to `@aegis/*` / Aegis Console across `apps/web`, `apps/server`, `libs/*`, TypeScript path mappings, Vite/Vitest/Storybook resolvers, and agent documentation. Clean up the footer layout by removing the duplicate animated logo and elevate the brand header lockup into a `/dashboard` navigation link featuring an SVG-isolated 3D hover animation easter egg.
 
 ### Delivered Capabilities
 
