@@ -89,7 +89,7 @@ Beyond the tags:
    └── config services ──► serverDZ.cfg and BattlEye config files on disk
 ```
 
-In development the web app (`:4200`) proxies `/api` to the daemon (`:5000`). Fastify does not serve the SPA yet (_undecided_, see [Decisions and open questions](#decisions-and-open-questions)).
+In development the web app (`:4200`) proxies `/api` to the daemon (`:5000`). In production, one Fastify process serves the built SPA and the API on a single port, same origin. This is decided but not implemented yet: `apps/server` has no static-file plugin today.
 
 ### Contract-first API
 
@@ -173,11 +173,12 @@ SQLite, one file: `manager-data/database/manager.sqlite` (override with `DATABAS
 
 ### Decided
 
+- **Production serving.** One process: Fastify serves the built SPA (with a fallback to `index.html`) and `/api/v1` on one port, same origin. HTTPS is added by an optional reverse proxy in front, which must not buffer SSE. Not implemented yet; the work belongs to the appliance epic (`DSM-00144`).
 - **Authorization.** A valid access token is the only check. Roles will be removed (`ensureAdminRole`, `requireAdmin`, `AUTH_FORBIDDEN_ADMIN_REQUIRED`, `users.role`). Cleanup is tracked in [tech debt](../tech-debt.md) (_to be written_).
 - **Node.js.** Target the latest LTS, currently Node 26, and pin it (`engines` in `package.json` and `.nvmrc`). Today CI runs Node 24 and `README.md` says 20 or 22; both need aligning.
 - **Testing.** Unit tests (Vitest) plus agentic manual testing with Playwright. There is no automated E2E suite, and none is planned.
 
 ### Open
 
-1. **Production serving.** `apps/server` has no static-file plugin, so only Vite serves the SPA today. Decide how the front end and back end are served in production (for example Fastify serving the built SPA from the same origin, or a separate web server). This belongs with the appliance epic (`DSM-00144`). Until then, no deployment doc is written.
+1. **Production deployment details.** Still to decide: exposure (LAN only or public internet, and the default `HOST`), whether Aegis terminates TLS itself, the distribution format (archive with bundled Node, Docker image, or source), and the default port.
 2. **Persistence.** The old ten-table design (`PERSISTENCE_SPEC`) is undecided. Audit it against the backlog, then keep what is needed and refactor the rest.
