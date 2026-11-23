@@ -130,7 +130,7 @@ const STEAM_PATH_CHECKS: readonly {
 
 /**
  * Rejects the first invalid path with the toast-level error code and a `fieldErrors` entry
- * for the offending input, so the client highlights and focuses it (GEMINI.md §5).
+ * for the offending input, so the client highlights and focuses it (user feedback contract).
  */
 function validatePathPreconditions(data: UpdateSteamSettingsDto, reply: FastifyReply): boolean {
   for (const { field, validate, fallbackCode, fallbackMessage } of STEAM_PATH_CHECKS) {

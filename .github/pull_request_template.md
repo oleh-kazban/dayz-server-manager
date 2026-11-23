@@ -19,7 +19,7 @@ Tip: In GitHub, click the Copilot icon in the toolbar and select 'Summary' to au
 
 ## Checklist
 
-- [ ] Self-review completed against `.agents/skills/code-review.md`
+- [ ] Self-review completed
 - [ ] Verification passed locally (`pnpm nx run-many -t typecheck`, `pnpm eslint <path> --max-warnings 0`)
 - [ ] Two-level test coverage policy satisfied (>= 80% global / 100% affected code)
 - [ ] Screenshots or recordings attached (for UI changes)
