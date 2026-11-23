@@ -72,11 +72,10 @@ Thumbs.db
 # ==============================================================================
 specs/
 references/
-GEMINI.md
 .agents/
 .claude/
 ...sandbox/
-
 notes.md
+
 # Outdated material awaiting owner review (delete when confirmed useless)
 .archive/
