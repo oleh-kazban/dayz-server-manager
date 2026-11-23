@@ -125,7 +125,7 @@ The cross-cutting scan covered every component for deprecated React APIs, hardco
 
 #### TD-UI-013 · `customClassName` duplicates `containerClassName` · Medium
 
-- **Where:** `Input`, `PasswordInput`, `Autosuggest`, `Checkbox`, `DatePicker` and `FileUploader` declare both props, and `Loader` has only `customClassName`.
+- **Where:** `Input`, `PasswordInput`, `Select`, `Toggle`, `Autosuggest`, `Checkbox`, `DatePicker` and `FileUploader` declare both props, and `Loader` has only `customClassName`. `Select` labels it a "legacy container className alias".
 - **Evidence:** `Input.tsx` resolves `containerClassName || customClassName`. No code outside the kit passes `customClassName`. The standard (`containerClassName` on the outermost wrapper) is the documented one.
 - **Impact:** two names for one hook, with an unclear winner. It breaks the consistency pillar.
 - **Recommendation:** remove `customClassName` everywhere and give `Loader` a `className`. Check each remaining control against the same rule.
@@ -163,6 +163,62 @@ The cross-cutting scan covered every component for deprecated React APIs, hardco
 - **Evidence:** the input sets both `disabled` and `aria-disabled`, and renders `aria-disabled="false"` when enabled. The ref merge uses a type assertion. The Storybook story text cites a section of the old specification ("§2.2.1") that no longer exists.
 - **Recommendation:** drop `aria-disabled`, simplify the ref handling, and remove the reference.
 - **Decision:** no.
+
+#### TD-UI-019 · Ref-merge code is copied into 10 components · Medium
+
+- **Evidence:** the same "assign a function or object ref" block (`'current' in ref`, often with a type assertion) appears in `DatePicker`, `Input`, `DotsFloatingMenu`, `FloatingMenu`, `NotificationMenu`, `Select` (as `assignRef`), `TableColumnVisibility`, `Tabs`, `TagInput` and `TagSelect`. `Checkbox` has a variant of it.
+- **Recommendation:** one tested `useMergedRef` helper in `libs/ui/src/hooks`, used everywhere.
+- **Decision:** no.
+
+#### TD-UI-020 · Focus indicators differ across components · Medium
+
+- **Evidence:** 29 × `focus-visible:ring-1`, 6 × `focus-visible:ring-2`, 10 × `focus-within:ring-1`, and only three uses of a ring offset. `Button` and `Checkbox` use `ring-2` with an offset. `Toggle`, the clear and show buttons, and most others use a 1 px ring with no offset or `ring-offset-1`.
+- **Impact:** keyboard users see a different focus style depending on the control, and the 1 px rings are hard to see on some themes.
+- **Recommendation:** define one focus-ring token (width, offset, color) and use it in every component.
+- **Decision (product owner):** one focus style everywhere. Proposed: 2 px ring with a 2 px offset, as `Button` has today.
+
+#### TD-UI-021 · Small touch and click targets · Medium
+
+- **Evidence (from the classes, not measured in a browser except the first):** the `PasswordInput` toggle is 20 × 20 px (measured), the `Select` clear button is about 18 × 18 px (`p-0.5` plus a 14 px icon), the `Toggle` track is 32 × 18 px, and a `Checkbox` is 16 × 16 px (its label enlarges the target when present). WCAG 2.2 sets a 24 px minimum target. The kit has 39 raw `<button>` elements outside `Button`.
+- **Recommendation:** use the kit's icon-only `Button` where a control has a button, and give toggles and checkboxes a 24 px minimum target.
+- **Decision:** no. It follows TD-UI-005 and TD-UI-015.
+
+#### TD-UI-022 · Form label and hint typography is inconsistent · Medium
+
+- **Evidence:** `Input` and `Select` labels are 12 px, medium weight, main color. `Checkbox` labels are 11 px in the secondary color. `Toggle` labels are 12 px. Error text is 11 px in `Input` and `Checkbox` but 12 px in `Select`. Descriptions are 10 px in `Checkbox` and `Toggle`.
+- **Recommendation:** define one form-label style and one form-hint style as tokens (with TD-UI-014) and use them in every field.
+- **Decision (product owner):** one style everywhere. Proposed: labels 12 px medium in the main color, hints and errors in the caption token (11 px).
+
+#### TD-UI-023 · Four components have no consumers · Medium
+
+- **Evidence:** `Autosuggest` (369 lines), `DatePicker` (275), `TagInput` (444) and `TagSelect` (415) are not used by any application code or by any other kit component. No backlog item names them. They carry tests, stories and, for `DatePicker`, the `react-day-picker` dependency. About 1,500 lines of source in total.
+- **Impact:** every audit, dependency update and design change has to keep them correct, with no user for them.
+- **Recommendation:** keep them if features on the roadmap need them (for example the Types workbench filters or the restart scheduler) and audit them when those features start, or remove them now and restore them from history when needed.
+- **Decision (product owner):** keep all four. They are audited in detail and made clean and tidy like the rest of the kit (consumer-free does not mean exempt from the standards).
+
+#### TD-UI-024 · `Select`: unused options and a large file · Medium
+
+- **Evidence:** the app uses `Select` 10 times. `clearable`, `renderOption` and `renderValue` are never passed. `helperText` and `leftIcon` are passed once each. `Select.tsx` is 608 lines and holds the popup, the keyboard logic and the option rows. The project convention puts helpers in `*.utils.ts`.
+- **Recommendation:** drop the three unused props, or keep them only after a consumer needs them. Move the keyboard and option helpers into `select.utils.ts`.
+- **Decision (product owner):** keep `clearable`, `renderOption` and `renderValue`; they will be needed for flexibility. Condition: a kept prop must have a test and a story. `clearable` has both. `renderOption` and `renderValue` have neither today, so they need a story and a test that prove they work. Moving the helpers into `select.utils.ts` still applies.
+
+#### TD-UI-025 · `Select`: robustness · Low
+
+- **Evidence:** `aria-controls` points at the listbox id while the listbox is not in the DOM (it renders only when open). `key={String(option.value)}` and the `===` comparison break for object values, but the generic `T` is not restricted to primitives. The popup uses `shadow-lg` and `rounded-xl` instead of the `--shadow-dropdown` and radius tokens (14 other places use the shadow token).
+- **Recommendation:** set `aria-controls` only while open, restrict `T` to `string | number`, and use the tokens.
+- **Decision:** no.
+
+#### TD-UI-026 · `Checkbox` and `Toggle`: redundant ARIA · Low
+
+- **Evidence:** `Checkbox` sets `aria-checked="mixed"` on a native checkbox. `Toggle` sets `aria-checked` on a native checkbox with `role="switch"`. The native `indeterminate` and `checked` states already reach assistive technology, and ARIA in HTML advises against `aria-checked` on `input type=checkbox`. `Checkbox` also focuses itself through an effect instead of the native `autoFocus`.
+- **Recommendation:** remove the redundant attributes and keep the tests on the native state.
+- **Decision:** no.
+
+#### TD-UI-027 · `Toggle` color variants · Low
+
+- **Evidence:** `color` offers `primary`, `success` and `danger`. One call site uses `danger` (the `filePatching` launch option), and none uses `success`. The hover fills reuse the `-border` tokens (`--color-status-success-border`), which are border colors. The knob is `bg-white` (TD-UI-011).
+- **Recommendation:** drop `success`, add a proper hover token or a darker `-hover` color, and use a knob token.
+- **Decision (product owner):** `color` has two options only, brand (`primary`) and `danger`. Remove `success`.
 
 ## 2. Other known items (not yet audited)
 
