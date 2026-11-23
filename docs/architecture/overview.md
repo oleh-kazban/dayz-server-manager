@@ -20,7 +20,7 @@ Every design decision is checked against four pillars:
 1. **Security** – least privilege, secrets encrypted at rest, no credentials in URLs or logs.
 2. **Consistency** – one way to do each thing: naming, contracts, forms, feedback, UI components.
 3. **Comfort** – operators get explicit feedback for every action and are protected from destructive mistakes.
-4. **Modern UI/UX** – a fast, accessible, themeable console.
+4. **Modern UI/UX** – a fast, accessible, themeable console with smooth animation and thoughtful features, not only a responsive layout.
 
 ## 2. Stack
 
