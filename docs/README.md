@@ -17,6 +17,12 @@ Every document starts with a status block. Documents describe what the code does
 | :----------------------------------- | :------------------------------------------- |
 | [Overview](architecture/overview.md) | Stack, repository layout, runtime, decisions |
 
+## Design
+
+| Document                                 | Content                                    |
+| :--------------------------------------- | :----------------------------------------- |
+| [Design system](design/design-system.md) | Themes, tokens, typography, layout, motion |
+
 ## Where other things live
 
 | Topic              | Location                                                     |
