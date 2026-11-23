@@ -14,7 +14,7 @@
 | `DSM-00102` | Theme-Aware Pre-Bootstrap Loading State and Accessibility                                | `Story` | `P1 (High)`     | `DONE`        | `DSM-00101`                                                     |
 | `DSM-00103` | Seamless In-App Bootstrapping and Route Transition Continuity                            | `Story` | `P1 (High)`     | `DONE`        | `DSM-00101`                                                     |
 | `DSM-00104` | Full-Stack Monorepo Architecture and Application Bootstrapping                           | `Task`  | `P0 (Critical)` | `DONE`        | `None`                                                          |
-| `DSM-00105` | Outlive Design System UI Kit Component Library                                           | `Story` | `P0 (Critical)` | `DONE`        | `DSM-00104`                                                     |
+| `DSM-00105` | Aegis Design System UI Kit Component Library                                             | `Story` | `P0 (Critical)` | `DONE`        | `DSM-00104`                                                     |
 | `DSM-00106` | Storybook Component Catalog and Interactive Documentation                                | `Task`  | `P2 (Medium)`   | `DONE`        | `DSM-00105`                                                     |
 | `DSM-00107` | Operator Authentication and Secure Sign-In Experience                                    | `Story` | `P0 (Critical)` | `DONE`        | `DSM-00104`, `DSM-00105`                                        |
 | `DSM-00108` | Unified Toast Notification Dispatcher and Error Translation                              | `Story` | `P1 (High)`     | `DONE`        | `DSM-00104`, `DSM-00105`                                        |
@@ -326,14 +326,14 @@
 
 ---
 
-### [DSM-00105] Outlive Design System UI Kit Component Library
+### [DSM-00105] Aegis Design System UI Kit Component Library
 
 - **Priority**: `P0 (Critical)`
 - **Type**: `Story`
 - **Status**: `DONE`
 - **Depends On**: `DSM-00104`
 - **High-Level Requirements**:
-  Implement a cohesive, accessible, and lightweight design system component library (`libs/ui`) aligned with the Outlive pastel visual tokens. Provide foundational interactive primitives (`Button`, `Input`, `PasswordInput`, `Checkbox`, `Toggle`, `Select`, `Tag`, `TagInput`, `TagSelect`, `StatusTag`, `Badge`), feedback containers (`Card`, `HeroBanner`, `Notice`, `ProgressBar`, `Skeleton`, `Tooltip`, `EmptyState`, `KpiCard`), data presentation surfaces (`Tabs`, `Pagination`, `Breadcrumbs`, `Table`, `TableBulkActions`, `TableColumnVisibility`), and safety dialogs (`ConfirmationDialog`, `KeywordConfirmationDialog`). Ensure every component satisfies WCAG contrast, ARIA specifications, keyboard focus management, and comprehensive Vitest unit tests.
+  Implement a cohesive, accessible, and lightweight design system component library (`libs/ui`) aligned with the Aegis pastel visual tokens. Provide foundational interactive primitives (`Button`, `Input`, `PasswordInput`, `Checkbox`, `Toggle`, `Select`, `Tag`, `TagInput`, `TagSelect`, `StatusTag`, `Badge`), feedback containers (`Card`, `HeroBanner`, `Notice`, `ProgressBar`, `Skeleton`, `Tooltip`, `EmptyState`, `KpiCard`), data presentation surfaces (`Tabs`, `Pagination`, `Breadcrumbs`, `Table`, `TableBulkActions`, `TableColumnVisibility`), and safety dialogs (`ConfirmationDialog`, `KeywordConfirmationDialog`). Ensure every component satisfies WCAG contrast, ARIA specifications, keyboard focus management, and comprehensive Vitest unit tests.
 - **Scope Boundaries**:
   - **Included**:
     - Reusable component library exported from `libs/ui/src/index.ts` (`autosuggest`, `breadcrumbs`, `button`, `card`, `checkbox`, `confirmation`, `date-picker`, `empty-state`, `hero-banner`, `input`, `kpi-card`, `loader`, `menu`, `notice`, `notification-menu`, `pagination`, `progress-bar`, `select`, `skeleton`, `status-tag`, `table`, `tabs`, `tag`, `tag-input`, `toast`, `toggle`, `tooltip`).
@@ -368,7 +368,7 @@
 - **Status**: `DONE`
 - **Depends On**: `DSM-00104`, `DSM-00105`
 - **High-Level Requirements**:
-  Deliver an end-to-end authentication and operator login workflow securing the DSM management console. Provide Fastify authentication REST endpoints (`/api/v1/auth/login`, `/api/v1/auth/logout`) with SQLite operator verification and secure `scrypt` password hashing. Build the dedicated `/sign-in` view in `apps/web` featuring the Outlive branded `SignInHero`, react-hook-form + Zod validated `SignInForm`, client-side `AuthProvider` session state, and TanStack Router `beforeLoad` redirection guards.
+  Deliver an end-to-end authentication and operator login workflow securing the DSM management console. Provide Fastify authentication REST endpoints (`/api/v1/auth/login`, `/api/v1/auth/logout`) with SQLite operator verification and secure `scrypt` password hashing. Build the dedicated `/sign-in` view in `apps/web` featuring the branded `SignInHero`, react-hook-form + Zod validated `SignInForm`, client-side `AuthProvider` session state, and TanStack Router `beforeLoad` redirection guards.
 - **Scope Boundaries**:
   - **Included**:
     - Zod contracts (`libs/api-contracts/src/lib/auth.contract.ts`) and SDK client (`libs/api-client/src/lib/endpoints/auth.ts`).
