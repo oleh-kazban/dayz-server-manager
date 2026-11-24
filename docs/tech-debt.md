@@ -37,7 +37,8 @@ The audit follows one process per component: investigate (implementation, API, t
 | CodeEditor, CodeDiffView                          | Audited from the source and checked in Storybook. Findings TD-UI-059 to TD-UI-062            |
 | LogViewer                                         | Audited from the source and checked in Storybook. Findings TD-UI-063 to TD-UI-065            |
 | Breadcrumbs                                       | Audited from the source and checked in Storybook. Finding TD-UI-066                          |
-| Remaining 6 components                            | Not yet audited: FileUploader, HeroBanner, Loader, Pagination, ProgressBar, Skeleton         |
+| FileUploader                                      | Audited from the source and checked in Storybook. Findings TD-UI-067 and TD-UI-068           |
+| Remaining 5 components                            | Not yet audited: HeroBanner, Loader, Pagination, ProgressBar, Skeleton                       |
 
 The cross-cutting scan covered every component for deprecated React APIs, hardcoded colors, off-standard control heights, `size` props, `containerClassName` and missing tests or stories. It found no deprecated APIs (`forwardRef`, `MutableRefObject`), and every component directory has tests and stories.
 
@@ -542,6 +543,24 @@ The cross-cutting scan covered every component for deprecated React APIs, hardco
 - **Code:** the collapse does not check that anything is hidden: with `maxItems` just below the item count, the ellipsis can replace nothing. The current page is a `span` with `role="link"` and `aria-disabled`, where `aria-current="page"` alone is enough. `ref` is accepted by the link type but forwarded only for `<a>`. The ellipsis label "Show more breadcrumbs" is fixed English, and the focus ring is 1 px (TD-UI-020).
 - **Recommendation:** make the kit component fit the router (`asChild` forwarding all props, or a `renderLink` prop), replace the header's inline trail with it, and fix the collapse and the markup.
 - **Decision (product owner):** yes, replace the header's inline trail with the kit `Breadcrumbs` once the router fit is fixed.
+
+> The next two findings cover `FileUploader`, used once (`ImportModsModal`, a `.json` preset up to 2 MB).
+
+#### TD-UI-067 · `FileUploader` semantics and focus · Medium
+
+- **Verified:** the drop zone is a `div` with `role="button"`. Its accessible name is only the label ("Upload File"). The visible instruction ("Click to upload or drag and drop") and the constraints (".json • up to 500 KB") are in neither the name nor the description (`aria-describedby` has only the helper text).
+- **Verified:** `aria-invalid` is set on the `role="button"` element, always rendered (`false` or `true`). ARIA does not support it on a button, so it is ignored. The focus ring is 1 px (TD-UI-020).
+- **Verified:** after a file is dropped, the drop zone is replaced by the file card and focus moves to `body`. Nothing is announced when a file is selected or removed (no live region). The remove button is 28 × 28 px and is labeled only "Remove file", without the file name.
+- **Code, not verified:** the hidden `required` file input has no `onInvalid` handler, so a native validation bubble would appear at the hidden input's position (`DatePicker` handles this case).
+- **Recommendation:** use a native `<button>` for the drop zone, describe it with the constraints, move focus to the file card after selection and back to the drop zone after removal, announce the file name politely, and include the name in the remove label. Handle `onInvalid` as `DatePicker` does.
+- **Decision:** no.
+
+#### TD-UI-068 · `FileUploader` behavior and API · Low
+
+- **Verified:** dropping two files keeps the first and ignores the second without a message.
+- **Code:** `customClassName` is marked "Legacy" in its own type (TD-UI-013), and `className` styles the drop zone or the file card depending on the state. The error text is 12 px with an icon, a fourth error style (TD-UI-022). The messages are fixed English. `text-[11px]`, `border-2` and `p-6` are hardcoded (TD-UI-018). The component only selects a file, with no upload or progress, despite its name. The code carries "GUARD-01" to "GUARD-03" comments that add noise. It reports a rejected file through `onError` and an inline message, and the consumer must add the red toast required by the feedback contract.
+- **Recommendation:** remove `customClassName`, share the field shell and the error style, and add the message for extra files.
+- **Decision (product owner):** when several files are dropped, the component says that only one is used ("Only one file is allowed. Using preset.json.").
 
 ## 2. Other known items (not yet audited)
 
