@@ -23,11 +23,14 @@ The audit follows one process per component: investigate (implementation, API, t
 
 ### Audit progress
 
-| Component               | Status                                                      |
-| :---------------------- | :---------------------------------------------------------- |
-| Button                  | Audited. Findings TD-UI-001 to TD-UI-009 (TD-UI-002 closed) |
-| Cross-cutting scan      | Done. Findings TD-UI-010 to TD-UI-012                       |
-| Remaining 30 components | Not yet audited                                             |
+| Component                                    | Status                                                                                       |
+| :------------------------------------------- | :------------------------------------------------------------------------------------------- |
+| Button                                       | Audited. Findings TD-UI-001 to TD-UI-009 (TD-UI-001 and TD-UI-002 closed)                    |
+| Cross-cutting scan                           | Done. Findings TD-UI-010 to TD-UI-012, TD-UI-014, TD-UI-018 to TD-UI-022                     |
+| Input, PasswordInput                         | Audited. Findings TD-UI-013, TD-UI-015 to TD-UI-017                                          |
+| Select, Checkbox, Toggle                     | Audited. Findings TD-UI-024 to TD-UI-027                                                     |
+| Autosuggest, DatePicker, TagInput, TagSelect | Audited from the source and checked in Storybook. Findings TD-UI-023, TD-UI-028 to TD-UI-033 |
+| Remaining 22 components                      | Not yet audited                                                                              |
 
 The cross-cutting scan covered every component for deprecated React APIs, hardcoded colors, off-standard control heights, `size` props, `containerClassName` and missing tests or stories. It found no deprecated APIs (`forwardRef`, `MutableRefObject`), and every component directory has tests and stories.
 
@@ -219,6 +222,71 @@ The cross-cutting scan covered every component for deprecated React APIs, hardco
 - **Evidence:** `color` offers `primary`, `success` and `danger`. One call site uses `danger` (the `filePatching` launch option), and none uses `success`. The hover fills reuse the `-border` tokens (`--color-status-success-border`), which are border colors. The knob is `bg-white` (TD-UI-011).
 - **Recommendation:** drop `success`, add a proper hover token or a darker `-hover` color, and use a knob token.
 - **Decision (product owner):** `color` has two options only, brand (`primary`) and `danger`. Remove `success`.
+
+> The next six findings come from reading the source of `Autosuggest`, `DatePicker`, `TagInput` and `TagSelect`, then checking the doubtful ones in a Storybook build with Playwright. **Verified** marks a behavior seen in the browser, **Code** a fact read from the source, and **Not verified** an item no story could show.
+
+#### TD-UI-028 · Each form control re-implements the field shell · Medium
+
+- **Evidence:** the label block, the error paragraph (`text-[11px] ... leading-tight`), the `containerClassName || customClassName` resolution, the border classes for the error state and the ref merge are copied into `Input`, `Select`, `Autosuggest`, `DatePicker`, `TagInput` and `TagSelect`. `TagInput` and `TagSelect` each define their own `getContainerBorderClasses` or `getTriggerBorderClasses`. `Autosuggest` has a fixed search icon and no `leftIcon`, while `Input` has one.
+- **Impact:** every design decision (TD-UI-020, TD-UI-022, TD-UI-014) must be applied six times, and the copies already drift.
+- **Recommendation:** one `FormField` wrapper for label, hint and error, one shared control-surface class helper (border, ring, disabled state), and `useMergedRef` (TD-UI-019). This is the structural fix behind most form-related findings.
+- **Decision:** no.
+
+#### TD-UI-029 · Popup surfaces and option rows differ between controls · Medium
+
+- **Evidence:** the dropdown surface is written out in `Select`, `Autosuggest`, `DatePicker`, `TagInput` and `TagSelect`. `Autosuggest` and `DatePicker` use `shadow-[var(--shadow-card)]`, the other three use `shadow-lg`, and a `--shadow-dropdown` token exists. `TagInput` and `TagSelect` animate in (`animate-in fade-in zoom-in-95`), the others do not. `z-50` is a class in some and an inline `zIndex: 50` in others. Option rows are copied four times (`Select`, `Autosuggest`, `TagInput`, `TagSelect`) with different highlight colors: `Autosuggest` highlights in the primary tint, `TagInput` in the subtle surface. `TagSelect` hardcodes a minimum width of 220 px.
+- **Recommendation:** a shared `PopupSurface` and `OptionRow` (or tokens plus one class helper) with one shadow, one radius, one motion and one z-index token (TD-UI-018).
+- **Decision:** no.
+
+#### TD-UI-030 · `TagSelect` accessibility and keyboard · High
+
+- **Evidence:**
+  - **Verified:** the trigger is a `div` with `role="combobox"` that contains three real buttons in the default story (two tag remove buttons and the clear-all button). Interactive controls nested in a combobox fail the "nested-interactive" accessibility rule.
+  - **Verified:** the search field in the popup has no `aria-label` (placeholder only).
+  - **Verified:** after opening with Enter, focus stays on the trigger. Tab moves to the clear-all button, then to each tag's remove button, while the popup stays open and focus never enters it. A keyboard user cannot reach the search field, which sits at the end of `body`.
+  - **Not verified:** the arrow keys highlight disabled options (`TagInput` skips them). No story has a disabled option. The code shows it.
+  - **Code:** the same arrow and escape handling is written twice (`handleTriggerKeyDown` and `handlePopupKeyDown`).
+  - The clear-all button is about 18 px square with no focus style (`focus:outline-none`), see TD-UI-021.
+- **Recommendation:** make the trigger a button-like element that holds the tags outside the combobox role, move focus to the search field on open and return it on close, label the search field, skip disabled options, and use one key handler.
+- **Decision:** no.
+
+#### TD-UI-031 · `TagInput` behavior · Medium
+
+- **Evidence:**
+  - **Verified:** Escape leaves the component in an inconsistent state. The popup becomes invisible (`visibility: hidden`) but its listbox stays in the DOM, so the open state (`showSuggestions`) and the popup state (`usePopup`) disagree. It shows again only after the filter changes.
+  - **Verified:** selecting the suggestion "Hunting" (value `hunting`) adds a chip that reads `hunting`, not the label (`TagSelect` shows the label).
+  - **Verified:** clicking the empty area inside the field leaves focus on `body`, though the cursor suggests it focuses the input.
+  - **Code:** the popup open state lives twice: `usePopup` keeps one and an effect copies `showSuggestions` into it.
+  - **Code:** the input disappears when `maxTags` is reached. The label then points at nothing and focus is lost (no story sets `maxTags`).
+  - **Code:** there is no `name` prop, so the control cannot take part in a native form (`TagSelect` renders hidden inputs).
+  - **Code:** the default `transformTag` is a new function on every render, which defeats the `useCallback` around `commitTag`.
+  - **Code:** suggestion rows set `aria-selected` for the highlighted row; in a listbox that attribute means selected, not highlighted (`Autosuggest` does the same).
+- **Recommendation:** fix each item with a test. Keep the input (disabled) at the limit, or move focus to the last chip.
+- **Decision:** no.
+
+#### TD-UI-032 · `DatePicker` · Medium
+
+- **Evidence:**
+  - **Code:** the trigger's `aria-label` replaces its visible `<label>`. The stories pass an `ariaLabel` equal to the label, so they look right (**Verified**: both read "Backup Snapshot Date"). A consumer that omits `ariaLabel` gets the default "Select date", and assistive technology never reads the visible label.
+  - **Verified:** the calendar opens with focus on the selected or current day, the weekday header starts on Sunday ("Su") and is English only.
+  - A hidden `<input type="date">` with an empty `onChange` exists only to reuse native form validation, and the open handler finds the focus target with `button[tabindex="0"]`, which depends on `react-day-picker` internals.
+  - `react-day-picker/style.css` is imported in full and then overridden by `classNames`, inline `--rdp-*` variables and `[&_.rdp-...]` selectors. Sizes (28 px), `text-[10px]` and colors are hardcoded (TD-UI-014, TD-UI-018).
+  - Both month buttons repeat the same class string. The clear button is about 22 px with no focus style.
+  - The validation messages ("A date is required.") are fixed English strings.
+  - The component exposes no locale or week-start option. **Decision needed:** is a locale requirement planned?
+- **Recommendation:** name the trigger from the visible label (`aria-labelledby`), drop the duplicated style overrides, and decide on locale support.
+- **Decision:** no.
+
+#### TD-UI-033 · `Autosuggest` · Low
+
+- **Evidence:**
+  - Option rows select on `onMouseDown` and again on `onClick`. **Verified:** a mouse click selects once, because the list unmounts on mouse down and the click never fires. The `onClick` handler serves keyboard and assistive-technology activation, so it stays. Not a defect.
+  - Both `disabled` and `aria-disabled` are set (as in TD-UI-017).
+  - The clear button has no focus style and an icon-sized target (TD-UI-021).
+  - "Searching...", "Clear search" and the default placeholder are fixed English strings.
+  - The input uses `focus:ring-1` (TD-UI-020), `text-xs` and `text-[11px]` (TD-UI-014).
+- **Recommendation:** apply the shared decisions from TD-UI-020 to TD-UI-022.
+- **Decision:** no.
 
 ## 2. Other known items (not yet audited)
 
