@@ -41,7 +41,8 @@ The audit follows one process per component: investigate (implementation, API, t
 | HeroBanner                                        | Audited from the source and checked in Storybook. Finding TD-UI-069 (colors: TD-UI-010)                         |
 | Loader                                            | Audited from the source and checked in Storybook. Finding TD-UI-070                                             |
 | Pagination                                        | Audited from the source and checked in Storybook. Findings TD-UI-071 and TD-UI-072 (kit strings, cross-cutting) |
-| Remaining 2 components                            | Not yet audited: ProgressBar, Skeleton                                                                          |
+| ProgressBar                                       | Audited from the source and checked in Storybook. Finding TD-UI-073                                             |
+| Remaining 1 component                             | Not yet audited: Skeleton                                                                                       |
 
 The cross-cutting scan covered every component for deprecated React APIs, hardcoded colors, off-standard control heights, `size` props, `containerClassName` and missing tests or stories. It found no deprecated APIs (`forwardRef`, `MutableRefObject`), and every component directory has tests and stories.
 
@@ -593,6 +594,13 @@ The cross-cutting scan covered every component for deprecated React APIs, hardco
 
 - **Code:** the kit renders user-facing English text that a consumer cannot translate without a prop on every use: "Searching...", "Clear search", "A date is required.", "Cancel", "Confirm", "Dismiss notification", "Show more breadcrumbs", "Rows per page:", "Showing ... items", "Click to upload or drag and drop", "No records found", "No options found", "Loading...", "Jump to latest", the search panel labels in the code editor and more. The web app has its own i18n resources (`apps/web/src/core/i18n`), and the product owner wants locale support for `DatePicker` (TD-UI-032).
 - **Decision (product owner):** the web app will be translated into at least Ukrainian, Polish, German, Italian and French, besides English. The kit therefore needs a way to receive its strings (a provider with a message map and English defaults), and its components must not build sentences from fragments. Plural rules differ between these languages (Ukrainian and Polish have several plural forms), so counts such as "3 items selected" need plural-aware messages. Dates and numbers follow the same locale (TD-UI-032).
+
+#### TD-UI-073 · `ProgressBar` · Low
+
+- **Verified:** with reduced motion emulated, the indeterminate bar keeps sliding (TD-UI-034). The fill has a contrast of 4.9 to 5.3 against the track in all four tested variants, which is enough. The track itself has only 1.05:1 against the page, so the full length of the bar is almost invisible.
+- **Code:** `SteamGuardChallengeModal` renders a countdown bar with no `label` and no `aria-label`, so the `role="progressbar"` has no name. The component does not require one. The root class has three names, `className`, `containerClassName` and `customClassName` (TD-UI-013), and `...props` goes to the wrapper rather than to the progressbar element. The `11px` text, the 300 ms transition and the `h-1`, `h-2` and `h-3` heights are hardcoded (TD-UI-014, TD-UI-018).
+- **Recommendation:** make `label` or `aria-label` required in the type, give the track a visible edge token, and use named tokens for the sizes and the transition.
+- **Decision:** no.
 
 ## 2. Other known items (not yet audited)
 
