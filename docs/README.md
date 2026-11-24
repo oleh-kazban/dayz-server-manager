@@ -14,12 +14,13 @@ Every document starts with a status block. Documents describe what the code does
 
 ## Architecture
 
-| Document                                   | Content                                      |
-| :----------------------------------------- | :------------------------------------------- |
-| [Overview](architecture/overview.md)       | Stack, repository layout, runtime, decisions |
-| [Backend](architecture/backend.md)         | Daemon, API, errors, realtime, services      |
-| [Frontend](architecture/frontend.md)       | Providers, routing, state, realtime, forms   |
-| [Persistence](architecture/persistence.md) | SQLite schema, migrations, secrets, backups  |
+| Document                                   | Content                                         |
+| :----------------------------------------- | :---------------------------------------------- |
+| [Overview](architecture/overview.md)       | Stack, repository layout, runtime, decisions    |
+| [Backend](architecture/backend.md)         | Daemon, API, errors, realtime, services         |
+| [Frontend](architecture/frontend.md)       | Providers, routing, state, realtime, forms      |
+| [DayZ domain](architecture/dayz-domain.md) | Config, launch command, mods, BattlEye and RCON |
+| [Persistence](architecture/persistence.md) | SQLite schema, migrations, secrets, backups     |
 
 ## Engineering
 
