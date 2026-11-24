@@ -25,6 +25,8 @@ Every document starts with a status block. Documents describe what the code does
 | [Conventions](engineering/conventions.md)           | Architecture rules, TypeScript, React, user feedback contract, forms |
 | [Testing](engineering/testing.md)                   | Strategy, coverage policy, live verification                         |
 | [Git and releases](engineering/git-and-releases.md) | Branches, commits, CI, backlog, dependencies                         |
+| [Tech debt register](tech-debt.md)                  | Audit findings with evidence and decisions                           |
+| [UI kit fix plan](engineering/ui-kit-fix-plan.md)   | Ordered work packages for the UI kit findings                        |
 
 ## Design
 
