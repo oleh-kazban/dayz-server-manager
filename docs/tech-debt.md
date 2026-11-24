@@ -23,15 +23,16 @@ The audit follows one process per component: investigate (implementation, API, t
 
 ### Audit progress
 
-| Component                                         | Status                                                                                       |
-| :------------------------------------------------ | :------------------------------------------------------------------------------------------- |
-| Button                                            | Audited. Findings TD-UI-001 to TD-UI-009 (TD-UI-001 and TD-UI-002 closed)                    |
-| Cross-cutting scan                                | Done. Findings TD-UI-010 to TD-UI-012, TD-UI-014, TD-UI-018 to TD-UI-022                     |
-| Input, PasswordInput                              | Audited. Findings TD-UI-013, TD-UI-015 to TD-UI-017                                          |
-| Select, Checkbox, Toggle                          | Audited. Findings TD-UI-024 to TD-UI-027                                                     |
-| Autosuggest, DatePicker, TagInput, TagSelect      | Audited from the source and checked in Storybook. Findings TD-UI-023, TD-UI-028 to TD-UI-033 |
-| Card, KpiCard, Tag, StatusTag, Notice, EmptyState | Audited from the source and checked in Storybook. Findings TD-UI-034 to TD-UI-041            |
-| Remaining 16 components                           | Not yet audited                                                                              |
+| Component                                         | Status                                                                                                                                |
+| :------------------------------------------------ | :------------------------------------------------------------------------------------------------------------------------------------ |
+| Button                                            | Audited. Findings TD-UI-001 to TD-UI-009 (TD-UI-001 and TD-UI-002 closed)                                                             |
+| Cross-cutting scan                                | Done. Findings TD-UI-010 to TD-UI-012, TD-UI-014, TD-UI-018 to TD-UI-022                                                              |
+| Input, PasswordInput                              | Audited. Findings TD-UI-013, TD-UI-015 to TD-UI-017                                                                                   |
+| Select, Checkbox, Toggle                          | Audited. Findings TD-UI-024 to TD-UI-027                                                                                              |
+| Autosuggest, DatePicker, TagInput, TagSelect      | Audited from the source and checked in Storybook. Findings TD-UI-023, TD-UI-028 to TD-UI-033                                          |
+| Card, KpiCard, Tag, StatusTag, Notice, EmptyState | Audited from the source and checked in Storybook. Findings TD-UI-034 to TD-UI-041                                                     |
+| Confirmation, Tooltip, Toast, menus, `usePopup`   | Audited from the source and checked in Storybook. Findings TD-UI-042 to TD-UI-048                                                     |
+| Remaining 11 components                           | Not yet audited: Breadcrumbs, CodeEditor, FileUploader, HeroBanner, Loader, LogViewer, Pagination, ProgressBar, Skeleton, Table, Tabs |
 
 The cross-cutting scan covered every component for deprecated React APIs, hardcoded colors, off-standard control heights, `size` props, `containerClassName` and missing tests or stories. It found no deprecated APIs (`forwardRef`, `MutableRefObject`), and every component directory has tests and stories.
 
@@ -318,8 +319,8 @@ The cross-cutting scan covered every component for deprecated React APIs, hardco
 
 - **Verified:** the `warning` notice has `role="alert"` and `aria-live="polite"`, which contradict each other (an alert is assertive). `error` is `alert` and `assertive`, `info` is `status` and `polite`.
 - **Verified:** the title is always an `h5`. `Card` offers `titleLevel` and `EmptyState` offers `titleAs` for the same purpose, so three components solve the heading level in three ways.
-- **Code:** `variant` accepts both `error` and `danger` (an alias). The app passes `error` 8 times and never `danger`. The other components use `danger`. The close button is a hardcoded 36 px square with a 1 px focus ring (TD-UI-020).
-- **Recommendation:** drop the `aria-live` override and let the role decide (warning becomes `status` unless it blocks work). Use one heading prop name (`titleAs`) with a sensible default in all three components. Settle on `danger` as the only name and migrate the 8 call sites.
+- **Code:** `variant` accepts both `error` and `danger` (an alias). The app passes `error` 9 times and `danger` once, and `ConfigLockBanner` mixes `warning`, `info` and `danger` in one file. The other components use `danger`. The close button is a hardcoded 36 px square with a 1 px focus ring (TD-UI-020).
+- **Recommendation:** drop the `aria-live` override and let the role decide (warning becomes `status` unless it blocks work). Use one heading prop name (`titleAs`) with a sensible default in all three components. Settle on `danger` as the only name and migrate the 10 call sites.
 - **Decision:** no.
 
 #### TD-UI-038 · Test hooks ship in the production DOM · Low
@@ -338,14 +339,70 @@ The cross-cutting scan covered every component for deprecated React APIs, hardco
 
 - **Verified:** the component has no consumer in the app (0 uses). **Verified:** the loading skeleton has no `aria-busy`, no role and no text, so assistive technology reads nothing.
 - **Code:** hardcoded `min-h-[114px]`, `text-[27px]`, sparkline defaults of 94 × 35 and stroke width 2 (TD-UI-014, TD-UI-018). `aria-label` and `aria-labelledby` are set on a `div` with no role. The sparkline `svg` block is written twice (children and data variants). `isLoading` replaces children, so a compound card cannot show a skeleton of its own shape.
-- **Recommendation:** **Decision (product owner):** keep it; it was built in advance for a planned feature. Then add `role="group"`, a loading label, tokens for size and one sparkline element.
-- **Decision:** no.
+- **Recommendation:** add `role="group"`, a loading label, tokens for size and one sparkline element.
+- **Decision (product owner):** keep it; it was built in advance for a planned feature.
 
 #### TD-UI-041 · `Card` and `EmptyState` · Low
 
-- **Verified:** `EmptyState` has no consumer in the app (0 uses), and `Card` has one file with two uses. **Decision (product owner):** keep `EmptyState`; it was built in advance for a planned feature.
+- **Code:** `Card` has 16 uses in 11 files. `EmptyState` has 2 (`MarkdownViewer`, `FaqModal`). An earlier version of this entry said "no consumer" for `EmptyState` because a search missed JSX that wraps onto the next line; the counts here were redone with a multi-line aware search.
 - **Code:** `Card` renders `children &&`, so a child of `0` shows nothing, uses a type assertion for `ref` and has a fixed `p-5` with no density option. `EmptyState` has `text-sm sm:text-base`, `sm:text-[13px]` and fixed widths (`max-w-sm`, `max-w-md`) that are not tokens. `Card` takes props (`title`, `actions`, `footer`) while `KpiCard` and `EmptyState` use slots, so the kit has two composition styles.
 - **Recommendation:** pick one composition style for new components (props with optional slots), and use tokens for sizes.
+- **Decision:** no.
+
+> The next seven findings cover the overlays: `Confirmation`, `KeywordConfirmation`, `Tooltip`, `Toast`, the three menus and `usePopup`. Use counts in the app: `Confirmation` 10 (6 files), `KeywordConfirmation` 1, `Tooltip` 1, `DotsFloatingMenu` 1, `NotificationMenu` 1, `FloatingMenu` 0, toasts through `notify.ts`.
+
+#### TD-UI-042 · Two modal systems, and no `Modal` in the kit · High
+
+- **Code:** `Confirmation` and `KeywordConfirmation` use the native `<dialog>` with `showModal()`. Nine app modals (`StopServerDialog`, `AddModModal`, `EditModModal`, `ExportPresetModal`, `ImportModsModal`, `CreateServerModal`, `SteamDiagnosticsModal`, `SteamGuardChallengeModal`, `FaqModal`) use a `div role="dialog"` with the app hook `useModalDialog`, which re-implements Escape, the Tab focus trap, the scroll lock and a workaround for stacked native dialogs (`hasStackedDialog`). The kit has no `Modal`, `Drawer` or `Popover`.
+- **Verified:** an element appended to `body` with `z-index: 9999` (the toaster) is painted under the backdrop of an open native modal, and a hit test at its position returns the dialog. A toast raised while a `Confirmation` is open sits under the backdrop and its close button cannot be used. The same applies to every `usePopup` popup (`z-50`) rendered inside a native modal.
+- **Impact:** focus handling, scroll lock, backdrop, animation and Escape exist twice and differ. A failure toast during a native dialog breaks the feedback contract visually.
+- **Recommendation:** one kit `Modal` on the native `<dialog>`, used by every modal; `Confirmation` built on it; `useModalDialog` retired. Render toasts and popups in the top layer (the `popover` attribute) so they stack correctly.
+- **Decision (product owner):** standardize on the native `<dialog>`. This is the largest overlay change.
+
+#### TD-UI-043 · `Confirmation` and `KeywordConfirmation` · Medium
+
+- **Code:** the two components share about 70 lines (header, icon, close button, cancel and confirm buttons, timer text) and differ only by the keyword input. Both hardcode `backdrop:bg-black/50` (TD-UI-011) and `rounded-2xl`. The corner close button and `Cancel` do the same thing, and the close button uses `isIconOnly` (TD-UI-005).
+- **Code:** in `KeywordConfirmation` the input has no label (the keyword is its placeholder), and the instruction "Type ... to confirm" is a sibling paragraph not linked with `aria-describedby`.
+- **Code, to verify in the running app:** a confirm click closes the native dialog first and then calls `onConfirm`. The app passes `isLoading={mutation.isPending}` from five call sites, but by then the dialog is already closed, so the spinner and the blocked Escape are never visible. The Storybook stories cannot show this, because they unmount the dialog on confirm.
+- **Recommendation:** build both on a shared `ConfirmDialogShell`, label the keyword input, and decide the confirm flow: either keep the dialog open until the action ends (then `isLoading` works), or remove `isLoading`.
+- **Decision (product owner):** the dialog stays open with a spinner while the action runs, then closes when it ends. `isLoading` stays and must work. On failure the dialog stays open and the error toast shows (see TD-UI-042).
+
+#### TD-UI-044 · `Tooltip` · Medium
+
+- **Code:** the trigger is wrapped in an extra `span.inline-flex`, which can change the layout of the child. The tooltip opens on hover and focus only, so it never appears on a touch device. The 250 ms and 100 ms delays and `shadow-md` are hardcoded, two `data-testid` values ship in the DOM (TD-UI-038), and `children as ReactElement` is a cast with no runtime guard. It has one consumer (`SaveButton`).
+- **Decision (product owner):** a tooltip does nothing on touch devices. It is a hint for hover and keyboard focus, so essential text must not live only in a tooltip.
+- **Recommendation:** read the delays from tokens, remove the wrapper where possible, and decide the touch behavior.
+- **Decision:** no.
+
+#### TD-UI-045 · `Toast` · Medium
+
+- **Verified:** the close button is 22 × 22 px (TD-UI-021), the title is an `h3` inside a live region, and the toaster container has `z-index: 9999` while every other popup uses `z-50` (there is no z-index scale, TD-UI-042).
+- **Code:** every toast lasts 4000 ms, errors included. A failure toast is the contract's only signal of an error, and a long description can be gone before it is read. The `info` type uses the brand color (the product owner decided that `info` uses the info token everywhere, TD-UI-035). The type is `error`, while `Tag`, `StatusTag` and `NotificationMenu` say `danger` and `Notice` accepts both (four vocabularies).
+- **Decision (product owner):** an error toast stays until the user dismisses it.
+- **Recommendation:** per-type default durations, a `danger` name everywhere, and a non-heading title element.
+- **Decision:** no.
+
+#### TD-UI-046 · The three menus overlap · Medium
+
+- **Code:** `FloatingMenu` and `DotsFloatingMenu` share about 90 lines (trigger ref merge, closing when disabled, focusing the first option, arrow, Home and End handling). `FloatingMenu` supports no disabled options while `DotsFloatingMenu` does. `FloatingMenu` picks one value, as `Select` does, with a different role (`menuitemradio` against `listbox`). `DotsFloatingMenu` keys options by `label`, so two equal labels collide. The triggers are raw `button` elements with a 1 px focus ring (TD-UI-005, TD-UI-020), and `aria-controls` points at a menu that does not exist while closed (TD-UI-025). These two menus are the only popups that use `--shadow-dropdown` (TD-UI-029).
+- **Decision (product owner):** keep `FloatingMenu` (built in advance) and define the split: `Select` for form fields, `FloatingMenu` for toolbar and filter choices. Document it in the component stories.
+- **Recommendation:** one `useMenuKeyboard` hook for both, disabled options in both, and a key from a stable id.
+- **Decision:** no.
+
+#### TD-UI-047 · `NotificationMenu` · Medium
+
+- **Verified:** at a 390 px viewport the panel is 384 px wide and spans 8 to 392 px, so it overflows the right edge (more on a 360 px phone). `usePopup` returns a `maxWidth`, but the panel ignores it and uses a fixed `w-96`.
+- **Verified:** the per-item dismiss button (22 × 22 px) has `opacity: 0` at rest and appears on hover or focus, so touch users never see it.
+- **Code:** the row content is written twice (button variant and `div` variant, about 35 duplicated lines). The empty state re-implements `EmptyState`. The panel is a `role="dialog"` popover that moves focus in but does not trap it. It hardcodes `text-[10px]`, `text-[11px]` and `max-h-84`. It has one consumer (`Header`).
+- **Recommendation:** apply `maxWidth` from `usePopup` with a `w-[min(24rem,100vw-1rem)]` style size, always show the dismiss control (or show it on touch), extract one row layout, and reuse `EmptyState`.
+- **Decision:** no.
+
+#### TD-UI-048 · `usePopup` · Medium
+
+- **Code:** eight components use the hook (`Select`, `Autosuggest`, `DatePicker`, `TagInput`, `TagSelect`, `FloatingMenu`, `DotsFloatingMenu`, `NotificationMenu`), and each one re-implements the same surrounding code: ref merge (TD-UI-019), closing when disabled, focus on open, and the popup surface (TD-UI-029).
+- **Code:** the hook closes the popup on Escape through its own document listener. That is the root cause of the `TagInput` state mismatch in TD-UI-031: the component computes "open" from its own state, so after Escape its listbox stays in the DOM, hidden.
+- **Code:** popups render in `document.body` with `z-50`, so inside a native modal they fall under it (TD-UI-042).
+- **Recommendation:** make the hook return props for the trigger and the popup (ref, ARIA, keys), own the open state, and render in the top layer.
 - **Decision:** no.
 
 ## 2. Other known items (not yet audited)
