@@ -23,24 +23,25 @@ The audit follows one process per component: investigate (implementation, API, t
 
 ### Audit progress
 
-| Component                                         | Status                                                                                       |
-| :------------------------------------------------ | :------------------------------------------------------------------------------------------- |
-| Button                                            | Audited. Findings TD-UI-001 to TD-UI-009 (TD-UI-001 and TD-UI-002 closed)                    |
-| Cross-cutting scan                                | Done. Findings TD-UI-010 to TD-UI-012, TD-UI-014, TD-UI-018 to TD-UI-022                     |
-| Input, PasswordInput                              | Audited. Findings TD-UI-013, TD-UI-015 to TD-UI-017                                          |
-| Select, Checkbox, Toggle                          | Audited. Findings TD-UI-024 to TD-UI-027                                                     |
-| Autosuggest, DatePicker, TagInput, TagSelect      | Audited from the source and checked in Storybook. Findings TD-UI-023, TD-UI-028 to TD-UI-033 |
-| Card, KpiCard, Tag, StatusTag, Notice, EmptyState | Audited from the source and checked in Storybook. Findings TD-UI-034 to TD-UI-041            |
-| Confirmation, Tooltip, Toast, menus, `usePopup`   | Audited from the source and checked in Storybook. Findings TD-UI-042 to TD-UI-048            |
-| Table, TableColumnVisibility, TableBulkActions    | Audited from the source and checked in Storybook. Findings TD-UI-049 to TD-UI-054            |
-| Tabs                                              | Audited from the source and checked in Storybook. Findings TD-UI-055 to TD-UI-058            |
-| CodeEditor, CodeDiffView                          | Audited from the source and checked in Storybook. Findings TD-UI-059 to TD-UI-062            |
-| LogViewer                                         | Audited from the source and checked in Storybook. Findings TD-UI-063 to TD-UI-065            |
-| Breadcrumbs                                       | Audited from the source and checked in Storybook. Finding TD-UI-066                          |
-| FileUploader                                      | Audited from the source and checked in Storybook. Findings TD-UI-067 and TD-UI-068           |
-| HeroBanner                                        | Audited from the source and checked in Storybook. Finding TD-UI-069 (colors: TD-UI-010)      |
-| Loader                                            | Audited from the source and checked in Storybook. Finding TD-UI-070                          |
-| Remaining 3 components                            | Not yet audited: Pagination, ProgressBar, Skeleton                                           |
+| Component                                         | Status                                                                                                          |
+| :------------------------------------------------ | :-------------------------------------------------------------------------------------------------------------- |
+| Button                                            | Audited. Findings TD-UI-001 to TD-UI-009 (TD-UI-001 and TD-UI-002 closed)                                       |
+| Cross-cutting scan                                | Done. Findings TD-UI-010 to TD-UI-012, TD-UI-014, TD-UI-018 to TD-UI-022                                        |
+| Input, PasswordInput                              | Audited. Findings TD-UI-013, TD-UI-015 to TD-UI-017                                                             |
+| Select, Checkbox, Toggle                          | Audited. Findings TD-UI-024 to TD-UI-027                                                                        |
+| Autosuggest, DatePicker, TagInput, TagSelect      | Audited from the source and checked in Storybook. Findings TD-UI-023, TD-UI-028 to TD-UI-033                    |
+| Card, KpiCard, Tag, StatusTag, Notice, EmptyState | Audited from the source and checked in Storybook. Findings TD-UI-034 to TD-UI-041                               |
+| Confirmation, Tooltip, Toast, menus, `usePopup`   | Audited from the source and checked in Storybook. Findings TD-UI-042 to TD-UI-048                               |
+| Table, TableColumnVisibility, TableBulkActions    | Audited from the source and checked in Storybook. Findings TD-UI-049 to TD-UI-054                               |
+| Tabs                                              | Audited from the source and checked in Storybook. Findings TD-UI-055 to TD-UI-058                               |
+| CodeEditor, CodeDiffView                          | Audited from the source and checked in Storybook. Findings TD-UI-059 to TD-UI-062                               |
+| LogViewer                                         | Audited from the source and checked in Storybook. Findings TD-UI-063 to TD-UI-065                               |
+| Breadcrumbs                                       | Audited from the source and checked in Storybook. Finding TD-UI-066                                             |
+| FileUploader                                      | Audited from the source and checked in Storybook. Findings TD-UI-067 and TD-UI-068                              |
+| HeroBanner                                        | Audited from the source and checked in Storybook. Finding TD-UI-069 (colors: TD-UI-010)                         |
+| Loader                                            | Audited from the source and checked in Storybook. Finding TD-UI-070                                             |
+| Pagination                                        | Audited from the source and checked in Storybook. Findings TD-UI-071 and TD-UI-072 (kit strings, cross-cutting) |
+| Remaining 2 components                            | Not yet audited: ProgressBar, Skeleton                                                                          |
 
 The cross-cutting scan covered every component for deprecated React APIs, hardcoded colors, off-standard control heights, `size` props, `containerClassName` and missing tests or stories. It found no deprecated APIs (`forwardRef`, `MutableRefObject`), and every component directory has tests and stories.
 
@@ -579,6 +580,19 @@ The cross-cutting scan covered every component for deprecated React APIs, hardco
 - **Code:** `customClassName` duplicates the container class prop (TD-UI-013). The color is fixed to the brand color with no way to inherit it. The animation delays, bounce heights and sizes are inline or hardcoded (TD-UI-018). The default label "Loading..." is fixed English. Every `Loader` is a `role="status"` live region (TD-UI-036).
 - **Recommendation:** one `Loader` (or one `Spinner` primitive) used by `Button`, `Autosuggest`, `FaqModal`, `RootFallback` and `SteamDiagnosticsModal`, with a `currentColor` option, tokens for sizes, and a reduced-motion behavior (slower spin, or a non-moving indicator).
 - **Decision (product owner):** keep the `dots` and `pulse` variants.
+
+#### TD-UI-071 · `Pagination` · Medium
+
+- **Verified:** at 390 px the full footer story overflows: the last button ends at 880 px and the page becomes 880 px wide. The root is `flex` without `flex-wrap`. The one consumer (`AddModModal`) works around it with `className="flex-wrap gap-y-2"`.
+- **Verified:** a focused page button that becomes `disabled` drops focus to `body`. The consumer passes `disabled={searchMutation.isPending}`, so after a keyboard user presses a page button, every button is disabled while the search runs and focus is lost.
+- **Code:** nothing announces a page change (no live region and no focus move to the results). `role="navigation"` is redundant on `<nav>`. The buttons are raw `<button>` elements with a 2 px ring without offset (TD-UI-005, TD-UI-020). The strings ("Showing ... items", "Rows per page:", "Go to next page", "Page 3") are fixed English (see TD-UI-072). The select width `w-20` is hardcoded, and a `pageSize` that is not in `pageSizeOptions` shows an empty select. The ellipsis is the text "..." instead of one character or icon. `getPaginationItems` has no test of its own and is covered only through the component test.
+- **Recommendation:** wrap by default and stack the counter above the buttons on narrow screens, keep focus (use `aria-disabled` while loading, as the pending state is short), announce "Page 3 of 10" in a polite status, and add a unit test for `getPaginationItems`.
+- **Decision (product owner):** use `aria-disabled` while loading so keyboard focus stays on the button.
+
+#### TD-UI-072 · Kit strings are fixed English · Medium
+
+- **Code:** the kit renders user-facing English text that a consumer cannot translate without a prop on every use: "Searching...", "Clear search", "A date is required.", "Cancel", "Confirm", "Dismiss notification", "Show more breadcrumbs", "Rows per page:", "Showing ... items", "Click to upload or drag and drop", "No records found", "No options found", "Loading...", "Jump to latest", the search panel labels in the code editor and more. The web app has its own i18n resources (`apps/web/src/core/i18n`), and the product owner wants locale support for `DatePicker` (TD-UI-032).
+- **Decision (product owner):** the web app will be translated into at least Ukrainian, Polish, German, Italian and French, besides English. The kit therefore needs a way to receive its strings (a provider with a message map and English defaults), and its components must not build sentences from fragments. Plural rules differ between these languages (Ukrainian and Polish have several plural forms), so counts such as "3 items selected" need plural-aware messages. Dates and numbers follow the same locale (TD-UI-032).
 
 ## 2. Other known items (not yet audited)
 
