@@ -17,6 +17,7 @@ Every document starts with a status block. Documents describe what the code does
 | Document                                   | Content                                      |
 | :----------------------------------------- | :------------------------------------------- |
 | [Overview](architecture/overview.md)       | Stack, repository layout, runtime, decisions |
+| [Backend](architecture/backend.md)         | Daemon, API, errors, realtime, services      |
 | [Persistence](architecture/persistence.md) | SQLite schema, migrations, secrets, backups  |
 
 ## Engineering
