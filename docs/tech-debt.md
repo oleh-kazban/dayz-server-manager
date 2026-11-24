@@ -645,12 +645,12 @@ The audit read the daemon's source (36 files, about 10,300 lines), ran its tests
 
 **What is in good shape:** no `any`, `@ts-ignore`, TODO or `console` calls; typed errors with one envelope; atomic config writes with a backup limit (15 per file); transactions and state guards in the lifecycle service; path safety checks; and 615 tests in 37 files with 96.85% statement coverage (`steam.ts` at 83.6% and `steam-runner.service.ts` at 85.9% are the weakest).
 
-| Area                        | Status                                                                                                                                                     |
-| :-------------------------- | :--------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Static metrics and coverage | Done                                                                                                                                                       |
-| Auth, sessions, realtime    | Read in full                                                                                                                                               |
-| Servers, lifecycle, config  | Structure and the main paths read. The 914-line `server-fs-inspector.service.ts` and the 845-line `server-dz-config.service.ts` were not read line by line |
-| Mods, Steam                 | Structure read. The Steam runner and path service were read in full                                                                                        |
+| Area                        | Status                                                                                                                                                                                                        |
+| :-------------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Static metrics and coverage | Done                                                                                                                                                                                                          |
+| Auth, sessions, realtime    | Read in full                                                                                                                                                                                                  |
+| Servers, lifecycle, config  | Read: `servers.ts` create path, the lifecycle service structure and start path, `server-dz-config.service.ts` (load, drift, revisions), `server-fs-inspector.service.ts` (install, BattlEye and result parts) |
+| Mods, Steam                 | Read: the Steam runner, path service and settings route, the mods route structure and its helpers. The preset import and replace logic was read for structure only                                            |
 
 ### Findings
 
@@ -726,4 +726,36 @@ The audit read the daemon's source (36 files, about 10,300 lines), ran its tests
 
 - **Code:** a hash is stored as `salt:hex` (scrypt with its default cost, 64-byte key). The format has no version or cost, so raising the cost later needs a format change and a rehash on the next sign-in.
 - **Recommendation:** store `scrypt$N$r$p$salt$hash` and rehash after a successful sign-in when the cost is out of date.
+- **Decision:** no.
+
+#### TD-SRV-013 · A `GET` request writes to the database · Medium
+
+- **Code:** `GET /servers/:id/config/server-dz` calls `ServerDzConfigService.load`, which calls `recordExternalDriftIfNeeded`. When the file on disk differs from the last stored revision, the read inserts a new revision with the source `external` and also overwrites the server's `queryPort` and `maxPlayers` with the values found in the file (unless the query port collides with another server). So opening the editor page changes stored data.
+- **Impact:** a safe-looking read has side effects, concurrent opens can race on the revision list, and the stored port can change without a visible save. The behavior itself (keeping the database in step with a file edited outside Aegis) is intended.
+- **Recommendation:** keep the behavior but make it explicit: a `POST .../config/server-dz/sync` that the page calls first, or a file check at server start and at save, and keep `GET` free of writes.
+- **Decision:** no.
+
+#### TD-SRV-014 · `server-fs-inspector.service.ts`: repeated status objects and a probe that writes · Low
+
+- **Code:** the 914-line file builds each path status by hand: 28 object literals with `configuredPath`, and eight near-identical early returns that repeat the same nine fields (`executableRunnable: false` and the others). A small builder for "status plus issue" would cut the file by a large part. The code `INSTALL_DIR_MISSING` is also used for "lacks read or traverse permissions", which is a different problem.
+- **Code:** the path check is a `POST` that writes a probe file (`.dsm_fs_probe_<uuid>.tmp`) into the profile and BattlEye folders and removes it. A crash between the write and the delete leaves the file in the game folder. `inspect()` also reads `process.platform` directly instead of taking it as an input.
+- **Recommendation:** one builder for status and issue, a dedicated code for the permission case, the platform as a parameter, and a note in the response that the check writes a probe.
+- **Decision:** no.
+
+#### TD-SRV-015 · Steam settings start with guessed paths · Low
+
+- **Code:** the first read of the Steam settings stores defaults that look configured: `C:\steamcmd\steamcmd.exe`, `C:\DayZServer\steamapps\workshop` and `C:\DayZServer\steamapps` on Windows, and `/usr/games/steamcmd`, `/var/dayz/workshop` and `/var/dayz/steamapps` on Linux. Nothing checks them until the operator runs diagnostics. The backlog already plans a "not configured" state (`DSM-00340` to `DSM-00342`).
+- **Recommendation:** store no path until the operator or the auto-detection sets one, as the backlog item says.
+- **Decision:** no.
+
+#### TD-SRV-016 · The "no non-null assertion" rule is not enforced · Low
+
+- **Code:** the conventions say no `!`, but lint uses `tseslint.configs.recommended`, which does not include `no-non-null-assertion`. There are 4 in the daemon (`server-mods.ts` lines 552, 656 and 862, `steam.ts` line 98) and 3 more in the web and libraries.
+- **Recommendation:** turn on `@typescript-eslint/no-non-null-assertion` as an error and replace the seven uses with a check or a typed helper.
+- **Decision:** no.
+
+#### TD-SRV-017 · `positionAt` is written twice · Low
+
+- **Code:** `server-dz-config.service.ts` has its own `positionAt` (offset to line and column), and `libs/dayz-config` has the same logic in `DiagnosticSink.position`.
+- **Recommendation:** export one helper from `libs/dayz-config`.
 - **Decision:** no.
