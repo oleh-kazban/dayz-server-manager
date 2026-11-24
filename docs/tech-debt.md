@@ -23,18 +23,19 @@ The audit follows one process per component: investigate (implementation, API, t
 
 ### Audit progress
 
-| Component                                         | Status                                                                                                                   |
-| :------------------------------------------------ | :----------------------------------------------------------------------------------------------------------------------- |
-| Button                                            | Audited. Findings TD-UI-001 to TD-UI-009 (TD-UI-001 and TD-UI-002 closed)                                                |
-| Cross-cutting scan                                | Done. Findings TD-UI-010 to TD-UI-012, TD-UI-014, TD-UI-018 to TD-UI-022                                                 |
-| Input, PasswordInput                              | Audited. Findings TD-UI-013, TD-UI-015 to TD-UI-017                                                                      |
-| Select, Checkbox, Toggle                          | Audited. Findings TD-UI-024 to TD-UI-027                                                                                 |
-| Autosuggest, DatePicker, TagInput, TagSelect      | Audited from the source and checked in Storybook. Findings TD-UI-023, TD-UI-028 to TD-UI-033                             |
-| Card, KpiCard, Tag, StatusTag, Notice, EmptyState | Audited from the source and checked in Storybook. Findings TD-UI-034 to TD-UI-041                                        |
-| Confirmation, Tooltip, Toast, menus, `usePopup`   | Audited from the source and checked in Storybook. Findings TD-UI-042 to TD-UI-048                                        |
-| Table, TableColumnVisibility, TableBulkActions    | Audited from the source and checked in Storybook. Findings TD-UI-049 to TD-UI-054                                        |
-| Tabs                                              | Audited from the source and checked in Storybook. Findings TD-UI-055 to TD-UI-058                                        |
-| Remaining 9 components                            | Not yet audited: Breadcrumbs, CodeEditor, FileUploader, HeroBanner, Loader, LogViewer, Pagination, ProgressBar, Skeleton |
+| Component                                         | Status                                                                                                       |
+| :------------------------------------------------ | :----------------------------------------------------------------------------------------------------------- |
+| Button                                            | Audited. Findings TD-UI-001 to TD-UI-009 (TD-UI-001 and TD-UI-002 closed)                                    |
+| Cross-cutting scan                                | Done. Findings TD-UI-010 to TD-UI-012, TD-UI-014, TD-UI-018 to TD-UI-022                                     |
+| Input, PasswordInput                              | Audited. Findings TD-UI-013, TD-UI-015 to TD-UI-017                                                          |
+| Select, Checkbox, Toggle                          | Audited. Findings TD-UI-024 to TD-UI-027                                                                     |
+| Autosuggest, DatePicker, TagInput, TagSelect      | Audited from the source and checked in Storybook. Findings TD-UI-023, TD-UI-028 to TD-UI-033                 |
+| Card, KpiCard, Tag, StatusTag, Notice, EmptyState | Audited from the source and checked in Storybook. Findings TD-UI-034 to TD-UI-041                            |
+| Confirmation, Tooltip, Toast, menus, `usePopup`   | Audited from the source and checked in Storybook. Findings TD-UI-042 to TD-UI-048                            |
+| Table, TableColumnVisibility, TableBulkActions    | Audited from the source and checked in Storybook. Findings TD-UI-049 to TD-UI-054                            |
+| Tabs                                              | Audited from the source and checked in Storybook. Findings TD-UI-055 to TD-UI-058                            |
+| CodeEditor, CodeDiffView                          | Audited from the source and checked in Storybook. Findings TD-UI-059 to TD-UI-062                            |
+| Remaining 8 components                            | Not yet audited: Breadcrumbs, FileUploader, HeroBanner, Loader, LogViewer, Pagination, ProgressBar, Skeleton |
 
 The cross-cutting scan covered every component for deprecated React APIs, hardcoded colors, off-standard control heights, `size` props, `containerClassName` and missing tests or stories. It found no deprecated APIs (`forwardRef`, `MutableRefObject`), and every component directory has tests and stories.
 
@@ -481,6 +482,36 @@ The cross-cutting scan covered every component for deprecated React APIs, hardco
 
 - **Code:** the active tab changes instantly (only the color and border transition). The product pillar "modern UI/UX" names smooth animations. A sliding indicator (underline) or segment (segmented) would fit it, and it must respect the reduced-motion rule (TD-UI-034).
 - **Decision (product owner):** no sliding indicator; the instant change is fine. Closed.
+
+> The next four findings cover `CodeEditor` and `CodeDiffView` (CodeMirror 6), each used once in the app (`ServerConfigCard`, `ConfigRevisionsPanel`). This component is in good shape. **Verified** as correct: Tab leaves the editor (no keyboard trap), the content has `role="textbox"`, `aria-multiline="true"` and the label. **Code:** both are lazy-loaded in the app, every token the theme uses is defined, and the utilities and the language mode have their own tests.
+
+#### TD-UI-059 · Read-only editor and diff cannot be reached with the keyboard · High
+
+- **Verified:** in `readOnly` mode the content has `contenteditable="false"` and no `tabindex`, and the scroller has `tabindex="-1"`. Pressing Tab skips the editor, although its content scrolls. A keyboard or screen-reader user cannot scroll or select the text. `ServerConfigCard` shows the config this way whenever the user is not editing.
+- **Verified:** the diff container (`role="group"`) has `tabindex="-1"`, and the diff content is read-only, so the same applies to `CodeDiffView`.
+- **Recommendation:** add `tabindex="0"` to the read-only content (through `EditorView.contentAttributes`) and to the diff panes, and keep the visible focus style.
+- **Decision:** no.
+
+#### TD-UI-060 · The search panel and the theme do not follow the kit · Medium
+
+- **Verified:** the built-in search panel (Ctrl+F) uses 25 px high controls (kit controls are 36 px), 13 × 13 px checkboxes and an 8 × 18 px close button. Its labels are CodeMirror's English defaults ("next", "previous", "all", "match case", "regexp", "by word", "replace", "replace all"), and the app's i18n does not reach them.
+- **Code:** `aegis-theme.ts` hardcodes `12px`, `6px`, `3px`, `0.6em` and `1.6` (TD-UI-014, TD-UI-018). It reads the base tokens (`--color-danger`, `--color-warning`) while the components read the semantic `--color-status-*` tokens, so the kit has two token layers for the same colors.
+- **Recommendation:** replace the panel with one built from the kit's `Input`, `Checkbox` and `Button` (CodeMirror accepts a custom panel), with translated labels. Use named tokens for the sizes and read the semantic color tokens.
+- **Decision (product owner):** rebuild the panel from the kit components.
+
+#### TD-UI-061 · `CodeDiffView` · Medium
+
+- **Verified:** at 390 px the side-by-side layout gives two panes of 146 px each, and each scrolls sideways (373 px of content in 146 px). The unified layout fits.
+- **Code:** the whole CodeMirror instance is rebuilt whenever any prop changes. Changes are marked only by tint and gutter color (WCAG 1.4.1, use of color), and the side-by-side layout has no `+` or `-` markers. `ariaLabel` is optional, so the group can be unnamed. The component has no `ref`, so the page cannot focus it.
+- **Recommendation:** fall back to the unified layout on narrow containers, require a name, and add a text marker for added and removed lines.
+- **Decision (product owner):** the side-by-side layout switches to unified automatically on narrow containers.
+
+#### TD-UI-062 · `CodeEditor` API and large documents · Low
+
+- **Code:** it is not a form field like the other controls (TD-UI-028): there is no `label`, `id`, `name`, `required` or `error` prop and no `onBlur`. The container uses a 1 px focus ring (TD-UI-020). `onChange` serializes the whole document (`doc.toString()`) after every edit, which costs time in proportion to the file size.
+- **Not verified:** no measurement was made. The only editing consumer is `serverDZ.cfg`, which is small. This matters if large files (for example `types.xml`) get an editor.
+- **Recommendation:** give it the same field props as the other controls through the shared field shell, and revisit `onChange` (a debounced or on-demand value) before a large-file editor is built.
+- **Decision:** no.
 
 ## 2. Other known items (not yet audited)
 
