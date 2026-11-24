@@ -39,7 +39,8 @@ The audit follows one process per component: investigate (implementation, API, t
 | Breadcrumbs                                       | Audited from the source and checked in Storybook. Finding TD-UI-066                          |
 | FileUploader                                      | Audited from the source and checked in Storybook. Findings TD-UI-067 and TD-UI-068           |
 | HeroBanner                                        | Audited from the source and checked in Storybook. Finding TD-UI-069 (colors: TD-UI-010)      |
-| Remaining 4 components                            | Not yet audited: Loader, Pagination, ProgressBar, Skeleton                                   |
+| Loader                                            | Audited from the source and checked in Storybook. Finding TD-UI-070                          |
+| Remaining 3 components                            | Not yet audited: Pagination, ProgressBar, Skeleton                                           |
 
 The cross-cutting scan covered every component for deprecated React APIs, hardcoded colors, off-standard control heights, `size` props, `containerClassName` and missing tests or stories. It found no deprecated APIs (`forwardRef`, `MutableRefObject`), and every component directory has tests and stories.
 
@@ -570,6 +571,14 @@ The cross-cutting scan covered every component for deprecated React APIs, hardco
 - **Code:** `backgroundImage` goes into an inline style as `url('${backgroundImage}')` without escaping, so a URL with a quote or a parenthesis breaks the declaration. Passing `scrimClassName` replaces the whole default gradient, so a custom scrim can remove the protection that keeps the white text readable on the image. The `ref` type is `Ref<HTMLDivElement>` while `as` can be `section`, `article` or `header`. The size values are hardcoded (`min-h-[180px]`, `text-[32px]`, `text-[10px]`, `text-[13px]`, `p-6 sm:p-7`, TD-UI-014, TD-UI-018). The heading prop is `titleAs` here, `titleLevel` in `Card` and `titleAs` plus `as` in `EmptyState` (TD-UI-037). It has two composition styles (props, or nine slot components plus statics), like `EmptyState` and `KpiCard` (TD-UI-041).
 - **Recommendation:** encode the image URL (or set it through a CSS variable), keep a minimum contrast scrim whatever `scrimClassName` says, type the ref from `as`, and use tokens for sizes.
 - **Decision:** no.
+
+#### TD-UI-070 · `Loader` and the other spinners · Medium
+
+- **Verified:** with `prefers-reduced-motion: reduce` emulated, all three variants keep animating (`spin`, `loader-bounce`, `loader-pulse`). This extends TD-UI-034.
+- **Code:** the app draws a spinner in five ways. The kit `Loader` has one use (`ActiveSessionsCard`). `FaqModal` uses `Loader2` directly, `RootFallback` and `SteamDiagnosticsModal` draw a CSS ring by hand, and `Autosuggest` and `Button` use `Loader2` with their own sizes. Only the `spinner` variant is used; `dots` and `pulse` have no consumer.
+- **Code:** `customClassName` duplicates the container class prop (TD-UI-013). The color is fixed to the brand color with no way to inherit it. The animation delays, bounce heights and sizes are inline or hardcoded (TD-UI-018). The default label "Loading..." is fixed English. Every `Loader` is a `role="status"` live region (TD-UI-036).
+- **Recommendation:** one `Loader` (or one `Spinner` primitive) used by `Button`, `Autosuggest`, `FaqModal`, `RootFallback` and `SteamDiagnosticsModal`, with a `currentColor` option, tokens for sizes, and a reduced-motion behavior (slower spin, or a non-moving indicator).
+- **Decision (product owner):** keep the `dots` and `pulse` variants.
 
 ## 2. Other known items (not yet audited)
 
