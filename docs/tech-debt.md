@@ -1,10 +1,10 @@
 # Tech Debt Register
 
-|              |                                                                                       |
-| :----------- | :------------------------------------------------------------------------------------ |
-| **Status**   | Living document. The UI kit audit is in progress; the other areas are not yet audited |
-| **Verified** | Findings were checked against commit `cc0b1dd` unless an entry says otherwise         |
-| **Audience** | Maintainers and AI agents                                                             |
+|              |                                                                                    |
+| :----------- | :--------------------------------------------------------------------------------- |
+| **Status**   | Living document. The UI kit audit is complete; the other areas are not yet audited |
+| **Verified** | Findings were checked against commit `cc0b1dd` unless an entry says otherwise      |
+| **Audience** | Maintainers and AI agents                                                          |
 
 Each finding has evidence, an impact and the smallest correction. Findings are collected first and fixed one by one afterwards, in the order the product owner picks. An entry marked **Decision** needs a product or architecture decision before work starts.
 
@@ -23,26 +23,27 @@ The audit follows one process per component: investigate (implementation, API, t
 
 ### Audit progress
 
-| Component                                         | Status                                                                                                          |
-| :------------------------------------------------ | :-------------------------------------------------------------------------------------------------------------- |
-| Button                                            | Audited. Findings TD-UI-001 to TD-UI-009 (TD-UI-001 and TD-UI-002 closed)                                       |
-| Cross-cutting scan                                | Done. Findings TD-UI-010 to TD-UI-012, TD-UI-014, TD-UI-018 to TD-UI-022                                        |
-| Input, PasswordInput                              | Audited. Findings TD-UI-013, TD-UI-015 to TD-UI-017                                                             |
-| Select, Checkbox, Toggle                          | Audited. Findings TD-UI-024 to TD-UI-027                                                                        |
-| Autosuggest, DatePicker, TagInput, TagSelect      | Audited from the source and checked in Storybook. Findings TD-UI-023, TD-UI-028 to TD-UI-033                    |
-| Card, KpiCard, Tag, StatusTag, Notice, EmptyState | Audited from the source and checked in Storybook. Findings TD-UI-034 to TD-UI-041                               |
-| Confirmation, Tooltip, Toast, menus, `usePopup`   | Audited from the source and checked in Storybook. Findings TD-UI-042 to TD-UI-048                               |
-| Table, TableColumnVisibility, TableBulkActions    | Audited from the source and checked in Storybook. Findings TD-UI-049 to TD-UI-054                               |
-| Tabs                                              | Audited from the source and checked in Storybook. Findings TD-UI-055 to TD-UI-058                               |
-| CodeEditor, CodeDiffView                          | Audited from the source and checked in Storybook. Findings TD-UI-059 to TD-UI-062                               |
-| LogViewer                                         | Audited from the source and checked in Storybook. Findings TD-UI-063 to TD-UI-065                               |
-| Breadcrumbs                                       | Audited from the source and checked in Storybook. Finding TD-UI-066                                             |
-| FileUploader                                      | Audited from the source and checked in Storybook. Findings TD-UI-067 and TD-UI-068                              |
-| HeroBanner                                        | Audited from the source and checked in Storybook. Finding TD-UI-069 (colors: TD-UI-010)                         |
-| Loader                                            | Audited from the source and checked in Storybook. Finding TD-UI-070                                             |
-| Pagination                                        | Audited from the source and checked in Storybook. Findings TD-UI-071 and TD-UI-072 (kit strings, cross-cutting) |
-| ProgressBar                                       | Audited from the source and checked in Storybook. Finding TD-UI-073                                             |
-| Remaining 1 component                             | Not yet audited: Skeleton                                                                                       |
+| Component                                           | Status                                                                                                          |
+| :-------------------------------------------------- | :-------------------------------------------------------------------------------------------------------------- |
+| Button                                              | Audited. Findings TD-UI-001 to TD-UI-009 (TD-UI-001 and TD-UI-002 closed)                                       |
+| Cross-cutting scan                                  | Done. Findings TD-UI-010 to TD-UI-012, TD-UI-014, TD-UI-018 to TD-UI-022                                        |
+| Input, PasswordInput                                | Audited. Findings TD-UI-013, TD-UI-015 to TD-UI-017                                                             |
+| Select, Checkbox, Toggle                            | Audited. Findings TD-UI-024 to TD-UI-027                                                                        |
+| Autosuggest, DatePicker, TagInput, TagSelect        | Audited from the source and checked in Storybook. Findings TD-UI-023, TD-UI-028 to TD-UI-033                    |
+| Card, KpiCard, Tag, StatusTag, Notice, EmptyState   | Audited from the source and checked in Storybook. Findings TD-UI-034 to TD-UI-041                               |
+| Confirmation, Tooltip, Toast, menus, `usePopup`     | Audited from the source and checked in Storybook. Findings TD-UI-042 to TD-UI-048                               |
+| Table, TableColumnVisibility, TableBulkActions      | Audited from the source and checked in Storybook. Findings TD-UI-049 to TD-UI-054                               |
+| Tabs                                                | Audited from the source and checked in Storybook. Findings TD-UI-055 to TD-UI-058                               |
+| CodeEditor, CodeDiffView                            | Audited from the source and checked in Storybook. Findings TD-UI-059 to TD-UI-062                               |
+| LogViewer                                           | Audited from the source and checked in Storybook. Findings TD-UI-063 to TD-UI-065                               |
+| Breadcrumbs                                         | Audited from the source and checked in Storybook. Finding TD-UI-066                                             |
+| FileUploader                                        | Audited from the source and checked in Storybook. Findings TD-UI-067 and TD-UI-068                              |
+| HeroBanner                                          | Audited from the source and checked in Storybook. Finding TD-UI-069 (colors: TD-UI-010)                         |
+| Loader                                              | Audited from the source and checked in Storybook. Finding TD-UI-070                                             |
+| Pagination                                          | Audited from the source and checked in Storybook. Findings TD-UI-071 and TD-UI-072 (kit strings, cross-cutting) |
+| ProgressBar                                         | Audited from the source and checked in Storybook. Finding TD-UI-073                                             |
+| Skeleton, hooks `useSortableList` and `useDebounce` | Audited. Findings TD-UI-074 and TD-UI-075                                                                       |
+| Remaining                                           | None. The component audit is complete                                                                           |
 
 The cross-cutting scan covered every component for deprecated React APIs, hardcoded colors, off-standard control heights, `size` props, `containerClassName` and missing tests or stories. It found no deprecated APIs (`forwardRef`, `MutableRefObject`), and every component directory has tests and stories.
 
@@ -415,7 +416,7 @@ The cross-cutting scan covered every component for deprecated React APIs, hardco
 - **Recommendation:** make the hook return props for the trigger and the popup (ref, ARIA, keys), own the open state, and render in the top layer.
 - **Decision:** no.
 
-> The next five findings cover `Table`, `TableColumnVisibility` and `TableBulkActions` (one consumer: `ModsView`). The drag-and-drop hook `useSortableList` is audited with the other hooks.
+> The next five findings cover `Table`, `TableColumnVisibility` and `TableBulkActions` (one consumer: `ModsView`). The drag-and-drop hook `useSortableList` is covered in TD-UI-075.
 
 #### TD-UI-049 · `Table` accessibility · High
 
@@ -600,6 +601,21 @@ The cross-cutting scan covered every component for deprecated React APIs, hardco
 - **Verified:** with reduced motion emulated, the indeterminate bar keeps sliding (TD-UI-034). The fill has a contrast of 4.9 to 5.3 against the track in all four tested variants, which is enough. The track itself has only 1.05:1 against the page, so the full length of the bar is almost invisible.
 - **Code:** `SteamGuardChallengeModal` renders a countdown bar with no `label` and no `aria-label`, so the `role="progressbar"` has no name. The component does not require one. The root class has three names, `className`, `containerClassName` and `customClassName` (TD-UI-013), and `...props` goes to the wrapper rather than to the progressbar element. The `11px` text, the 300 ms transition and the `h-1`, `h-2` and `h-3` heights are hardcoded (TD-UI-014, TD-UI-018).
 - **Recommendation:** make `label` or `aria-label` required in the type, give the track a visible edge token, and use named tokens for the sizes and the transition.
+- **Decision:** no.
+
+#### TD-UI-074 · `Skeleton` · Low
+
+- **Verified, correct:** the `pulse` animation stops when reduced motion is on (`motion-reduce:animate-none`). It is the only animated part of the kit that does this, so it is the pattern for TD-UI-034. The `wave` shimmer is hidden with `motion-reduce:before:hidden` (not checked visually).
+- **Verified:** every skeleton is a `role="status"` region labeled "Loading...". The table placeholder story renders 14 of them and the wave story 4, so a loading screen can announce "Loading..." many times (TD-UI-036).
+- **Code:** the `wave` shimmer hardcodes `via-white/15` and 1.6 s (TD-UI-011, TD-UI-018). The last line of a multi-line skeleton is a fixed `75%`. `data-testid="skeleton"` and `"skeleton-line"` ship in the DOM (TD-UI-038). The `aria-hidden` type comment ("paired with explicit aria-busy parent") does not match the code, which only checks for `true`. The app passes fixed pixel heights copied from the final content (96, 320, 448), so a content change reintroduces layout shift. `KpiCard` draws its own skeleton instead of using this component (TD-UI-040), and `Table` has none (TD-UI-050).
+- **Recommendation:** one `role="status"` per loading area (or `aria-busy` on the container with the skeletons `aria-hidden`), tokens for the shimmer, and skeleton rows for `Table`.
+- **Decision:** no.
+
+#### TD-UI-075 · Hooks: `useSortableList` and `useDebounce` · Low
+
+- **Code:** `useSortableList` supports mouse drag and the keyboard (arrow keys on the handle, with locked rows respected, and the drop index math is correct). Native HTML drag and drop does not fire on most touch devices, so a phone user has no way to reorder columns. Nothing announces a move for screen readers (the only instruction is a `title` on the handle).
+- **Code:** `useDebounce` is minimal and correct. `usePopup` is covered in TD-UI-048. Both hooks have tests.
+- **Recommendation:** add "move up" and "move down" actions for touch (in the menu's row), and a polite status such as "Moved Name to position 3 of 7".
 - **Decision:** no.
 
 ## 2. Other known items (not yet audited)
