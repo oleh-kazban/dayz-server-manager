@@ -1,10 +1,10 @@
 # Tech Debt Register
 
-|              |                                                                                    |
-| :----------- | :--------------------------------------------------------------------------------- |
-| **Status**   | Living document. The UI kit audit is complete; the other areas are not yet audited |
-| **Verified** | Findings were checked against commit `cc0b1dd` unless an entry says otherwise      |
-| **Audience** | Maintainers and AI agents                                                          |
+|              |                                                                                            |
+| :----------- | :----------------------------------------------------------------------------------------- |
+| **Status**   | Living document. The UI kit and server audits are complete; the web app is not yet audited |
+| **Verified** | Findings were checked against commit `cc0b1dd` unless an entry says otherwise              |
+| **Audience** | Maintainers and AI agents                                                                  |
 
 Each finding has evidence, an impact and the smallest correction. Findings are collected first and fixed one by one afterwards, in the order the product owner picks. An entry marked **Decision** needs a product or architecture decision before work starts.
 
@@ -624,7 +624,7 @@ These came up while writing the documentation. Each was verified against the cod
 
 | ID    | Priority | Item                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        | Evidence                                                                                                                                                                                                                                |
 | :---- | :------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | :-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| TD-01 | Medium   | **Role checks are duplicated and cannot fail.** About 35 `ensureAdminRole` and `requireAdmin` call sites; replace with one `requireRoot` on operator endpoints (**Decision made**)                                                                                                                                                                                                                                                                                                                                                          | `apps/server/src/routes/{servers,server-mods,steam,workshop,server-config,launch-command}.ts`                                                                                                                                           |
+| TD-01 | Medium   | **Role checks are duplicated and cannot fail.** Five copies of the same no-op helper (`ensureAdminRole` in four route files, `requireAdmin` in one) and 31 call sites; replace with one `requireRoot` on operator endpoints (**Decision made**)                                                                                                                                                                                                                                                                                             | `apps/server/src/routes/{servers,server-mods,steam,workshop,server-config,launch-command}.ts`                                                                                                                                           |
 | TD-02 | Medium   | **Fonts load from Google Fonts at runtime.** Offline or LAN hosts fall back to system fonts and every page load contacts Google (**Decision**: bundle locally)                                                                                                                                                                                                                                                                                                                                                                              | `libs/ui/src/styles/fonts.css`, `apps/web/src/styles/fonts.css`                                                                                                                                                                         |
 | TD-03 | Medium   | **Node version is inconsistent.** CI runs Node 24, the README says 20 or 22, and there is no `engines` or `.nvmrc`. Target: the latest LTS (26), pinned                                                                                                                                                                                                                                                                                                                                                                                     | `.github/actions/setup-workspace/action.yml`, `README.md`, `package.json`                                                                                                                                                               |
 | TD-04 | Medium   | **README is stale.** The roadmap shows built features as unchecked and the Moderator and Viewer roles no longer exist                                                                                                                                                                                                                                                                                                                                                                                                                       | `README.md` roadmap and roles sections                                                                                                                                                                                                  |
@@ -638,3 +638,92 @@ These came up while writing the documentation. Each was verified against the cod
 | TD-12 | Low      | **Server defaults are written in several places.** Game port 2302 and RCON port 2310 appear in the contract, the database schema and migration, and the create dialog; the query port 27016 appears in the servers route (`MIN_QUERY_PORT`) and in `libs/dayz-config` (`DEFAULT_STEAM_QUERY_PORT`). They agree today                                                                                                                                                                                                                        | `libs/api-contracts/src/lib/server.contract.ts`, `libs/database/src/lib/schema.ts`, `apps/web/src/features/server-settings/CreateServerModal.tsx`, `apps/server/src/routes/servers.ts`, `libs/dayz-config/src/lib/projection.ts`        |
 | TD-13 | Medium   | **Path rules exist in four copies.** The contract `safePathSchema`, `SteamPathService.validateLexicalPath`, `server-path-safety.validateLexicalCandidate` and the launch compiler each check paths (length, `..`, control characters, absolute form) with slightly different code. `..` is rejected anywhere in the string, so a folder such as `my..mods` is refused by all of them                                                                                                                                                        | `libs/api-contracts/src/lib/server.contract.ts`, `apps/server/src/services/steam/steam-path.service.ts`, `apps/server/src/services/server/server-path-safety.ts`, `libs/dayz-config/src/lib/launch/compiler.ts`                         |
 | TD-14 | Low      | **Steam constants and fallbacks.** `getAvailableDiskSpace` returns a fixed 100 GB when `statfs` is unavailable, so the 1 GB check can pass without a real measurement. The 90 s Steam Guard timeout is written in the contract, the daemon and the web modal, and the 20 GB storage warning in the daemon and (with a 10 GB limit) in the settings page                                                                                                                                                                                     | `apps/server/src/services/steam/steam-path.service.ts`, `libs/api-contracts/src/lib/steam.contract.ts`, `apps/server/src/services/steam/steam-runner.service.ts`, `apps/web/src/features/steam/components/SteamGuardChallengeModal.tsx` |
+
+## 3. Server (`apps/server`)
+
+The audit read the daemon's source (36 files, about 10,300 lines), ran its tests with coverage, checked the dependencies, and compared it with the contracts and the web app. Findings about security that are not fixed yet are kept out of this file, in a private note. **Verified** means seen when running the code, **Code** means read from the source.
+
+**What is in good shape:** no `any`, `@ts-ignore`, TODO or `console` calls; typed errors with one envelope; atomic config writes with a backup limit (15 per file); transactions and state guards in the lifecycle service; path safety checks; and 615 tests in 37 files with 96.85% statement coverage (`steam.ts` at 83.6% and `steam-runner.service.ts` at 85.9% are the weakest).
+
+| Area                        | Status                                                                                                                                                     |
+| :-------------------------- | :--------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Static metrics and coverage | Done                                                                                                                                                       |
+| Auth, sessions, realtime    | Read in full                                                                                                                                               |
+| Servers, lifecycle, config  | Structure and the main paths read. The 914-line `server-fs-inspector.service.ts` and the 845-line `server-dz-config.service.ts` were not read line by line |
+| Mods, Steam                 | Structure read. The Steam runner and path service were read in full                                                                                        |
+
+### Findings
+
+#### TD-SRV-001 · The server and its tests do not run after a Node upgrade until a native rebuild · Medium
+
+- **Verified:** with Node 26.13.1 on this machine, all 15 tests of the first database spec failed (and every other test that opens SQLite): `better_sqlite3.node` had been built for ABI 131 (Node 23), while Node 26 needs ABI 147. `pnpm rebuild better-sqlite3` fixed it (a prebuilt binary for Node 26 exists for `better-sqlite3` 12.11.1), and then 37 files and 615 tests passed. The daemon itself would not have started either.
+- **Code:** `package.json` has no `engines` field and there is no `.nvmrc`, so nothing says which Node is expected or warns that a rebuild is needed. This extends TD-03.
+- **Recommendation:** pin Node in `engines` and `.nvmrc`, add a start-up check that turns the native-module error into a clear message ("run `pnpm rebuild better-sqlite3`"), and add the rebuild step to [getting started](engineering/getting-started.md).
+- **Decision:** no.
+
+#### TD-SRV-002 · Data paths depend on the working directory · Medium
+
+- **Code:** the database (`manager-data/database/manager.sqlite`), the vault key (`manager-data/.vault.key`) and the config backups (`manager-data/backups/configs`) are all resolved from `process.cwd()`. Starting the daemon from another folder silently creates an empty database, a new vault key and a new `admin` seed, and the old data looks lost (and its encrypted secrets cannot be read).
+- **Recommendation:** one data directory setting (`DSM_DATA_DIR`) in the validated environment, resolved once at start-up and printed in the log. The appliance layout (`manager-data` next to `app/`) makes this the default.
+- **Decision:** no.
+
+#### TD-SRV-003 · Route files hold domain logic · Medium
+
+- **Code:** `servers.ts` (794 lines), `server-mods.ts` (1,010 lines) and `steam.ts` (592 lines) contain the business rules, not only the HTTP handling: port conflict and port picking, defaults read from the disk on creation, preset merge and replace planning, and settings encryption. Lifecycle, config and Steam sign-in have services, but servers, mods and Steam settings do not.
+- **Impact:** the rules cannot be reused or tested without an HTTP request, and the route files are the longest in the daemon.
+- **Recommendation:** move them into `ServerService`, `ModService` and `SteamSettingsService`, as the lifecycle service already does. Keep the routes to parsing, calling a service and shaping the response.
+- **Decision:** no.
+
+#### TD-SRV-004 · Copied code in the daemon · Medium
+
+- **Code:** the same session-activity throttle (60 s) is written in `app.ts` (`isSessionActive`) and in the refresh route. There are two SSE implementations: `SseHub.subscribe` (no `reply.hijack()`, its own heartbeat) and `openEventStream` (hijacks the reply). The role check exists five times (TD-01), and the path rules four times (TD-13).
+- **Recommendation:** one session helper, one SSE writer used by both the hub and the per-client stream, and the central `requireRoot`.
+- **Decision:** no.
+
+#### TD-SRV-005 · Two validation styles · Low
+
+- **Code:** handlers validate with Zod `safeParse` (35 places, some through `parseOrSendError` and some as repeated inline blocks that build the same error response). Only `auth.ts` and `health.ts` also declare a Fastify JSON schema, and only they have response schemas. Other responses are shaped by hand.
+- **Recommendation:** one helper for "parse or send the error", and either Zod for request and response everywhere, or Fastify schemas generated from the contracts.
+- **Decision:** no.
+
+#### TD-SRV-006 · Expired sessions are never deleted · Low
+
+- **Code:** a session row is removed only when an operator revokes it or changes the password. Rows whose `expires_at` has passed stay in `sessions` forever, and each sign-in adds one.
+- **Recommendation:** delete expired rows at start-up and on a slow timer.
+- **Decision:** no.
+
+#### TD-SRV-007 · No `trustProxy` setting · Medium
+
+- **Code:** Fastify's `trustProxy` is not set. Behind the optional reverse proxy that the production plan allows, `request.ip` is the proxy's address, so the login rate limit (10 per minute) is shared by every client. The login route also reads `X-Forwarded-For` by hand for the session's IP, so the two disagree.
+- **Recommendation:** a `TRUST_PROXY` setting in the validated environment, used by Fastify for both the rate limit and the recorded IP, and no manual header reading.
+- **Decision:** no.
+
+#### TD-SRV-008 · An environment variable outside the schema · Low
+
+- **Code:** `config-atomic-writer.ts` reads `process.env.DSM_BACKUP_DIR`. It is not in `envSchema`, so it is not validated and not documented (see TD-SRV-002).
+- **Recommendation:** move it into the schema, or drop it for the data directory setting.
+- **Decision:** no.
+
+#### TD-SRV-009 · Silent error handling and blocking calls · Low
+
+- **Code:** 33 `catch` blocks are empty or only swallow the error (for example when a kill signal fails). Some are right (a process that already exited), but each deserves a one-line reason or a log entry. Synchronous file calls (`existsSync`, `statSync`, `readdirSync`, `statfsSync`) run inside request handlers, 17 in the Steam runner and 14 in the Steam path service, and block the event loop while they run. On a local admin tool this is minor.
+- **Recommendation:** review each empty `catch`, log at `debug` where it is deliberate, and use the promise-based `fs` API in request paths.
+- **Decision:** no.
+
+#### TD-SRV-010 · No log entry for failed sign-ins and rate-limit hits · Low
+
+- **Code:** a wrong password, an unknown user and a `429` leave no log line. An operator cannot see that someone is guessing passwords.
+- **Recommendation:** log failed sign-ins (user name, IP, reason) at `warn`, and later write them to the audit trail.
+- **Decision:** no.
+
+#### TD-SRV-011 · Dependency advisories in `fast-uri` · Low
+
+- **Verified:** `pnpm audit --prod` reports four advisories (two moderate, two low) in `fast-uri`, a transitive dependency of Fastify through `ajv`. All are fixed in `fast-uri` 3.1.9 or later.
+- **Recommendation:** add a `pnpm-workspace.yaml` override for `fast-uri`, as is done for `undici`, until Fastify updates.
+- **Decision:** no.
+
+#### TD-SRV-012 · Password hashes carry no parameters · Low
+
+- **Code:** a hash is stored as `salt:hex` (scrypt with its default cost, 64-byte key). The format has no version or cost, so raising the cost later needs a format change and a rehash on the next sign-in.
+- **Recommendation:** store `scrypt$N$r$p$salt$hash` and rehash after a successful sign-in when the cost is out of date.
+- **Decision:** no.

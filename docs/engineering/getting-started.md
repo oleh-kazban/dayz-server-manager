@@ -10,6 +10,7 @@
 
 - **Node.js:** the latest LTS (currently 26). The version is not pinned yet; pinning it in `engines` and `.nvmrc`, and aligning CI (Node 24) and the README (20 or 22), is a pending task.
 - **pnpm:** the version in the `packageManager` field of `package.json`. Run `corepack enable` to use it.
+- **After a Node upgrade:** the native SQLite module is built for one Node version. If the server or the tests fail with `compiled against a different Node.js version` (`NODE_MODULE_VERSION`), run `pnpm rebuild better-sqlite3`.
 
 ## Install and run
 
