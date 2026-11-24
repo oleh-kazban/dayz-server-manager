@@ -23,16 +23,17 @@ The audit follows one process per component: investigate (implementation, API, t
 
 ### Audit progress
 
-| Component                                         | Status                                                                                                                                |
-| :------------------------------------------------ | :------------------------------------------------------------------------------------------------------------------------------------ |
-| Button                                            | Audited. Findings TD-UI-001 to TD-UI-009 (TD-UI-001 and TD-UI-002 closed)                                                             |
-| Cross-cutting scan                                | Done. Findings TD-UI-010 to TD-UI-012, TD-UI-014, TD-UI-018 to TD-UI-022                                                              |
-| Input, PasswordInput                              | Audited. Findings TD-UI-013, TD-UI-015 to TD-UI-017                                                                                   |
-| Select, Checkbox, Toggle                          | Audited. Findings TD-UI-024 to TD-UI-027                                                                                              |
-| Autosuggest, DatePicker, TagInput, TagSelect      | Audited from the source and checked in Storybook. Findings TD-UI-023, TD-UI-028 to TD-UI-033                                          |
-| Card, KpiCard, Tag, StatusTag, Notice, EmptyState | Audited from the source and checked in Storybook. Findings TD-UI-034 to TD-UI-041                                                     |
-| Confirmation, Tooltip, Toast, menus, `usePopup`   | Audited from the source and checked in Storybook. Findings TD-UI-042 to TD-UI-048                                                     |
-| Remaining 11 components                           | Not yet audited: Breadcrumbs, CodeEditor, FileUploader, HeroBanner, Loader, LogViewer, Pagination, ProgressBar, Skeleton, Table, Tabs |
+| Component                                         | Status                                                                                                                         |
+| :------------------------------------------------ | :----------------------------------------------------------------------------------------------------------------------------- |
+| Button                                            | Audited. Findings TD-UI-001 to TD-UI-009 (TD-UI-001 and TD-UI-002 closed)                                                      |
+| Cross-cutting scan                                | Done. Findings TD-UI-010 to TD-UI-012, TD-UI-014, TD-UI-018 to TD-UI-022                                                       |
+| Input, PasswordInput                              | Audited. Findings TD-UI-013, TD-UI-015 to TD-UI-017                                                                            |
+| Select, Checkbox, Toggle                          | Audited. Findings TD-UI-024 to TD-UI-027                                                                                       |
+| Autosuggest, DatePicker, TagInput, TagSelect      | Audited from the source and checked in Storybook. Findings TD-UI-023, TD-UI-028 to TD-UI-033                                   |
+| Card, KpiCard, Tag, StatusTag, Notice, EmptyState | Audited from the source and checked in Storybook. Findings TD-UI-034 to TD-UI-041                                              |
+| Confirmation, Tooltip, Toast, menus, `usePopup`   | Audited from the source and checked in Storybook. Findings TD-UI-042 to TD-UI-048                                              |
+| Table, TableColumnVisibility, TableBulkActions    | Audited from the source and checked in Storybook. Findings TD-UI-049 to TD-UI-054                                              |
+| Remaining 10 components                           | Not yet audited: Breadcrumbs, CodeEditor, FileUploader, HeroBanner, Loader, LogViewer, Pagination, ProgressBar, Skeleton, Tabs |
 
 The cross-cutting scan covered every component for deprecated React APIs, hardcoded colors, off-standard control heights, `size` props, `containerClassName` and missing tests or stories. It found no deprecated APIs (`forwardRef`, `MutableRefObject`), and every component directory has tests and stories.
 
@@ -403,6 +404,53 @@ The cross-cutting scan covered every component for deprecated React APIs, hardco
 - **Code:** the hook closes the popup on Escape through its own document listener. That is the root cause of the `TagInput` state mismatch in TD-UI-031: the component computes "open" from its own state, so after Escape its listbox stays in the DOM, hidden.
 - **Code:** popups render in `document.body` with `z-50`, so inside a native modal they fall under it (TD-UI-042).
 - **Recommendation:** make the hook return props for the trigger and the popup (ref, ARIA, keys), own the open state, and render in the top layer.
+- **Decision:** no.
+
+> The next five findings cover `Table`, `TableColumnVisibility` and `TableBulkActions` (one consumer: `ModsView`). The drag-and-drop hook `useSortableList` is audited with the other hooks.
+
+#### TD-UI-049 · `Table` accessibility · High
+
+- **Verified:** the scroll region (`role="region"`) has no `tabindex`, though it carries focus styles. A keyboard user cannot scroll a table that is wider than its container.
+- **Verified:** `aria-selected` is set on three `<tr>` elements in a plain table. ARIA allows it on rows only in a `grid` or `treegrid`, so the selection is not announced.
+- **Verified:** a sortable `<th>` is a clickable cell with `role="columnheader"` and `tabindex="0"`, with no button inside. Enter sorts and a 2 px focus ring shows, but assistive technology does not announce a control.
+- **Code:** when a consumer passes `aria-label` (`ModsView` does), the region and the `<table>` both receive it, so the name is read twice. `isClickable` rows only change the cursor: they have no keyboard access and no role.
+- **Recommendation:** make the region focusable (`tabIndex={0}`) and name only one element, put a `<button>` inside sortable headers (keep `aria-sort` on the `<th>`), show selection with a checkbox column instead of `aria-selected`, and open a clickable row from a link or button in its first cell.
+- **Decision:** no.
+
+#### TD-UI-050 · `Table` API · Medium
+
+- **Code:** in `TableHead`, `{...props}` is spread after the internal `onClick`, `onKeyDown` and `tabIndex`. A consumer's `onKeyDown` therefore replaces the sort key handler (the handler calls `props.onKeyDown` itself, but the spread then overwrites it).
+- **Code:** `TableSortDirection` is `'asc' | 'desc' | false | null`, plus `undefined`: `false` means sortable but unsorted, `undefined` means not sortable (unless `onSort` is set), `null` shows no icon. Three "not sorted" values.
+- **Code:** `TableEmptyProps` declares `children`, `aria-label` and `data-testid`, and `children` is never rendered. `TableEmpty` uses an `h5` for its title (see TD-UI-037). Every sub-component type repeats `className` and `children`, which `HTMLAttributes` already has.
+- **Code:** the column checkboxes get the id `col-toggle-<column id>`, which collides when two tables share a page. The table has no loading state (skeleton rows) and no sticky header. `first:pl-5 last:pr-5` and the row paddings are hardcoded (TD-UI-018).
+- **Recommendation:** spread `props` first, then the internal handlers, and use one sort-state type (`'asc' | 'desc' | 'none'`, with sortability from `onSort`). Add a loading state, because every list needs one for the feedback rules.
+- **Decision:** no.
+
+#### TD-UI-051 · Empty states are built four times · Medium
+
+- **Code:** `TableEmpty`, `NotificationEmptyState` (in `NotificationMenu`), `EmptyState`, and the plain text rows in `TagSelect` all draw an icon circle, a title and a description with different sizes and heading levels (`h5`, `p`, `h3`).
+- **Recommendation:** `TableEmpty` and `NotificationMenu` render `EmptyState` with a compact variant.
+- **Decision:** no.
+
+#### TD-UI-052 · `TableColumnVisibility` · Medium
+
+- **Verified:** after the menu opens, focus stays on the trigger and does not move to the search field. The focus effect runs while the popup is still `visibility: hidden`, so `focus()` has no effect (`DatePicker` avoids this by waiting for the position).
+- **Verified:** the search field has no label. "Show all" and "Reset to default" are raw buttons of 48 × 16 px and 89 × 16 px (TD-UI-021) styled as links. They should use the `text` `Button` variant (TD-UI-007). The reorder handle is 22 × 22 px. At 390 px the panel fits (8 to 296 px).
+- **Code:** Escape is handled twice (the component and `usePopup`). `w-72`, `maxHeight ?? 400`, `text-[10px]` and `text-[11px]` are hardcoded. The panel is the second copy of "search inside a popup" (`TagSelect` has the first). A stale comment refers to an image, "Header matching Editor.png". The popup uses `animate-in` (TD-UI-034).
+- **Recommendation:** focus the field once the popup is positioned, use `Input` and `Button` inside the panel, and share the popup shell (TD-UI-029).
+- **Decision:** no.
+
+#### TD-UI-053 · `TableBulkActions` · Low
+
+- **Verified (also in the product owner's screenshots):** the bar overflows and its items overlap. At 390 px "Bulk edit" and "Clear selection" overlap. In a wider container (about 470 px) "Clear selection" overlaps "Delete". The action group is `whitespace-nowrap` with `min-w-0` and the clear button is `shrink-0`, so nothing wraps or shrinks. The bar needs to wrap its actions (or scroll them) at any width.
+- **Code:** no consumer (keep: built in advance). The selected count is not in a live region, so a screen reader does not hear it change. The region name "Table bulk actions" and the "item(s) selected" plural are fixed English text. The clear button is a raw 36 px button (TD-UI-005, TD-UI-007), and `px-5` repeats the table's cell padding as a magic number.
+- **Recommendation:** make the count a polite live region, take the strings as props with defaults, and use the kit `Button`.
+- **Decision:** no.
+
+#### TD-UI-054 · `Table` on phones · Medium
+
+- **Verified:** at 390 px the content (458 px) scrolls inside its region (286 px). The page itself does not overflow.
+- **Decision (product owner):** horizontal scrolling inside the table is acceptable on phones. The fixed-size parts around it (the bulk actions bar, TD-UI-053) must still not overflow.
 - **Decision:** no.
 
 ## 2. Other known items (not yet audited)
