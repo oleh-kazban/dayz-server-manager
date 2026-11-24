@@ -108,7 +108,7 @@ What works today:
 What does not exist yet:
 
 - **Downloading** mods with SteamCMD, with progress (`DSM-00133`). The operator places the `@folder` on disk today.
-- **Keys.** DayZ checks a player's mod signature against a `.bikey` file in the server's `keys/` folder. Aegis does not touch that folder yet. The old design and the backlog disagree on how to do it: the old design linked keys with symlinks or hardlinks and rebuilt all links after every change (with a `mod_keys` table), while the backlog says to copy a mod's `.bikey` into `keys/` when the mod is enabled and remove it when the mod is disabled or removed (`DSM-00337`, `DSM-00338`). _Undecided._ Both have to handle two mods that ship a key with the same name, and a key renamed by a mod update.
+- **Keys.** DayZ checks a player's mod signature against a `.bikey` file in the server's `keys/` folder. Aegis does not touch that folder yet. _Decided:_ Aegis **copies** a mod's `.bikey` into `keys/` when the mod is enabled and removes the copy when the mod is disabled or removed (`DSM-00337`, `DSM-00338`). It does not use symlinks or hardlinks: creating a symlink on Windows needs an administrator or Developer Mode, and a hardlink works only inside one volume and keeps pointing at the old data after an update. Aegis records what it copied (key name, source and hash), copies again when a mod update changes a key, and removes only its own copies, never the vanilla keys. Two mods that ship a key with the same name, and a key renamed by an update, still need rules when this is built.
 
 ## 6. BattlEye and RCON
 
@@ -143,4 +143,4 @@ These come from the old design and the [backlog](../product/backlog.md). None ha
 - **ADM parsing.** Player events with coordinates, chat and kills, from the ADM log. Backlog: `DSM-00212`.
 - **World map and loot heatmap.** DayZ coordinates start at the south-west corner, with Y growing to the north, so a map layer must flip Y. Map sizes and the loot point source (`mapgrouppos.xml`, `mapgroupproto.xml`) are to be checked when the map is built. Backlog: `DSM-00141` and its stories.
 - **Server FPS from the RPT log, telemetry, the A2S query and a watchdog.** Backlog: `DSM-00114`, `DSM-00139`.
-- **Key handling for mods**, see section 5.
+- **Key handling for mods**, see section 5 (decided, not built).

@@ -14,14 +14,15 @@ Every document starts with a status block. Documents describe what the code does
 
 ## Architecture
 
-| Document                                   | Content                                         |
-| :----------------------------------------- | :---------------------------------------------- |
-| [Overview](architecture/overview.md)       | Stack, repository layout, runtime, decisions    |
-| [Backend](architecture/backend.md)         | Daemon, API, errors, realtime, services         |
-| [Frontend](architecture/frontend.md)       | Providers, routing, state, realtime, forms      |
-| [Steam](architecture/steam.md)             | Steam settings, SteamCMD sign-in, Workshop API  |
-| [DayZ domain](architecture/dayz-domain.md) | Config, launch command, mods, BattlEye and RCON |
-| [Persistence](architecture/persistence.md) | SQLite schema, migrations, secrets, backups     |
+| Document                                                       | Content                                         |
+| :------------------------------------------------------------- | :---------------------------------------------- |
+| [Overview](architecture/overview.md)                           | Stack, repository layout, runtime, decisions    |
+| [Backend](architecture/backend.md)                             | Daemon, API, errors, realtime, services         |
+| [Frontend](architecture/frontend.md)                           | Providers, routing, state, realtime, forms      |
+| [Appliance and updater](architecture/appliance-and-updater.md) | Packaging, services, updater, backups (planned) |
+| [Steam](architecture/steam.md)                                 | Steam settings, SteamCMD sign-in, Workshop API  |
+| [DayZ domain](architecture/dayz-domain.md)                     | Config, launch command, mods, BattlEye and RCON |
+| [Persistence](architecture/persistence.md)                     | SQLite schema, migrations, secrets, backups     |
 
 ## Engineering
 
