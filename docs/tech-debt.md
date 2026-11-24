@@ -23,14 +23,15 @@ The audit follows one process per component: investigate (implementation, API, t
 
 ### Audit progress
 
-| Component                                    | Status                                                                                       |
-| :------------------------------------------- | :------------------------------------------------------------------------------------------- |
-| Button                                       | Audited. Findings TD-UI-001 to TD-UI-009 (TD-UI-001 and TD-UI-002 closed)                    |
-| Cross-cutting scan                           | Done. Findings TD-UI-010 to TD-UI-012, TD-UI-014, TD-UI-018 to TD-UI-022                     |
-| Input, PasswordInput                         | Audited. Findings TD-UI-013, TD-UI-015 to TD-UI-017                                          |
-| Select, Checkbox, Toggle                     | Audited. Findings TD-UI-024 to TD-UI-027                                                     |
-| Autosuggest, DatePicker, TagInput, TagSelect | Audited from the source and checked in Storybook. Findings TD-UI-023, TD-UI-028 to TD-UI-033 |
-| Remaining 22 components                      | Not yet audited                                                                              |
+| Component                                         | Status                                                                                       |
+| :------------------------------------------------ | :------------------------------------------------------------------------------------------- |
+| Button                                            | Audited. Findings TD-UI-001 to TD-UI-009 (TD-UI-001 and TD-UI-002 closed)                    |
+| Cross-cutting scan                                | Done. Findings TD-UI-010 to TD-UI-012, TD-UI-014, TD-UI-018 to TD-UI-022                     |
+| Input, PasswordInput                              | Audited. Findings TD-UI-013, TD-UI-015 to TD-UI-017                                          |
+| Select, Checkbox, Toggle                          | Audited. Findings TD-UI-024 to TD-UI-027                                                     |
+| Autosuggest, DatePicker, TagInput, TagSelect      | Audited from the source and checked in Storybook. Findings TD-UI-023, TD-UI-028 to TD-UI-033 |
+| Card, KpiCard, Tag, StatusTag, Notice, EmptyState | Audited from the source and checked in Storybook. Findings TD-UI-034 to TD-UI-041            |
+| Remaining 16 components                           | Not yet audited                                                                              |
 
 The cross-cutting scan covered every component for deprecated React APIs, hardcoded colors, off-standard control heights, `size` props, `containerClassName` and missing tests or stories. It found no deprecated APIs (`forwardRef`, `MutableRefObject`), and every component directory has tests and stories.
 
@@ -273,7 +274,7 @@ The cross-cutting scan covered every component for deprecated React APIs, hardco
   - `react-day-picker/style.css` is imported in full and then overridden by `classNames`, inline `--rdp-*` variables and `[&_.rdp-...]` selectors. Sizes (28 px), `text-[10px]` and colors are hardcoded (TD-UI-014, TD-UI-018).
   - Both month buttons repeat the same class string. The clear button is about 22 px with no focus style.
   - The validation messages ("A date is required.") are fixed English strings.
-  - The component exposes no locale or week-start option. **Decision needed:** is a locale requirement planned?
+  - The component exposes no locale or week-start option. **Decision (product owner):** locale support is wanted.
 - **Recommendation:** name the trigger from the visible label (`aria-labelledby`), drop the duplicated style overrides, and decide on locale support.
 - **Decision:** no.
 
@@ -286,6 +287,65 @@ The cross-cutting scan covered every component for deprecated React APIs, hardco
   - "Searching...", "Clear search" and the default placeholder are fixed English strings.
   - The input uses `focus:ring-1` (TD-UI-020), `text-xs` and `text-[11px]` (TD-UI-014).
 - **Recommendation:** apply the shared decisions from TD-UI-020 to TD-UI-022.
+- **Decision:** no.
+
+> The next eight findings cover the display components. The labels are the same: **Verified** (seen in Storybook), **Code** (read from the source).
+
+#### TD-UI-034 · Reduced-motion preference is ignored · Medium
+
+- **Verified:** with `prefers-reduced-motion: reduce` emulated, `StatusTag` still runs `animate-ping` and the `KpiCard` skeleton still runs `animate-pulse`. Only two custom animations (`animate-bell-ring`, `animate-popup-enter`) have a reduced-motion rule in `keyframes.css`.
+- **Code:** the same Tailwind utilities (`animate-spin`, `animate-pulse`, `animate-ping`, `animate-in`) are used by `Button`, `Loader`, `Skeleton`, `ProgressBar`, `NotificationMenu`, `Autosuggest`, `TagInput`, `TagSelect` and `TableColumnVisibility`.
+- **Impact:** users who ask the system for less motion still get continuous animation. The design system lists reduced motion as an accessibility rule.
+- **Recommendation:** one global `prefers-reduced-motion` rule in the kit styles that disables or shortens animation and transition durations, with a test or story note.
+- **Decision:** no.
+
+#### TD-UI-035 · Semantic color maps are copied between `Tag`, `StatusTag` and `Notice` · Medium
+
+- **Code:** `Tag` and `StatusTag` each hold the same three maps (subtle, solid, outline) over the same six colors, plus identical shape maps and icon renderers (`renderTagIcon`, `renderStatusTagIcon`). `Notice` holds a fourth copy of the subtle map. `Tag` has a `neutral` variant that duplicates `variant="subtle"` with `color="default"`. `Tag` and `StatusTag` both use `customClassName || className`.
+- **Impact:** a color change must be made in three files. `StatusTag` is a `Tag` with a dot, so it can be built on `Tag`.
+- **Recommendation:** one shared tone map (`tone.utils.ts`) used by all three, `StatusTag` composed from `Tag`, and `neutral` removed.
+- **Open question:** `Notice` with `variant="info"` uses the brand color (`--color-primary`), while `Tag` and `StatusTag` use `--color-status-info`. **Decision (product owner):** `info` uses the info token everywhere, for consistency.
+- **Decision:** no.
+
+#### TD-UI-036 · `StatusTag` is a live region by default, and `Tag` names a plain `span` · Medium
+
+- **Verified:** one `StatusTag` story renders 22 elements with `role="status"`. In a table of servers, every tag becomes a live region, so a screen reader may announce many changes at once.
+- **Code:** `Tag` accepts `aria-label` on a `span` with no role. ARIA does not allow a name on a generic element, so assistive technology ignores it.
+- **Recommendation:** make `role` opt-in on `StatusTag` (use it for a single indicator that changes while the user watches). Drop `aria-label` from `Tag`, or give the element a role when a name is passed.
+- **Decision:** no.
+
+#### TD-UI-037 · `Notice` ARIA and heading · Medium
+
+- **Verified:** the `warning` notice has `role="alert"` and `aria-live="polite"`, which contradict each other (an alert is assertive). `error` is `alert` and `assertive`, `info` is `status` and `polite`.
+- **Verified:** the title is always an `h5`. `Card` offers `titleLevel` and `EmptyState` offers `titleAs` for the same purpose, so three components solve the heading level in three ways.
+- **Code:** `variant` accepts both `error` and `danger` (an alias). The app passes `error` 8 times and never `danger`. The other components use `danger`. The close button is a hardcoded 36 px square with a 1 px focus ring (TD-UI-020).
+- **Recommendation:** drop the `aria-live` override and let the role decide (warning becomes `status` unless it blocks work). Use one heading prop name (`titleAs`) with a sensible default in all three components. Settle on `danger` as the only name and migrate the 8 call sites.
+- **Decision:** no.
+
+#### TD-UI-038 · Test hooks ship in the production DOM · Low
+
+- **Verified:** `data-testid="kpi-sparkline"` is present in the rendered `KpiCard`. **Code:** `kpi-skeleton`, `empty-state-icon`, `hero-banner-bg` and `hero-banner-scrim` are the same. The testing rules say to query by role, label and text.
+- **Recommendation:** remove the fixed test IDs from the components and let tests query by role or by a passed-in `data-testid`.
+- **Decision:** no.
+
+#### TD-UI-039 · `Tag` small details · Low
+
+- **Verified:** the remove button is 18 × 18 px (TD-UI-021). **Code:** the tag has a hardcoded negative margin (`-mr-[7px]`), a 1 px `ring-current` focus ring (TD-UI-020), and uses `rounded-md` while form controls use `rounded-lg`. `title` is passed through, but a truncated tag has no tooltip by default.
+- **Recommendation:** make the remove button an icon-only `Button` (TD-UI-005), and replace the margin with a spacing token.
+- **Decision:** no.
+
+#### TD-UI-040 · `KpiCard` · Medium
+
+- **Verified:** the component has no consumer in the app (0 uses). **Verified:** the loading skeleton has no `aria-busy`, no role and no text, so assistive technology reads nothing.
+- **Code:** hardcoded `min-h-[114px]`, `text-[27px]`, sparkline defaults of 94 × 35 and stroke width 2 (TD-UI-014, TD-UI-018). `aria-label` and `aria-labelledby` are set on a `div` with no role. The sparkline `svg` block is written twice (children and data variants). `isLoading` replaces children, so a compound card cannot show a skeleton of its own shape.
+- **Recommendation:** **Decision (product owner):** keep it; it was built in advance for a planned feature. Then add `role="group"`, a loading label, tokens for size and one sparkline element.
+- **Decision:** no.
+
+#### TD-UI-041 · `Card` and `EmptyState` · Low
+
+- **Verified:** `EmptyState` has no consumer in the app (0 uses), and `Card` has one file with two uses. **Decision (product owner):** keep `EmptyState`; it was built in advance for a planned feature.
+- **Code:** `Card` renders `children &&`, so a child of `0` shows nothing, uses a type assertion for `ref` and has a fixed `p-5` with no density option. `EmptyState` has `text-sm sm:text-base`, `sm:text-[13px]` and fixed widths (`max-w-sm`, `max-w-md`) that are not tokens. `Card` takes props (`title`, `actions`, `footer`) while `KpiCard` and `EmptyState` use slots, so the kit has two composition styles.
+- **Recommendation:** pick one composition style for new components (props with optional slots), and use tokens for sizes.
 - **Decision:** no.
 
 ## 2. Other known items (not yet audited)
