@@ -23,20 +23,21 @@ The audit follows one process per component: investigate (implementation, API, t
 
 ### Audit progress
 
-| Component                                         | Status                                                                                            |
-| :------------------------------------------------ | :------------------------------------------------------------------------------------------------ |
-| Button                                            | Audited. Findings TD-UI-001 to TD-UI-009 (TD-UI-001 and TD-UI-002 closed)                         |
-| Cross-cutting scan                                | Done. Findings TD-UI-010 to TD-UI-012, TD-UI-014, TD-UI-018 to TD-UI-022                          |
-| Input, PasswordInput                              | Audited. Findings TD-UI-013, TD-UI-015 to TD-UI-017                                               |
-| Select, Checkbox, Toggle                          | Audited. Findings TD-UI-024 to TD-UI-027                                                          |
-| Autosuggest, DatePicker, TagInput, TagSelect      | Audited from the source and checked in Storybook. Findings TD-UI-023, TD-UI-028 to TD-UI-033      |
-| Card, KpiCard, Tag, StatusTag, Notice, EmptyState | Audited from the source and checked in Storybook. Findings TD-UI-034 to TD-UI-041                 |
-| Confirmation, Tooltip, Toast, menus, `usePopup`   | Audited from the source and checked in Storybook. Findings TD-UI-042 to TD-UI-048                 |
-| Table, TableColumnVisibility, TableBulkActions    | Audited from the source and checked in Storybook. Findings TD-UI-049 to TD-UI-054                 |
-| Tabs                                              | Audited from the source and checked in Storybook. Findings TD-UI-055 to TD-UI-058                 |
-| CodeEditor, CodeDiffView                          | Audited from the source and checked in Storybook. Findings TD-UI-059 to TD-UI-062                 |
-| LogViewer                                         | Audited from the source and checked in Storybook. Findings TD-UI-063 to TD-UI-065                 |
-| Remaining 7 components                            | Not yet audited: Breadcrumbs, FileUploader, HeroBanner, Loader, Pagination, ProgressBar, Skeleton |
+| Component                                         | Status                                                                                       |
+| :------------------------------------------------ | :------------------------------------------------------------------------------------------- |
+| Button                                            | Audited. Findings TD-UI-001 to TD-UI-009 (TD-UI-001 and TD-UI-002 closed)                    |
+| Cross-cutting scan                                | Done. Findings TD-UI-010 to TD-UI-012, TD-UI-014, TD-UI-018 to TD-UI-022                     |
+| Input, PasswordInput                              | Audited. Findings TD-UI-013, TD-UI-015 to TD-UI-017                                          |
+| Select, Checkbox, Toggle                          | Audited. Findings TD-UI-024 to TD-UI-027                                                     |
+| Autosuggest, DatePicker, TagInput, TagSelect      | Audited from the source and checked in Storybook. Findings TD-UI-023, TD-UI-028 to TD-UI-033 |
+| Card, KpiCard, Tag, StatusTag, Notice, EmptyState | Audited from the source and checked in Storybook. Findings TD-UI-034 to TD-UI-041            |
+| Confirmation, Tooltip, Toast, menus, `usePopup`   | Audited from the source and checked in Storybook. Findings TD-UI-042 to TD-UI-048            |
+| Table, TableColumnVisibility, TableBulkActions    | Audited from the source and checked in Storybook. Findings TD-UI-049 to TD-UI-054            |
+| Tabs                                              | Audited from the source and checked in Storybook. Findings TD-UI-055 to TD-UI-058            |
+| CodeEditor, CodeDiffView                          | Audited from the source and checked in Storybook. Findings TD-UI-059 to TD-UI-062            |
+| LogViewer                                         | Audited from the source and checked in Storybook. Findings TD-UI-063 to TD-UI-065            |
+| Breadcrumbs                                       | Audited from the source and checked in Storybook. Finding TD-UI-066                          |
+| Remaining 6 components                            | Not yet audited: FileUploader, HeroBanner, Loader, Pagination, ProgressBar, Skeleton         |
 
 The cross-cutting scan covered every component for deprecated React APIs, hardcoded colors, off-standard control heights, `size` props, `containerClassName` and missing tests or stories. It found no deprecated APIs (`forwardRef`, `MutableRefObject`), and every component directory has tests and stories.
 
@@ -533,6 +534,14 @@ The cross-cutting scan covered every component for deprecated React APIs, hardco
 - **Code:** `height` is a fixed pixel number, so the viewer cannot fill the available space or follow the viewport on a phone. `label` and `emptyMessage` use different names from the rest of the kit (`ariaLabel`, `emptyText`). Severity colors use the base tokens `--color-danger` and `--color-warning` (the two token layers in TD-UI-060). The row height, overscan and `text-xs` are named constants or classes, but not tokens (TD-UI-018). The default `detectLogSeverity` matches the word "error" anywhere, so a line such as a player named "Error" is colored as an error.
 - **Recommendation:** accept a CSS height (or fill the parent), unify the prop names, read the semantic color tokens, and anchor the severity match to the log format.
 - **Decision:** no.
+
+#### TD-UI-066 · `Breadcrumbs` is unused while the header builds its own · Medium
+
+- **Code:** the kit component has no consumer. `Header.tsx` renders its own `<nav aria-label="Breadcrumb">` with the router `Link` and a `ChevronRight`, as plain elements, not a list. The kit version cannot take a router link directly: `BreadcrumbLink` renders `<a href>` and, with `asChild`, only merges `className` into the child (the other props are not forwarded).
+- **Verified:** the ellipsis button is 18 × 18 px and a text link is 16 px high (TD-UI-021). After the ellipsis is clicked the trail cannot collapse again. It fits at 320 px.
+- **Code:** the collapse does not check that anything is hidden: with `maxItems` just below the item count, the ellipsis can replace nothing. The current page is a `span` with `role="link"` and `aria-disabled`, where `aria-current="page"` alone is enough. `ref` is accepted by the link type but forwarded only for `<a>`. The ellipsis label "Show more breadcrumbs" is fixed English, and the focus ring is 1 px (TD-UI-020).
+- **Recommendation:** make the kit component fit the router (`asChild` forwarding all props, or a `renderLink` prop), replace the header's inline trail with it, and fix the collapse and the markup.
+- **Decision (product owner):** yes, replace the header's inline trail with the kit `Breadcrumbs` once the router fit is fixed.
 
 ## 2. Other known items (not yet audited)
 
