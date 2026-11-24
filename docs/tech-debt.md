@@ -38,7 +38,8 @@ The audit follows one process per component: investigate (implementation, API, t
 | LogViewer                                         | Audited from the source and checked in Storybook. Findings TD-UI-063 to TD-UI-065            |
 | Breadcrumbs                                       | Audited from the source and checked in Storybook. Finding TD-UI-066                          |
 | FileUploader                                      | Audited from the source and checked in Storybook. Findings TD-UI-067 and TD-UI-068           |
-| Remaining 5 components                            | Not yet audited: HeroBanner, Loader, Pagination, ProgressBar, Skeleton                       |
+| HeroBanner                                        | Audited from the source and checked in Storybook. Finding TD-UI-069 (colors: TD-UI-010)      |
+| Remaining 4 components                            | Not yet audited: Loader, Pagination, ProgressBar, Skeleton                                   |
 
 The cross-cutting scan covered every component for deprecated React APIs, hardcoded colors, off-standard control heights, `size` props, `containerClassName` and missing tests or stories. It found no deprecated APIs (`forwardRef`, `MutableRefObject`), and every component directory has tests and stories.
 
@@ -561,6 +562,14 @@ The cross-cutting scan covered every component for deprecated React APIs, hardco
 - **Code:** `customClassName` is marked "Legacy" in its own type (TD-UI-013), and `className` styles the drop zone or the file card depending on the state. The error text is 12 px with an icon, a fourth error style (TD-UI-022). The messages are fixed English. `text-[11px]`, `border-2` and `p-6` are hardcoded (TD-UI-018). The component only selects a file, with no upload or progress, despite its name. The code carries "GUARD-01" to "GUARD-03" comments that add noise. It reports a rejected file through `onError` and an inline message, and the consumer must add the red toast required by the feedback contract.
 - **Recommendation:** remove `customClassName`, share the field shell and the error style, and add the message for extra files.
 - **Decision (product owner):** when several files are dropped, the component says that only one is used ("Only one file is allowed. Using preset.json.").
+
+#### TD-UI-069 · `HeroBanner` · Low
+
+- **Context:** no page uses it. The product owner's rule is to keep components built in advance for a planned feature. The colors are covered by TD-UI-010. Whether it gets a role is the open "section voice" question in the design system document.
+- **Verified:** at 390 px the banner fits (no page overflow) and the background image request succeeds. The banner is dark in every theme, because the default scrim is a fixed dark gradient (this is the exception TD-UI-010 asks to document).
+- **Code:** `backgroundImage` goes into an inline style as `url('${backgroundImage}')` without escaping, so a URL with a quote or a parenthesis breaks the declaration. Passing `scrimClassName` replaces the whole default gradient, so a custom scrim can remove the protection that keeps the white text readable on the image. The `ref` type is `Ref<HTMLDivElement>` while `as` can be `section`, `article` or `header`. The size values are hardcoded (`min-h-[180px]`, `text-[32px]`, `text-[10px]`, `text-[13px]`, `p-6 sm:p-7`, TD-UI-014, TD-UI-018). The heading prop is `titleAs` here, `titleLevel` in `Card` and `titleAs` plus `as` in `EmptyState` (TD-UI-037). It has two composition styles (props, or nine slot components plus statics), like `EmptyState` and `KpiCard` (TD-UI-041).
+- **Recommendation:** encode the image URL (or set it through a CSS variable), keep a minimum contrast scrim whatever `scrimClassName` says, type the ref from `as`, and use tokens for sizes.
+- **Decision:** no.
 
 ## 2. Other known items (not yet audited)
 
