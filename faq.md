@@ -1,22 +1,22 @@
 # DayZ Server Operator Cheatsheet & FAQ
 
-A comprehensive operational guide for managing, configuring, and maintaining DayZ Dedicated Servers with DayZ Server Manager (DSM).
+A comprehensive operational guide for managing, configuring, and maintaining DayZ Dedicated Servers with Aegis (the DayZ Server Manager).
 
 ---
 
 ## 1. Dedicated Server Network Ports & Firewall Rules
 
-DayZ Dedicated Servers communicate across distinct UDP and TCP protocols for game traffic, master browser queries, remote console management, and DSM orchestration.
+DayZ Dedicated Servers communicate across distinct UDP and TCP protocols for game traffic, master browser queries, remote console management, and Aegis.
 
 ### Port Matrix
 
-| Port        | Protocol | Direction       | Purpose                | Notes / NAT Guidance                                                                                                                                                 |
-| :---------- | :------- | :-------------- | :--------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **`2302`**  | `UDP`    | Inbound         | **Game Port**          | Default gameplay port. Client game traffic connects here. If running multiple server instances on the same host, increment by at least +2 (e.g., 2302, 2304).        |
-| **`27016`** | `UDP`    | Inbound         | **Steam Query Port**   | Steam Master Server browser query port. Defined via `steamQueryPort = 27016;` in `serverDZ.cfg`. Essential for server discovery in the in-game and launcher browser. |
-| **`2310`**  | `UDP`    | Inbound / Local | **BattlEye RCON Port** | Remote administration port defined in `battleye/BEServer.cfg` via `RConPort 2310`. Restrict access to `127.0.0.1` or authorized admin subnets.                       |
-| **`4200`**  | `TCP`    | Inbound / Local | **DSM Web Console**    | HTTP frontend UI port for DayZ Server Manager dashboard.                                                                                                             |
-| **`5000`**  | `TCP`    | Inbound / Local | **DSM Backend API**    | Fastify REST API and Server-Sent Events (SSE) telemetry daemon.                                                                                                      |
+| Port        | Protocol | Direction       | Purpose                             | Notes / NAT Guidance                                                                                                                                                                                                                          |
+| :---------- | :------- | :-------------- | :---------------------------------- | :-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **`2302`**  | `UDP`    | Inbound         | **Game Port**                       | Default gameplay port. Client game traffic connects here. If running multiple server instances on the same host, increment by at least +2 (e.g., 2302, 2304).                                                                                 |
+| **`27016`** | `UDP`    | Inbound         | **Steam Query Port**                | Steam Master Server browser query port. Defined via `steamQueryPort = 27016;` in `serverDZ.cfg`. Essential for server discovery in the in-game and launcher browser.                                                                          |
+| **`2310`**  | `UDP`    | Inbound / Local | **BattlEye RCON Port**              | Remote administration port defined in the BattlEye config (`profiles/BattlEye/BEServer_x64.cfg`, or `beserver_x64.cfg` on Linux) with `RConPort 2310`. Aegis generates this file. Restrict access to `127.0.0.1` or authorized admin subnets. |
+| **`4200`**  | `TCP`    | Inbound / Local | **Aegis web console (development)** | Development server of the web console. A production install will serve the console and the API on one port, which is not decided yet.                                                                                                         |
+| **`5000`**  | `TCP`    | Inbound / Local | **Aegis backend API**               | Fastify REST API and Server-Sent Events (SSE). Keep it on the local network or behind a reverse proxy.                                                                                                                                        |
 
 ### Firewall Configuration Tips
 
@@ -50,7 +50,7 @@ Always trigger a shutdown via BattlEye RCON rather than terminating the process:
    ```
 3. **World Persistence Flush:** DayZ disengages connected clients, writes out all active player transactions, flushes the `storage_1` hive to disk, and closes file handles.
 4. **Process Exit:** The process terminates naturally with exit code `0`.
-5. **Supervisor Watchdog:** DSM monitors process exit for up to 60 seconds after `#shutdown`. If the process fails to exit after this timeout, a fallback graceful `SIGTERM` is dispatched before any forced kill.
+5. **Watchdog:** Aegis waits up to 60 seconds after `#shutdown` for the process to exit. If it is still running, Aegis ends it: on Linux with `SIGTERM` to the process group and then `SIGKILL` after a grace period, on Windows by force. The wait time is the setting `DSM_SERVER_STOP_TIMEOUT_MS`.
 
 ---
 
@@ -70,7 +70,8 @@ DayZ verifies mod integrity using Bohemia Interactive's digital signatures (`.bi
 
 ### Key Management Best Practices
 
-- **Automated Copying:** Whenever a mod is installed or updated via Steam Workshop, extract its `.bikey` file and place it into the root `keys/` folder of the DayZ server.
+- **Copying (not automated yet):** Aegis does not manage keys yet, so copy them by hand until it does (planned).
+- **When a mod is installed or updated:** Whenever a mod is installed or updated via Steam Workshop, extract its `.bikey` file and place it into the root `keys/` folder of the DayZ server.
 - **Orphan Key Cleanup:** When removing a mod from your server's `-mod=` launch parameter, remove its associated `.bikey` from `keys/` unless another mod shares the same author key. Leftover keys unnecessarily increase signature verification overhead during client connections.
 - **Do Not Delete Default Keys:** Always preserve `dayz.bikey` and official Bohemia keys in the `keys/` folder.
 
@@ -78,7 +79,7 @@ DayZ verifies mod integrity using Bohemia Interactive's digital signatures (`.bi
 
 ## 4. Scoped Backup Geometries & Disaster Recovery
 
-Backing up a DayZ server does not require archiving tens of gigabytes of static game binaries on every snapshot. DSM categorizes backups into granular scopes:
+Backing up a DayZ server does not require archiving tens of gigabytes of static game binaries on every snapshot. Aegis has no backup feature yet (it is planned). Until it does, these are the scopes worth backing up by hand:
 
 ### Recommended Backup Scopes
 
