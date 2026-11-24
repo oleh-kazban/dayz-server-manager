@@ -2,7 +2,7 @@
 
 Internal working documentation for maintainers and AI agents. It is not user documentation. Operators read the [FAQ](../faq.md) and the [README](../README.md).
 
-Every document starts with a status block. Documents describe what the code does today, and mark anything else as _planned_ or _undecided_. When code and a document disagree, fix the document in the same change.
+Every document starts with a status block. Documents describe what the code does today, and mark anything else as _planned_ or _undecided_. When code and a document disagree, find out which one is wrong. If the code deviates from a product decision, the document states the decision and the deviation goes into the [tech debt register](tech-debt.md). If the document is wrong, fix the document in the same change.
 
 ## Product
 
@@ -18,6 +18,7 @@ Every document starts with a status block. Documents describe what the code does
 | :----------------------------------------- | :------------------------------------------- |
 | [Overview](architecture/overview.md)       | Stack, repository layout, runtime, decisions |
 | [Backend](architecture/backend.md)         | Daemon, API, errors, realtime, services      |
+| [Frontend](architecture/frontend.md)       | Providers, routing, state, realtime, forms   |
 | [Persistence](architecture/persistence.md) | SQLite schema, migrations, secrets, backups  |
 
 ## Engineering

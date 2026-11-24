@@ -57,16 +57,16 @@ libs/
 
 Nx tags enforce the rules through `@nx/enforce-module-boundaries` (`eslint.config.js`).
 
-| Project                       | Tags                             | May depend on                                           |
-| :---------------------------- | :------------------------------- | :------------------------------------------------------ |
-| `apps/web`                    | `scope:client`                   | `client`, `contracts`, `shared`                         |
-| `apps/server`                 | `scope:server`                   | `server`, `contracts`, `shared`, `platform`, `database` |
-| `libs/api-client`             | `scope:client`                   | `client`, `contracts`, `shared`                         |
-| `libs/api-contracts`          | `scope:contracts`                | `contracts` only                                        |
-| `libs/database`               | `scope:database`, `scope:server` | `database`, `contracts`, `shared`                       |
-| `libs/ui`, `libs/dayz-config` | `scope:shared`                   | `shared`, `contracts`                                   |
-| `libs/platform`               | `scope:platform`                 | not constrained by a rule                               |
-| `libs/rcon`                   | `scope:server`                   | not constrained by a rule                               |
+| Project                       | Tags                             | May depend on                                                                                |
+| :---------------------------- | :------------------------------- | :------------------------------------------------------------------------------------------- |
+| `apps/web`                    | `scope:client`                   | `client`, `contracts`, `shared`                                                              |
+| `apps/server`                 | `scope:server`                   | `server`, `contracts`, `shared`, `platform`, `database`                                      |
+| `libs/api-client`             | `scope:client`                   | `client`, `contracts`, `shared`                                                              |
+| `libs/api-contracts`          | `scope:contracts`                | `contracts` only                                                                             |
+| `libs/database`               | `scope:database`, `scope:server` | `database`, `contracts`, `shared`; the `server` tag also allows `server` and `platform` libs |
+| `libs/ui`, `libs/dayz-config` | `scope:shared`                   | `shared`, `contracts`                                                                        |
+| `libs/platform`               | `scope:platform`                 | not constrained by a rule                                                                    |
+| `libs/rcon`                   | `scope:server`                   | the `server` rule applies (it may also use `platform` and `database`)                        |
 
 Beyond the tags:
 
@@ -121,7 +121,7 @@ Steam credentials and server RCON passwords are encrypted with AES-256-GCM befor
 
 ### Server process supervision
 
-`ServerLifecycleService` (`apps/server/src/services/server/server-lifecycle.service.ts`) owns the server state machine: `stopped`, `starting`, `running`, `stopping`, plus failure reasons.
+`ServerLifecycleService` (`apps/server/src/services/server/server-lifecycle.service.ts`) owns the server state machine: `stopped`, `starting`, `running`, `stopping` and `failed`, with the last exit reason stored beside it (`start_failed`, `crashed`, `exited_while_offline`, `force_stopped`, `stopped`, `shutdown_timeout`).
 
 - **Spawn:** argument arrays only, never a shell string. `@aegis/dayz-config` compiles the launch command from the stored server settings and mods.
 - **Stop:** sends BattlEye RCON `#shutdown` first, so DayZ flushes persistence. If the process is still alive after `DSM_SERVER_STOP_TIMEOUT_MS` (default 60 s), the watchdog force-kills it.
@@ -143,7 +143,7 @@ The `serverDZ.cfg` file on disk is the source of truth. The database keeps only 
 
 ### Real-time updates
 
-`SseHub` fans events out to connected clients. The web app opens one connection (`RealtimeProvider`) and updates TanStack Query caches from typed events, for example server status changes and failed stops or restarts.
+`SseHub` fans events out to connected clients. The signed-in shell opens one connection (`RealtimeProvider`) and updates TanStack Query caches from typed events, for example server status changes and failed stops or restarts. The Steam settings page opens a second connection for the Steam login events.
 
 ## 5. Persistence
 

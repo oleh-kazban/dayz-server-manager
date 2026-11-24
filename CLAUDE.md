@@ -85,5 +85,6 @@ Rules in [git and releases](docs/engineering/git-and-releases.md). In short:
 ## 7. Documentation
 
 - Update the affected document in the same change as the code.
+- A document built from code can copy a drift (web and server disagreeing, or code deviating from a product decision). Check the code against the decision and against the other side, state the decision in the document, and log the deviation in `docs/tech-debt.md`.
 - The product backlog is [`docs/product/backlog.md`](docs/product/backlog.md). Ideas that are not decided stay in the private `.agents/incubator.md`, and anything commercial never goes into tracked files.
 - `.archive/` holds outdated material for the user to review. Do not read from it as a source of truth, and do not delete it.

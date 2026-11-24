@@ -64,7 +64,8 @@ Every user-initiated mutation (create, update, delete, validate, or any button t
 
 Rules:
 
-- Never call `showToast.*` directly in feature code. `notifySuccess`, `notifyApiError` and `notifyInfo` also write to the notification centre and translate API error codes.
+- Never call `showToast.*` directly in feature code. Use `notifySuccess`, `notifyApiError` and `notifyInfo`: they translate API error codes into messages.
+- Toasts report the result of a request. The notification centre (the bell) is for background events, such as the result of a delayed task that no request is waiting for. Warning and info toasts are not in use yet. Today the three helpers also write every toast into the bell, which is a known deviation (TD-08 in the [register](../tech-debt.md)).
 - Never return early from `onError` after setting field errors. The toast is still required, because the field may not be on screen.
 - Every `mutate(...)` with an `onSuccess` also has an `onError`, on the mutation or at the call site.
 - Background reads never toast.

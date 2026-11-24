@@ -18,16 +18,16 @@ This map answers one question: what works today, and what does not. Statuses com
 
 ## Foundation
 
-| Capability                                     | PBI                        | Status  | Notes                                           |
-| :--------------------------------------------- | :------------------------- | :------ | :---------------------------------------------- |
-| Monorepo, tooling, CI                          | `DSM-00104`, `DSM-00129`   | Built   | Nx, pnpm, ESLint, Vitest, Husky, GitHub Actions |
-| UI kit `@aegis/ui` with Storybook              | `DSM-00105`, `DSM-00106`   | Built   | `libs/ui`                                       |
-| Themes                                         | `DSM-00110`, `DSM-00135`   | Built   | 12 palettes                                     |
-| Splash and bootstrap continuity                | `DSM-00101` to `DSM-00103` | Built   |                                                 |
-| Toasts, notification centre, error translation | `DSM-00108`, `DSM-00132`   | Built   | English only (`en-US`)                          |
-| Form conventions, unsaved-changes guard        | `DSM-00137`, `DSM-00138`   | Built   | `useEditableForm`                               |
-| In-app FAQ and release history                 | `DSM-00121`, `DSM-00130`   | Built   | `pnpm docs:sync`                                |
-| Localization beyond English                    | `DSM-00111`                | Planned |                                                 |
+| Capability                                     | PBI                        | Status  | Notes                                                                                                                    |
+| :--------------------------------------------- | :------------------------- | :------ | :----------------------------------------------------------------------------------------------------------------------- |
+| Monorepo, tooling, CI                          | `DSM-00104`, `DSM-00129`   | Built   | Nx, pnpm, ESLint, Vitest, Husky, GitHub Actions                                                                          |
+| UI kit `@aegis/ui` with Storybook              | `DSM-00105`, `DSM-00106`   | Built   | `libs/ui`                                                                                                                |
+| Themes                                         | `DSM-00110`, `DSM-00135`   | Built   | 12 palettes                                                                                                              |
+| Splash and bootstrap continuity                | `DSM-00101` to `DSM-00103` | Built   |                                                                                                                          |
+| Toasts, notification centre, error translation | `DSM-00108`, `DSM-00132`   | Partial | English only (`en-US`). The bell also lists toast results, against the rule that it lists background events only (TD-08) |
+| Form conventions, unsaved-changes guard        | `DSM-00137`, `DSM-00138`   | Built   | `useEditableForm`                                                                                                        |
+| In-app FAQ and release history                 | `DSM-00121`, `DSM-00130`   | Built   | `pnpm docs:sync`                                                                                                         |
+| Localization beyond English                    | `DSM-00111`                | Planned |                                                                                                                          |
 
 ## Operator access
 
@@ -56,13 +56,13 @@ This map answers one question: what works today, and what does not. Statuses com
 
 ## Steam and mods
 
-| Capability                                            | PBI                        | Status  | Notes                                    |
-| :---------------------------------------------------- | :------------------------- | :------ | :--------------------------------------- |
-| Steam settings, interactive sign-in, credential vault | `DSM-00126`                | Built   | `/settings/steam`, Steam Guard challenge |
-| Mod list, load order, key distribution (phase 1)      | `DSM-00119`                | Built   | `/mods`                                  |
-| Mod preset import and export                          | `DSM-00354` to `DSM-00356` | Built   |                                          |
-| Workshop download with progress, `.bikey` handling    | `DSM-00133`                | Planned |                                          |
-| SteamCMD health check and guided install              | `DSM-00159`                | Planned |                                          |
+| Capability                                            | PBI                        | Status  | Notes                                                                                                                |
+| :---------------------------------------------------- | :------------------------- | :------ | :------------------------------------------------------------------------------------------------------------------- |
+| Steam settings, interactive sign-in, credential vault | `DSM-00126`                | Built   | `/settings/steam`, Steam Guard challenge                                                                             |
+| Mod list and load order (phase 1)                     | `DSM-00119`                | Built   | `/mods`. The backlog title says "key distribution", but copying `.bikey` files is planned (`DSM-00337`, `DSM-00338`) |
+| Mod preset import and export                          | `DSM-00354` to `DSM-00356` | Built   |                                                                                                                      |
+| Workshop download with progress, `.bikey` handling    | `DSM-00133`                | Planned |                                                                                                                      |
+| SteamCMD health check and guided install              | `DSM-00159`                | Planned |                                                                                                                      |
 
 ## Monitoring
 
