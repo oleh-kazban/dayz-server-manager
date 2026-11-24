@@ -23,17 +23,18 @@ The audit follows one process per component: investigate (implementation, API, t
 
 ### Audit progress
 
-| Component                                         | Status                                                                                                                         |
-| :------------------------------------------------ | :----------------------------------------------------------------------------------------------------------------------------- |
-| Button                                            | Audited. Findings TD-UI-001 to TD-UI-009 (TD-UI-001 and TD-UI-002 closed)                                                      |
-| Cross-cutting scan                                | Done. Findings TD-UI-010 to TD-UI-012, TD-UI-014, TD-UI-018 to TD-UI-022                                                       |
-| Input, PasswordInput                              | Audited. Findings TD-UI-013, TD-UI-015 to TD-UI-017                                                                            |
-| Select, Checkbox, Toggle                          | Audited. Findings TD-UI-024 to TD-UI-027                                                                                       |
-| Autosuggest, DatePicker, TagInput, TagSelect      | Audited from the source and checked in Storybook. Findings TD-UI-023, TD-UI-028 to TD-UI-033                                   |
-| Card, KpiCard, Tag, StatusTag, Notice, EmptyState | Audited from the source and checked in Storybook. Findings TD-UI-034 to TD-UI-041                                              |
-| Confirmation, Tooltip, Toast, menus, `usePopup`   | Audited from the source and checked in Storybook. Findings TD-UI-042 to TD-UI-048                                              |
-| Table, TableColumnVisibility, TableBulkActions    | Audited from the source and checked in Storybook. Findings TD-UI-049 to TD-UI-054                                              |
-| Remaining 10 components                           | Not yet audited: Breadcrumbs, CodeEditor, FileUploader, HeroBanner, Loader, LogViewer, Pagination, ProgressBar, Skeleton, Tabs |
+| Component                                         | Status                                                                                                                   |
+| :------------------------------------------------ | :----------------------------------------------------------------------------------------------------------------------- |
+| Button                                            | Audited. Findings TD-UI-001 to TD-UI-009 (TD-UI-001 and TD-UI-002 closed)                                                |
+| Cross-cutting scan                                | Done. Findings TD-UI-010 to TD-UI-012, TD-UI-014, TD-UI-018 to TD-UI-022                                                 |
+| Input, PasswordInput                              | Audited. Findings TD-UI-013, TD-UI-015 to TD-UI-017                                                                      |
+| Select, Checkbox, Toggle                          | Audited. Findings TD-UI-024 to TD-UI-027                                                                                 |
+| Autosuggest, DatePicker, TagInput, TagSelect      | Audited from the source and checked in Storybook. Findings TD-UI-023, TD-UI-028 to TD-UI-033                             |
+| Card, KpiCard, Tag, StatusTag, Notice, EmptyState | Audited from the source and checked in Storybook. Findings TD-UI-034 to TD-UI-041                                        |
+| Confirmation, Tooltip, Toast, menus, `usePopup`   | Audited from the source and checked in Storybook. Findings TD-UI-042 to TD-UI-048                                        |
+| Table, TableColumnVisibility, TableBulkActions    | Audited from the source and checked in Storybook. Findings TD-UI-049 to TD-UI-054                                        |
+| Tabs                                              | Audited from the source and checked in Storybook. Findings TD-UI-055 to TD-UI-058                                        |
+| Remaining 9 components                            | Not yet audited: Breadcrumbs, CodeEditor, FileUploader, HeroBanner, Loader, LogViewer, Pagination, ProgressBar, Skeleton |
 
 The cross-cutting scan covered every component for deprecated React APIs, hardcoded colors, off-standard control heights, `size` props, `containerClassName` and missing tests or stories. It found no deprecated APIs (`forwardRef`, `MutableRefObject`), and every component directory has tests and stories.
 
@@ -452,6 +453,34 @@ The cross-cutting scan covered every component for deprecated React APIs, hardco
 - **Verified:** at 390 px the content (458 px) scrolls inside its region (286 px). The page itself does not overflow.
 - **Decision (product owner):** horizontal scrolling inside the table is acceptable on phones. The fixed-size parts around it (the bulk actions bar, TD-UI-053) must still not overflow.
 - **Decision:** no.
+
+> The next four findings cover `Tabs` (`Tabs`, `TabList`, `TabTrigger`, `TabContent`). The app uses `Tabs` with the `items` prop in three places (`FaqModal`, `AddModModal`, `ImportModsModal`) and `TabContent` in two. `TabList` and `TabTrigger` are used only in stories.
+
+#### TD-UI-055 · Tab lists overflow on narrow screens · Medium
+
+- **Verified:** at 320 px wide, all three tested stories overflow. The underline list ends at 489 px (the page grows to 489 px wide), and the segmented lists end at 475 px and 405 px. The list has `overflow: visible`, so nothing scrolls or wraps. The measured lists are 362 to 432 px wide, so the four-tab segmented list also overflows a 390 px phone.
+- **Recommendation:** make the list horizontally scrollable (with the active tab scrolled into view and no visible scrollbar), as the product owner accepted for tables.
+- **Decision (product owner):** yes, a horizontally scrollable tab list with the active tab scrolled into view.
+
+#### TD-UI-056 · `Tabs` accessibility and keyboard order · Medium
+
+- **Verified:** arrow keys, Home and End move focus and selection with wrap-around, and inactive tabs have `tabindex="-1"`. This part is correct.
+- **Verified:** 2 of 3 triggers have an `aria-controls` that points at a panel that is not in the DOM, because inactive panels are unmounted (TD-UI-025 has the same pattern in `Select`).
+- **Verified:** the count badge is `aria-hidden`, so counts such as "12" or "24" are not part of the tab's accessible name.
+- **Code:** arrow-key order comes from an array that effects fill in mount order. A tab that appears later is appended at the end even when it renders in the middle. Selection follows focus, so every arrow press calls `onChange` and mounts or unmounts a panel. Every panel has `tabIndex={0}`, which the WAI-ARIA pattern recommends only when the panel has no focusable content.
+- **Recommendation:** read the tab order from the DOM (`[role="tab"]` inside the list), set `aria-controls` only when the panel is mounted, give the badge a visually hidden text, and keep panel `tabIndex` only when needed.
+- **Decision:** no.
+
+#### TD-UI-057 · `Tabs` API and details · Medium
+
+- **Code:** `aria-label` and `ariaLabel` both exist on `Tabs` and on `TabList` (two names for one prop, as in TD-UI-016). The default tab is `items[0]` even when that tab is disabled. With the compound API and no `defaultValue`, no tab is active and no panel shows. `containerClassName || 'space-y-4'` replaces the default spacing instead of merging with it. The context value is a new object on every render, so all tabs re-render. `item.label as ReactNode` is a needless cast. The ref merge is the eleventh copy (TD-UI-019). Other values are hardcoded: `text-[11px]` on the badge, `gap-6`, a 1 px focus ring (TD-UI-020) and the 32 px segmented height (TD-UI-012).
+- **Recommendation:** one `aria-label` prop, skip disabled items for the default, merge class names, and memoize the context.
+- **Decision:** no.
+
+#### TD-UI-058 · Tab selection has no motion · Low
+
+- **Code:** the active tab changes instantly (only the color and border transition). The product pillar "modern UI/UX" names smooth animations. A sliding indicator (underline) or segment (segmented) would fit it, and it must respect the reduced-motion rule (TD-UI-034).
+- **Decision (product owner):** no sliding indicator; the instant change is fine. Closed.
 
 ## 2. Other known items (not yet audited)
 
