@@ -56,7 +56,7 @@ Rules:
 
 ### In scope
 
-Each area maps to epics in the [backlog](backlog.md). The [feature map](feature-map.md) (_to be written_) shows what is built.
+Each area maps to epics in the [backlog](backlog.md). The [feature map](feature-map.md) shows what is built.
 
 | Area                 | Capability                                                                              |
 | :------------------- | :-------------------------------------------------------------------------------------- |

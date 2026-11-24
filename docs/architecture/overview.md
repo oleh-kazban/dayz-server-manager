@@ -147,7 +147,7 @@ The `serverDZ.cfg` file on disk is the source of truth. The database keeps only 
 
 ## 5. Persistence
 
-SQLite, one file: `manager-data/database/manager.sqlite` (override with `DATABASE_PATH`). Migrations are versioned and recorded in `_dsm_migrations` (`libs/database/src/lib/migrations.ts`). Details are in [persistence](persistence.md) (_to be written_).
+SQLite, one file: `manager-data/database/manager.sqlite` (override with `DATABASE_PATH`). Migrations are versioned and recorded in `_dsm_migrations` (`libs/database/src/lib/migrations.ts`). Details are in [persistence](persistence.md).
 
 | Table                     | Purpose                                   |
 | :------------------------ | :---------------------------------------- |
@@ -164,7 +164,7 @@ SQLite, one file: `manager-data/database/manager.sqlite` (override with `DATABAS
 ## 6. Web application
 
 - Feature slices in `apps/web/src/features/` (auth, dashboard, faq, flavor-text, maintenance, mods, profile, server-settings, steam, theme). Shared infrastructure sits in `apps/web/src/core/` (forms, i18n, notifications, query, realtime, storage, layout, navigation).
-- Routing is code-based with TanStack Router (`router.tsx`). Many routes still render `PlaceholderView` (players, economy, world, audit, system, most of settings). The [feature map](../product/feature-map.md) (_to be written_) lists what is real.
+- Routing is code-based with TanStack Router (`router.tsx`). Many routes still render `PlaceholderView` (players, economy, world, audit, system, most of settings). The [feature map](../product/feature-map.md) lists what is real.
 - Server state lives in TanStack Query. Zustand holds three local UI stores (layout, notifications, FAQ).
 - Forms use `useEditableForm`. Mutations give operators explicit feedback, as defined in `CLAUDE.md` (user feedback contract).
 - The `@aegis/ui` kit provides the controls and 12 theme palettes (`data-theme`), built on Tailwind 4 tokens.
@@ -174,7 +174,7 @@ SQLite, one file: `manager-data/database/manager.sqlite` (override with `DATABAS
 ### Decided
 
 - **Production serving.** One process: Fastify serves the built SPA (with a fallback to `index.html`) and `/api/v1` on one port, same origin. HTTPS is added by an optional reverse proxy in front, which must not buffer SSE. Not implemented yet; the work belongs to the appliance epic (`DSM-00144`).
-- **Authorization.** Two fixed roles: `root` (the installer, exactly one) and `admin`. A valid access token is the check for every endpoint. Only operator-management endpoints additionally require `root`, through one central `requireRoot` check. The ~35 duplicated `ensureAdminRole` and `requireAdmin` copies and `AUTH_FORBIDDEN_ADMIN_REQUIRED` are removed; the `users.role` column gains `root` through a migration. Cleanup is tracked in [tech debt](../tech-debt.md) (_to be written_).
+- **Authorization.** Two fixed roles: `root` (the installer, exactly one) and `admin`. A valid access token is the check for every endpoint. Only operator-management endpoints additionally require `root`, through one central `requireRoot` check. The ~35 duplicated `ensureAdminRole` and `requireAdmin` copies and `AUTH_FORBIDDEN_ADMIN_REQUIRED` are removed; the `users.role` column gains `root` through a migration. Cleanup is tracked in [tech debt](../tech-debt.md).
 - **First run.** An empty database opens a setup screen that creates the root account, protected by a one-time token printed to the server log. The `admin`/`admin` seed and `DSM_ADMIN_PASSWORD` are removed. Lost root passwords are reset by a CLI command (appliance epic `DSM-00144`).
 - **Node.js.** Target the latest LTS, currently Node 26, and pin it (`engines` in `package.json` and `.nvmrc`). Today CI runs Node 24 and `README.md` says 20 or 22; both need aligning.
 - **Testing.** Unit tests (Vitest) plus agentic manual testing with Playwright. There is no automated E2E suite, and none is planned.

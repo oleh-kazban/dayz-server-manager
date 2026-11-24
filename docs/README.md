@@ -9,13 +9,15 @@ Every document starts with a status block. Documents describe what the code does
 | Document                                        | Content                                        |
 | :---------------------------------------------- | :--------------------------------------------- |
 | [Vision and scope](product/vision-and-scope.md) | Purpose, pillars, users, scope, open questions |
+| [Feature map](product/feature-map.md)           | What is built, partial, placeholder or planned |
 | [Backlog](product/backlog.md)                   | Product backlog items (source of `history.md`) |
 
 ## Architecture
 
-| Document                             | Content                                      |
-| :----------------------------------- | :------------------------------------------- |
-| [Overview](architecture/overview.md) | Stack, repository layout, runtime, decisions |
+| Document                                   | Content                                      |
+| :----------------------------------------- | :------------------------------------------- |
+| [Overview](architecture/overview.md)       | Stack, repository layout, runtime, decisions |
+| [Persistence](architecture/persistence.md) | SQLite schema, migrations, secrets, backups  |
 
 ## Engineering
 

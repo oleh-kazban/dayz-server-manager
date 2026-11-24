@@ -126,7 +126,7 @@ The baseline target is WCAG 2.2 AA.
 
 Every meaningful component defines: loaded, loading, empty, error, disabled, and stale or disconnected where data is live. Loading skeletons keep the final geometry. An error says what failed and what to do next.
 
-Every user-initiated mutation gives explicit feedback. The contract lives in [conventions](../engineering/conventions.md) (_to be written_) and is summarized in `CLAUDE.md`.
+Every user-initiated mutation gives explicit feedback. The contract lives in [conventions](../engineering/conventions.md) and is summarized in `CLAUDE.md`.
 
 ## 10. Content and tone
 
