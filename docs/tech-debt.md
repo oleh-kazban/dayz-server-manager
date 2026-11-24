@@ -23,19 +23,20 @@ The audit follows one process per component: investigate (implementation, API, t
 
 ### Audit progress
 
-| Component                                         | Status                                                                                                       |
-| :------------------------------------------------ | :----------------------------------------------------------------------------------------------------------- |
-| Button                                            | Audited. Findings TD-UI-001 to TD-UI-009 (TD-UI-001 and TD-UI-002 closed)                                    |
-| Cross-cutting scan                                | Done. Findings TD-UI-010 to TD-UI-012, TD-UI-014, TD-UI-018 to TD-UI-022                                     |
-| Input, PasswordInput                              | Audited. Findings TD-UI-013, TD-UI-015 to TD-UI-017                                                          |
-| Select, Checkbox, Toggle                          | Audited. Findings TD-UI-024 to TD-UI-027                                                                     |
-| Autosuggest, DatePicker, TagInput, TagSelect      | Audited from the source and checked in Storybook. Findings TD-UI-023, TD-UI-028 to TD-UI-033                 |
-| Card, KpiCard, Tag, StatusTag, Notice, EmptyState | Audited from the source and checked in Storybook. Findings TD-UI-034 to TD-UI-041                            |
-| Confirmation, Tooltip, Toast, menus, `usePopup`   | Audited from the source and checked in Storybook. Findings TD-UI-042 to TD-UI-048                            |
-| Table, TableColumnVisibility, TableBulkActions    | Audited from the source and checked in Storybook. Findings TD-UI-049 to TD-UI-054                            |
-| Tabs                                              | Audited from the source and checked in Storybook. Findings TD-UI-055 to TD-UI-058                            |
-| CodeEditor, CodeDiffView                          | Audited from the source and checked in Storybook. Findings TD-UI-059 to TD-UI-062                            |
-| Remaining 8 components                            | Not yet audited: Breadcrumbs, FileUploader, HeroBanner, Loader, LogViewer, Pagination, ProgressBar, Skeleton |
+| Component                                         | Status                                                                                            |
+| :------------------------------------------------ | :------------------------------------------------------------------------------------------------ |
+| Button                                            | Audited. Findings TD-UI-001 to TD-UI-009 (TD-UI-001 and TD-UI-002 closed)                         |
+| Cross-cutting scan                                | Done. Findings TD-UI-010 to TD-UI-012, TD-UI-014, TD-UI-018 to TD-UI-022                          |
+| Input, PasswordInput                              | Audited. Findings TD-UI-013, TD-UI-015 to TD-UI-017                                               |
+| Select, Checkbox, Toggle                          | Audited. Findings TD-UI-024 to TD-UI-027                                                          |
+| Autosuggest, DatePicker, TagInput, TagSelect      | Audited from the source and checked in Storybook. Findings TD-UI-023, TD-UI-028 to TD-UI-033      |
+| Card, KpiCard, Tag, StatusTag, Notice, EmptyState | Audited from the source and checked in Storybook. Findings TD-UI-034 to TD-UI-041                 |
+| Confirmation, Tooltip, Toast, menus, `usePopup`   | Audited from the source and checked in Storybook. Findings TD-UI-042 to TD-UI-048                 |
+| Table, TableColumnVisibility, TableBulkActions    | Audited from the source and checked in Storybook. Findings TD-UI-049 to TD-UI-054                 |
+| Tabs                                              | Audited from the source and checked in Storybook. Findings TD-UI-055 to TD-UI-058                 |
+| CodeEditor, CodeDiffView                          | Audited from the source and checked in Storybook. Findings TD-UI-059 to TD-UI-062                 |
+| LogViewer                                         | Audited from the source and checked in Storybook. Findings TD-UI-063 to TD-UI-065                 |
+| Remaining 7 components                            | Not yet audited: Breadcrumbs, FileUploader, HeroBanner, Loader, Pagination, ProgressBar, Skeleton |
 
 The cross-cutting scan covered every component for deprecated React APIs, hardcoded colors, off-standard control heights, `size` props, `containerClassName` and missing tests or stories. It found no deprecated APIs (`forwardRef`, `MutableRefObject`), and every component directory has tests and stories.
 
@@ -511,6 +512,26 @@ The cross-cutting scan covered every component for deprecated React APIs, hardco
 - **Code:** it is not a form field like the other controls (TD-UI-028): there is no `label`, `id`, `name`, `required` or `error` prop and no `onBlur`. The container uses a 1 px focus ring (TD-UI-020). `onChange` serializes the whole document (`doc.toString()`) after every edit, which costs time in proportion to the file size.
 - **Not verified:** no measurement was made. The only editing consumer is `serverDZ.cfg`, which is small. This matters if large files (for example `types.xml`) get an editor.
 - **Recommendation:** give it the same field props as the other controls through the shared field shell, and revisit `onChange` (a debounced or on-demand value) before a large-file editor is built.
+- **Decision:** no.
+
+> The next three findings cover `LogViewer`. It has no consumer yet: it is `DSM-00207` (in progress), and the live RPT page `DSM-00208` will use it. **Verified** as correct: the scroll area is a focusable `role="log"` region with a 2 px inset focus ring, and the windowing works (44 to 65 rows are in the DOM for 100,000 lines). The warning color has a 5.32:1 contrast on the default light theme (the other themes are not measured, see the contrast question in the design system document).
+
+#### TD-UI-063 · The status region announces every new line · Medium
+
+- **Verified:** while following is paused, the `role="status"` text ("Following paused. 11 new lines.") changed 10 times in 4 seconds, once per incoming line (the story adds one line every 0.4 s). A screen reader announces each change. The component's own comment says that announcing each line would drown a screen reader on a busy server (hundreds of lines per second).
+- **Recommendation:** announce once when following pauses, and drop the running count from the live region (the visible button already shows it). If a count is needed, update it at a coarse interval.
+- **Decision:** no.
+
+#### TD-UI-064 · Windowing limits copy and find · Medium
+
+- **Verified:** in the 100,000-line story, Ctrl+A selects only the 44 rendered rows, so copying gives 44 lines, not the log. **Code:** the browser's find (Ctrl+F) also sees only rendered rows. **Code, not verified:** the horizontal scroll width follows the widest rendered row, so it can change while scrolling when line lengths differ (the story's lines have equal length).
+- **Recommendation:** document the limit in the component, and keep `DSM-00210` (filter by text) and `DSM-00211` (download the full file) ahead of the release of the live log page.
+- **Decision (product owner):** `DSM-00210` and `DSM-00211` are enough for search and the full copy. No "Copy all" in the viewer.
+
+#### TD-UI-065 · `LogViewer` API and tokens · Low
+
+- **Code:** `height` is a fixed pixel number, so the viewer cannot fill the available space or follow the viewport on a phone. `label` and `emptyMessage` use different names from the rest of the kit (`ariaLabel`, `emptyText`). Severity colors use the base tokens `--color-danger` and `--color-warning` (the two token layers in TD-UI-060). The row height, overscan and `text-xs` are named constants or classes, but not tokens (TD-UI-018). The default `detectLogSeverity` matches the word "error" anywhere, so a line such as a player named "Error" is colored as an error.
+- **Recommendation:** accept a CSS height (or fill the parent), unify the prop names, read the semantic color tokens, and anchor the severity match to the log format.
 - **Decision:** no.
 
 ## 2. Other known items (not yet audited)
