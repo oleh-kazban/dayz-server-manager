@@ -1,17 +1,17 @@
 import { eq, or } from 'drizzle-orm';
 import type { FastifyPluginAsync } from 'fastify';
-import { randomUUID } from 'node:crypto';
 
 import {
   type AuthUserDto,
   refreshRequestSchema,
   type RefreshResponseDto,
   signInRequestSchema,
-  type SignInResponseDto,
   USER_ROLE_VALUES,
 } from '@aegis/api-contracts';
 import { sessions, users, verifyPassword } from '@aegis/database';
 
+import { isSetupExpired } from '../services/identity/setup-account';
+import { issueSignIn, signInContext } from '../services/identity/sign-in';
 import { formatZodFieldErrors, sendApiError } from '../utils/api-error';
 
 export const registerAuthRoutes: FastifyPluginAsync = async fastify => {
@@ -77,71 +77,24 @@ export const registerAuthRoutes: FastifyPluginAsync = async fastify => {
         return sendApiError(reply, 401, 'AUTH_INVALID_CREDENTIALS', 'Invalid username or password');
       }
 
-      // Update lastLoginAt timestamp
-      fastify.db.update(users).set({ lastLoginAt: new Date() }).where(eq(users.id, user.id)).run();
-
-      // Create stateful session row (ADR-001)
-      const sid = randomUUID();
-      const rememberMe = Boolean(parseResult.data.rememberMe);
-      const sessionTtlMs = rememberMe ? 30 * 24 * 60 * 60 * 1000 : 7 * 24 * 60 * 60 * 1000;
-      const now = Date.now();
-      const expiresAt = new Date(now + sessionTtlMs);
-
-      const rawXForwardedFor = request.headers['x-forwarded-for'];
-      let forwardedIp: string | undefined;
-      if (Array.isArray(rawXForwardedFor)) {
-        forwardedIp = rawXForwardedFor[0];
-      } else if (typeof rawXForwardedFor === 'string') {
-        forwardedIp = rawXForwardedFor.split(',')[0].trim();
+      const ctx = signInContext(request, Boolean(parseResult.data.rememberMe));
+      if (user.role === 'setup' && isSetupExpired(user.createdAt, ctx.now)) {
+        return sendApiError(
+          reply,
+          401,
+          'AUTH_SETUP_SESSION_EXPIRED',
+          'The setup session has expired',
+        );
       }
-      const ipAddress = forwardedIp || request.ip || '127.0.0.1';
-      const userAgent = (request.headers['user-agent'] as string | undefined) ?? null;
 
-      fastify.db
-        .insert(sessions)
-        .values({
-          id: sid,
-          userId: user.id,
-          userAgent,
-          ipAddress,
-          lastActiveAt: new Date(now),
-          createdAt: new Date(now),
-          expiresAt,
-        })
-        .run();
-
-      const accessToken = fastify.jwt.sign(
+      const response = issueSignIn(
         {
-          sub: user.id,
-          username: user.username,
-          role: user.role,
-          type: 'access',
-          sid,
+          db: fastify.db,
+          signToken: (payload, expiresIn) => fastify.jwt.sign(payload, { expiresIn }),
         },
-        { expiresIn: '15m' },
+        user,
+        ctx,
       );
-
-      const refreshToken = fastify.jwt.sign(
-        {
-          sub: user.id,
-          type: 'refresh',
-          sid,
-        },
-        { expiresIn: rememberMe ? '30d' : '7d' },
-      );
-
-      const response: SignInResponseDto = {
-        accessToken,
-        refreshToken,
-        expiresIn: 900,
-        user: {
-          id: user.id,
-          username: user.username,
-          displayName: user.displayName ?? undefined,
-          email: user.email ?? undefined,
-          role: user.role,
-        },
-      };
 
       return reply.send(response);
     },

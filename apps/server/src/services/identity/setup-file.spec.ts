@@ -1,0 +1,231 @@
+import {
+  existsSync,
+  lstatSync,
+  mkdirSync,
+  mkdtempSync,
+  readdirSync,
+  readFileSync,
+  rmSync,
+  statSync,
+  symlinkSync,
+  writeFileSync,
+} from 'node:fs';
+import { tmpdir } from 'node:os';
+import path from 'node:path';
+
+import {
+  defaultDataDir,
+  readSetupFile,
+  removeSetupFile,
+  SETUP_FILE_NAME,
+  writeSetupFile,
+} from './setup-file';
+
+const NOTICE =
+  '# Aegis first-time setup. Sign in with these credentials, then create the root account. Anyone who can read this file can sign in until it expires or is deleted.';
+// eslint-disable-next-line sonarjs/no-hardcoded-passwords -- test fixture value
+const PAIR = { username: 'setup-1a2b3c4d5e6f', password: 'Zk3-pQ9_vL2xW8nB5mT7rY1uC4hJ6dA0' };
+const EXPIRES = new Date('2026-11-25T23:36:00.000Z');
+
+describe('setup credentials file', () => {
+  let dir: string;
+  let file: string;
+
+  beforeEach(() => {
+    dir = mkdtempSync(path.join(tmpdir(), 'aegis-setup-file-'));
+    file = path.join(dir, SETUP_FILE_NAME);
+  });
+
+  afterEach(() => {
+    rmSync(dir, { recursive: true, force: true });
+  });
+
+  it('is named setup-credentials.txt and defaults to manager-data under the cwd', () => {
+    expect(SETUP_FILE_NAME).toBe('setup-credentials.txt');
+    expect(defaultDataDir()).toBe(path.resolve(process.cwd(), 'manager-data'));
+  });
+
+  describe('writeSetupFile', () => {
+    it('writes exactly the four lines with a trailing newline and returns the path', () => {
+      const result = writeSetupFile(dir, PAIR, EXPIRES);
+
+      expect(result).toBe(file);
+      expect(readFileSync(file, 'utf8')).toBe(
+        `${NOTICE}\nusername: ${PAIR.username}\npassword: ${PAIR.password}\nexpires: 2026-11-25T23:36:00.000Z\n`,
+      );
+    });
+
+    it('creates a missing directory recursively', () => {
+      const nested = path.join(dir, 'a', 'b');
+
+      writeSetupFile(nested, PAIR, EXPIRES);
+
+      expect(existsSync(path.join(nested, SETUP_FILE_NAME))).toBe(true);
+    });
+
+    it('leaves only the file in the directory (no temp file)', () => {
+      writeSetupFile(dir, PAIR, EXPIRES);
+
+      expect(readdirSync(dir)).toEqual([SETUP_FILE_NAME]);
+    });
+
+    it.skipIf(process.platform === 'win32')('creates the file with mode 0600', () => {
+      writeSetupFile(dir, PAIR, EXPIRES);
+
+      expect(statSync(file).mode & 0o777).toBe(0o600);
+    });
+
+    it('replaces an existing file with the new content', () => {
+      writeFileSync(file, 'old content that must disappear\n');
+      const other = {
+        username: 'setup-ffffffffffff',
+        password: 'N3w-pass_word-0123456789abcdefghij',
+      };
+
+      writeSetupFile(dir, other, EXPIRES);
+
+      const content = readFileSync(file, 'utf8');
+      expect(content).toContain(`username: ${other.username}`);
+      expect(content).not.toContain('old content');
+      expect(readdirSync(dir)).toEqual([SETUP_FILE_NAME]);
+    });
+
+    it('removes its temp file and keeps the password out of the error when publishing fails', () => {
+      mkdirSync(path.join(file, 'blocker'), { recursive: true });
+
+      let message = '';
+      try {
+        writeSetupFile(dir, PAIR, EXPIRES);
+      } catch (error) {
+        message = String(error);
+      }
+
+      expect(message).not.toBe('');
+      expect(message).not.toContain(PAIR.password);
+      expect(readdirSync(dir)).toEqual([SETUP_FILE_NAME]);
+    });
+
+    it('throws for an empty directory planted at the target, leaves no temp file and no password in the error', () => {
+      mkdirSync(file);
+
+      let message = '';
+      try {
+        writeSetupFile(dir, PAIR, EXPIRES);
+      } catch (error) {
+        message = String(error);
+      }
+
+      expect(message).not.toBe('');
+      expect(message).not.toContain(PAIR.password);
+      expect(readdirSync(dir)).toEqual([SETUP_FILE_NAME]);
+    });
+
+    it('replaces a symlink planted at the target by rename and leaves the link target unchanged', context => {
+      const victim = path.join(dir, 'victim.txt');
+      writeFileSync(victim, 'victim content\n');
+      try {
+        symlinkSync(victim, file);
+      } catch (error) {
+        if ((error as NodeJS.ErrnoException).code === 'EPERM') {
+          context.skip('creating symlinks needs privileges on this host');
+        }
+        throw error;
+      }
+
+      writeSetupFile(dir, PAIR, EXPIRES);
+
+      expect(readFileSync(victim, 'utf8')).toBe('victim content\n');
+      expect(lstatSync(file).isSymbolicLink()).toBe(false);
+      expect(readFileSync(file, 'utf8')).toContain(`username: ${PAIR.username}`);
+      expect(readdirSync(dir).sort()).toEqual([SETUP_FILE_NAME, 'victim.txt']);
+    });
+
+    it('keeps the password out of the error when the directory cannot be created', () => {
+      const blocker = path.join(dir, 'not-a-dir');
+      writeFileSync(blocker, 'x');
+
+      let message = '';
+      try {
+        writeSetupFile(path.join(blocker, 'sub'), PAIR, EXPIRES);
+      } catch (error) {
+        message = String(error);
+      }
+
+      expect(message).not.toBe('');
+      expect(message).not.toContain(PAIR.password);
+    });
+  });
+
+  describe('readSetupFile', () => {
+    it('reads back the pair and the expiry it wrote', () => {
+      writeSetupFile(dir, PAIR, EXPIRES);
+
+      const read = readSetupFile(dir);
+
+      expect(read?.username).toBe(PAIR.username);
+      expect(read?.password).toBe(PAIR.password);
+      expect(new Date(read?.expires ?? '').toISOString()).toBe(EXPIRES.toISOString());
+    });
+
+    it('returns null when the file is missing', () => {
+      expect(readSetupFile(dir)).toBeNull();
+    });
+
+    it('returns null when the path is a directory (unreadable)', () => {
+      mkdirSync(file);
+
+      expect(readSetupFile(dir)).toBeNull();
+    });
+
+    const good = [
+      NOTICE,
+      `username: ${PAIR.username}`,
+      `password: ${PAIR.password}`,
+      'expires: 2026-11-25T23:36:00.000Z',
+    ];
+
+    it.each([
+      ['an empty file', ''],
+      ['only three lines', `${good.slice(0, 3).join('\n')}\n`],
+      ['five lines', `${[...good, 'extra: line'].join('\n')}\n`],
+      ['a notice without the # prefix', `${['Aegis notice', ...good.slice(1)].join('\n')}\n`],
+      [
+        'a swapped username and password line',
+        `${[good[0], good[2], good[1], good[3]].join('\n')}\n`,
+      ],
+      ['a wrong key', `${[good[0], 'user: x', good[2], good[3]].join('\n')}\n`],
+      [
+        'a missing space after the colon',
+        `${[good[0], 'username:x', good[2], good[3]].join('\n')}\n`,
+      ],
+      [
+        'an expires key that is misspelled',
+        `${[...good.slice(0, 3), 'expiry: 2026-11-25T23:36:00.000Z'].join('\n')}\n`,
+      ],
+    ])('returns null for %s (fail closed)', (_name, content) => {
+      writeFileSync(file, content);
+
+      expect(readSetupFile(dir)).toBeNull();
+    });
+  });
+
+  describe('removeSetupFile', () => {
+    it('deletes the file', () => {
+      writeSetupFile(dir, PAIR, EXPIRES);
+
+      removeSetupFile(dir);
+
+      expect(existsSync(file)).toBe(false);
+    });
+
+    it('ignores a missing file', () => {
+      expect(() => removeSetupFile(dir)).not.toThrow();
+    });
+
+    it('rethrows an error other than ENOENT', () => {
+      mkdirSync(path.join(file, 'child'), { recursive: true });
+
+      expect(() => removeSetupFile(dir)).toThrow();
+    });
+  });
+});

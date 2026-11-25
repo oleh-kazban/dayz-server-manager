@@ -2,15 +2,9 @@ import type { FastifyInstance } from 'fastify';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import { apiErrorResponseSchema } from '@aegis/api-contracts';
-import {
-  type DatabaseInstance,
-  hashPassword,
-  initDatabase,
-  sessions,
-  users,
-  verifyPassword,
-} from '@aegis/database';
+import { type DatabaseInstance, initDatabase, sessions, verifyPassword } from '@aegis/database';
 
+import { DEFAULT_TEST_PASSWORD, insertUser } from '../__fixtures__/users';
 import { buildApp } from '../app/app';
 import { loadEnv } from '../config/env';
 
@@ -35,14 +29,12 @@ describe('Profile Routes (/api/v1/profile & /api/v1/auth/profile)', () => {
 
     await app.ready();
 
-    // Login as default admin to obtain a valid access token with stateful session
+    // Sign in as an admin inserted by the spec to obtain a token with a stateful session
+    const admin = insertUser(dbInstance, { username: 'admin', role: 'admin' });
     const loginRes = await app.inject({
       method: 'POST',
       url: '/api/v1/auth/login',
-      payload: {
-        usernameOrEmail: 'admin',
-        password: 'admin',
-      },
+      payload: admin.credentials,
     });
 
     expect(loginRes.statusCode).toBe(200);
@@ -356,7 +348,7 @@ describe('Profile Routes (/api/v1/profile & /api/v1/auth/profile)', () => {
           authorization: `Bearer ${userAccessToken}`,
         },
         payload: {
-          currentPassword: 'admin',
+          currentPassword: DEFAULT_TEST_PASSWORD,
           newPassword: 'newSuperPassword1!',
           confirmPassword: 'differentPassword2@',
         },
@@ -378,7 +370,7 @@ describe('Profile Routes (/api/v1/profile & /api/v1/auth/profile)', () => {
           authorization: `Bearer ${userAccessToken}`,
         },
         payload: {
-          currentPassword: 'admin',
+          currentPassword: DEFAULT_TEST_PASSWORD,
           newPassword: passWithoutDigits,
           confirmPassword: passWithoutDigits,
         },
@@ -395,7 +387,7 @@ describe('Profile Routes (/api/v1/profile & /api/v1/auth/profile)', () => {
           authorization: `Bearer ${userAccessToken}`,
         },
         payload: {
-          currentPassword: 'admin',
+          currentPassword: DEFAULT_TEST_PASSWORD,
           newPassword: 'Str0ng! Pass1',
           confirmPassword: 'Str0ng! Pass1',
         },
@@ -459,7 +451,7 @@ describe('Profile Routes (/api/v1/profile & /api/v1/auth/profile)', () => {
           authorization: `Bearer ${userAccessToken}`,
         },
         payload: {
-          currentPassword: 'admin',
+          currentPassword: DEFAULT_TEST_PASSWORD,
           newPassword: 'BrandNewSecurePassword123!',
           confirmPassword: 'BrandNewSecurePassword123!',
         },
@@ -525,7 +517,7 @@ describe('Profile Routes (/api/v1/profile & /api/v1/auth/profile)', () => {
           authorization: `Bearer ${ghostToken}`,
         },
         payload: {
-          currentPassword: 'admin',
+          currentPassword: DEFAULT_TEST_PASSWORD,
           newPassword: 'SomePassword123!',
           confirmPassword: 'SomePassword123!',
         },
@@ -537,21 +529,6 @@ describe('Profile Routes (/api/v1/profile & /api/v1/auth/profile)', () => {
     });
   });
 });
-
-/** Inserts a user row with the given role and returns its login credentials. */
-function insertUser(db: DatabaseInstance, role: 'root' | 'setup') {
-  db.db
-    .insert(users)
-    .values({
-      id: `role-model-${role}`,
-      username: `${role}-user`,
-      passwordHash: hashPassword('role-pass-123'),
-      role,
-      createdAt: new Date(),
-    })
-    .run();
-  return { usernameOrEmail: `${role}-user`, password: 'role-pass-123' };
-}
 
 async function buildRoleApp() {
   const dbInstance = initDatabase({ dbPath: ':memory:' });
@@ -580,7 +557,7 @@ describe.each(['/api/v1/profile', '/api/v1/auth/profile'])('role model on %s', p
   });
 
   it('GET and PATCH return the root role from the database (AC-11)', async () => {
-    const credentials = insertUser(dbInstance, 'root');
+    const { credentials } = insertUser(dbInstance, { role: 'root' });
     const login = await app.inject({
       method: 'POST',
       url: '/api/v1/auth/login',

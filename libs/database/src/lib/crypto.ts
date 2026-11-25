@@ -9,6 +9,12 @@ export function hashPassword(password: string): string {
   return `${salt}:${derivedKey.toString('hex')}`;
 }
 
+/**
+ * Stored hash that no password verifies: it has no `salt:key` shape, so `verifyPassword`
+ * returns false before any scrypt call.
+ */
+export const UNUSABLE_PASSWORD_HASH = '!';
+
 export function verifyPassword(password: string, storedHash: string): boolean {
   const [salt, key] = storedHash.split(':');
   if (!salt || !key) return false;

@@ -1,10 +1,8 @@
 import Database from 'better-sqlite3';
 import { type BetterSQLite3Database, drizzle } from 'drizzle-orm/better-sqlite3';
-import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 
-import { hashPassword } from './crypto';
 import { runMigrations } from './migrations';
 import * as schema from './schema';
 
@@ -44,34 +42,6 @@ export function initDatabase(options: DatabaseOptions = {}): DatabaseInstance {
   runMigrations(sqlite, { vaultKeyDir: options.vaultKeyDir });
 
   const db = drizzle(sqlite, { schema });
-
-  // Auto-seed initial operator if table is empty
-  const existingCount = sqlite.prepare('SELECT count(*) as count FROM users').get() as {
-    count: number;
-  };
-
-  if (existingCount.count === 0) {
-    if (process.env.NODE_ENV === 'production' && !process.env.DSM_ADMIN_PASSWORD) {
-      sqlite.close();
-      throw new Error(
-        'DSM_ADMIN_PASSWORD environment variable is required to bootstrap the database in production',
-      );
-    }
-
-    const defaultAdminId = crypto.randomUUID();
-    const defaultAdminPass = process.env.DSM_ADMIN_PASSWORD || 'admin';
-
-    db.insert(schema.users)
-      .values({
-        id: defaultAdminId,
-        username: 'admin',
-        email: 'admin@dsm.local',
-        passwordHash: hashPassword(defaultAdminPass),
-        role: 'admin',
-        createdAt: new Date(),
-      })
-      .run();
-  }
 
   return { db, sqlite, close: () => sqlite.close() };
 }

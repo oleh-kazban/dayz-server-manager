@@ -18,6 +18,7 @@ import { getTableConfig } from 'drizzle-orm/sqlite-core';
 
 import { EMPTY_LAUNCH_OPTIONS } from '@aegis/api-contracts';
 
+import { insertTestUser } from './__fixtures__/users';
 import * as actualCrypto from './crypto';
 import { initDatabase } from './db';
 import { convertLegacyLaunchParameters, migrations, runMigrations } from './migrations';
@@ -554,7 +555,7 @@ describe('Database Migrations — 0007_server_config_editor', () => {
     const instance = initDatabase({ dbPath: ':memory:' });
     try {
       const { sqlite } = instance;
-      const admin = sqlite.prepare('SELECT id FROM users LIMIT 1').get() as { id: string };
+      const admin = insertTestUser(instance.db);
       insertServerRow(sqlite, 'srv-locked');
       sqlite
         .prepare(

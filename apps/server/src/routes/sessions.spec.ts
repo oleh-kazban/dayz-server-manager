@@ -10,6 +10,7 @@ import {
   users,
 } from '@aegis/database';
 
+import { insertUser } from '../__fixtures__/users';
 import { buildApp } from '../app/app';
 import { loadEnv } from '../config/env';
 
@@ -41,6 +42,7 @@ describe('Sessions Routes (/api/v1/auth/sessions)', () => {
     await app.ready();
 
     // User 1 login (admin)
+    const admin = insertUser(dbInstance, { username: 'admin', role: 'admin' });
     const login1 = await app.inject({
       method: 'POST',
       url: '/api/v1/auth/login',
@@ -48,7 +50,7 @@ describe('Sessions Routes (/api/v1/auth/sessions)', () => {
         'user-agent':
           'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120.0.0.0 Safari/537.36',
       },
-      payload: { usernameOrEmail: 'admin', password: 'admin' },
+      payload: admin.credentials,
     });
     user1Token = login1.json().accessToken;
     user1Id = login1.json().user.id;

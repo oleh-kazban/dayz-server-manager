@@ -28,8 +28,10 @@ import { registerServerLogRoutes } from '../routes/server-logs';
 import { registerServerModsRoutes } from '../routes/server-mods';
 import { registerServersRoutes } from '../routes/servers';
 import { registerSessionsRoutes } from '../routes/sessions';
+import { registerSetupRoutes } from '../routes/setup';
 import { registerSteamRoutes } from '../routes/steam';
 import { registerWorkshopRoutes } from '../routes/workshop';
+import { defaultDataDir } from '../services/identity/setup-file';
 import { sseHub } from '../services/realtime/sse-hub';
 import { SseTicketStore } from '../services/realtime/sse-ticket-store';
 import { ConfigEditLockService } from '../services/server/config-edit-lock.service';
@@ -56,6 +58,8 @@ export interface BuildAppOptions {
   skipLifecycleReconcile?: boolean;
   /** Log destination (tests assert on log output); defaults to stdout. */
   logStream?: { write: (line: string) => void };
+  /** Directory of `setup-credentials.txt`; specs pass a temp dir; defaults to `manager-data`. */
+  setupFileDir?: string;
 }
 
 export function buildApp(options: BuildAppOptions): FastifyInstance {
@@ -253,6 +257,10 @@ export function buildApp(options: BuildAppOptions): FastifyInstance {
   app.register(registerProfileRoutes, { prefix: '/api/v1/profile' });
   app.register(registerProfileRoutes, { prefix: '/api/v1/auth/profile' });
   app.register(registerSessionsRoutes, { prefix: '/api/v1/auth/sessions' });
+  app.register(registerSetupRoutes, {
+    prefix: '/api/v1/setup',
+    setupFileDir: options.setupFileDir ?? defaultDataDir(),
+  });
   app.register(registerServersRoutes, { prefix: '/api/v1/servers' });
   app.register(registerServerModsRoutes, { prefix: '/api/v1/servers' });
   app.register(registerServerConfigRoutes, { prefix: '/api/v1/servers' });

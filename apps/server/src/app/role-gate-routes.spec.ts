@@ -142,6 +142,17 @@ describe('role gate over every registered route', () => {
     }
   });
 
+  it('registers POST /api/v1/setup/root behind authenticate, on the allowlist and not public (AC-14)', () => {
+    const key = 'POST /api/v1/setup/root';
+    const route = routes.find(r => r.key === key);
+
+    expect(route).toBeDefined();
+    expect(ROLE_GATE_OPEN_ROUTES.has(key)).toBe(true);
+    expect(PUBLIC_ROUTES).not.toContain(key);
+    expect(route && hasAuthHook(route)).toBe(true);
+    expect(route && isAdminGuarded(route)).toBe(false);
+  });
+
   it('carries requireAdmin on exactly the pinned admin-guarded routes (AC-9)', () => {
     const guarded = routes.filter(isAdminGuarded).map(r => r.key);
     expect(guarded.sort()).toEqual([...ADMIN_GUARDED_ROUTES].sort());

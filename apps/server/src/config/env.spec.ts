@@ -18,7 +18,6 @@ describe('loadEnv', () => {
       NODE_ENV: 'production',
       SESSION_SECRET: 'production-session-secret-must-be-32-chars-minimum!',
       CORS_ORIGIN: 'https://example.com',
-      DSM_ADMIN_PASSWORD: 'super-admin-password-123',
       LOG_LEVEL: 'warn',
     });
 
@@ -26,9 +25,19 @@ describe('loadEnv', () => {
     expect(config.HOST).toBe('127.0.0.1');
     expect(config.NODE_ENV).toBe('production');
     expect(config.SESSION_SECRET).toBe('production-session-secret-must-be-32-chars-minimum!');
-    expect(config.DSM_ADMIN_PASSWORD).toBe('super-admin-password-123');
     expect(config.CORS_ORIGIN).toBe('https://example.com');
     expect(config.LOG_LEVEL).toBe('warn');
+  });
+
+  it('ignores DSM_ADMIN_PASSWORD: it is not part of the loaded config', () => {
+    const config = loadEnv({ DSM_ADMIN_PASSWORD: 'super-admin-password-123' });
+
+    expect(config).not.toHaveProperty('DSM_ADMIN_PASSWORD');
+    expect(Object.values(config)).not.toContain('super-admin-password-123');
+  });
+
+  it('does not fail on a too short DSM_ADMIN_PASSWORD', () => {
+    expect(() => loadEnv({ DSM_ADMIN_PASSWORD: 'x' })).not.toThrow();
   });
 
   describe('SESSION_SECRET', () => {

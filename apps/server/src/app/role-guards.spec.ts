@@ -207,8 +207,11 @@ describe('role guards', () => {
   });
 
   describe('ROLE_GATE_OPEN_ROUTES (AC-5, AC-8)', () => {
-    it('is pinned to GET /api/v1/auth/me only', () => {
-      expect([...ROLE_GATE_OPEN_ROUTES]).toEqual(['GET /api/v1/auth/me']);
+    it('is pinned to GET /api/v1/auth/me and POST /api/v1/setup/root', () => {
+      expect([...ROLE_GATE_OPEN_ROUTES]).toEqual([
+        'GET /api/v1/auth/me',
+        'POST /api/v1/setup/root',
+      ]);
     });
   });
 });

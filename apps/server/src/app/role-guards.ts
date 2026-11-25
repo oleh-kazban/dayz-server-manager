@@ -9,7 +9,10 @@ export const ADMIN_FORBIDDEN_MESSAGE =
 export const ROOT_FORBIDDEN_MESSAGE = 'Root privileges are required to perform this action.';
 
 /** Routes a non-admin role may call after `authenticate`, as "METHOD pattern". */
-export const ROLE_GATE_OPEN_ROUTES: ReadonlySet<string> = new Set(['GET /api/v1/auth/me']);
+export const ROLE_GATE_OPEN_ROUTES: ReadonlySet<string> = new Set([
+  'GET /api/v1/auth/me',
+  'POST /api/v1/setup/root',
+]);
 
 export function isAdminRole(role: UserRole | undefined): boolean {
   return role === 'root' || role === 'admin';
