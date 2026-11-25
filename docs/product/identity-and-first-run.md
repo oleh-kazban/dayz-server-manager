@@ -2,7 +2,7 @@
 
 |              |                                                                                                                                              |
 | :----------- | :------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Status**   | Approved by the product owner. No code is written yet                                                                                        |
+| **Status**   | Approved by the product owner. Slice 3a (server and library) is implemented                                                                  |
 | **Audience** | Maintainers and AI agents                                                                                                                    |
 | **Covers**   | Start-up defaults (first item of roadmap package R1), roadmap package R7, `TD-01`, `TD-07`, `TD-LIB-005`                                     |
 | **Related**  | [Vision and scope](vision-and-scope.md#4-users), [Fix roadmap](../engineering/fix-roadmap.md), [Persistence](../architecture/persistence.md) |
@@ -119,7 +119,7 @@ The design follows the existing sign-in screen and its components. It was writte
 
 **Layout.** One card in the same shell as the sign-in page (`apps/web/src/features/auth/SignIn.tsx`), with the same hero panel on wide screens (`SignInHero`). There is no sidebar and no navigation, because a setup session can reach nothing else. From top to bottom:
 
-1. Eyebrow `FIRST-TIME SETUP` and heading `Create the root account` (an `h1`).
+1. Eyebrow `FIRST-TIME SETUP` and heading `Create the root account` (an `h2`; the page shell owns the `h1`).
 2. One sentence: `This account owns this Aegis installation. You can add other administrators later.`
 3. A `Notice` (info): `You are signed in with a temporary setup account. It is deleted when you finish.`
 4. Fields: `Username`, `Password`, `Confirm password`, with the password rule shown as a hint under the password field.
@@ -163,7 +163,7 @@ No new shared component is needed. The new feature component is `SetupForm` next
 | id    | Rule                                                                                                                          | Requirement          |
 | :---- | :---------------------------------------------------------------------------------------------------------------------------- | :------------------- |
 | UX-1  | After signing in with the setup pair, the browser is on `/setup`, and every other route redirects there                       | R-SETUP-5, R-ROOT-1  |
-| UX-2  | The page has one `h1`, the Notice about the temporary account, three labelled fields and one primary button                   | R-ROOT-1             |
+| UX-2  | The page has one `h2`, the Notice about the temporary account, three labelled fields and one primary button                   | R-ROOT-1             |
 | UX-3  | Submitting with an invalid or empty field shows an inline message under that field and moves focus to the first invalid field | R-ROOT-1, R-ROOT-6   |
 | UX-4  | While the request runs, the button shows a spinner and the fields are disabled                                                | R-ROOT-1             |
 | UX-5  | A taken username shows `This username is already taken` under the username field and a red toast                              | R-ROOT-6             |

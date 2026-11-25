@@ -26,7 +26,11 @@ The web dev server proxies `/api` to the daemon.
 >
 > If Storybook or Nx behaves oddly on Windows, check `echo $env:NX_WORKSPACE_ROOT_PATH`. Nx prefers that variable over the real working directory, and a lowercase `d:\...` value makes Storybook build with broken story keys (every story fails with `importers[path] is not a function`). Unset it or set it with an uppercase drive letter.
 
-On first start the daemon creates the database and seeds an `admin` user. The password is `admin`, or the value of `DSM_ADMIN_PASSWORD`. In production `DSM_ADMIN_PASSWORD` is required. This seed is being replaced by a first-run setup screen that creates the root operator; see [vision and scope](../product/vision-and-scope.md#4-users).
+On first start the daemon creates the database with no account. It then creates a temporary setup account and writes its username and password to `manager-data/setup-credentials.txt`. The log prints the path of the file and the time it expires, never the credentials. The setup account and the file are valid for 60 minutes. Restart the daemon to get new ones. Creating the root account deletes the setup account and the file. No variable presets a password.
+
+The file has mode `0600` where the platform supports it. On Windows the mode bits have no effect and the file inherits the ACL of the data directory, as `manager-data/.vault.key` does: restrict that directory to the account that runs Aegis. The file is replaced with a rename, so the data directory needs no hard link support for it.
+
+**Upgrading.** The first start of this version changes the session secret handling, so every session ends and operators sign in again. An `admin` account that still has the default password `admin` is locked at start and removed when the root account is created. Other accounts are not changed.
 
 ## Configuration
 
@@ -40,7 +44,6 @@ Copy `.env.example` to `.env.local`. The daemon validates its environment with Z
 | `CORS_ORIGIN`                      | `http://localhost:4200,http://127.0.0.1:4200` | Allowed browser origins, comma-separated                                                   |
 | `LOG_LEVEL`                        | `info`                                        | Pino level                                                                                 |
 | `SESSION_SECRET`                   | none                                          | Optional, at least 32 characters. Empty: Aegis keeps a key in `manager-data/.session.key`  |
-| `DSM_ADMIN_PASSWORD`               | none                                          | Initial admin password. Required in production on first boot                               |
 | `DATABASE_PATH`                    | `manager-data/database/manager.sqlite`        | SQLite file                                                                                |
 | `DSM_SERVER_STARTUP_WINDOW_MS`     | `60000`                                       | How long a starting server may take before it counts as failed                             |
 | `DSM_SERVER_POLL_INTERVAL_MS`      | `5000`                                        | Liveness poll for supervised processes                                                     |

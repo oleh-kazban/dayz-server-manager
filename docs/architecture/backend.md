@@ -10,12 +10,13 @@ The backend is one Fastify 5 daemon in `apps/server`. It serves the REST API und
 
 ## 1. Startup and shutdown
 
-`main.ts` loads the environment, builds the app, and listens on `HOST:PORT`.
+`main.ts` loads the environment, builds the app, prepares the setup account, and listens on `HOST:PORT`.
 
 1. `loadEnv` validates the environment with Zod (`config/env.ts`) and stops with a list of the invalid variables. `SESSION_SECRET` is optional. When set, it must be at least 32 characters. When empty, `resolveSessionSecret` (`config/session-secret.ts`) creates a random key once in `manager-data/.session.key` and reuses it. An invalid key file stops the start with an error that names the file. The variables are listed in [getting started](../engineering/getting-started.md#configuration).
-2. `buildApp` (`app/app.ts`) creates the Fastify instance, the database, the services and the routes. It takes options so that tests can replace the database, the process manager, the RCON client and the log stream.
-3. After the server is ready, `ServerLifecycleService.reconcile()` re-adopts DayZ processes that survived a restart. A failure is logged and does not stop the boot.
-4. On `SIGINT` or `SIGTERM` the app closes, the database closes, and the process exits with `0`. When the app closes, only the lifecycle timers stop: DayZ processes keep running.
+2. `buildApp` (`app/app.ts`) creates the Fastify instance, the database, the services and the routes. It takes options so that tests can replace the database, the process manager, the RCON client, the log stream and the directory of the setup file (`setupFileDir`, default `manager-data`).
+3. `prepareIdentity` (`services/identity/startup.ts`) runs after `buildApp` and before `listen`. It locks a seeded `admin` that still has the default password. With no `root` account it creates the `setup` account and `manager-data/setup-credentials.txt`, or keeps them when they are still valid, and logs the file path and the expiry time at `warn` level (never the credentials). With a `root` account it removes any leftover setup account and file and prints nothing. A failure ends the process with exit code `1`. `buildApp` creates no account and writes no file. See [persistence](persistence.md#4-secrets-and-hashes).
+4. After the server is ready, `ServerLifecycleService.reconcile()` re-adopts DayZ processes that survived a restart. A failure is logged and does not stop the boot.
+5. On `SIGINT` or `SIGTERM` the app closes, the database closes, and the process exits with `0`. When the app closes, only the lifecycle timers stop: DayZ processes keep running.
 
 The daemon does not serve the web app yet. In production, one process is meant to serve both (see the [decision](overview.md#decided)); the static-file plugin is not written.
 
@@ -48,6 +49,7 @@ Routes live in `apps/server/src/routes/`, one file per area, each registered wit
 | `POST /api/v1/auth/login`                                                                                           | Sign in (rate limited: 10 per minute)                                                                     |
 | `POST /api/v1/auth/refresh`                                                                                         | Exchange a refresh token (rate limited: 30 per minute)                                                    |
 | `GET /api/v1/auth/me`                                                                                               | The current operator                                                                                      |
+| `POST /api/v1/setup/root`                                                                                           | Create the root account from the setup session (rate limited: 10 per minute)                              |
 | `GET`, `PATCH /api/v1/profile`, `POST /api/v1/profile/change-password`                                              | Profile and password (also under `/api/v1/auth/profile`)                                                  |
 | `GET /api/v1/auth/sessions`, `DELETE .../:id`, `POST .../revoke-others`                                             | List and revoke sessions                                                                                  |
 | `GET`, `POST /api/v1/servers`, `GET`, `PATCH`, `DELETE .../:id`                                                     | List, create, read, update and delete servers                                                             |
@@ -72,13 +74,15 @@ The request and response shapes are Zod schemas in `libs/api-contracts`, and the
 
 **Request validation.** Handlers parse the body, params and query with the contract schemas (`safeParse`) and answer `400 VALIDATION_FAILED` with `fieldErrors`. Only the health and auth routes also declare a Fastify JSON schema.
 
-**Authorization.** The roles are `root`, `admin` and `setup`. `authenticate` (and `authenticateSse`) is the choke point: after it verifies the token it applies a default-deny, so only `root` and `admin` pass, and a `setup`, missing or unknown role gets `403 AUTH_FORBIDDEN_ADMIN_REQUIRED`. The only exception is the allowlist `ROLE_GATE_OPEN_ROUTES` (initially `GET /api/v1/auth/me`). Routes that need the admin role add `requireAdmin` after `authenticate` in `onRequest`, so a denied caller gets 403 before the body is parsed. `requireRoot` (`AUTH_FORBIDDEN_ROOT_REQUIRED`) exists, but no route uses it yet. The guards are in `app/role-guards.ts`; see TD-01 in the [register](../tech-debt.md).
+**Authorization.** The roles are `root`, `admin` and `setup`. `authenticate` (and `authenticateSse`) is the choke point: after it verifies the token it applies a default-deny, so only `root` and `admin` pass, and a `setup`, missing or unknown role gets `403 AUTH_FORBIDDEN_ADMIN_REQUIRED`. The only exception is the allowlist `ROLE_GATE_OPEN_ROUTES` (`GET /api/v1/auth/me` and `POST /api/v1/setup/root`). Routes that need the admin role add `requireAdmin` after `authenticate` in `onRequest`, so a denied caller gets 403 before the body is parsed. `requireRoot` (`AUTH_FORBIDDEN_ROOT_REQUIRED`) exists, but no route uses it yet.
+
+**First-time setup.** `POST /api/v1/setup/root` takes `{username, password, confirmPassword}` with the `Authorization` header of a `setup` session (the account from `setup-credentials.txt`, signed in through `/auth/login`). In one immediate transaction `createRoot` (`services/identity/create-root.ts`) checks that no root exists and that the caller is the unexpired `setup` account, deletes the setup account and a locked seeded `admin`, and inserts the `root` account. After the commit the route deletes the file and answers with the same body as login. If a database failure happens while the tokens are issued after the commit, the route answers `500`; the root account exists and the operator signs in normally. Refusals: `409 AUTH_SETUP_ALREADY_COMPLETE`, `401 AUTH_SETUP_SESSION_EXPIRED`, `401 AUTH_SESSION_INVALID` (caller gone), `409 AUTH_USERNAME_TAKEN` (with `fieldErrors.username`), `403 AUTH_FORBIDDEN_ADMIN_REQUIRED` for any role but `setup`, `400 VALIDATION_FAILED`. Login answers `401 AUTH_SETUP_SESSION_EXPIRED` for a setup account older than 60 minutes, and a setup session never outlives that time. The guards are in `app/role-guards.ts`; see TD-01 in the [register](../tech-debt.md).
 
 ## 4. Errors
 
 Every error response uses one envelope, built by `sendApiError` (`utils/api-error.ts`): the HTTP status, a phrase, an `errorCode`, a message, and optional `params` and `fieldErrors`.
 
-- The codes are the `apiErrorCodeSchema` enum in `libs/api-contracts/src/lib/error.contract.ts` (67 codes). The web app maps each code to a translated message in `apps/web/src/core/i18n`.
+- The codes are the `apiErrorCodeSchema` enum in `libs/api-contracts/src/lib/error.contract.ts` (71 codes). The web app maps each code to a translated message in `apps/web/src/core/i18n`.
 - `formatZodFieldErrors` converts a `ZodError` into `fieldErrors` keyed by field name.
 - An unexpected error is logged in full and answered with `500 INTERNAL_SERVER_ERROR` and a generic message, so internals never reach the client.
 - Rate limiting answers `429 AUTH_RATE_LIMIT_EXCEEDED`.
@@ -144,6 +148,6 @@ Each route and service has a spec next to it (`*.spec.ts`). Route tests build th
 
 - No static serving of the web app (see section 1).
 - The profile routes are registered twice, under `/api/v1/profile` and `/api/v1/auth/profile`.
-- Only login and refresh are rate limited.
+- Only login, refresh and the setup route are rate limited.
 - The log routes support only the `rpt` kind. The ADM and script logs are planned items in the [backlog](../product/backlog.md).
 - The defaults `HOST=0.0.0.0` and `CORS_ORIGIN` for the dev servers are not production settings (see the open deployment question in the [overview](overview.md#open)).
