@@ -1,10 +1,10 @@
 # Tech Debt Register
 
-|              |                                                                                                                     |
-| :----------- | :------------------------------------------------------------------------------------------------------------------ |
-| **Status**   | Living document. The UI kit, server and web app audits are complete (first pass); the libraries are not yet audited |
-| **Verified** | Findings were checked against commit `cc0b1dd` unless an entry says otherwise                                       |
-| **Audience** | Maintainers and AI agents                                                                                           |
+|              |                                                                                                             |
+| :----------- | :---------------------------------------------------------------------------------------------------------- |
+| **Status**   | Living document. The first audit pass is complete for the UI kit, the server, the web app and the libraries |
+| **Verified** | Findings were checked against commit `cc0b1dd` unless an entry says otherwise                               |
+| **Audience** | Maintainers and AI agents                                                                                   |
 
 Each finding has evidence, an impact and the smallest correction. Findings are collected first and fixed one by one afterwards, in the order the product owner picks. An entry marked **Decision** needs a product or architecture decision before work starts.
 
@@ -852,4 +852,58 @@ The audit ran the 87 test files (874 tests, 96.12% statement coverage), read the
 
 - **Code:** two non-null assertions in `ImportModsModal.tsx` (lines 143 and 371, see TD-SRV-016). `session-storage.driver.ts` logs "Failed to set" in its `remove` function (copy of the set message). Four mutations in `profile.mutations.ts` have no `onError` in the hook (the call sites handle errors, as the profile form showed).
 - **Recommendation:** fix the lint rule, the log text, and keep one place for error handling per mutation.
+- **Decision:** no.
+
+## 5. Libraries (`libs/*` except `ui`)
+
+The audit ran every library's tests with coverage, counted the usual smells, read the riskiest code (the process managers, the RCON packet decoder, the HTTP client) and fuzzed the `serverDZ.cfg` parser with 4,000 random inputs and seven adversarial ones.
+
+| Library         | Tests             | Statements | Notes                                                                                                |
+| :-------------- | :---------------- | :--------- | :--------------------------------------------------------------------------------------------------- |
+| `api-contracts` | 10 files, passing | 99.58%     | 13 files, about 1,560 lines                                                                          |
+| `dayz-config`   | 11 files, passing | 100%       | Parser and launch compiler. Random fuzzing found no crash (4,000 inputs in 135 ms)                   |
+| `api-client`    | 9 files, passing  | 94.66%     | Typed client, one module per area                                                                    |
+| `database`      | 4 files, passing  | 98.64%     | Schema, migrations, crypto. Branch coverage 86.79%                                                   |
+| `platform`      | 5 files, passing  | 100%       | Process managers. Absolute paths for `taskkill` and `powershell`, identity checked before every kill |
+| `rcon`          | 3 files, passing  | 100%       | The packet decoder never throws on bad input and checks length, header, checksum and type            |
+
+No library has `any`, non-null assertions or TODO comments. The only `eslint-disable` lines are two in `dayz-config`.
+
+### Findings
+
+#### TD-LIB-001 · The `serverDZ.cfg` parser overflows the stack on deeply nested classes · Medium
+
+- **Verified:** `analyzeServerConfig` throws `RangeError: Maximum call stack size exceeded` for about 2,500 nested `class a {` blocks (25 KB). The config limit is 64 KiB, which allows about 6,500 levels. Other adversarial inputs (a 1 MB string, an unterminated comment, 60,000 assignments, 20,000 nested array braces) took between 2 and 150 ms and did not fail.
+- **Code, not tried in the browser:** the web editor runs the same function while the operator types (`useMemo` in `ServerConfigCard`), so pasting such content would throw during render and reach the error boundary. On the server, `validate` and `save` call it without a guard, so the request ends as a 500. Real DayZ files nest three levels at most.
+- **Recommendation:** add a depth limit (an error diagnostic such as `NESTING_TOO_DEEP` at depth 32) or make the parser iterative, and catch parser failures in the editor.
+- **Decision:** no.
+
+#### TD-LIB-002 · The HTTP client has no timeout and does not wrap odd successful responses · Low
+
+- **Code:** `HttpClient.request` calls `fetch` with no `AbortController`, so a request to a server that accepts the connection and never answers stays pending forever and the form's spinner never ends. A successful response with an empty or non-JSON body (a proxy page, a `204`) makes `response.json()` throw a plain `SyntaxError`, which is not an `ApiError` or a `ValidationError`, so the UI shows its generic fallback. `init.headers` is cast to a plain record, so a `Headers` object would be ignored.
+- **Recommendation:** a default timeout (with the caller able to override it) that fails as an `ApiError` with a readable message, and one place that turns every failure into `ApiError`.
+- **Decision:** no.
+
+#### TD-LIB-003 · The RCON client ignores server messages and sends no keep-alive · Low
+
+- **Code, not tried against a real server:** the decoder understands the "message" packet type, but the client drops everything that is not a login or a command response (`client.ts`, the `onSessionMessage` handler). BattlEye's protocol expects the client to acknowledge server messages and to send a packet at least every 45 seconds. Today a session is short (login, `#shutdown`, close), so it does not matter. It will matter for the planned player list, chat and kick features that keep a session open.
+- **Recommendation:** acknowledge messages and add a keep-alive before any feature holds a session open. Test against a real DayZ server.
+- **Decision:** no.
+
+#### TD-LIB-004 · Contracts mix wire types, domain types and repeated rules · Low
+
+- **Code:** 11 fields use `z.string().datetime().or(z.date())`, so the same schema accepts a string from the wire and a `Date` from the database code (`mod.contract.ts` and others). The port range (1024 to 65535), the path rules, the RCON password character set and the mod folder rules appear in several schemas or libraries (see TD-13 and TD-12). The RCON client also has its own password check (printable ASCII, 0x20 to 0x7e), wider than the contract's, which excludes space and some punctuation.
+- **Recommendation:** separate the wire schema (strings) from the mapping done in the database layer, and define each constant and rule once in the contracts library.
+- **Decision:** no.
+
+#### TD-LIB-005 · The database library reads the environment and seeds an account · Low
+
+- **Code:** `initDatabase` reads `process.env.NODE_ENV` and `DSM_ADMIN_PASSWORD` directly and inserts the `admin` user, so the library has product behavior and bypasses the validated environment in `apps/server` (see TD-SRV-008 and TD-07). The first-run setup will replace the seed and should move this to the server.
+- **Recommendation:** make `initDatabase` open and migrate only, and put seeding in the server's start-up.
+- **Decision:** no.
+
+#### TD-LIB-006 · A process check starts PowerShell on every poll on Windows · Low
+
+- **Code:** `isAlive` checks the pid, then reads the process identity through `Get-CimInstance` in a new PowerShell process. The lifecycle poll (every 5 s by default) calls it for every re-adopted server. Starting PowerShell costs tens to hundreds of milliseconds of CPU each time on a host that is busy running a game server. Not measured.
+- **Recommendation:** read the identity once when a process is adopted and check only the pid and a cheap start-time source during polls, or use a native handle.
 - **Decision:** no.
