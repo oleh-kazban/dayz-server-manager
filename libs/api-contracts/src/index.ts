@@ -1,4 +1,5 @@
 export * from './lib/auth.contract';
+export * from './lib/credentials.contract';
 export * from './lib/error.contract';
 export * from './lib/health.contract';
 export * from './lib/launch.contract';
@@ -9,4 +10,5 @@ export * from './lib/realtime.contract';
 export * from './lib/server.contract';
 export * from './lib/server-config.contract';
 export * from './lib/session.contract';
+export * from './lib/setup.contract';
 export * from './lib/steam.contract';

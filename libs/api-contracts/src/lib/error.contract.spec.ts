@@ -21,6 +21,13 @@ describe('Error Contracts (@aegis/api-contracts)', () => {
       );
     });
 
+    it.each(['AUTH_SETUP_ALREADY_COMPLETE', 'AUTH_SETUP_SESSION_EXPIRED', 'AUTH_USERNAME_TAKEN'])(
+      'includes the setup flow error code %s',
+      code => {
+        expect(apiErrorCodeSchema.options).toContain(code);
+      },
+    );
+
     it('includes server config storage and BattlEye sync error codes', () => {
       expect(apiErrorCodeSchema.options).toEqual(
         expect.arrayContaining([

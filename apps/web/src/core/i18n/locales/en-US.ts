@@ -91,6 +91,18 @@ export const enUSTranslations: TranslationCatalog = {
       title: 'Access Denied',
       description: 'Only the root account can perform this action.',
     },
+    AUTH_SETUP_ALREADY_COMPLETE: {
+      title: 'Setup is already complete',
+      description: 'Sign in with your account to continue.',
+    },
+    AUTH_SETUP_SESSION_EXPIRED: {
+      title: 'Setup session expired',
+      description: 'Restart Aegis to create new setup credentials.',
+    },
+    AUTH_USERNAME_TAKEN: {
+      title: 'Username already taken',
+      description: 'Choose a different username.',
+    },
     AUTH_RATE_LIMIT_EXCEEDED: {
       title: 'Too Many Requests',
       description: 'Too many attempts detected. Please wait a moment before trying again.',
@@ -367,6 +379,7 @@ export const enUSTranslations: TranslationCatalog = {
     STORAGE_PATH_NOT_WRITABLE: '{{message}}',
     INSUFFICIENT_STORAGE_SPACE: '{{message}}',
     AUTH_PASSWORD_MISMATCH: 'Current password is incorrect.',
+    AUTH_USERNAME_TAKEN: 'This username is already taken',
   },
   notifications: {
     SERVER_CREATED: {
