@@ -50,7 +50,7 @@ Copy `.env.example` to `.env.local`. The daemon validates its environment with Z
 
 ### Production setup
 
-Put HTTPS in front of Aegis with a reverse proxy that you provide. Aegis does not manage certificates. See the [FAQ](../../faq.md). Leave `SESSION_SECRET` empty to let Aegis generate a key once and keep it in `manager-data/.session.key`. Set it only to share one key between instances. If the key file is invalid, the start fails and names the file: fix it, delete it (this signs everyone out), or set `SESSION_SECRET`.
+Put HTTPS in front of Aegis with a reverse proxy that you provide. Aegis does not manage certificates. See the [FAQ](../../faq.md). Leave `SESSION_SECRET` empty to let Aegis generate a key once and keep it in `manager-data/.session.key`. Set it only to share one key between instances. If the key file is invalid, the start fails and names the file: fix it, delete it (this signs everyone out), or set `SESSION_SECRET`. The data directory must support hard links (NTFS, ext4 and xfs do; FAT, exFAT and some network shares do not). On such a directory, set `SESSION_SECRET` instead.
 
 ## Commands
 
