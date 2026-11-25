@@ -59,9 +59,9 @@ Each requirement is written to be testable. The numbering is stable and is used 
 
 ### 4.3 Roles
 
-- **R-ROLE-1.** The user role has the values `root` and `admin`. Exactly one `root` exists after setup. Root cannot be deleted or demoted.
-- **R-ROLE-2.** Two shared guards exist on the server: `requireAdmin` (allows `root` and `admin`, rejects `setup`) and `requireRoot` (allows only `root`). The five duplicated no-op helpers and the error code that nothing emits are removed (`TD-01`, `TD-10`). `TD-01` names only `requireRoot`. It needs this clarification, because the 31 existing call sites guard routes that both roles may use.
-- **R-ROLE-3.** The 31 existing call sites use `requireAdmin` and keep working for both roles. Operator management endpoints are out of scope here (section 7), so `requireRoot` is covered by its own tests until the operators page uses it.
+- **R-ROLE-1.** The user role has the values `root`, `admin` and `setup`. Exactly one `root` exists after setup. Root cannot be deleted or demoted.
+- **R-ROLE-2.** Two shared guards exist on the server: `requireAdmin` (allows `root` and `admin`, rejects `setup`) and `requireRoot` (allows only `root`). The five duplicated helpers and the inline check are replaced by the one `requireAdmin` (`TD-01`). `AUTH_FORBIDDEN_ADMIN_REQUIRED` is emitted by it (`TD-10`), and `AUTH_FORBIDDEN_ROOT_REQUIRED` is new. `TD-01` names only `requireRoot`. It needs this clarification, because every admin-guarded route may be used by both roles. `authenticate` denies `setup`, missing and unknown roles on every route except an explicit allowlist (initially `GET /api/v1/auth/me`).
+- **R-ROLE-3.** Every admin-guarded route uses `requireAdmin` and keeps working for `root` and `admin`. Operator management endpoints are out of scope here (section 7), so `requireRoot` is covered by its own tests until the operators page uses it.
 - **R-ROLE-4.** The role set is defined once in `libs/api-contracts`, and the database column, the server and the web app all use it.
 
 ### 4.4 Setup account

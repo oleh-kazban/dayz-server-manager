@@ -108,7 +108,7 @@ Errors use one envelope built by `sendApiError` (`apps/server/src/utils/api-erro
 
 ### Authentication and sessions
 
-- Two fixed roles are planned: `root` and `admin` (see [vision](../product/vision-and-scope.md#4-users)). Today `users.role` allows only `admin`, and route handlers call duplicated `ensureAdminRole` helpers that can never fail; they are tracked as tech debt.
+- Three roles exist: `root`, `admin` and `setup` (see [vision](../product/vision-and-scope.md#4-users)). `USER_ROLE_VALUES` in `libs/api-contracts` is the single source. Admin-guarded routes share one `requireAdmin`; there are no duplicated helpers.
 - Sign-in issues a 15-minute **access token** and a **refresh token** (7 days, or 30 days with "remember me"). Both are JWTs signed with `SESSION_SECRET`.
 - Every access token carries a session id (`sid`). `authenticate` rejects tokens whose session row is missing or expired.
 - Passwords are hashed with scrypt (`libs/database/src/lib/crypto.ts`).
@@ -174,7 +174,7 @@ SQLite, one file: `manager-data/database/manager.sqlite` (override with `DATABAS
 ### Decided
 
 - **Production serving.** One process: Fastify serves the built SPA (with a fallback to `index.html`) and `/api/v1` on one port, same origin. HTTPS is added by an optional reverse proxy in front, which must not buffer SSE. Not implemented yet; the work belongs to the appliance epic (`DSM-00144`).
-- **Authorization.** Two fixed roles: `root` (the installer, exactly one) and `admin`. A valid access token is the check for every endpoint. Only operator-management endpoints additionally require `root`, through one central `requireRoot` check. The ~35 duplicated `ensureAdminRole` and `requireAdmin` copies and `AUTH_FORBIDDEN_ADMIN_REQUIRED` are removed; the `users.role` column gains `root` through a migration. Cleanup is tracked in [tech debt](../tech-debt.md).
+- **Authorization.** Three roles: `root` (the installer, exactly one), `admin` and `setup`. A valid access token of a `root` or `admin` user is the check for every endpoint, except an explicit allowlist (initially `GET /api/v1/auth/me`). Only operator-management endpoints additionally require `root`, through one central `requireRoot` check. The duplicated role helpers are replaced by one `requireAdmin`. The `users.role` column needs no migration for the type change; the `root` row arrives with a later slice. See [tech debt](../tech-debt.md).
 - **First run.** An empty database opens a setup screen that creates the root account, protected by a one-time token printed to the server log. The `admin`/`admin` seed and `DSM_ADMIN_PASSWORD` are removed. Lost root passwords are reset by a CLI command (appliance epic `DSM-00144`).
 - **Node.js.** Target the latest LTS, currently Node 26, and pin it (`engines` in `package.json` and `.nvmrc`). Today CI runs Node 24 and `README.md` says 20 or 22; both need aligning.
 - **Testing.** Unit tests (Vitest) plus agentic manual testing with Playwright. There is no automated E2E suite, and none is planned.

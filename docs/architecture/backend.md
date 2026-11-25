@@ -72,7 +72,7 @@ The request and response shapes are Zod schemas in `libs/api-contracts`, and the
 
 **Request validation.** Handlers parse the body, params and query with the contract schemas (`safeParse`) and answer `400 VALIDATION_FAILED` with `fieldErrors`. Only the health and auth routes also declare a Fastify JSON schema.
 
-**Authorization.** Handlers check only that the caller is signed in, plus a duplicated `requireAdmin` or `ensureAdminRole` helper that cannot fail today. The planned `requireRoot` check is described in the [overview](overview.md#decided) and tracked as TD-01 in the [register](../tech-debt.md).
+**Authorization.** The roles are `root`, `admin` and `setup`. `authenticate` (and `authenticateSse`) is the choke point: after it verifies the token it applies a default-deny, so only `root` and `admin` pass, and a `setup`, missing or unknown role gets `403 AUTH_FORBIDDEN_ADMIN_REQUIRED`. The only exception is the allowlist `ROLE_GATE_OPEN_ROUTES` (initially `GET /api/v1/auth/me`). Routes that need the admin role add `requireAdmin` after `authenticate` in `onRequest`, so a denied caller gets 403 before the body is parsed. `requireRoot` (`AUTH_FORBIDDEN_ROOT_REQUIRED`) exists, but no route uses it yet. The guards are in `app/role-guards.ts`; see TD-01 in the [register](../tech-debt.md).
 
 ## 4. Errors
 
@@ -143,7 +143,6 @@ Each route and service has a spec next to it (`*.spec.ts`). Route tests build th
 ## 10. Known gaps
 
 - No static serving of the web app (see section 1).
-- Duplicated, ineffective role checks (TD-01).
 - The profile routes are registered twice, under `/api/v1/profile` and `/api/v1/auth/profile`.
 - Only login and refresh are rate limited.
 - The log routes support only the `rpt` kind. The ADM and script logs are planned items in the [backlog](../product/backlog.md).
