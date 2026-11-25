@@ -12,7 +12,7 @@ The backend is one Fastify 5 daemon in `apps/server`. It serves the REST API und
 
 `main.ts` loads the environment, builds the app, and listens on `HOST:PORT`.
 
-1. `loadEnv` validates the environment with Zod (`config/env.ts`) and stops with a list of the invalid variables. In production, `SESSION_SECRET` must be set explicitly and be at least 32 characters. The variables are listed in [getting started](../engineering/getting-started.md#configuration).
+1. `loadEnv` validates the environment with Zod (`config/env.ts`) and stops with a list of the invalid variables. `SESSION_SECRET` is optional. When set, it must be at least 32 characters. When empty, `resolveSessionSecret` (`config/session-secret.ts`) creates a random key once in `manager-data/.session.key` and reuses it. An invalid key file stops the start with an error that names the file. The variables are listed in [getting started](../engineering/getting-started.md#configuration).
 2. `buildApp` (`app/app.ts`) creates the Fastify instance, the database, the services and the routes. It takes options so that tests can replace the database, the process manager, the RCON client and the log stream.
 3. After the server is ready, `ServerLifecycleService.reconcile()` re-adopts DayZ processes that survived a restart. A failure is logged and does not stop the boot.
 4. On `SIGINT` or `SIGTERM` the app closes, the database closes, and the process exits with `0`. When the app closes, only the lifecycle timers stop: DayZ processes keep running.
@@ -32,7 +32,7 @@ The daemon does not serve the web app yet. In production, one process is meant t
 | `authenticate`            | Route hook that requires a valid access token                                 |
 | `authenticateSse`         | Route hook that accepts a one-time ticket, or falls back to `authenticate`    |
 
-**Plugins:** `@fastify/cors` (origins from `CORS_ORIGIN`, credentials allowed), `@fastify/rate-limit` (`global: false`, so only routes that ask for a limit have one), `@fastify/sensible`, and `@fastify/jwt` (secret `SESSION_SECRET`).
+**Plugins:** `@fastify/cors` (origins from `CORS_ORIGIN`, credentials allowed), `@fastify/rate-limit` (`global: false`, so only routes that ask for a limit have one), `@fastify/sensible`, and `@fastify/jwt` (secret from `SESSION_SECRET` or `.session.key`).
 
 **Body parsing:** a custom JSON parser accepts an empty body with `Content-Type: application/json` (clients send it on `DELETE`). Invalid JSON is a `400`.
 

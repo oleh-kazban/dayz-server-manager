@@ -48,7 +48,7 @@ Each requirement is written to be testable. The numbering is stable and is used 
 - **R-SEC-2.** If `SESSION_SECRET` is not set, Aegis reads `.session.key` from the data directory (the directory that holds `.vault.key`).
 - **R-SEC-3.** If the file does not exist, Aegis creates it with 32 random bytes from a cryptographic source, with owner-only permissions where the platform supports them, and writes it atomically.
 - **R-SEC-4.** If the file exists but is unreadable, empty or too short, the start fails with a clear error that names the file and tells the operator what to do. Aegis never silently replaces an existing key.
-- **R-SEC-5.** The built-in secret is removed from the code, the examples and the docs.
+- **R-SEC-5.** The built-in secret is no longer used as a default. The former value stays in the code only as a deny-list entry that is rejected, and it is removed from the examples and docs.
 - **R-SEC-6.** The secret is never logged.
 
 ### 4.2 Network exposure

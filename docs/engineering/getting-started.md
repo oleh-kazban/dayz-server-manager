@@ -35,11 +35,11 @@ Copy `.env.example` to `.env.local`. The daemon validates its environment with Z
 | Variable                           | Default                                       | Purpose                                                                                    |
 | :--------------------------------- | :-------------------------------------------- | :----------------------------------------------------------------------------------------- |
 | `PORT`                             | `5000`                                        | Daemon port                                                                                |
-| `HOST`                             | `0.0.0.0`                                     | Bind address                                                                               |
+| `HOST`                             | `0.0.0.0`                                     | Bind address. A non-loopback address logs a start warning: put HTTPS in front of Aegis     |
 | `NODE_ENV`                         | `development`                                 | `development`, `production` or `test`                                                      |
 | `CORS_ORIGIN`                      | `http://localhost:4200,http://127.0.0.1:4200` | Allowed browser origins, comma-separated                                                   |
 | `LOG_LEVEL`                        | `info`                                        | Pino level                                                                                 |
-| `SESSION_SECRET`                   | development value                             | Signs tokens. In production it must be set explicitly and be at least 32 characters        |
+| `SESSION_SECRET`                   | none                                          | Optional, at least 32 characters. Empty: Aegis keeps a key in `manager-data/.session.key`  |
 | `DSM_ADMIN_PASSWORD`               | none                                          | Initial admin password. Required in production on first boot                               |
 | `DATABASE_PATH`                    | `manager-data/database/manager.sqlite`        | SQLite file                                                                                |
 | `DSM_SERVER_STARTUP_WINDOW_MS`     | `60000`                                       | How long a starting server may take before it counts as failed                             |
@@ -47,6 +47,10 @@ Copy `.env.example` to `.env.local`. The daemon validates its environment with Z
 | `DSM_SERVER_STOP_TIMEOUT_MS`       | `60000`                                       | Time to wait for a graceful stop before force-killing                                      |
 | `STEAM_VAULT_KEY`, `DSM_VAULT_KEY` | none                                          | Key for encrypted secrets. Without one, a key file is created in `manager-data/.vault.key` |
 | `VITE_API_URL`                     | empty                                         | Web app: API origin. Empty uses the Vite proxy                                             |
+
+### Production setup
+
+Put HTTPS in front of Aegis with a reverse proxy that you provide. Aegis does not manage certificates. See the [FAQ](../../faq.md). Leave `SESSION_SECRET` empty to let Aegis generate a key once and keep it in `manager-data/.session.key`. Set it only to share one key between instances. If the key file is invalid, the start fails and names the file: fix it, delete it (this signs everyone out), or set `SESSION_SECRET`.
 
 ## Commands
 

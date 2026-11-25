@@ -66,7 +66,7 @@ Seven application tables.
 
 - **Passwords** are hashed with scrypt (64-byte key, random 16-byte salt) and stored as `salt:hex`. Verification uses `timingSafeEqual`.
 - **Vault secrets** (Steam credentials and API key, RCON passwords) are encrypted with AES-256-GCM and stored as `iv:authTag:ciphertext`, all in hex, with a random 12-byte IV.
-- **The vault key** comes from `STEAM_VAULT_KEY` or `DSM_VAULT_KEY` (a 64-character hex value is used as is, anything else is derived with scrypt). Without either, a random 32-byte key is created once in `manager-data/.vault.key` with mode `0600`. The key is independent of `SESSION_SECRET`.
+- **The vault key** comes from `STEAM_VAULT_KEY` or `DSM_VAULT_KEY` (a 64-character hex value is used as is, anything else is derived with scrypt). Without either, a random 32-byte key is created once in `manager-data/.vault.key` with mode `0600`. The key is independent of the session secret, which comes from `SESSION_SECRET` or from `manager-data/.session.key` (created once, mode `0600` where the platform supports it).
 - Losing the key file makes the stored secrets unreadable. Back it up together with the database.
 
 ## 5. Backups
