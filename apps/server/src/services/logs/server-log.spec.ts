@@ -276,6 +276,8 @@ describe('LogFollower', () => {
     await expect.poll(() => events.length, { timeout: 2_000 }).toBe(1);
     follow.stop();
     follow.stop();
+    // A poll started before stop() may still be in flight; let it finish before the file changes.
+    await new Promise(resolve => setTimeout(resolve, 60));
     fs.appendFileSync(file, 'after stop\n');
     await new Promise(resolve => setTimeout(resolve, 60));
     expect(events).toHaveLength(1);

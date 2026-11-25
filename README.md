@@ -1,96 +1,78 @@
-# DayZ Server Manager
+# Aegis: DayZ Server Manager
 
 [![CI](https://img.shields.io/github/actions/workflow/status/oleh-kazban/dayz-server-manager/ci.yaml?branch=master&label=CI&logo=github)](https://github.com/oleh-kazban/dayz-server-manager/actions/workflows/ci.yaml)
 [![PR Validation](https://img.shields.io/github/actions/workflow/status/oleh-kazban/dayz-server-manager/pr-validation.yaml?label=PR%20Validation&logo=github)](https://github.com/oleh-kazban/dayz-server-manager/actions/workflows/pr-validation.yaml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-Running a DayZ server usually means juggling a mess of batch scripts, manually editing massive XML files in text editors, and praying a missing bracket doesn't break loot spawns across the entire map. When a server crashes at 2 AM or a mod update quietly breaks compatibility, diagnosing the issue means digging through half a dozen raw log files.
+Running a DayZ server usually means juggling batch scripts, editing large config files by hand, and hoping a missing bracket does not break the server. When a server crashes at 2 AM or a mod update quietly breaks compatibility, you dig through raw log files to find out why.
 
-**DayZ Server Manager (DSM)** is a modern, self-hosted web control panel built to take the pain out of managing DayZ Dedicated Servers. Whether you are hosting a private server for a few friends or running a high-pop community server on a dedicated box, DSM gives you a clean, responsive interface to supervise your server, tweak configs safely, and keep everything running smoothly.
+**Aegis** is a self-hosted web console for administering DayZ Dedicated Servers, on Windows x64 and Linux x64. It runs on the same machine as the game server, supervises the process, edits its configuration safely, and manages Steam Workshop mods. Its purpose is the **DayZ Server Manager** (DSM), and it is built on four pillars: security, consistency, comfort for the people who run servers, and a modern interface.
 
-![DayZ Server Manager - Dashboard Overview](docs/screenshots/dashboard-overview.jpg)
+> **Status: early development.** Aegis is not ready for production use. Part of the console is built, part is a placeholder page, and part is planned. This README says which is which.
 
----
+![Design preview of the dashboard](docs/screenshots/dashboard-overview.jpg)
 
-## What It Does
+![Design preview of the Types workbench](docs/screenshots/types-workbench.jpg)
 
-### 1. Live Telemetry & Process Control
+![Design preview of the sign-in page](docs/screenshots/sign-in.jpg)
 
-- **One-click Lifecycle:** Start, stop, and restart your server directly from the browser.
-- **Safe Shutdowns:** Graceful stop routines give players advance notice and flush persistence to disk, preventing inventory rollbacks.
-- **Real-time Vital Signs:** Live monitoring of host CPU load, RAM allocation, active player slots, and server tickrate (FPS) via real-time event streaming.
-- **Automatic Crash Recovery:** Detects unexpected process exits and restarts the server automatically.
-
-### 2. High-Performance Economy Workbench (`types.xml`)
-
-DayZ's `types.xml` contains anywhere from 2,000 to over 20,000 item definitions. Opening and editing this file in standard editors is sluggish and prone to syntax errors that can ruin a wipe.
-
-![DayZ Server Manager - Types.xml Workbench](docs/screenshots/types-workbench.jpg)
-
-- **Instant Filtering:** Filter 20,000+ items by category, tier, usage, or name in under 10 milliseconds.
-- **Batch Adjustments:** Easily scale nominal values, lifetimes, or restock timers across entire item classes (e.g., weapons, military loot, medical gear).
-- **Pre-commit XML Validation:** DSM validates syntax and structure before anything is written to disk, ensuring broken XML never makes it to your server files.
-- **Visual Diff Inspector:** Review every changed value side-by-side before applying changes to your live mission.
-
-### 3. Secure Workspace Access & Role-Based Control
-
-![DayZ Server Manager - Workspace Access & Sign-In](docs/screenshots/sign-in.jpg)
-
-- **Role-Based Access Control (RBAC):** Delegate operational duties across team members with granular roles (`Administrator`, `Moderator`, `Viewer`) to protect critical server operations.
-- **Session Supervision:** Type-safe authentication workflows with protected layout routing, persistent session state, and immediate cache invalidation on logout.
-- **Modern Responsive Design:** Theme-synchronized workspace portal with system health status indicators and accessible form controls.
-
-### 4. Server Configuration & Scheduled Automation
-
-- **Automated Cron Jobs:** Schedule daily backups, periodic server restarts with warnings, and cleanup routines.
-- **Tags & Metadata:** Manage server browser tags, visibility, BattlEye/VAC enforcement, and Steam listing parameters.
-- **Discord Integration:** Stream server status events, player milestones, and critical crash alerts directly to Discord webhooks.
-
-### 5. Mod & Workshop Management
-
-- **SteamCMD Integration:** Download and update mods from the Steam Workshop without leaving the web interface.
-- **Automatic Key Handling:** Copies `.bikey` files directly into your server's `keys/` directory on install or update.
-- **Load Order Resolution:** Organize and toggle server-side and client-side mods with clear startup parameter generation.
-
-### 6. Snapshots & One-Click Rollbacks
-
-- **Scheduled Backups:** Automated snapshots of mission files, server profiles, and the hive persistence database (`storage_1`).
-- **Instant Recovery:** If a corrupted mod or bad config breaks your world, restore a known good snapshot with one click.
-- **Safe File Commits:** All file operations use atomic writes (`.tmp` write + swap) and pre-save backups (`.bak_{timestamp}`) to prevent partial writes.
-
-### 7. Searchable Logs & Audit Trail
-
-- **Log Streaming:** Live console output, server logs (`.rpt`, `.ADM`), and crash reports in a searchable, filterable viewer.
-- **Administrative Audit:** Track who restarted the server, what config values were modified, and when backups were restored.
+_These images are design previews of where the console is going. The current console does not show all of it yet, see below._
 
 ---
 
-## Documentation & Operator Guides
+## What works today
 
-- **[Operator Cheatsheet & FAQ](faq.md):** Essential technical cheatsheet covering default network ports (`2302`, `27016`, `2310`), graceful persistence flush via BattlEye `#shutdown`, `.bikey` signature key distribution, and scoped backup geometries.
-- **[Release History & Changelog](history.md):** Structured changelog of completed product backlog items compiled directly from `.agents/BACKLOG.md`.
-- **In-App Knowledge Base:** Operators can press <kbd>Shift + ?</kbd> anywhere within the web console or click the help icon in the top navigation bar to open the live searchable documentation modal.
+- **Sign-in and sessions.** Password sign-in with short-lived tokens, a profile page, password change, and a list of your active sessions that you can revoke.
+- **Servers.** Register a server, check its paths on disk, and pick the active server. Start, stop, restart and force-stop from the browser, with live status.
+- **Safe shutdown.** A stop asks the game to shut down through BattlEye RCON (`#shutdown`) so it can save its world, and only kills the process if it does not exit in time. You can also schedule a delayed stop or restart. If Aegis restarts, a running game server keeps running and Aegis finds it again.
+- **`serverDZ.cfg` editor.** Syntax and value checks while you type, a lock so two operators do not edit at once, atomic saves with a backup, and a history of revisions you can restore.
+- **Launch command.** A preview of the exact command that starts your server, built from your options and mod list. There is no free-text argument field, so a typo cannot add an unsafe argument.
+- **Mods.** Add Workshop and local mods, set their load order, search and look up Workshop items and collections, check for updates, and import or export a launcher preset.
+- **Steam.** Store SteamCMD settings and credentials (encrypted), sign in with Steam Guard, and run a diagnostics check.
+- **Interface.** 12 themes (six light, six dark), responsive layout, live updates through server-sent events, and an in-app help modal.
+
+## What is not built yet
+
+These are planned. Some pages exist in the console as placeholders.
+
+- Download and update of the game server and of mods with SteamCMD, and `.bikey` key handling
+- The `types.xml` economy workbench and the world map
+- Log viewer pages, host and process telemetry, player management
+- Backups and restore, scheduled restarts, Discord notifications
+- Installer packages, services (Windows and systemd), and in-app updates
+- Translations (English only for now)
+
+The full list, with status, is the [feature map](docs/product/feature-map.md). Finished work is listed in the [release history](history.md).
 
 ---
 
-## How It Works
+## Documentation
 
-DSM is designed as a standalone, self-hosted appliance that runs on the same machine (or local network) as your DayZ server:
+- **[Operator cheatsheet and FAQ](faq.md):** default ports, why a graceful shutdown matters, how mod signature keys work, and what to back up.
+- **[Release history](history.md):** completed work, generated from the backlog.
+- **In-app help:** press <kbd>Shift + ?</kbd> anywhere in the console, or use the help icon in the header.
+- **[Project documentation](docs/README.md):** architecture, conventions and the product plan, for people who work on Aegis.
+
+---
+
+## How it works
+
+Aegis is a standalone, self-hosted application that runs on the same machine (or local network) as your DayZ server:
 
 ```text
 [ DayZ Dedicated Server ]
          ^
-         | Process signals, RCON (#shutdown), game file access
+         | Process control, RCON (#shutdown), game file access
          v
-[ DSM Fastify Backend ] <---> [ SQLite Database (manager.sqlite) ]
+[ Aegis backend (Fastify) ] <---> [ SQLite database ]
          ^
-         | REST API (/api/v1) + Server-Sent Events (SSE)
+         | REST API (/api/v1) + Server-Sent Events
          v
-[ DSM React 19 Frontend ] (Web browser on PC, tablet, or phone)
+[ Aegis web console (React 19) ]  (browser on a PC, tablet or phone)
 ```
 
-- **Zero Cloud Lock-in:** DSM runs entirely on your own hardware (Windows VPS, Linux box, or local gaming rig). No third-party accounts or external dependencies required.
-- **Game Files Stay on Disk:** DSM does not replace DayZ's native file layout. Your XMLs, configs, and storage files remain standard DayZ files.
+- **No cloud.** Aegis runs on your own hardware. It talks to Steam only to sign in and to look up Workshop items.
+- **Your game files stay as they are.** Aegis does not change DayZ's file layout. Your configs and storage remain standard DayZ files.
 
 ---
 
@@ -114,14 +96,14 @@ Built from the ground up as a modern, high-throughput monorepo:
 
 ---
 
-## Getting Started (Development)
+## Getting started (development)
 
 ### Prerequisites
 
-- **Node.js:** v20.x or v22.x LTS
-- **pnpm:** `pnpm@12.10.1` (or install via `corepack enable`)
+- **Node.js:** the latest LTS release (currently 26)
+- **pnpm:** `pnpm@12.10.1` (run `corepack enable` to get it)
 
-### Installation & Setup
+### Install and run
 
 1. **Clone the repository:**
 
@@ -140,12 +122,14 @@ Built from the ground up as a modern, high-throughput monorepo:
 
    ```bash
    pnpm start:web      # web console on http://localhost:4200
-   pnpm start:server   # Fastify backend on http://localhost:5000
+   pnpm start:server   # backend on http://localhost:5000
    ```
 
    Open [http://localhost:4200](http://localhost:4200) in your browser.
 
-4. **Sign in:** on first start the backend seeds the database with an `admin` user whose password is `admin`, or the value of `DSM_ADMIN_PASSWORD` if set. The seed runs only while the users table is empty, and in production (`NODE_ENV=production`) `DSM_ADMIN_PASSWORD` is required.
+4. **Sign in.** On the first start the backend creates an `admin` user. Its password is `admin`, or the value of `DSM_ADMIN_PASSWORD` if you set it. In production (`NODE_ENV=production`) `DSM_ADMIN_PASSWORD` is required. This will be replaced by a first-run setup screen.
+
+Settings, environment variables and Windows notes are in [getting started](docs/engineering/getting-started.md).
 
 ---
 
@@ -170,54 +154,26 @@ Built from the ground up as a modern, high-throughput monorepo:
 
 ---
 
-## Project Structure
+## Project structure
 
 ```text
 dayz-server-manager/
 ├── apps/
-│   ├── web/                     # React 19 SPA (Control Plane Console)
-│   │   ├── src/
-│   │   │   ├── components/      # Shared app-level form and layout components
-│   │   │   ├── core/            # App infrastructure (forms, i18n, notifications, query, realtime …)
-│   │   │   ├── features/        # Feature slices (auth, dashboard, mods, server-settings, steam …)
-│   │   │   └── styles/          # Tailwind CSS v4 theme tokens, fonts & animations
-│   │   ├── index.html
-│   │   ├── project.json         # Nx targets (build, serve, lint, typecheck, test, test:coverage)
-│   │   └── vite.config.ts       # Vite 8 + Tailwind v4 bundler config
-│   │
-│   └── server/                  # Fastify REST API (/api/v1) + SSE: auth, servers, mods, steam, realtime
-│
+│   ├── web/          # React 19 web console
+│   └── server/       # Fastify backend: REST API (/api/v1) and server-sent events
 ├── libs/
-│   ├── ui/                      # @aegis/ui component kit (buttons, inputs, tables, toasts, Storybook)
-│   ├── api-client/              # Typed HTTP client with one endpoint module per API area
-│   ├── api-contracts/           # Shared Zod request/response schemas (pure TypeScript + Zod)
-│   ├── database/                # SQLite (better-sqlite3) + Drizzle ORM schema, migrations, crypto
-│   ├── dayz-config/             # serverDZ.cfg tokenizer/parser, rules and launch command compiler
-│   ├── platform/                # Cross-platform process managers (Windows and POSIX)
-│   └── rcon/                    # BattlEye RCON UDP client and packet codec
-│
-├── .github/                     # GitHub Actions CI & PR validation pipelines
-├── .husky/                      # Git hooks (pre-commit lint-staged, pre-push cycle check)
-├── eslint.config.js             # ESLint v10 Flat Config
-├── nx.json                      # Nx task orchestrator configuration
-├── package.json                 # Centralized monorepo manifest
-├── pnpm-workspace.yaml          # Pnpm workspace definition & build script permissions
-└── tsconfig.base.json           # Master TypeScript compiler options and path mappings
+│   ├── ui/           # @aegis/ui component kit and themes (Storybook)
+│   ├── api-client/   # Typed HTTP client, one module per API area
+│   ├── api-contracts/# Shared Zod request and response schemas
+│   ├── database/     # SQLite schema, migrations, password hashing and the secret vault
+│   ├── dayz-config/  # serverDZ.cfg parser and rules, launch command compiler
+│   ├── platform/     # Process managers for Windows and Linux
+│   └── rcon/         # BattlEye RCON client over UDP
+├── docs/             # Project documentation
+├── faq.md            # Operator cheatsheet
+├── history.md        # Release history (generated)
+└── LICENSE
 ```
-
----
-
-## Roadmap
-
-- [x] Monorepo architecture & quality tooling (Nx, pnpm, ESLint v10, Prettier, Husky)
-- [x] Client application skeleton with React 19, Vite, and Tailwind CSS v4
-- [x] Workspace access, authentication flows, and role-based identity (RBAC)
-- [ ] Dashboard shell with real-time process telemetry and quick actions
-- [ ] High-performance virtualized `types.xml` workbench with Web Worker diff engine
-- [ ] Fastify REST backend (`/api/v1`) with native child process supervision
-- [ ] SteamCMD workshop downloader and automated `.bikey` extraction
-- [ ] SQLite persistence layer for audit logs, task history, and backup metadata
-- [ ] Cross-platform service packaging (WinSW on Windows, systemd on Linux)
 
 ---
 

@@ -285,7 +285,7 @@ describe('Steam Routes (/api/v1/settings/steam)', () => {
       expect(res.statusCode).toBe(400);
       const body = res.json();
       expect(body.errorCode).toBe('INVALID_STEAMCMD_PATH');
-      // The offending field is named so the client can highlight it (GEMINI.md §5)
+      // The offending field is named so the client can highlight it (user feedback contract)
       expect(body.fieldErrors).toEqual({
         steamCmdPath: { code: 'INVALID_STEAMCMD_PATH', message: 'Binary does not exist' },
       });

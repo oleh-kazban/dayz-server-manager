@@ -68,13 +68,13 @@ Thumbs.db
 *.sublime-workspace
 
 # ==============================================================================
-# Workspace Internal Specs & Sandboxes
+# Workspace-Internal Folders & Sandboxes
 # ==============================================================================
-specs/
-references/
-GEMINI.md
+# .agents/ and .claude/ hold agent state and plugin reports; .archive/ holds old material
 .agents/
 .claude/
 ...sandbox/
-
 notes.md
+
+# Outdated material awaiting owner review (delete when confirmed useless)
+.archive/

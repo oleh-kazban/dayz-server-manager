@@ -1,5 +1,5 @@
 /**
- * Generates an architectural Pull Request summary following .github/copilot-instructions.md.
+ * Generates an architectural Pull Request summary following docs/engineering/git-and-releases.md.
  *
  * @param {object} params
  * @param {import('@octokit/core').Octokit} params.github
@@ -68,7 +68,7 @@ module.exports = async function generatePrSummary({ github, context }) {
     .join('\n');
 
   const prompt = [
-    'You are a Principal Software Architect generating a PR summary for DayZ Server Manager based on .github/copilot-instructions.md.',
+    'You are a Principal Software Architect generating a PR summary for DayZ Server Manager based on docs/engineering/git-and-releases.md.',
     `PR Title: ${prTitle}`,
     'Commits:',
     commitMessages,

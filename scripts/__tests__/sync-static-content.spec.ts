@@ -491,8 +491,8 @@ describe('sync-static-content pipeline', () => {
   describe('runSync (Full Pipeline Execution)', () => {
     it('happy path: generates root history.md and copies both faq.md and history.md into public assets', () => {
       const faqPath = path.join(tempDir, 'faq.md');
-      const backlogDir = path.join(tempDir, '.agents');
-      const backlogPath = path.join(backlogDir, 'BACKLOG.md');
+      const backlogDir = path.join(tempDir, 'docs', 'product');
+      const backlogPath = path.join(backlogDir, 'backlog.md');
 
       fs.mkdirSync(backlogDir, { recursive: true });
       fs.writeFileSync(
@@ -529,7 +529,7 @@ describe('sync-static-content pipeline', () => {
         });
       const errorLogSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
-      // Temp dir has no faq.md or .agents/BACKLOG.md
+      // Temp dir has no faq.md or docs/product/backlog.md
       const targetDir = path.join(tempDir, 'apps/web/public/assets/content');
       const rootHistory = path.join(tempDir, 'history.md');
 
@@ -544,7 +544,7 @@ describe('sync-static-content pipeline', () => {
       expect(fs.existsSync(rootHistory)).toBe(false);
     });
 
-    it('CI mode: uses pre-existing root history.md when .agents/BACKLOG.md is missing', () => {
+    it('CI mode: uses pre-existing root history.md when docs/product/backlog.md is missing', () => {
       const faqPath = path.join(tempDir, 'faq.md');
       const rootHistory = path.join(tempDir, 'history.md');
 
@@ -565,8 +565,8 @@ describe('sync-static-content pipeline', () => {
 
     it('idempotency: consecutive runSync executions produce byte-identical output with multi-line scopes (ARCH-01, REQ-02)', () => {
       const faqPath = path.join(tempDir, 'faq.md');
-      const backlogDir = path.join(tempDir, '.agents');
-      const backlogPath = path.join(backlogDir, 'BACKLOG.md');
+      const backlogDir = path.join(tempDir, 'docs', 'product');
+      const backlogPath = path.join(backlogDir, 'backlog.md');
 
       fs.mkdirSync(backlogDir, { recursive: true });
       fs.writeFileSync(faqPath, '# FAQ\n', 'utf-8');

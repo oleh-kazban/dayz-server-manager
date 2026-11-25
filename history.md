@@ -238,7 +238,7 @@ A Start control starts the active server with a green toast on success and a red
 
 ### Delivered Capabilities
 
-Start control, disabled reasons, feedback contract (`GEMINI.md` §5), tests and live QA.
+Start control, disabled reasons, the user feedback contract, tests and live QA.
 
 ---
 
@@ -404,7 +404,7 @@ Route-change blocking with a `Confirmation` dialog; `beforeunload` for tab close
 
 ### Summary
 
-Make every create/update form behave consistently: the save/update control is disabled while the form has no changes relative to the last saved values; validation runs when the admin tries to save and then re-validates live; every invalid field (client or server `fieldErrors`) is highlighted with a specific message and the first one receives focus; every server-side create/update/save ends in a green or red toast. The conventions are enforced by QA via `GEMINI.md` §5.
+Make every create/update form behave consistently: the save/update control is disabled while the form has no changes relative to the last saved values; validation runs when the admin tries to save and then re-validates live; every invalid field (client or server `fieldErrors`) is highlighted with a specific message and the first one receives focus; every server-side create/update/save ends in a green or red toast. The conventions are enforced by QA through the user feedback contract.
 
 ### Delivered Capabilities
 
@@ -560,7 +560,7 @@ Upgrade critical runtime, security, Storybook 10.x, ESLint, and Vitest dependenc
 
 ### Summary
 
-Rebrand the workspace and runtime console from `@dsm/*` / Outlive to `@aegis/*` / Aegis Console across `apps/web`, `apps/server`, `libs/*`, TypeScript path mappings, Vite/Vitest/Storybook resolvers, and agent documentation. Clean up the footer layout by removing the duplicate animated logo and elevate the brand header lockup into a `/dashboard` navigation link featuring an SVG-isolated 3D hover animation easter egg.
+Rebrand the workspace and runtime console from `@dsm/*` to `@aegis/*` / Aegis Console across `apps/web`, `apps/server`, `libs/*`, TypeScript path mappings, Vite/Vitest/Storybook resolvers, and agent documentation. Clean up the footer layout by removing the duplicate animated logo and elevate the brand header lockup into a `/dashboard` navigation link featuring an SVG-isolated 3D hover animation easter egg.
 
 ### Delivered Capabilities
 
@@ -757,7 +757,7 @@ Establish a unified toast notification architecture that transforms low-level RE
 
 ### Summary
 
-Deliver an end-to-end authentication and operator login workflow securing the DSM management console. Provide Fastify authentication REST endpoints (`/api/v1/auth/login`, `/api/v1/auth/logout`) with SQLite operator verification and secure `scrypt` password hashing. Build the dedicated `/sign-in` view in `apps/web` featuring the Outlive branded `SignInHero`, react-hook-form + Zod validated `SignInForm`, client-side `AuthProvider` session state, and TanStack Router `beforeLoad` redirection guards.
+Deliver an end-to-end authentication and operator login workflow securing the DSM management console. Provide Fastify authentication REST endpoints (`/api/v1/auth/login`, `/api/v1/auth/logout`) with SQLite operator verification and secure `scrypt` password hashing. Build the dedicated `/sign-in` view in `apps/web` featuring the branded `SignInHero`, react-hook-form + Zod validated `SignInForm`, client-side `AuthProvider` session state, and TanStack Router `beforeLoad` redirection guards.
 
 ### Delivered Capabilities
 
@@ -785,7 +785,7 @@ Establish an interactive Storybook environment for `libs/ui` that acts as a livi
 
 ---
 
-## [DSM-00105] Outlive Design System UI Kit Component Library
+## [DSM-00105] Aegis Design System UI Kit Component Library
 
 - **Type**: `Story`
 - **Priority**: `P0 (Critical)`
@@ -794,7 +794,7 @@ Establish an interactive Storybook environment for `libs/ui` that acts as a livi
 
 ### Summary
 
-Implement a cohesive, accessible, and lightweight design system component library (`libs/ui`) aligned with the Outlive pastel visual tokens. Provide foundational interactive primitives (`Button`, `Input`, `PasswordInput`, `Checkbox`, `Toggle`, `Select`, `Tag`, `TagInput`, `TagSelect`, `StatusTag`, `Badge`), feedback containers (`Card`, `HeroBanner`, `Notice`, `ProgressBar`, `Skeleton`, `Tooltip`, `EmptyState`, `KpiCard`), data presentation surfaces (`Tabs`, `Pagination`, `Breadcrumbs`, `Table`, `TableBulkActions`, `TableColumnVisibility`), and safety dialogs (`ConfirmationDialog`, `KeywordConfirmationDialog`). Ensure every component satisfies WCAG contrast, ARIA specifications, keyboard focus management, and comprehensive Vitest unit tests.
+Implement a cohesive, accessible, and lightweight design system component library (`libs/ui`) aligned with the Aegis pastel visual tokens. Provide foundational interactive primitives (`Button`, `Input`, `PasswordInput`, `Checkbox`, `Toggle`, `Select`, `Tag`, `TagInput`, `TagSelect`, `StatusTag`, `Badge`), feedback containers (`Card`, `HeroBanner`, `Notice`, `ProgressBar`, `Skeleton`, `Tooltip`, `EmptyState`, `KpiCard`), data presentation surfaces (`Tabs`, `Pagination`, `Breadcrumbs`, `Table`, `TableBulkActions`, `TableColumnVisibility`), and safety dialogs (`ConfirmationDialog`, `KeywordConfirmationDialog`). Ensure every component satisfies WCAG contrast, ARIA specifications, keyboard focus management, and comprehensive Vitest unit tests.
 
 ### Delivered Capabilities
 
