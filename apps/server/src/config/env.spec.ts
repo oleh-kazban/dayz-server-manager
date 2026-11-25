@@ -1,4 +1,4 @@
-import { loadEnv } from './env';
+import { FORMER_PUBLIC_SESSION_SECRETS, loadEnv } from './env';
 
 describe('loadEnv', () => {
   it('loads valid configuration with defaults', () => {
@@ -31,19 +31,54 @@ describe('loadEnv', () => {
     expect(config.LOG_LEVEL).toBe('warn');
   });
 
-  it('rejects default or weak session secret in production', () => {
-    expect(() =>
-      loadEnv({
-        NODE_ENV: 'production',
-      }),
-    ).toThrow('SESSION_SECRET must be an explicit, strong secret');
+  describe('SESSION_SECRET', () => {
+    const strong = 'a-strong-session-secret-of-32-chars!';
 
-    expect(() =>
-      loadEnv({
-        NODE_ENV: 'production',
-        SESSION_SECRET: 'too-short-secret',
-      }),
-    ).toThrow('SESSION_SECRET must be an explicit, strong secret');
+    it.each(['development', 'test', 'production'])(
+      'is undefined when unset in %s (no built-in default)',
+      NODE_ENV => {
+        expect(loadEnv({ NODE_ENV }).SESSION_SECRET).toBeUndefined();
+      },
+    );
+
+    it.each(['', '   '])('treats %j as not set', value => {
+      expect(loadEnv({ SESSION_SECRET: value }).SESSION_SECRET).toBeUndefined();
+    });
+
+    it.each(['development', 'test', 'production'])('accepts a strong secret in %s', NODE_ENV => {
+      expect(loadEnv({ NODE_ENV, SESSION_SECRET: strong }).SESSION_SECRET).toBe(strong);
+    });
+
+    it('accepts a secret of exactly 32 characters', () => {
+      const secret = 'x'.repeat(32);
+      expect(loadEnv({ SESSION_SECRET: secret }).SESSION_SECRET).toBe(secret);
+    });
+
+    it.each(['development', 'test', 'production'])(
+      'rejects a secret of 31 characters in %s',
+      NODE_ENV => {
+        expect(() => loadEnv({ NODE_ENV, SESSION_SECRET: 'x'.repeat(31) })).toThrow(
+          'SESSION_SECRET',
+        );
+      },
+    );
+
+    const formerSecrets = [
+      'super-secret-dev-session-key-32-chars-long',
+      'dev-insecure-secret-change-me-in-production-min-32-chars',
+    ];
+
+    it('lists exactly the two former public secrets', () => {
+      expect([...FORMER_PUBLIC_SESSION_SECRETS]).toEqual(formerSecrets);
+    });
+
+    it.each(
+      formerSecrets.flatMap(secret =>
+        ['development', 'test', 'production'].map(NODE_ENV => [secret, NODE_ENV]),
+      ),
+    )('rejects the former public secret %s in %s', (secret, NODE_ENV) => {
+      expect(() => loadEnv({ NODE_ENV, SESSION_SECRET: secret })).toThrow('SESSION_SECRET');
+    });
   });
 
   it('throws descriptive error on invalid port or environment', () => {

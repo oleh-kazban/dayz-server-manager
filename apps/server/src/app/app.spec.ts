@@ -7,6 +7,7 @@ import { buildApp } from './app';
 describe('Fastify App', () => {
   const config = loadEnv({
     PORT: '5000',
+    SESSION_SECRET: 'test-session-secret-0123456789-abcdef',
     LOG_LEVEL: 'silent',
     CORS_ORIGIN: 'http://localhost:4200',
     DATABASE_PATH: ':memory:',
@@ -71,5 +72,37 @@ describe('Fastify App', () => {
 
     await app.close();
     app.closeDb();
+  });
+
+  describe('non-loopback listen warning', () => {
+    const WARN_LEVEL = 40;
+
+    async function listenAndCollectLogs(host: string) {
+      const lines: string[] = [];
+      const app = buildApp({
+        config: { ...config, HOST: host, LOG_LEVEL: 'warn' },
+        logStream: { write: line => lines.push(line) },
+      });
+      try {
+        await app.listen({ port: 0, host: '127.0.0.1' });
+      } finally {
+        await app.close();
+        app.closeDb();
+      }
+      return lines.map(line => JSON.parse(line) as { level: number; msg: string });
+    }
+
+    it('logs one warn-level line mentioning HTTPS when HOST is 0.0.0.0', async () => {
+      const logs = await listenAndCollectLogs('0.0.0.0');
+
+      const warnings = logs.filter(l => l.level === WARN_LEVEL && /HTTPS/.test(l.msg));
+      expect(warnings).toHaveLength(1);
+    });
+
+    it('logs no HTTPS warning when HOST is 127.0.0.1', async () => {
+      const logs = await listenAndCollectLogs('127.0.0.1');
+
+      expect(logs.filter(l => /HTTPS/.test(l.msg))).toHaveLength(0);
+    });
   });
 });

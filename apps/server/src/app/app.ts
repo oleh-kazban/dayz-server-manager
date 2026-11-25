@@ -15,6 +15,8 @@ import { type DatabaseInstance, initDatabase, sessions } from '@aegis/database';
 import { createProcessManager, type ProcessManager } from '@aegis/platform';
 
 import { type EnvConfig } from '../config/env';
+import { listenWarning } from '../config/network';
+import { resolveSessionSecret } from '../config/session-secret';
 import { registerAuthRoutes } from '../routes/auth';
 import { registerHealthRoutes } from '../routes/health';
 import { registerLaunchCommandRoutes } from '../routes/launch-command';
@@ -40,6 +42,8 @@ import { serializeRequest } from '../utils/log-redaction';
 
 export interface BuildAppOptions {
   config: EnvConfig;
+  /** Directory for `.session.key` when SESSION_SECRET is not set; defaults to `manager-data`. */
+  sessionKeyDir?: string;
   serverOptions?: FastifyServerOptions;
   db?: DatabaseInstance;
   /** OS process adapter; defaults to the platform implementation (DSM-00160). */
@@ -100,6 +104,13 @@ export function buildApp(options: BuildAppOptions): FastifyInstance {
   // Only timers stop; DayZ processes keep running across DSM restarts (DSM-00160 D1).
   app.addHook('onClose', async () => lifecycle.close());
 
+  app.addHook('onListen', async () => {
+    const warning = listenWarning(options.config.HOST);
+    if (warning) {
+      app.log.warn(warning);
+    }
+  });
+
   // Allow empty bodies when Content-Type: application/json is sent on DELETE/GET requests
   app.addContentTypeParser('application/json', { parseAs: 'string' }, (_req, body, defaultDone) => {
     if (typeof body === 'string' && body.trim() === '') {
@@ -131,7 +142,10 @@ export function buildApp(options: BuildAppOptions): FastifyInstance {
   app.register(sensible);
 
   app.register(jwt, {
-    secret: options.config.SESSION_SECRET,
+    secret: resolveSessionSecret({
+      configured: options.config.SESSION_SECRET,
+      dir: options.sessionKeyDir,
+    }),
   });
 
   app.setErrorHandler(
