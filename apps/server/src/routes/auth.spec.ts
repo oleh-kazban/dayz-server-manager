@@ -3,7 +3,13 @@ import type { FastifyInstance } from 'fastify';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import { apiErrorResponseSchema } from '@aegis/api-contracts';
-import { type DatabaseInstance, initDatabase, sessions } from '@aegis/database';
+import {
+  type DatabaseInstance,
+  hashPassword,
+  initDatabase,
+  sessions,
+  users,
+} from '@aegis/database';
 
 import { buildApp } from '../app/app';
 import { loadEnv } from '../config/env';
@@ -568,5 +574,116 @@ describe('Auth Routes (/api/v1/auth)', () => {
       const updatedSess = sessionDb.db.select().from(sessions).where(eq(sessions.id, sid)).get();
       expect(updatedSess!.lastActiveAt.getTime()).toBeGreaterThan(oldTime.getTime());
     });
+  });
+});
+
+/** Inserts a user row with the given role and returns its login credentials. */
+function insertUser(db: DatabaseInstance, role: 'root' | 'setup') {
+  db.db
+    .insert(users)
+    .values({
+      id: `role-model-${role}`,
+      username: `${role}-user`,
+      passwordHash: hashPassword('role-pass-123'),
+      role,
+      createdAt: new Date(),
+    })
+    .run();
+  return { usernameOrEmail: `${role}-user`, password: 'role-pass-123' };
+}
+
+async function buildRoleApp() {
+  const dbInstance = initDatabase({ dbPath: ':memory:' });
+  const app = buildApp({
+    config: loadEnv({
+      SESSION_SECRET: 'test-session-secret-at-least-32-chars-long!',
+      LOG_LEVEL: 'silent',
+    }),
+    db: dbInstance,
+  });
+  await app.ready();
+  return { app, dbInstance };
+}
+
+describe.each(['root', 'setup'] as const)('Auth routes for a %s user (role model)', role => {
+  let app: FastifyInstance;
+  let dbInstance: DatabaseInstance;
+  let credentials: { usernameOrEmail: string; password: string };
+
+  beforeAll(async () => {
+    ({ app, dbInstance } = await buildRoleApp());
+    credentials = insertUser(dbInstance, role);
+  });
+
+  afterAll(async () => {
+    await app.close();
+    dbInstance.close();
+  });
+
+  it('login serializes the real role in the response and the token claim (AC-2, AC-8)', async () => {
+    const res = await app.inject({
+      method: 'POST',
+      url: '/api/v1/auth/login',
+      payload: credentials,
+    });
+
+    expect(res.statusCode).toBe(200);
+    expect(res.json().user.role).toBe(role);
+    expect(app.jwt.decode<{ role: string }>(res.json().accessToken)?.role).toBe(role);
+  });
+
+  it('refresh issues an access token carrying the real role (AC-8)', async () => {
+    const login = await app.inject({
+      method: 'POST',
+      url: '/api/v1/auth/login',
+      payload: credentials,
+    });
+
+    const res = await app.inject({
+      method: 'POST',
+      url: '/api/v1/auth/refresh',
+      payload: { refreshToken: login.json().refreshToken },
+    });
+
+    expect(res.statusCode).toBe(200);
+    expect(app.jwt.decode<{ role: string }>(res.json().accessToken)?.role).toBe(role);
+  });
+
+  it('GET /me returns 200 with the real role (AC-2, AC-8, AC-11)', async () => {
+    const login = await app.inject({
+      method: 'POST',
+      url: '/api/v1/auth/login',
+      payload: credentials,
+    });
+
+    const res = await app.inject({
+      method: 'GET',
+      url: '/api/v1/auth/me',
+      headers: { authorization: `Bearer ${login.json().accessToken}` },
+    });
+
+    expect(res.statusCode).toBe(200);
+    expect(res.json().role).toBe(role);
+  });
+});
+
+describe('GET /api/v1/auth/me with a role-less token (role model)', () => {
+  it('stays allowed because the route is on the allowlist', async () => {
+    const { app, dbInstance } = await buildRoleApp();
+    try {
+      const token = app.jwt.sign({ sub: 'role-model-root', type: 'access' });
+      insertUser(dbInstance, 'root');
+
+      const res = await app.inject({
+        method: 'GET',
+        url: '/api/v1/auth/me',
+        headers: { authorization: `Bearer ${token}` },
+      });
+
+      expect(res.statusCode).toBe(200);
+    } finally {
+      await app.close();
+      dbInstance.close();
+    }
   });
 });

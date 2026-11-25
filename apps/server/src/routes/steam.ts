@@ -1,5 +1,5 @@
 import { eq } from 'drizzle-orm';
-import type { FastifyInstance, FastifyPluginAsync, FastifyReply, FastifyRequest } from 'fastify';
+import type { FastifyInstance, FastifyPluginAsync, FastifyReply } from 'fastify';
 
 import {
   type ApiErrorCode,
@@ -20,24 +20,13 @@ import {
   verifyVaultKey,
 } from '@aegis/database';
 
+import { requireAdmin } from '../app/role-guards';
 import { type PathValidationResult, steamPathService } from '../services/steam/steam-path.service';
 import {
   steamRunnerService,
   type SteamSessionStatusType,
 } from '../services/steam/steam-runner.service';
 import { formatZodFieldErrors, sendApiError } from '../utils/api-error';
-
-function ensureAdminRole(
-  request: FastifyRequest,
-  reply: FastifyReply,
-  actionMessage: string,
-): boolean {
-  if (request.user?.role !== 'admin') {
-    sendApiError(reply, 403, 'AUTH_FORBIDDEN_ADMIN_REQUIRED', actionMessage);
-    return false;
-  }
-  return true;
-}
 
 function toSafeIsoDate(date: Date): string {
   if (date.getFullYear() > 9999) {
@@ -277,13 +266,9 @@ export const registerSteamRoutes: FastifyPluginAsync = async fastify => {
   fastify.get(
     '/',
     {
-      onRequest: [fastify.authenticate],
+      onRequest: [fastify.authenticate, requireAdmin],
     },
     async (request, reply) => {
-      if (!ensureAdminRole(request, reply, 'Admin role required to view Steam settings')) {
-        return;
-      }
-
       const settings = getOrCreateDefaultSettings(fastify);
       const workshopCapacity = steamPathService.getVolumeCapacity(settings.steamWorkshopPath);
       const metaCapacity = steamPathService.getVolumeCapacity(settings.steamMetaPath);
@@ -300,13 +285,9 @@ export const registerSteamRoutes: FastifyPluginAsync = async fastify => {
   fastify.patch(
     '/',
     {
-      onRequest: [fastify.authenticate],
+      onRequest: [fastify.authenticate, requireAdmin],
     },
     async (request, reply) => {
-      if (!ensureAdminRole(request, reply, 'Admin role required to update Steam settings')) {
-        return;
-      }
-
       const parseResult = updateSteamSettingsSchema.safeParse(request.body);
       if (!parseResult.success) {
         return sendApiError(reply, 400, 'VALIDATION_FAILED', {
@@ -378,13 +359,9 @@ export const registerSteamRoutes: FastifyPluginAsync = async fastify => {
   fastify.post(
     '/session/clear',
     {
-      onRequest: [fastify.authenticate],
+      onRequest: [fastify.authenticate, requireAdmin],
     },
     async (request, reply) => {
-      if (!ensureAdminRole(request, reply, 'Admin role required to clear session tokens')) {
-        return;
-      }
-
       const current = getOrCreateDefaultSettings(fastify);
       try {
         steamRunnerService.clearSessionTokens(current.steamMetaPath);
@@ -413,13 +390,9 @@ export const registerSteamRoutes: FastifyPluginAsync = async fastify => {
   fastify.post(
     '/session/login',
     {
-      onRequest: [fastify.authenticate],
+      onRequest: [fastify.authenticate, requireAdmin],
     },
     async (request, reply) => {
-      if (!ensureAdminRole(request, reply, 'Admin role required to authenticate Steam session')) {
-        return;
-      }
-
       const current = getOrCreateDefaultSettings(fastify);
       if (current.authMode !== 'account' || !current.steamUsername) {
         return sendApiError(reply, 400, 'STEAM_USERNAME_REQUIRED', {
@@ -467,13 +440,9 @@ export const registerSteamRoutes: FastifyPluginAsync = async fastify => {
   fastify.post(
     '/challenge/respond',
     {
-      onRequest: [fastify.authenticate],
+      onRequest: [fastify.authenticate, requireAdmin],
     },
     async (request, reply) => {
-      if (!ensureAdminRole(request, reply, 'Admin role required to respond to 2FA challenge')) {
-        return;
-      }
-
       const parseResult = steamChallengeResponseSchema.safeParse(request.body);
       if (!parseResult.success) {
         return sendApiError(reply, 400, 'VALIDATION_FAILED', {
@@ -503,13 +472,9 @@ export const registerSteamRoutes: FastifyPluginAsync = async fastify => {
   fastify.post(
     '/challenge/abort',
     {
-      onRequest: [fastify.authenticate],
+      onRequest: [fastify.authenticate, requireAdmin],
     },
     async (request, reply) => {
-      if (!ensureAdminRole(request, reply, 'Admin role required to abort challenge')) {
-        return;
-      }
-
       const parseResult = steamChallengeAbortSchema.safeParse(request.body);
       if (!parseResult.success) {
         return sendApiError(reply, 400, 'VALIDATION_FAILED', {
@@ -538,13 +503,9 @@ export const registerSteamRoutes: FastifyPluginAsync = async fastify => {
   fastify.post(
     '/diagnostics',
     {
-      onRequest: [fastify.authenticate],
+      onRequest: [fastify.authenticate, requireAdmin],
     },
     async (request, reply) => {
-      if (!ensureAdminRole(request, reply, 'Admin role required to run Steam diagnostics')) {
-        return;
-      }
-
       const current = getOrCreateDefaultSettings(fastify);
       const vaultKey = resolveVaultKey();
 

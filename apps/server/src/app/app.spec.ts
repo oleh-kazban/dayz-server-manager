@@ -105,4 +105,23 @@ describe('Fastify App', () => {
       expect(logs.filter(l => /HTTPS/.test(l.msg))).toHaveLength(0);
     });
   });
+
+  it('rejects an SSE ticket issued with role setup (role gate)', async () => {
+    const app = buildApp({ config });
+    app.get('/api/v1/__sse-probe', { onRequest: [app.authenticateSse] }, async () => ({ ok: 1 }));
+    try {
+      const { ticket } = app.sseTickets.issue({ sub: 'setup-user', role: 'setup' });
+
+      const response = await app.inject({
+        method: 'GET',
+        url: `/api/v1/__sse-probe?ticket=${encodeURIComponent(ticket)}`,
+      });
+
+      expect(response.statusCode).toBe(403);
+      expect(response.json().errorCode).toBe('AUTH_FORBIDDEN_ADMIN_REQUIRED');
+    } finally {
+      await app.close();
+      app.closeDb();
+    }
+  });
 });

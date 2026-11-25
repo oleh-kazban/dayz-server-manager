@@ -1,5 +1,5 @@
 import { and, asc, eq } from 'drizzle-orm';
-import type { FastifyInstance, FastifyPluginAsync, FastifyReply, FastifyRequest } from 'fastify';
+import type { FastifyInstance, FastifyPluginAsync, FastifyReply } from 'fastify';
 import crypto from 'node:crypto';
 
 import {
@@ -29,6 +29,7 @@ import {
 import { type Server, type ServerMod, serverMods, servers } from '@aegis/database';
 import { collectModLaunchFolders, formatModFlags } from '@aegis/dayz-config';
 
+import { requireAdmin } from '../app/role-guards';
 import {
   type PublishedFileMetadata,
   SteamWorkshopError,
@@ -112,18 +113,6 @@ export function listServerModRows(fastify: FastifyInstance, serverId: string): S
     .where(eq(serverMods.serverId, serverId))
     .orderBy(asc(serverMods.loadOrder))
     .all();
-}
-
-function ensureAdminRole(
-  request: FastifyRequest,
-  reply: FastifyReply,
-  actionMessage: string,
-): boolean {
-  if (request.user?.role !== 'admin') {
-    sendApiError(reply, 403, 'AUTH_FORBIDDEN_ADMIN_REQUIRED', actionMessage);
-    return false;
-  }
-  return true;
 }
 
 function resolveServerOrSendError(
@@ -570,10 +559,8 @@ export const registerServerModsRoutes: FastifyPluginAsync = async fastify => {
 
   fastify.post<{ Params: { id: string } }>(
     '/:id/mods',
-    { onRequest: [fastify.authenticate] },
+    { onRequest: [fastify.authenticate, requireAdmin] },
     async (request, reply) => {
-      if (!ensureAdminRole(request, reply, 'Admin role required to add server mods')) return;
-
       const server = resolveServerOrSendError(fastify, request.params, reply);
       if (!server || !guardServerConfigUnlocked(server, reply)) return;
 
@@ -660,10 +647,8 @@ export const registerServerModsRoutes: FastifyPluginAsync = async fastify => {
 
   fastify.post<{ Params: { id: string } }>(
     '/:id/mods/batch',
-    { onRequest: [fastify.authenticate] },
+    { onRequest: [fastify.authenticate, requireAdmin] },
     async (request, reply) => {
-      if (!ensureAdminRole(request, reply, 'Admin role required to batch add server mods')) return;
-
       const server = resolveServerOrSendError(fastify, request.params, reply);
       if (!server || !guardServerConfigUnlocked(server, reply)) return;
 
@@ -708,10 +693,8 @@ export const registerServerModsRoutes: FastifyPluginAsync = async fastify => {
 
   fastify.post<{ Params: { id: string } }>(
     '/:id/mods/import',
-    { onRequest: [fastify.authenticate] },
+    { onRequest: [fastify.authenticate, requireAdmin] },
     async (request, reply) => {
-      if (!ensureAdminRole(request, reply, 'Admin role required to import server mods')) return;
-
       const server = resolveServerOrSendError(fastify, request.params, reply);
       if (!server || !guardServerConfigUnlocked(server, reply)) return;
 
@@ -790,10 +773,8 @@ export const registerServerModsRoutes: FastifyPluginAsync = async fastify => {
 
   fastify.patch<{ Params: { id: string; modId: string } }>(
     '/:id/mods/:modId',
-    { onRequest: [fastify.authenticate] },
+    { onRequest: [fastify.authenticate, requireAdmin] },
     async (request, reply) => {
-      if (!ensureAdminRole(request, reply, 'Admin role required to update server mods')) return;
-
       const resolved = resolveServerAndModOrSendError(fastify, request.params, reply);
       if (!resolved) return;
 
@@ -867,10 +848,8 @@ export const registerServerModsRoutes: FastifyPluginAsync = async fastify => {
 
   fastify.delete<{ Params: { id: string; modId: string } }>(
     '/:id/mods/:modId',
-    { onRequest: [fastify.authenticate] },
+    { onRequest: [fastify.authenticate, requireAdmin] },
     async (request, reply) => {
-      if (!ensureAdminRole(request, reply, 'Admin role required to delete server mods')) return;
-
       const resolved = resolveServerAndModOrSendError(fastify, request.params, reply);
       if (!resolved) return;
 
@@ -903,10 +882,8 @@ export const registerServerModsRoutes: FastifyPluginAsync = async fastify => {
 
   fastify.put<{ Params: { id: string } }>(
     '/:id/mods/reorder',
-    { onRequest: [fastify.authenticate] },
+    { onRequest: [fastify.authenticate, requireAdmin] },
     async (request, reply) => {
-      if (!ensureAdminRole(request, reply, 'Admin role required to reorder server mods')) return;
-
       const server = resolveServerOrSendError(fastify, request.params, reply);
       if (!server || !guardServerConfigUnlocked(server, reply)) return;
 
@@ -954,12 +931,8 @@ export const registerServerModsRoutes: FastifyPluginAsync = async fastify => {
 
   fastify.post<{ Params: { id: string } }>(
     '/:id/mods/check-updates',
-    { onRequest: [fastify.authenticate] },
+    { onRequest: [fastify.authenticate, requireAdmin] },
     async (request, reply) => {
-      if (!ensureAdminRole(request, reply, 'Admin role required to check Workshop updates')) {
-        return;
-      }
-
       const server = resolveServerOrSendError(fastify, request.params, reply);
       if (!server) return;
 

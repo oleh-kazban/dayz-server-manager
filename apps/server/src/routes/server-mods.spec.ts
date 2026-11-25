@@ -23,7 +23,7 @@ describe('Server Mods Helpers & Routes (/api/v1/servers/:id/mods)', () => {
   let app: FastifyInstance;
   let dbInstance: DatabaseInstance;
   let adminToken: string;
-  let viewerToken: string;
+  let setupToken: string;
 
   const serverAId = '11111111-1111-4111-a111-111111111111';
   const serverBId = '22222222-2222-4222-8222-222222222222';
@@ -43,8 +43,8 @@ describe('Server Mods Helpers & Routes (/api/v1/servers/:id/mods)', () => {
       { sub: 'admin-id', role: 'admin', type: 'access' },
       { expiresIn: '15m' },
     );
-    viewerToken = app.jwt.sign(
-      { sub: 'viewer-id', role: 'viewer', type: 'access' },
+    setupToken = app.jwt.sign(
+      { sub: 'setup-id', role: 'setup', type: 'access' },
       { expiresIn: '15m' },
     );
 
@@ -183,32 +183,56 @@ describe('Server Mods Helpers & Routes (/api/v1/servers/:id/mods)', () => {
   });
 
   describe('RBAC & GUARD-MOD-01 (Ownership & Validation)', () => {
-    it('enforces authentication and admin-only mutations while allowing viewer GET', async () => {
+    it('enforces authentication and admin-only mutations and denies the setup role on reads', async () => {
       const unauth = await app.inject({
         method: 'GET',
         url: `/api/v1/servers/${serverAId}/mods`,
       });
       expect(unauth.statusCode).toBe(401);
 
-      const viewerGet = await app.inject({
+      const setupGet = await app.inject({
         method: 'GET',
         url: `/api/v1/servers/${serverAId}/mods`,
-        headers: { authorization: `Bearer ${viewerToken}` },
+        headers: { authorization: `Bearer ${setupToken}` },
       });
-      expect(viewerGet.statusCode).toBe(200);
+      expect(setupGet.statusCode).toBe(403);
+      expect(setupGet.json().errorCode).toBe('AUTH_FORBIDDEN_ADMIN_REQUIRED');
 
-      const viewerPost = await app.inject({
+      const setupExport = await app.inject({
+        method: 'GET',
+        url: `/api/v1/servers/${serverAId}/mods/export-preset`,
+        headers: { authorization: `Bearer ${setupToken}` },
+      });
+      expect(setupExport.statusCode).toBe(403);
+
+      const roleless = app.jwt.sign({ sub: 'roleless', type: 'access' });
+      const unknown = app.jwt.sign({ sub: 'unknown', role: 'viewer', type: 'access' });
+      for (const token of [roleless, unknown]) {
+        const denied = await app.inject({
+          method: 'POST',
+          url: `/api/v1/servers/${serverAId}/mods`,
+          headers: { authorization: `Bearer ${token}` },
+          payload: { sourceType: 'local', name: 'Local Mod', folderName: '@Local' },
+        });
+        expect(denied.statusCode).toBe(403);
+        expect(denied.json().errorCode).toBe('AUTH_FORBIDDEN_ADMIN_REQUIRED');
+      }
+
+      const setupPost = await app.inject({
         method: 'POST',
         url: `/api/v1/servers/${serverAId}/mods`,
-        headers: { authorization: `Bearer ${viewerToken}` },
+        headers: { authorization: `Bearer ${setupToken}` },
         payload: {
           sourceType: 'local',
           name: 'Local Mod',
           folderName: '@Local',
         },
       });
-      expect(viewerPost.statusCode).toBe(403);
-      expect(viewerPost.json().errorCode).toBe('AUTH_FORBIDDEN_ADMIN_REQUIRED');
+      expect(setupPost.statusCode).toBe(403);
+      expect(setupPost.json().errorCode).toBe('AUTH_FORBIDDEN_ADMIN_REQUIRED');
+      expect(setupPost.json().message).toBe(
+        'Administrator privileges are required to perform this action.',
+      );
     });
 
     it('rejects invalid UUIDs, unknown servers, and cross-server mod IDs (IDOR)', async () => {
@@ -1384,7 +1408,7 @@ describe('Server Mods Helpers & Routes (/api/v1/servers/:id/mods)', () => {
         const res = await app.inject({
           method: 'POST',
           url: `/api/v1/servers/${serverAId}/mods/import`,
-          headers: { authorization: `Bearer ${viewerToken}` },
+          headers: { authorization: `Bearer ${setupToken}` },
           payload: {
             preset: { steamWsMods: [{ workshopId: '1559212036', name: 'CF' }] },
           },

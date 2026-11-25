@@ -206,6 +206,51 @@ describe('Realtime Routes (/api/v1/realtime/sse)', () => {
     }
   });
 
+  it('issues no ticket to a setup token', async () => {
+    const issueSpy = vi.spyOn(app.sseTickets, 'issue');
+    issueSpy.mockClear();
+    const setupToken = app.jwt.sign({ sub: 'setup-id', role: 'setup', type: 'access' });
+
+    const res = await issueTicket(setupToken);
+
+    expect(res.statusCode).toBe(403);
+    expect(res.json().errorCode).toBe('AUTH_FORBIDDEN_ADMIN_REQUIRED');
+    expect(issueSpy).not.toHaveBeenCalled();
+  });
+
+  it('denies a setup token on the SSE stream via the header', async () => {
+    const subscribeSpy = vi.spyOn(app.sseHub, 'subscribe');
+    subscribeSpy.mockClear();
+    const setupToken = app.jwt.sign({ sub: 'setup-id', role: 'setup', type: 'access' });
+
+    const res = await app.inject({
+      method: 'GET',
+      url: '/api/v1/realtime/sse',
+      headers: { authorization: `Bearer ${setupToken}` },
+    });
+
+    expect(res.statusCode).toBe(403);
+    expect(subscribeSpy).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ['setup', 'setup' as const],
+    ['missing', undefined],
+  ])('rejects an SSE ticket stored with a %s role and consumes it', async (_name, role) => {
+    const subscribeSpy = vi.spyOn(app.sseHub, 'subscribe');
+    subscribeSpy.mockClear();
+    const { ticket } = app.sseTickets.issue({ sub: 'x', role });
+    const url = `/api/v1/realtime/sse?ticket=${encodeURIComponent(ticket)}`;
+
+    const res = await app.inject({ method: 'GET', url });
+    expect(res.statusCode).toBe(403);
+    expect(res.json().errorCode).toBe('AUTH_FORBIDDEN_ADMIN_REQUIRED');
+
+    const reused = await app.inject({ method: 'GET', url });
+    expect(reused.statusCode).toBe(401);
+    expect(subscribeSpy).not.toHaveBeenCalled();
+  });
+
   it('opens the stream for a ticket of a session-less token', async () => {
     mockSubscribe();
     const sessionless = app.jwt.sign({ sub: 'svc', role: 'admin', type: 'access' });

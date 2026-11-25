@@ -8,6 +8,7 @@ import {
   type RefreshResponseDto,
   signInRequestSchema,
   type SignInResponseDto,
+  USER_ROLE_VALUES,
 } from '@aegis/api-contracts';
 import { sessions, users, verifyPassword } from '@aegis/database';
 
@@ -48,7 +49,7 @@ export const registerAuthRoutes: FastifyPluginAsync = async fastify => {
                   username: { type: 'string' },
                   displayName: { type: 'string' },
                   email: { type: 'string' },
-                  role: { type: 'string', enum: ['admin'] },
+                  role: { type: 'string', enum: [...USER_ROLE_VALUES] },
                 },
               },
             },
@@ -265,7 +266,7 @@ export const registerAuthRoutes: FastifyPluginAsync = async fastify => {
               username: { type: 'string' },
               displayName: { type: 'string' },
               email: { type: 'string' },
-              role: { type: 'string', enum: ['admin'] },
+              role: { type: 'string', enum: [...USER_ROLE_VALUES] },
             },
           },
         },

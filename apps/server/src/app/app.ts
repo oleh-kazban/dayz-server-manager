@@ -40,6 +40,8 @@ import {
 import { sendApiError } from '../utils/api-error';
 import { serializeRequest } from '../utils/log-redaction';
 
+import { enforceRoleGate } from './role-guards';
+
 export interface BuildAppOptions {
   config: EnvConfig;
   /** Directory for `.session.key` when SESSION_SECRET is not set; defaults to `manager-data`. */
@@ -218,6 +220,7 @@ export function buildApp(options: BuildAppOptions): FastifyInstance {
         'Invalid or missing authentication token',
       );
     }
+    return enforceRoleGate(request, reply);
   });
 
   /**
@@ -242,6 +245,7 @@ export function buildApp(options: BuildAppOptions): FastifyInstance {
       return sendApiError(reply, 401, 'AUTH_SESSION_INVALID', 'Session is invalid or expired');
     }
     request.user = { ...identity, type: 'access' };
+    return enforceRoleGate(request, reply);
   });
 
   app.register(registerHealthRoutes);

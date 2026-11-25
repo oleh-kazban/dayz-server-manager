@@ -26,7 +26,7 @@ describe('Launch Command Route (GET /api/v1/servers/:id/launch-command)', () => 
   let app: FastifyInstance;
   let dbInstance: DatabaseInstance;
   let adminToken: string;
-  let viewerToken: string;
+  let setupToken: string;
 
   beforeAll(async () => {
     dbInstance = initDatabase({ dbPath: ':memory:' });
@@ -43,8 +43,8 @@ describe('Launch Command Route (GET /api/v1/servers/:id/launch-command)', () => 
       { sub: 'admin-id', role: 'admin', type: 'access' },
       { expiresIn: '15m' },
     );
-    viewerToken = app.jwt.sign(
-      { sub: 'viewer-id', role: 'viewer', type: 'access' },
+    setupToken = app.jwt.sign(
+      { sub: 'setup-id', role: 'setup', type: 'access' },
       { expiresIn: '15m' },
     );
 
@@ -170,8 +170,21 @@ describe('Launch Command Route (GET /api/v1/servers/:id/launch-command)', () => 
     expect((await get(SERVER_ID)).statusCode).toBe(401);
   });
 
-  it('returns 403 for a non-admin token', async () => {
-    const response = await get(SERVER_ID, viewerToken);
+  it('returns 403 for a setup token with the generic message', async () => {
+    const response = await get(SERVER_ID, setupToken);
+    expect(response.statusCode).toBe(403);
+    expect(response.json().errorCode).toBe('AUTH_FORBIDDEN_ADMIN_REQUIRED');
+    expect(response.json().message).toBe(
+      'Administrator privileges are required to perform this action.',
+    );
+  });
+
+  it.each([
+    ['no role', undefined],
+    ['an unknown role', 'viewer'],
+  ])('returns 403 for a token with %s', async (_name, role) => {
+    const token = app.jwt.sign({ sub: 'x', type: 'access', ...(role ? { role } : {}) });
+    const response = await get(SERVER_ID, token);
     expect(response.statusCode).toBe(403);
     expect(response.json().errorCode).toBe('AUTH_FORBIDDEN_ADMIN_REQUIRED');
   });

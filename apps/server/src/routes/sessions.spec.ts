@@ -338,3 +338,36 @@ describe('Sessions Routes (/api/v1/auth/sessions)', () => {
     });
   });
 });
+
+describe('Sessions routes deny the setup role (role model)', () => {
+  it.each([
+    ['GET', '/api/v1/auth/sessions'],
+    ['DELETE', '/api/v1/auth/sessions/some-session-id'],
+    ['POST', '/api/v1/auth/sessions/revoke-others'],
+  ])('returns 403 for a setup token on %s %s', async (method, url) => {
+    const dbInstance = initDatabase({ dbPath: ':memory:' });
+    const app = buildApp({
+      config: loadEnv({
+        SESSION_SECRET: 'test-session-secret-at-least-32-chars-long!',
+        LOG_LEVEL: 'silent',
+      }),
+      db: dbInstance,
+    });
+    await app.ready();
+    try {
+      const token = app.jwt.sign({ sub: 'setup-id', role: 'setup', type: 'access' });
+
+      const res = await app.inject({
+        method: method as 'GET',
+        url,
+        headers: { authorization: `Bearer ${token}` },
+      });
+
+      expect(res.statusCode).toBe(403);
+      expect(res.json().errorCode).toBe('AUTH_FORBIDDEN_ADMIN_REQUIRED');
+    } finally {
+      await app.close();
+      dbInstance.close();
+    }
+  });
+});

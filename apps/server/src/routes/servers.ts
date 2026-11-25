@@ -1,5 +1,5 @@
 import { asc, eq } from 'drizzle-orm';
-import type { FastifyInstance, FastifyPluginAsync, FastifyReply, FastifyRequest } from 'fastify';
+import type { FastifyInstance, FastifyPluginAsync, FastifyReply } from 'fastify';
 import crypto from 'node:crypto';
 
 import {
@@ -26,6 +26,7 @@ import {
   readIntegerSetting,
 } from '@aegis/dayz-config';
 
+import { requireAdmin } from '../app/role-guards';
 import {
   battlEyeConfigService,
   type BattlEyeSyncLogger,
@@ -411,18 +412,6 @@ export function resolveServerByIdOrSendError(
   return server;
 }
 
-export function ensureAdminRole(
-  request: FastifyRequest,
-  reply: FastifyReply,
-  actionMessage: string,
-): boolean {
-  if (request.user?.role !== 'admin') {
-    sendApiError(reply, 403, 'AUTH_FORBIDDEN_ADMIN_REQUIRED', actionMessage);
-    return false;
-  }
-  return true;
-}
-
 export const registerServersRoutes: FastifyPluginAsync = async fastify => {
   // GET /api/v1/servers - List all servers
   fastify.get(
@@ -473,13 +462,9 @@ export const registerServersRoutes: FastifyPluginAsync = async fastify => {
   fastify.post(
     '/',
     {
-      onRequest: [fastify.authenticate],
+      onRequest: [fastify.authenticate, requireAdmin],
     },
     async (request, reply) => {
-      if (!ensureAdminRole(request, reply, 'Admin role required to create servers')) {
-        return;
-      }
-
       const parseResult = createServerSchema.safeParse(request.body);
       if (!parseResult.success) {
         return sendApiError(reply, 400, 'VALIDATION_FAILED', {
@@ -583,13 +568,9 @@ export const registerServersRoutes: FastifyPluginAsync = async fastify => {
   fastify.patch<{ Params: { id: string } }>(
     '/:id',
     {
-      onRequest: [fastify.authenticate],
+      onRequest: [fastify.authenticate, requireAdmin],
     },
     async (request, reply) => {
-      if (!ensureAdminRole(request, reply, 'Admin role required to update servers')) {
-        return;
-      }
-
       const existing = resolveServerByIdOrSendError(fastify, request.params, reply);
       if (!existing) {
         return;
@@ -703,13 +684,9 @@ export const registerServersRoutes: FastifyPluginAsync = async fastify => {
   fastify.delete<{ Params: { id: string } }>(
     '/:id',
     {
-      onRequest: [fastify.authenticate],
+      onRequest: [fastify.authenticate, requireAdmin],
     },
     async (request, reply) => {
-      if (!ensureAdminRole(request, reply, 'Admin role required to delete servers')) {
-        return;
-      }
-
       const existing = resolveServerByIdOrSendError(fastify, request.params, reply);
       if (!existing) {
         return;
@@ -755,15 +732,9 @@ export const registerServersRoutes: FastifyPluginAsync = async fastify => {
   fastify.post<{ Params: { id: string } }>(
     '/:id/validate-paths',
     {
-      onRequest: [fastify.authenticate],
+      onRequest: [fastify.authenticate, requireAdmin],
     },
     async (request, reply) => {
-      if (
-        !ensureAdminRole(request, reply, 'Admin role required to validate server filesystem paths')
-      ) {
-        return;
-      }
-
       const existing = resolveServerByIdOrSendError(fastify, request.params, reply);
       if (!existing) {
         return;

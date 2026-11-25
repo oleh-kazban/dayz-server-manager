@@ -20,7 +20,7 @@ describe('Steam Routes (/api/v1/settings/steam)', () => {
   let app: FastifyInstance;
   let dbInstance: DatabaseInstance;
   let adminToken: string;
-  let viewerToken: string;
+  let setupToken: string;
 
   beforeAll(async () => {
     dbInstance = initDatabase({ dbPath: ':memory:' });
@@ -40,8 +40,8 @@ describe('Steam Routes (/api/v1/settings/steam)', () => {
       { sub: 'admin-id', role: 'admin', type: 'access' },
       { expiresIn: '15m' },
     );
-    viewerToken = app.jwt.sign(
-      { sub: 'viewer-id', role: 'viewer', type: 'access' },
+    setupToken = app.jwt.sign(
+      { sub: 'setup-id', role: 'setup', type: 'access' },
       { expiresIn: '15m' },
     );
 
@@ -72,22 +72,36 @@ describe('Steam Routes (/api/v1/settings/steam)', () => {
       expect(res.statusCode).toBe(401);
     });
 
-    it('returns 403 Forbidden when accessed by non-admin role (viewer)', async () => {
+    it('returns 403 Forbidden when accessed by non-admin role (setup)', async () => {
       const res = await app.inject({
         method: 'GET',
         url: '/api/v1/settings/steam',
-        headers: { authorization: `Bearer ${viewerToken}` },
+        headers: { authorization: `Bearer ${setupToken}` },
       });
       expect(res.statusCode).toBe(403);
       const body = res.json();
       expect(body.errorCode).toBe('AUTH_FORBIDDEN_ADMIN_REQUIRED');
     });
 
+    it.each([
+      ['no role', undefined],
+      ['an unknown role', 'viewer'],
+    ])('returns 403 Forbidden for a token with %s', async (_name, role) => {
+      const token = app.jwt.sign({ sub: 'x', type: 'access', ...(role ? { role } : {}) });
+      const res = await app.inject({
+        method: 'GET',
+        url: '/api/v1/settings/steam',
+        headers: { authorization: `Bearer ${token}` },
+      });
+      expect(res.statusCode).toBe(403);
+      expect(res.json().errorCode).toBe('AUTH_FORBIDDEN_ADMIN_REQUIRED');
+    });
+
     it('returns 403 Forbidden when non-admin attempts PATCH', async () => {
       const res = await app.inject({
         method: 'PATCH',
         url: '/api/v1/settings/steam',
-        headers: { authorization: `Bearer ${viewerToken}` },
+        headers: { authorization: `Bearer ${setupToken}` },
         payload: { branch: 'experimental' },
       });
       expect(res.statusCode).toBe(403);
@@ -97,7 +111,7 @@ describe('Steam Routes (/api/v1/settings/steam)', () => {
       const res = await app.inject({
         method: 'POST',
         url: '/api/v1/settings/steam/session/login',
-        headers: { authorization: `Bearer ${viewerToken}` },
+        headers: { authorization: `Bearer ${setupToken}` },
       });
       expect(res.statusCode).toBe(403);
       expect(res.json().errorCode).toBe('AUTH_FORBIDDEN_ADMIN_REQUIRED');

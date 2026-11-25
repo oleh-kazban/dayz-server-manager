@@ -88,7 +88,8 @@ describe('Server config routes (/api/v1/servers/:id/config)', () => {
   let adminToken: string;
   let otherAdminToken: string;
   let moderatorToken: string;
-  let viewerToken: string;
+  let rolelessToken: string;
+  let setupToken: string;
   let saved: Record<string, string | undefined>;
 
   const encrypt = (plain: string) => encryptVaultSecret(plain, resolveVaultKey());
@@ -163,7 +164,8 @@ describe('Server config routes (/api/v1/servers/:id/config)', () => {
     adminToken = sign(ADMIN.id, 'admin');
     otherAdminToken = sign(OTHER_ADMIN.id, 'admin');
     moderatorToken = sign('route-moderator', 'moderator');
-    viewerToken = sign('route-viewer', 'viewer');
+    rolelessToken = app.jwt.sign({ sub: 'route-roleless', type: 'access' }, { expiresIn: '15m' });
+    setupToken = sign('route-setup', 'setup');
   });
 
   afterAll(async () => {
@@ -218,8 +220,9 @@ describe('Server config routes (/api/v1/servers/:id/config)', () => {
     });
 
     it.each([
-      ['viewer', () => viewerToken],
+      ['setup', () => setupToken],
       ['moderator', () => moderatorToken],
+      ['roleless', () => rolelessToken],
     ])(
       'returns 403 AUTH_FORBIDDEN_ADMIN_REQUIRED for %s on every endpoint with zero mutation',
       async (_role, token) => {

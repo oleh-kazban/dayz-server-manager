@@ -1,5 +1,5 @@
 import { eq } from 'drizzle-orm';
-import type { FastifyInstance, FastifyPluginAsync, FastifyReply, FastifyRequest } from 'fastify';
+import type { FastifyInstance, FastifyPluginAsync, FastifyReply } from 'fastify';
 import type { ZodType } from 'zod';
 
 import {
@@ -18,6 +18,7 @@ import {
 } from '@aegis/api-contracts';
 import { type Server, servers } from '@aegis/database';
 
+import { requireAdmin } from '../app/role-guards';
 import { battlEyeConfigService } from '../services/server/battleye-config.service';
 import { ConfigStorageError } from '../services/server/config-atomic-writer';
 import { ConfigEditLockService } from '../services/server/config-edit-lock.service';
@@ -85,17 +86,6 @@ function resolveServerOrSendError(
   return parsed ? findServerOrSendError(fastify, parsed.id, reply) : null;
 }
 
-async function requireAdmin(request: FastifyRequest, reply: FastifyReply) {
-  if (request.user?.role !== 'admin') {
-    return sendApiError(
-      reply,
-      403,
-      'AUTH_FORBIDDEN_ADMIN_REQUIRED',
-      'Admin role required to manage server configuration files',
-    );
-  }
-}
-
 function sendServiceError(reply: FastifyReply, err: unknown) {
   if (err instanceof ConfigStorageError) {
     return sendApiError(reply, err.statusCode, err.errorCode, {
@@ -110,8 +100,7 @@ export const registerServerConfigRoutes: FastifyPluginAsync = async fastify => {
   const locks = new ConfigEditLockService(fastify.db, fastify.sqlite);
   const serverDz = new ServerDzConfigService({ db: fastify.db, sqlite: fastify.sqlite, locks });
   const routeOptions = {
-    onRequest: [fastify.authenticate],
-    preHandler: [requireAdmin],
+    onRequest: [fastify.authenticate, requireAdmin],
     bodyLimit: CONFIG_ROUTE_BODY_LIMIT,
   };
 
