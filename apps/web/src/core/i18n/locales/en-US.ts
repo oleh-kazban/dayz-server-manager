@@ -87,6 +87,10 @@ export const enUSTranslations: TranslationCatalog = {
       title: 'Access Denied',
       description: 'Administrator privileges are required to perform this action.',
     },
+    AUTH_FORBIDDEN_ROOT_REQUIRED: {
+      title: 'Access Denied',
+      description: 'Only the root account can perform this action.',
+    },
     AUTH_RATE_LIMIT_EXCEEDED: {
       title: 'Too Many Requests',
       description: 'Too many attempts detected. Please wait a moment before trying again.',

@@ -53,6 +53,16 @@ describe('ProfileIdentityCard', () => {
     expect(screen.getByDisplayValue('kovac@dayz.local')).toBeInTheDocument();
   });
 
+  it.each([
+    ['root', 'ROOT'],
+    ['setup', 'SETUP'],
+  ] as const)('shows the real role %s as the %s tag', (role, tag) => {
+    render(<ProfileIdentityCard profile={{ ...mockAdminProfile, role }} />);
+
+    expect(screen.getByText(tag)).toBeInTheDocument();
+    expect(screen.queryByText('ADMIN')).not.toBeInTheDocument();
+  });
+
   it('renders minimal admin profile with ADMIN role tag and empty optional fields', () => {
     const minimalProfile: UserProfileDto = {
       ...mockAdminProfile,

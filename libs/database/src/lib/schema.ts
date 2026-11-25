@@ -13,6 +13,7 @@ import {
   SERVER_EXIT_REASON_VALUES,
   SERVER_STATUS,
   SERVER_STATUS_VALUES,
+  USER_ROLE_VALUES,
 } from '@aegis/api-contracts';
 
 export const users = sqliteTable('users', {
@@ -21,9 +22,7 @@ export const users = sqliteTable('users', {
   passwordHash: text('password_hash').notNull(),
   displayName: text('display_name'),
   email: text('email'),
-  role: text('role', { enum: ['admin'] })
-    .notNull()
-    .default('admin'),
+  role: text('role', { enum: USER_ROLE_VALUES }).notNull().default('admin'),
   timezone: text('timezone').notNull().default('UTC'),
   timeFormat: text('time_format', { enum: ['12h', '24h'] })
     .notNull()

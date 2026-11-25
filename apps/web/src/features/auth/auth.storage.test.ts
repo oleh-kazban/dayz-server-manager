@@ -65,15 +65,22 @@ describe('authStorage', () => {
     expect(window.sessionStorage.getItem(AUTH_STORAGE_KEY)).toBeNull();
   });
 
-  it('normalizes legacy stored role and roles[] claims to admin and strips roles', () => {
+  it.each(['root', 'admin', 'setup'] as const)('keeps the stored role %s', role => {
+    authStorage.clear();
+    authStorage.set({ ...mockUser, role }, false);
+
+    expect(authStorage.get()?.role).toBe(role);
+  });
+
+  it('strips the legacy roles[] key and keeps the stored role', () => {
     authStorage.clear();
     window.localStorage.setItem(
       AUTH_STORAGE_KEY,
       JSON.stringify({
         id: 'usr-legacy',
-        username: 'legacyMod',
-        email: 'mod@dayz.local',
-        role: 'moderator',
+        username: 'legacyRoot',
+        email: 'root@dayz.local',
+        role: 'root',
         roles: ['moderator', 'viewer'],
       }),
     );
@@ -81,11 +88,30 @@ describe('authStorage', () => {
     const parsed = authStorage.get();
     expect(parsed).toEqual({
       id: 'usr-legacy',
-      username: 'legacyMod',
-      email: 'mod@dayz.local',
-      role: 'admin',
+      username: 'legacyRoot',
+      email: 'root@dayz.local',
+      role: 'root',
     });
     expect(parsed && 'roles' in parsed).toBe(false);
+  });
+
+  it.each([
+    ['an unknown role', { role: 'moderator' }],
+    ['a missing role', {}],
+  ])('returns null and clears the stored session for %s', (_name, extra) => {
+    authStorage.clear();
+    window.localStorage.setItem(
+      AUTH_STORAGE_KEY,
+      JSON.stringify({ id: 'usr-x', username: 'someone', email: 'x@dayz.local', ...extra }),
+    );
+    window.sessionStorage.setItem(
+      AUTH_STORAGE_KEY,
+      JSON.stringify({ id: 'usr-x', username: 'someone', email: 'x@dayz.local', ...extra }),
+    );
+
+    expect(authStorage.get()).toBeNull();
+    expect(window.localStorage.getItem(AUTH_STORAGE_KEY)).toBeNull();
+    expect(window.sessionStorage.getItem(AUTH_STORAGE_KEY)).toBeNull();
   });
 
   it('returns null when stored user JSON is malformed or missing required fields', () => {
@@ -95,5 +121,27 @@ describe('authStorage', () => {
 
     window.sessionStorage.setItem(AUTH_STORAGE_KEY, '{not-json');
     expect(authStorage.get()).toBeNull();
+  });
+
+  it.each([
+    ['an unknown role', { role: 'moderator' }],
+    ['a missing role', {}],
+  ])('clears user and tokens when get is called detached with %s', (_name, extra) => {
+    authStorage.clear();
+    const stored = JSON.stringify({ id: 'usr-x', username: 'someone', ...extra });
+    for (const storage of [window.localStorage, window.sessionStorage]) {
+      storage.setItem(AUTH_STORAGE_KEY, stored);
+      storage.setItem('dsm_access_token', JSON.stringify('access'));
+      storage.setItem('dsm_refresh_token', JSON.stringify('refresh'));
+    }
+
+    const { get } = authStorage;
+    expect(get()).toBeNull();
+
+    for (const storage of [window.localStorage, window.sessionStorage]) {
+      expect(storage.getItem(AUTH_STORAGE_KEY)).toBeNull();
+      expect(storage.getItem('dsm_access_token')).toBeNull();
+      expect(storage.getItem('dsm_refresh_token')).toBeNull();
+    }
   });
 });

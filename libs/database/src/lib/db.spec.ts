@@ -3,6 +3,8 @@ import { eq } from 'drizzle-orm';
 import fs from 'node:fs';
 import path from 'node:path';
 
+import { userRoleSchema } from '@aegis/api-contracts';
+
 import { verifyPassword } from './crypto';
 import { initDatabase } from './db';
 import { runMigrations } from './migrations';
@@ -498,5 +500,50 @@ describe('Database Initialization & Seeding', () => {
         instance.close();
       }
     });
+  });
+});
+
+describe('users.role column (role model)', () => {
+  it('builds the column enum from the contract role values', () => {
+    expect([...users.role.enumValues]).toEqual([...userRoleSchema.options]);
+    expect([...users.role.enumValues]).toEqual(['root', 'admin', 'setup']);
+  });
+
+  it.each(['root', 'setup'] as const)('reads back a row written with role %s', role => {
+    const instance = initDatabase({ dbPath: ':memory:' });
+    try {
+      instance.sqlite
+        .prepare(
+          'INSERT INTO users (id, username, password_hash, role, created_at) VALUES (?, ?, ?, ?, ?)',
+        )
+        .run(`u-${role}`, `user-${role}`, 'hash', role, 1);
+
+      const row = instance.db
+        .select()
+        .from(users)
+        .where(eq(users.id, `u-${role}`))
+        .get();
+      expect(row?.role).toBe(role);
+    } finally {
+      instance.close();
+    }
+  });
+
+  it('keeps the default role admin and adds no CHECK constraint or migration', () => {
+    const instance = initDatabase({ dbPath: ':memory:' });
+    try {
+      instance.sqlite
+        .prepare('INSERT INTO users (id, username, password_hash, created_at) VALUES (?, ?, ?, ?)')
+        .run('u-default', 'default-user', 'hash', 1);
+      const row = instance.db.select().from(users).where(eq(users.id, 'u-default')).get();
+      expect(row?.role).toBe('admin');
+
+      const ddl = instance.sqlite
+        .prepare("SELECT sql FROM sqlite_master WHERE name = 'users'")
+        .get() as { sql: string };
+      expect(ddl.sql.toUpperCase()).not.toContain('CHECK');
+    } finally {
+      instance.close();
+    }
   });
 });

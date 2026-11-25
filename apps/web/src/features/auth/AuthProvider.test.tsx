@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { apiClient } from '@aegis/api-client';
 
-import { useAuth } from './auth.context';
+import { AUTH_STORAGE_KEY, useAuth } from './auth.context';
 import { authStorage } from './auth.storage';
 import type { AuthUser } from './auth.types';
 import { AuthProvider } from './AuthProvider';
@@ -258,5 +258,79 @@ describe('AuthProvider & useAuth', () => {
       expect(authStorage.get()).toBeNull();
       expect(apiClient.client.getToken()).toBeNull();
     });
+  });
+
+  it('exposes the root role after a login response with role root', async () => {
+    vi.spyOn(apiClient.auth, 'login').mockResolvedValue({
+      accessToken: 'root-access-token',
+      refreshToken: 'root-refresh-token',
+      expiresIn: 900,
+      user: { id: 'usr-root', username: 'rootUser', email: 'root@dayz.local', role: 'root' },
+    });
+
+    function Consumer() {
+      const { user, login } = useAuth();
+      return (
+        <div>
+          <span data-testid="role">{user?.role ?? 'none'}</span>
+          <button
+            type="button"
+            onClick={() =>
+              void login({ usernameOrEmail: 'rootUser', password: 'SecretPassword123!' })
+            }
+          >
+            Log In
+          </button>
+        </div>
+      );
+    }
+
+    render(
+      <AuthProvider>
+        <Consumer />
+      </AuthProvider>,
+    );
+    await act(async () => {
+      screen.getByRole('button', { name: 'Log In' }).click();
+    });
+
+    expect(screen.getByTestId('role')).toHaveTextContent('root');
+    expect(authStorage.get()?.role).toBe('root');
+  });
+
+  it.each([
+    ['an unknown role', { role: 'moderator' }],
+    ['a missing role', {}],
+  ])('mounts signed out and clears storage for a stored user with %s', (_name, extra) => {
+    authStorage.clear();
+    const stored = JSON.stringify({ id: 'usr-x', username: 'someone', ...extra });
+    window.sessionStorage.setItem(AUTH_STORAGE_KEY, stored);
+    window.localStorage.setItem(AUTH_STORAGE_KEY, stored);
+    window.sessionStorage.setItem('dsm_access_token', JSON.stringify('access'));
+    window.localStorage.setItem('dsm_refresh_token', JSON.stringify('refresh'));
+
+    function Consumer() {
+      const { isAuthenticated, user } = useAuth();
+      return (
+        <span data-testid="state">
+          {isAuthenticated ? 'in' : 'out'}:{user?.username ?? 'none'}
+        </span>
+      );
+    }
+
+    expect(() =>
+      render(
+        <AuthProvider>
+          <Consumer />
+        </AuthProvider>,
+      ),
+    ).not.toThrow();
+
+    expect(screen.getByTestId('state')).toHaveTextContent('out:none');
+    for (const storage of [window.localStorage, window.sessionStorage]) {
+      expect(storage.getItem(AUTH_STORAGE_KEY)).toBeNull();
+      expect(storage.getItem('dsm_access_token')).toBeNull();
+      expect(storage.getItem('dsm_refresh_token')).toBeNull();
+    }
   });
 });

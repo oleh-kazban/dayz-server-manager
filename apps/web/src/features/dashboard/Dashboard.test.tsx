@@ -136,6 +136,31 @@ describe('Dashboard Component', () => {
     expect(screen.getByTestId('create-server-modal')).toBeInTheDocument();
   });
 
+  it.each(['root', 'setup'] as const)('shows the real role %s', role => {
+    vi.mocked(useActiveServer).mockReturnValue({
+      servers: [],
+      activeServer: null,
+      activeServerId: null,
+      setActiveServerId: vi.fn(),
+      isLoading: false,
+      error: null,
+    });
+
+    render(
+      <AuthContext.Provider
+        value={{
+          ...mockAuthContext,
+          user: { ...mockAuthContext.user, username: 'operator', role },
+        }}
+      >
+        <Dashboard />
+      </AuthContext.Provider>,
+    );
+
+    expect(screen.getByText(role)).toBeInTheDocument();
+    expect(screen.queryByText('admin')).not.toBeInTheDocument();
+  });
+
   it('handles health check query failure gracefully', async () => {
     vi.mocked(apiClient.health.get).mockRejectedValue(new Error('Network down'));
 

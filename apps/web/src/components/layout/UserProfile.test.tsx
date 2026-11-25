@@ -56,6 +56,25 @@ describe('UserProfile', () => {
     expect(screen.getByTitle('View profile & preferences')).toHaveAttribute('href', '/profile');
   });
 
+  it.each([
+    ['root', 'Root'],
+    ['admin', 'Administrator'],
+    ['setup', 'Setup'],
+  ] as const)('labels the %s role as %s without substitution', (role, label) => {
+    authStorage.set({ ...testUser, role }, false);
+
+    render(
+      <AuthProvider>
+        <UserProfile />
+      </AuthProvider>,
+    );
+
+    expect(screen.getByText(label)).toBeInTheDocument();
+    for (const other of ['Root', 'Administrator', 'Setup'].filter(l => l !== label)) {
+      expect(screen.queryByText(other)).not.toBeInTheDocument();
+    }
+  });
+
   it('renders custom displayName when provided instead of username', () => {
     authStorage.set(
       {
