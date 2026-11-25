@@ -33,6 +33,7 @@ Every document starts with a status block. Documents describe what the code does
 | [Testing](engineering/testing.md)                   | Strategy, coverage policy, live verification                         |
 | [Git and releases](engineering/git-and-releases.md) | Branches, commits, CI, backlog, dependencies                         |
 | [Tech debt register](tech-debt.md)                  | Audit findings with evidence and decisions                           |
+| [Fix roadmap](engineering/fix-roadmap.md)           | One ordered list of fix packages across all areas                    |
 | [UI kit fix plan](engineering/ui-kit-fix-plan.md)   | Ordered work packages for the UI kit findings                        |
 
 ## Design
