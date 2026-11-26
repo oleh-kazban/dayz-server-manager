@@ -63,6 +63,7 @@ export function Input({
       )}
 
       <div
+        role="presentation"
         onMouseDown={handleContainerMouseDown}
         className={`flex items-center rounded-lg border bg-[var(--color-surface)] shadow-xs transition-colors cursor-text h-9 px-3.5 gap-2.5 ${
           disabled ? 'opacity-50 cursor-not-allowed bg-[var(--color-surface-subtle)]' : ''

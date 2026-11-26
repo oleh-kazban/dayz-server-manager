@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from 'react';
+import { useId, useMemo, useRef, useState } from 'react';
 
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { AlertCircle, Upload, X } from 'lucide-react';
@@ -218,8 +218,10 @@ function StrategyOption({
   description: string;
   onChange: (mode: ModImportMode) => void;
 }) {
+  const inputId = useId();
   return (
     <label
+      htmlFor={inputId}
       className={`flex items-start gap-3 p-3 rounded-lg border transition-colors ${
         disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'
       } ${
@@ -229,6 +231,7 @@ function StrategyOption({
       }`}
     >
       <input
+        id={inputId}
         type="radio"
         name="import-strategy"
         value={mode}
