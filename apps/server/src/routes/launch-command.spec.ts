@@ -15,6 +15,7 @@ import {
   users,
 } from '@aegis/database';
 
+import { signSession } from '../__fixtures__/session-token';
 import { buildApp } from '../app/app';
 import { loadEnv } from '../config/env';
 
@@ -39,14 +40,8 @@ describe('Launch Command Route (GET /api/v1/servers/:id/launch-command)', () => 
     });
     await app.ready();
 
-    adminToken = app.jwt.sign(
-      { sub: 'admin-id', role: 'admin', type: 'access' },
-      { expiresIn: '15m' },
-    );
-    setupToken = app.jwt.sign(
-      { sub: 'setup-id', role: 'setup', type: 'access' },
-      { expiresIn: '15m' },
-    );
+    adminToken = signSession(app, { sub: 'admin-id', role: 'admin' }).accessToken;
+    setupToken = signSession(app, { sub: 'setup-id', role: 'setup' }).accessToken;
 
     const now = new Date();
     dbInstance.db
@@ -183,7 +178,7 @@ describe('Launch Command Route (GET /api/v1/servers/:id/launch-command)', () => 
     ['no role', undefined],
     ['an unknown role', 'viewer'],
   ])('returns 403 for a token with %s', async (_name, role) => {
-    const token = app.jwt.sign({ sub: 'x', type: 'access', ...(role ? { role } : {}) });
+    const token = signSession(app, { tokenRole: role ?? null }).accessToken;
     const response = await get(SERVER_ID, token);
     expect(response.statusCode).toBe(403);
     expect(response.json().errorCode).toBe('AUTH_FORBIDDEN_ADMIN_REQUIRED');

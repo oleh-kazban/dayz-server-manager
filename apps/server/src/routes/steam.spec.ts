@@ -11,6 +11,7 @@ import {
   steamSettings,
 } from '@aegis/database';
 
+import { signSession } from '../__fixtures__/session-token';
 import { buildApp } from '../app/app';
 import { loadEnv } from '../config/env';
 import { steamPathService } from '../services/steam/steam-path.service';
@@ -36,14 +37,8 @@ describe('Steam Routes (/api/v1/settings/steam)', () => {
 
     await app.ready();
 
-    adminToken = app.jwt.sign(
-      { sub: 'admin-id', role: 'admin', type: 'access' },
-      { expiresIn: '15m' },
-    );
-    setupToken = app.jwt.sign(
-      { sub: 'setup-id', role: 'setup', type: 'access' },
-      { expiresIn: '15m' },
-    );
+    adminToken = signSession(app, { sub: 'admin-id', role: 'admin' }).accessToken;
+    setupToken = signSession(app, { sub: 'setup-id', role: 'setup' }).accessToken;
 
     // Normalize timestamp for test database baseline
     const now = new Date();
@@ -87,7 +82,7 @@ describe('Steam Routes (/api/v1/settings/steam)', () => {
       ['no role', undefined],
       ['an unknown role', 'viewer'],
     ])('returns 403 Forbidden for a token with %s', async (_name, role) => {
-      const token = app.jwt.sign({ sub: 'x', type: 'access', ...(role ? { role } : {}) });
+      const token = signSession(app, { tokenRole: role ?? null }).accessToken;
       const res = await app.inject({
         method: 'GET',
         url: '/api/v1/settings/steam',

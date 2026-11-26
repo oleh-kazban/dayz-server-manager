@@ -1,5 +1,6 @@
 import { apiErrorResponseSchema, healthResponseSchema } from '@aegis/api-contracts';
 
+import { signSession } from '../__fixtures__/session-token';
 import { loadEnv } from '../config/env';
 
 import { buildApp } from './app';
@@ -110,7 +111,9 @@ describe('Fastify App', () => {
     const app = buildApp({ config });
     app.get('/api/v1/__sse-probe', { onRequest: [app.authenticateSse] }, async () => ({ ok: 1 }));
     try {
-      const { ticket } = app.sseTickets.issue({ sub: 'setup-user', role: 'setup' });
+      await app.ready();
+      const { sid, userId } = signSession(app, { role: 'setup' });
+      const { ticket } = app.sseTickets.issue({ sub: userId, role: 'setup', sid });
 
       const response = await app.inject({
         method: 'GET',

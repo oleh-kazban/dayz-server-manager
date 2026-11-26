@@ -7,7 +7,7 @@ export interface SseTicketIdentity {
   sub: string;
   username?: string;
   role?: UserRole;
-  sid?: string;
+  sid: string;
 }
 
 export interface SseTicketStoreOptions {

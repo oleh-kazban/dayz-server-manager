@@ -16,6 +16,7 @@ export interface TokenPayload {
   role?: UserRole;
   type: 'access' | 'refresh';
   sid: string;
+  jti?: string;
 }
 
 export interface SignInDeps {
@@ -56,6 +57,7 @@ export function issueSignIn(
   db.update(users).set({ lastLoginAt: ctx.now }).where(eq(users.id, user.id)).run();
 
   const sid = randomUUID();
+  const jti = randomUUID();
   const rememberMe = user.role === 'setup' ? false : ctx.rememberMe;
   let expiresAt = new Date(ctx.now.getTime() + (rememberMe ? 30 : 7) * DAY_MS);
   if (user.role === 'setup') {
@@ -72,6 +74,7 @@ export function issueSignIn(
       lastActiveAt: ctx.now,
       createdAt: ctx.now,
       expiresAt,
+      refreshJti: jti,
     })
     .run();
 
@@ -80,7 +83,7 @@ export function issueSignIn(
     ACCESS_TOKEN_SECONDS,
   );
   const refreshToken = signToken(
-    { sub: user.id, type: 'refresh', sid },
+    { sub: user.id, type: 'refresh', sid, jti },
     Math.max(1, Math.floor((expiresAt.getTime() - ctx.now.getTime()) / 1000)),
   );
 
