@@ -144,7 +144,7 @@ The `serverDZ.cfg` file on disk is the source of truth. The database keeps only 
 
 ### Real-time updates
 
-`SseHub` fans events out to connected clients. The signed-in shell opens one connection (`RealtimeProvider`) and updates TanStack Query caches from typed events, for example server status changes and failed stops or restarts. The Steam settings page opens a second connection for the Steam login events.
+`SseHub` fans events out to every connected client. A stream lives as long as the session that opened it: it closes when the session ends and within 15 seconds when the session is missing or expired (see [backend](backend.md)). The signed-in shell opens one connection (`RealtimeProvider`) and updates TanStack Query caches from typed events, for example server status changes and failed stops or restarts. The Steam settings page opens a second connection for the Steam login events.
 
 ## 5. Persistence
 

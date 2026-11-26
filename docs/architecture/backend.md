@@ -105,7 +105,7 @@ Details of the token model are in the [overview](overview.md#authentication-and-
 
 Two kinds of streams, both SSE:
 
-- **Broadcast stream** (`GET /realtime/sse`). `SseHub` sends every event to every connected client and a `: ping` comment on an interval. Events today:
+- **Broadcast stream** (`GET /realtime/sse`). `SseHub` sends every event to every connected client and a `: ping` comment every 15 seconds. Each stream is tied to the user and the session that opened it. The hub closes the streams of a session when it ends: sign-out, revoking that session, revoke-others (all except the caller), a password change (all except the caller) and refresh-token reuse. `revokeSessions` (`services/identity/sessions.ts`) deletes the rows first and then closes the streams. Every 15 seconds the hub also checks each stream's session and closes the streams of a missing or expired session; the check does not update `last_active_at`. If the check throws, the hub fails closed: it closes that session's streams and logs the error (session id, no token); other sessions are still checked. Events today:
 
 | Event                          | Sent when                                       |
 | :----------------------------- | :---------------------------------------------- |
@@ -116,7 +116,7 @@ Two kinds of streams, both SSE:
 | `steam.auth.challenge`         | Steam asks for a Guard code                     |
 | `steam.auth.challenge.expired` | A challenge was not answered in time            |
 
-- **Per-client stream** (`openEventStream`). The route owns the response (`reply.hijack()`), sets `Content-Type: text/event-stream` and `X-Accel-Buffering: no`, and sends a heartbeat every 15 seconds. The log stream uses it to send `log.lines` events. A reverse proxy in front must not buffer these responses.
+- **Per-client stream** (`openEventStream`). The route owns the response (`reply.hijack()`), sets `Content-Type: text/event-stream` and `X-Accel-Buffering: no`, and sends a heartbeat every 15 seconds. The log stream uses it to send `log.lines` events. It is also tied to the session: the route registers it with the hub (`SseHub.track`), so every session end and a failing check close it like a broadcast stream, and the log follower stops with it. The hub does not write to it; the stream keeps its own heartbeat. A reverse proxy in front must not buffer these responses.
 
 ## 7. Services
 
