@@ -3,6 +3,7 @@ import { eq } from 'drizzle-orm';
 import { users } from '@aegis/database';
 
 import { lockSeededAdmin } from './seeded-admin';
+import { deleteExpiredSessions } from './sessions';
 import { ensureSetupAccount } from './setup-account';
 import { removeSetupFile } from './setup-file';
 import type { IdentityDeps, IdentityStartupResult } from './types';
@@ -12,6 +13,7 @@ export type { IdentityDeps, IdentityLog, IdentityStartupResult } from './types';
 /** The only start-up entry for identity; `main.ts` calls it after `buildApp`, before `listen`. */
 export function prepareIdentity(deps: IdentityDeps): IdentityStartupResult {
   const { db, dataDir, log } = deps;
+  deleteExpiredSessions(db, (deps.now ?? (() => new Date()))());
   const lockedSeededAdmin = lockSeededAdmin(deps);
 
   if (db.select({ id: users.id }).from(users).where(eq(users.role, 'root')).get()) {

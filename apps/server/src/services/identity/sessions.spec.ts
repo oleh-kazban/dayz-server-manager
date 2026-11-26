@@ -5,7 +5,7 @@ import { type DatabaseInstance, initDatabase, sessions } from '@aegis/database';
 
 import { insertUser } from '../../__fixtures__/users';
 
-import { findLiveSession, revokeSessions } from './sessions';
+import { deleteExpiredSessions, findLiveSession, revokeSessions } from './sessions';
 
 const T0 = new Date('2026-11-27T10:00:00.000Z');
 const HOUR_MS = 3_600_000;
@@ -65,6 +65,85 @@ describe('findLiveSession (AC-9, AC-10)', () => {
     insertSession('s1', { expiresAt: new Date(T0.getTime() + 1_000) });
 
     expect(findLiveSession(dbi.db, 's1', T0)?.id).toBe('s1');
+  });
+});
+
+describe('deleteExpiredSessions (AC-13)', () => {
+  let dbi: DatabaseInstance;
+  let userId: string;
+  let otherUserId: string;
+
+  const insertSession = (id: string, expiresAt: Date, owner = userId): void => {
+    dbi.db
+      .insert(sessions)
+      .values({
+        id,
+        userId: owner,
+        lastActiveAt: T0,
+        createdAt: T0,
+        expiresAt,
+        refreshJti: `jti-${id}`,
+      })
+      .run();
+  };
+  const remaining = () =>
+    dbi.db
+      .select({ id: sessions.id })
+      .from(sessions)
+      .orderBy(sessions.id)
+      .all()
+      .map(s => s.id);
+
+  beforeEach(() => {
+    dbi = initDatabase({ dbPath: ':memory:' });
+    userId = insertUser(dbi).id;
+    otherUserId = insertUser(dbi).id;
+  });
+
+  afterEach(() => {
+    dbi.close();
+  });
+
+  it('deletes a session that expired before now', () => {
+    insertSession('old', new Date(T0.getTime() - HOUR_MS));
+
+    expect(deleteExpiredSessions(dbi.db, T0)).toBe(1);
+    expect(remaining()).toEqual([]);
+  });
+
+  it('deletes a session whose expiry equals now', () => {
+    insertSession('at-now', T0);
+
+    expect(deleteExpiredSessions(dbi.db, T0)).toBe(1);
+    expect(remaining()).toEqual([]);
+  });
+
+  it('keeps a session that expires one second after now', () => {
+    insertSession('later', new Date(T0.getTime() + 1_000));
+
+    expect(deleteExpiredSessions(dbi.db, T0)).toBe(0);
+    expect(remaining()).toEqual(['later']);
+  });
+
+  it('deletes only expired rows, of every user, and returns the count', () => {
+    insertSession('expired-a', new Date(T0.getTime() - 1_000));
+    insertSession('expired-b', T0, otherUserId);
+    insertSession('live-a', new Date(T0.getTime() + HOUR_MS));
+    insertSession('live-b', new Date(T0.getTime() + 1_000), otherUserId);
+
+    expect(deleteExpiredSessions(dbi.db, T0)).toBe(2);
+    expect(remaining()).toEqual(['live-a', 'live-b']);
+  });
+
+  it('returns 0 on an empty table and does not touch the users', () => {
+    expect(deleteExpiredSessions(dbi.db, T0)).toBe(0);
+    expect(dbi.sqlite.prepare('SELECT COUNT(*) AS n FROM users').get()).toEqual({ n: 2 });
+  });
+
+  it('uses the injected now, not the wall clock', () => {
+    insertSession('future-year', new Date('2099-01-01T00:00:00.000Z'));
+
+    expect(deleteExpiredSessions(dbi.db, new Date('2100-01-01T00:00:00.000Z'))).toBe(1);
   });
 });
 

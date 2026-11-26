@@ -1,10 +1,12 @@
 import { eq } from 'drizzle-orm';
 import type { FastifyRequest } from 'fastify';
 import { randomUUID } from 'node:crypto';
+import { isIP } from 'node:net';
 
 import type { SignInResponseDto, UserRole } from '@aegis/api-contracts';
 import { type DsmDatabase, sessions, type User, users } from '@aegis/database';
 
+import { deleteExpiredSessions } from './sessions';
 import { setupExpiresAt } from './setup-account';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -31,18 +33,16 @@ export interface SignInContext {
   now: Date;
 }
 
+function clientAddress(ip: string | undefined): string {
+  if (!ip) return '127.0.0.1';
+  return isIP(ip) === 0 ? 'unknown' : ip;
+}
+
 /** Client address and agent of a sign-in request. */
 export function signInContext(request: FastifyRequest, rememberMe: boolean): SignInContext {
-  const rawXForwardedFor = request.headers['x-forwarded-for'];
-  let forwardedIp: string | undefined;
-  if (Array.isArray(rawXForwardedFor)) {
-    forwardedIp = rawXForwardedFor[0];
-  } else if (typeof rawXForwardedFor === 'string') {
-    forwardedIp = rawXForwardedFor.split(',')[0].trim();
-  }
   return {
     rememberMe,
-    ipAddress: forwardedIp || request.ip || '127.0.0.1',
+    ipAddress: clientAddress(request.ip),
     userAgent: (request.headers['user-agent'] as string | undefined) ?? null,
     now: new Date(),
   };
@@ -54,6 +54,7 @@ export function issueSignIn(
   user: User,
   ctx: SignInContext,
 ): SignInResponseDto {
+  deleteExpiredSessions(db, ctx.now);
   db.update(users).set({ lastLoginAt: ctx.now }).where(eq(users.id, user.id)).run();
 
   const sid = randomUUID();

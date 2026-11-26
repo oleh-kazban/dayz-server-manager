@@ -70,6 +70,7 @@ export function buildApp(options: BuildAppOptions): FastifyInstance {
       serializers: { req: serializeRequest },
       ...(options.logStream ? { stream: options.logStream } : {}),
     },
+    trustProxy: options.config.TRUST_PROXY,
     ...options.serverOptions,
   });
 

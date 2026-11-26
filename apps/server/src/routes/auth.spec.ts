@@ -405,41 +405,18 @@ describe('Auth Routes (/api/v1/auth)', () => {
       expect(Math.abs(actualTtl - expectedTtl)).toBeLessThan(5000);
     });
 
-    it('parses forwarded IP from x-forwarded-for header string and array', async () => {
-      // Test string x-forwarded-for
-      const resString = await sessionApp.inject({
+    it('records the socket address and ignores x-forwarded-for when TRUST_PROXY is unset (AC-11)', async () => {
+      const res = await sessionApp.inject({
         method: 'POST',
         url: '/api/v1/auth/login',
-        headers: {
-          'x-forwarded-for': '203.0.113.195, 70.41.3.18',
-        },
+        remoteAddress: '192.0.2.9',
+        headers: { 'x-forwarded-for': '203.0.113.195, 70.41.3.18' },
         payload: sessionAdmin.credentials,
       });
-      const sidString = sessionApp.jwt.decode<{ sid: string }>(resString.json().accessToken)?.sid;
-      const sessString = sessionDb.db
-        .select()
-        .from(sessions)
-        .where(eq(sessions.id, sidString!))
-        .get();
-      expect(sessString?.ipAddress).toBe('203.0.113.195');
+      const sid = sessionApp.jwt.decode<{ sid: string }>(res.json().accessToken)?.sid;
+      const row = sessionDb.db.select().from(sessions).where(eq(sessions.id, sid!)).get();
 
-      // Test array x-forwarded-for (simulated via raw headers)
-      const resArray = await sessionApp.inject({
-        method: 'POST',
-        url: '/api/v1/auth/login',
-        headers: {
-          // eslint-disable-next-line sonarjs/no-hardcoded-ip
-          'x-forwarded-for': ['198.51.100.10', '10.0.0.1'] as unknown as string,
-        },
-        payload: sessionAdmin.credentials,
-      });
-      const sidArray = sessionApp.jwt.decode<{ sid: string }>(resArray.json().accessToken)?.sid;
-      const sessArray = sessionDb.db
-        .select()
-        .from(sessions)
-        .where(eq(sessions.id, sidArray!))
-        .get();
-      expect(sessArray?.ipAddress).toBe('198.51.100.10');
+      expect(row?.ipAddress).toBe('192.0.2.9');
     });
 
     it('rejects access token when session is revoked from database', async () => {

@@ -1,3 +1,4 @@
+/* eslint-disable sonarjs/no-hardcoded-ip -- address literals are test data */
 import { FORMER_PUBLIC_SESSION_SECRETS, loadEnv } from './env';
 
 describe('loadEnv', () => {
@@ -87,6 +88,48 @@ describe('loadEnv', () => {
       ),
     )('rejects the former public secret %s in %s', (secret, NODE_ENV) => {
       expect(() => loadEnv({ NODE_ENV, SESSION_SECRET: secret })).toThrow('SESSION_SECRET');
+    });
+  });
+
+  describe('TRUST_PROXY (AC-12)', () => {
+    it('is off by default', () => {
+      expect(loadEnv({}).TRUST_PROXY).toBe(false);
+    });
+
+    it.each(['', '   ', 'false', 'FALSE'])('treats %j as off', value => {
+      expect(loadEnv({ TRUST_PROXY: value }).TRUST_PROXY).toBe(false);
+    });
+
+    it.each(['true', ' TRUE '])('accepts %j as true', value => {
+      expect(loadEnv({ TRUST_PROXY: value }).TRUST_PROXY).toBe(true);
+    });
+
+    it.each([
+      ['127.0.0.1', '127.0.0.1'],
+      ['10.0.0.0/8,::1', '10.0.0.0/8,::1'],
+      [' 10.0.0.0/8 , ::1 ', '10.0.0.0/8,::1'],
+      ['loopback', 'loopback'],
+    ])('accepts the list %j as %j', (value, expected) => {
+      expect(loadEnv({ TRUST_PROXY: value }).TRUST_PROXY).toBe(expected);
+    });
+
+    it('stops the start for a number and names the variable with the hop count message', () => {
+      expect(() => loadEnv({ TRUST_PROXY: '2' })).toThrow(
+        /^Invalid environment configuration:\n {2}- TRUST_PROXY: TRUST_PROXY does not accept a hop count/,
+      );
+    });
+
+    it.each(['yes', '1.2.3', '10.0.0.0/33', 'a,,b'])(
+      'stops the start for %j with the address-list message',
+      value => {
+        expect(() => loadEnv({ TRUST_PROXY: value })).toThrow(
+          /^Invalid environment configuration:\n {2}- TRUST_PROXY: TRUST_PROXY must be false, true, or a comma-separated list of IP addresses or CIDR ranges/,
+        );
+      },
+    );
+
+    it('reports no TRUST_PROXY issue for a valid value next to another invalid variable', () => {
+      expect(() => loadEnv({ TRUST_PROXY: '127.0.0.1', PORT: 'x' })).not.toThrow(/TRUST_PROXY/);
     });
   });
 

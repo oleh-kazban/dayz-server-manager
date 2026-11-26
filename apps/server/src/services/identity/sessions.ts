@@ -1,4 +1,4 @@
-import { and, eq, ne } from 'drizzle-orm';
+import { and, eq, lte, ne } from 'drizzle-orm';
 
 import { type DsmDatabase, type Session, sessions } from '@aegis/database';
 
@@ -14,6 +14,11 @@ export function findLiveSession(
 ): Session | undefined {
   const session = db.select().from(sessions).where(eq(sessions.id, sid)).get();
   return session && session.expiresAt.getTime() > now.getTime() ? session : undefined;
+}
+
+/** Deletes every session that expired at or before `now`. Returns how many rows went. */
+export function deleteExpiredSessions(db: DsmDatabase, now: Date): number {
+  return db.delete(sessions).where(lte(sessions.expiresAt, now)).run().changes;
 }
 
 /** Records activity, at most once a minute (SQLite WAL write contention guard, ARCH-04). */
