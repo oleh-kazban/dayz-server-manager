@@ -52,6 +52,7 @@ describe('Dashboard Component', () => {
     isAuthenticated: true,
     login: vi.fn(),
     logout: vi.fn(),
+    adoptSession: vi.fn(),
   };
 
   beforeEach(() => {

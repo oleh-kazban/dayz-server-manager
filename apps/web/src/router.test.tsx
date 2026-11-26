@@ -26,6 +26,12 @@ const mockAdminAuth: AuthContextValue = {
   isAuthenticated: true,
   login: async () => {},
   logout: () => {},
+  adoptSession: () => {},
+};
+
+const mockSetupAuth: AuthContextValue = {
+  ...mockAdminAuth,
+  user: { id: 'usr-setup', username: 'setup-1a2b3c4d5e6f', email: '', role: 'setup' },
 };
 
 const mockGuestAuth: AuthContextValue = {
@@ -33,6 +39,7 @@ const mockGuestAuth: AuthContextValue = {
   isAuthenticated: false,
   login: async () => {},
   logout: () => {},
+  adoptSession: () => {},
 };
 
 function renderRoute(initialPath: string, auth = mockAdminAuth, flags = DEFAULT_MODULE_FLAGS) {
@@ -244,5 +251,81 @@ describe('Router Topology & Navigation', () => {
       Boolean(route.options?.staticData?.breadcrumb),
     );
     expect(leafRoutes).toHaveLength(Object.keys(ROUTE_BREADCRUMBS).length);
+  });
+
+  describe('first-time setup route', () => {
+    const setupHeading = { name: 'Create the root account' };
+
+    it.each(['/', '/sign-in', '/dashboard', '/players', '/settings/steam'])(
+      'redirects a signed-in setup user opening %s to /setup',
+      async path => {
+        const { history } = renderRoute(path, mockSetupAuth);
+
+        await waitFor(() => {
+          expect(screen.getByRole('heading', setupHeading)).toBeInTheDocument();
+        });
+        expect(history.location.pathname).toBe('/setup');
+      },
+    );
+
+    it('keeps a signed-in setup user on /setup', async () => {
+      const { history } = renderRoute('/setup', mockSetupAuth);
+
+      await waitFor(() => {
+        expect(screen.getByRole('heading', setupHeading)).toBeInTheDocument();
+      });
+      expect(history.location.pathname).toBe('/setup');
+    });
+
+    it.each([
+      ['admin', mockAdminAuth],
+      [
+        'root',
+        {
+          ...mockAdminAuth,
+          user: { id: 'usr-root', username: 'owner', email: '', role: 'root' as const },
+        },
+      ],
+    ])('redirects a signed-in %s user opening /setup to /dashboard', async (_role, auth) => {
+      const { history } = renderRoute('/setup', auth);
+
+      await waitFor(() => {
+        expect(screen.getByRole('heading', { name: 'Dashboard' })).toBeInTheDocument();
+      });
+      expect(history.location.pathname).toBe('/dashboard');
+      expect(screen.queryByRole('heading', setupHeading)).not.toBeInTheDocument();
+    });
+
+    it('redirects a signed-out visitor opening /setup to /sign-in without a return target', async () => {
+      const { history } = renderRoute('/setup', mockGuestAuth);
+
+      await waitFor(() => {
+        expect(screen.getByRole('heading', { name: /welcome back/i })).toBeInTheDocument();
+      });
+      expect(history.location.pathname).toBe('/sign-in');
+      expect(history.location.search).not.toContain('redirect');
+    });
+
+    it('renders /setup outside the authed shell, without the sidebar navigation', async () => {
+      renderRoute('/setup', mockSetupAuth);
+
+      await waitFor(() => {
+        expect(screen.getByRole('heading', setupHeading)).toBeInTheDocument();
+      });
+      expect(screen.queryByRole('navigation')).not.toBeInTheDocument();
+      expect(screen.queryByRole('navigation', { name: 'Breadcrumb' })).not.toBeInTheDocument();
+    });
+
+    it('registers /setup as a top-level route, not a child of the authed route', () => {
+      const router = createAppRouter();
+      const topRoutes = (router.routeTree.children ?? []) as {
+        id?: string;
+        children?: { id?: string }[];
+      }[];
+
+      expect(topRoutes.map(route => route.id)).toContain('/setup');
+      const authedNode = topRoutes.find(route => route.id === '/authed');
+      expect((authedNode?.children ?? []).map(route => route.id)).not.toContain('/authed/setup');
+    });
   });
 });

@@ -38,6 +38,7 @@ export type NotificationCode =
   | 'SERVER_CONFIG_CREATED'
   | 'SERVER_CONFIG_RESTORED'
   | 'PROFILE_UPDATED'
+  | 'ROOT_ACCOUNT_CREATED'
   | 'PASSWORD_ROTATED'
   | 'SESSION_REVOKED'
   | 'OTHER_SESSIONS_REVOKED'
@@ -511,6 +512,10 @@ export const enUSTranslations: TranslationCatalog = {
     PROFILE_UPDATED: {
       title: 'Profile Updated',
       description: 'Your identity and regional preferences have been saved.',
+    },
+    ROOT_ACCOUNT_CREATED: {
+      title: 'Root account created',
+      description: 'You are signed in as root.',
     },
     PASSWORD_ROTATED: {
       title: 'Password Rotated',
