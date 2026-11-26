@@ -461,6 +461,26 @@ export const migrations: DsmMigration[] = [
       addMissingServerColumns(sqlite, [['restart_requested', 'INTEGER NOT NULL DEFAULT 0']]);
     },
   },
+  {
+    id: '0013_session_refresh_rotation',
+    name: 'Track the current and previous refresh token of a session',
+    up: (sqlite: Database.Database) => {
+      const names = new Set(
+        (sqlite.pragma('table_info(sessions)') as { name: string }[]).map(c => c.name),
+      );
+      for (const [column, type] of [
+        ['refresh_jti', 'TEXT'],
+        ['previous_refresh_jti', 'TEXT'],
+        ['refresh_rotated_at', 'INTEGER'],
+      ]) {
+        if (!names.has(column)) {
+          sqlite.exec(`ALTER TABLE sessions ADD COLUMN ${column} ${type};`);
+        }
+      }
+      // Rows without an identifier can never match a refresh token.
+      sqlite.exec('DELETE FROM sessions WHERE refresh_jti IS NULL;');
+    },
+  },
 ];
 
 export function runMigrations(sqlite: Database.Database, options?: MigrationOptions): void {
