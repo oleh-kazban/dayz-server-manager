@@ -156,6 +156,232 @@ describe('setup credentials file', () => {
     });
   });
 
+  describe('writeSetupFile permission restriction (injected runner)', () => {
+    type Run = (
+      command: string,
+      args: readonly string[],
+    ) => { status: number | null; stdout: string; error?: Error };
+
+    const WHOAMI_OUT = '"CORP\\operator","S-1-5-21-111-222-333-1001"\n';
+    const OTHER = {
+      username: 'setup-ffffffffffff',
+      password: 'N3w-pass_word-0123456789abcdefghij',
+    };
+
+    /** A fake runner: records calls, answers whoami, and answers icacls through `icacls`. */
+    function fakeRun(
+      icacls: Run = () => ({ status: 0, stdout: '' }),
+      whoami: Run = () => ({ status: 0, stdout: WHOAMI_OUT }),
+    ) {
+      const calls: { command: string; args: readonly string[] }[] = [];
+      const run: Run = (command, args) => {
+        calls.push({ command, args });
+        return command === 'whoami' ? whoami(command, args) : icacls(command, args);
+      };
+      return { run, calls };
+    }
+
+    function failureOf(run: Run): { message: string } {
+      try {
+        writeSetupFile(dir, PAIR, EXPIRES, { platform: 'win32', run });
+      } catch (error) {
+        return { message: error instanceof Error ? error.message : String(error) };
+      }
+      return { message: '' };
+    }
+
+    function expectCleanFailure(message: string) {
+      expect(message).toContain(file);
+      expect(message).toMatch(/permissions/i);
+      expect(message).toMatch(/restrict/i);
+      expect(message).toMatch(/NTFS/);
+      expect(message).not.toContain(PAIR.password);
+      expect(message).not.toContain(PAIR.username);
+    }
+
+    function expectNoPairInArgs(calls: { args: readonly string[] }[]) {
+      for (const call of calls) {
+        for (const arg of call.args) {
+          expect(arg).not.toContain(PAIR.password);
+          expect(arg).not.toContain(PAIR.username);
+        }
+      }
+    }
+
+    it('on win32 restricts the empty temp file before the pair is written, then renames', () => {
+      let seen: { path: string; existed: boolean; size: number } | null = null;
+      const { run, calls } = fakeRun(((_command: string, args: readonly string[]) => {
+        const temp = args[0];
+        const existed = existsSync(temp);
+        seen = { path: temp, existed, size: existed ? statSync(temp).size : -1 };
+        return { status: 0, stdout: '' };
+      }) as Run);
+
+      const result = writeSetupFile(dir, PAIR, EXPIRES, { platform: 'win32', run });
+
+      expect(result).toBe(file);
+      expect(calls.map(call => call.command)).toEqual(['whoami', 'icacls']);
+      expect(calls[0].args).toEqual(['/user', '/fo', 'csv', '/nh']);
+      expect(seen).toEqual({ path: calls[1].args[0], existed: true, size: 0 });
+      const tempPath = calls[1].args[0];
+      expect(path.dirname(tempPath)).toBe(dir);
+      expect(tempPath.endsWith('.tmp')).toBe(true);
+      expect(readFileSync(file, 'utf8')).toContain(`password: ${PAIR.password}`);
+      expect(readdirSync(dir)).toEqual([SETUP_FILE_NAME]);
+    });
+
+    it('runs icacls with the exact argument array: no inheritance, full control for the user SID and Administrators', () => {
+      const { run, calls } = fakeRun();
+
+      writeSetupFile(dir, PAIR, EXPIRES, { platform: 'win32', run });
+
+      expect(calls).toHaveLength(2);
+      expect(calls[1].command).toBe('icacls');
+      expect(calls[1].args.slice(1)).toEqual([
+        '/inheritance:r',
+        '/grant:r',
+        '*S-1-5-21-111-222-333-1001:(F)',
+        '*S-1-5-32-544:(F)',
+      ]);
+      expectNoPairInArgs(calls);
+    });
+
+    it('takes the SID from the second CSV field', () => {
+      const { run, calls } = fakeRun(undefined, () => ({
+        status: 0,
+        stdout: '"CORP\\S-1-5-99 user","S-1-5-21-9-8-7-500"\r\n',
+      }));
+
+      writeSetupFile(dir, PAIR, EXPIRES, { platform: 'win32', run });
+
+      expect(calls[1]?.args ?? []).toContain('*S-1-5-21-9-8-7-500:(F)');
+    });
+
+    it.each<[string, Run]>([
+      ['whoami returns an error', () => ({ status: null, stdout: '', error: new Error('ENOENT') })],
+      [
+        'whoami throws',
+        () => {
+          throw new Error('spawn failed');
+        },
+      ],
+      ['whoami exits non-zero', () => ({ status: 1, stdout: WHOAMI_OUT })],
+      ['whoami output has no SID', () => ({ status: 0, stdout: '"CORP\\operator"\n' })],
+      ['whoami output is empty', () => ({ status: 0, stdout: '' })],
+    ])('throws a restriction error and leaves nothing behind when %s', (_name, whoami) => {
+      const { run, calls } = fakeRun(undefined, whoami);
+
+      const { message } = failureOf(run);
+
+      expectCleanFailure(message);
+      expect(readdirSync(dir)).toEqual([]);
+      expectNoPairInArgs(calls);
+    });
+
+    it.each<[string, Run]>([
+      ['icacls returns an error', () => ({ status: null, stdout: '', error: new Error('EACCES') })],
+      [
+        'icacls throws',
+        () => {
+          throw new Error('spawn failed');
+        },
+      ],
+      ['icacls exits non-zero', () => ({ status: 5, stdout: 'Access is denied.' })],
+    ])('throws a restriction error and leaves nothing behind when %s', (_name, icacls) => {
+      const { run, calls } = fakeRun(icacls);
+
+      const { message } = failureOf(run);
+
+      expectCleanFailure(message);
+      expect(readdirSync(dir)).toEqual([]);
+      expectNoPairInArgs(calls);
+    });
+
+    it('rejects a whoami field that is not a SID, never calls icacls and leaves nothing behind', () => {
+      const { run, calls } = fakeRun(undefined, () => ({
+        status: 0,
+        stdout: '"CORP\\operator","S-1-5-21-1;calc"\n',
+      }));
+
+      const { message } = failureOf(run);
+
+      expectCleanFailure(message);
+      expect(calls.map(call => call.command)).toEqual(['whoami']);
+      expect(readdirSync(dir)).toEqual([]);
+    });
+
+    it('attaches a cause to the error and keeps the pair out of both messages', () => {
+      const { run } = fakeRun(() => ({ status: 5, stdout: 'Access is denied.' }));
+      let caught: unknown;
+
+      try {
+        writeSetupFile(dir, PAIR, EXPIRES, { platform: 'win32', run });
+      } catch (error) {
+        caught = error;
+      }
+
+      expect(caught).toBeInstanceOf(Error);
+      const cause = (caught as Error).cause;
+      expect(cause).toBeInstanceOf(Error);
+      const messages = [(caught as Error).message, (cause as Error).message];
+      for (const text of messages) {
+        expect(text).not.toContain(PAIR.password);
+        expect(text).not.toContain(PAIR.username);
+      }
+    });
+
+    it('never writes the pair into the temp file when restriction fails', () => {
+      const contents: string[] = [];
+      const { run } = fakeRun((_command, args) => {
+        contents.push(readFileSync(args[0], 'utf8'));
+        return { status: 1, stdout: '' };
+      });
+
+      const { message } = failureOf(run);
+
+      expect(message).not.toBe('');
+      expect(contents).toEqual(['']);
+    });
+
+    it('leaves an existing valid setup file unchanged when whoami fails', () => {
+      writeSetupFile(dir, OTHER, EXPIRES, { platform: 'linux', run: fakeRun().run });
+      const before = readFileSync(file, 'utf8');
+      const { run } = fakeRun(undefined, () => ({ status: 1, stdout: '' }));
+
+      const { message } = failureOf(run);
+
+      expectCleanFailure(message);
+      expect(readFileSync(file, 'utf8')).toBe(before);
+      expect(readdirSync(dir)).toEqual([SETUP_FILE_NAME]);
+    });
+
+    it('leaves an existing valid setup file unchanged when icacls fails', () => {
+      writeSetupFile(dir, OTHER, EXPIRES, { platform: 'linux', run: fakeRun().run });
+      const before = readFileSync(file, 'utf8');
+      const { run } = fakeRun(() => ({ status: 1, stdout: '' }));
+
+      const { message } = failureOf(run);
+
+      expectCleanFailure(message);
+      expect(readFileSync(file, 'utf8')).toBe(before);
+      expect(readdirSync(dir)).toEqual([SETUP_FILE_NAME]);
+    });
+
+    it.each<NodeJS.Platform>(['linux', 'darwin'])(
+      'on %s spawns nothing and still writes the file atomically',
+      platform => {
+        const { run, calls } = fakeRun();
+
+        const result = writeSetupFile(dir, PAIR, EXPIRES, { platform, run });
+
+        expect(result).toBe(file);
+        expect(calls).toEqual([]);
+        expect(readFileSync(file, 'utf8')).toContain(`username: ${PAIR.username}`);
+        expect(readdirSync(dir)).toEqual([SETUP_FILE_NAME]);
+      },
+    );
+  });
+
   describe('readSetupFile', () => {
     it('reads back the pair and the expiry it wrote', () => {
       writeSetupFile(dir, PAIR, EXPIRES);
