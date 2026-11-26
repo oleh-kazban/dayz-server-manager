@@ -1,6 +1,6 @@
 import { type ReactNode, useEffect, useMemo, useState } from 'react';
 
-import { apiClient } from '@aegis/api-client';
+import { apiClient, ApiError } from '@aegis/api-client';
 import type { SignInResponseDto } from '@aegis/api-contracts';
 
 import { AuthContext } from './auth.context';
@@ -22,10 +22,52 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const [user, setUser] = useState<AuthUser | null>(authStorage.get);
 
-  const logout = () => {
+  const clearLocalSession = () => {
     apiClient.client.setToken(null);
     authStorage.clear();
     setUser(null);
+  };
+
+  /** A new access token, or null. Only a 401 from the server ends the local session. */
+  const refreshSession = async (): Promise<string | null> => {
+    const refreshToken = authStorage.getRefreshToken();
+    if (!refreshToken) {
+      clearLocalSession();
+      return null;
+    }
+
+    try {
+      const response = await apiClient.auth.refresh({ refreshToken });
+      apiClient.client.setToken(response.accessToken);
+      authStorage.setTokens({
+        accessToken: response.accessToken,
+        refreshToken: response.refreshToken,
+      });
+      return response.accessToken;
+    } catch (error) {
+      if (error instanceof ApiError && error.status === 401) {
+        clearLocalSession();
+      }
+      return null;
+    }
+  };
+
+  /** Ends the server session, then the local one; a failed call never blocks the sign-out. */
+  const logout = async () => {
+    try {
+      try {
+        await apiClient.auth.logout();
+      } catch (error) {
+        if (!(error instanceof ApiError && error.status === 401)) throw error;
+        // The access token expired: refresh once and repeat once.
+        // Calls refreshSession directly, bypassing the http client's refresh dedup; the server's 60 s grace window absorbs a concurrent refresh with the same token.
+        if (await refreshSession()) await apiClient.auth.logout();
+      }
+    } catch {
+      // The server session expires on its own; the operator is signed out here regardless.
+    } finally {
+      clearLocalSession();
+    }
   };
 
   const updateUser = (patch: Partial<AuthUser>) => {
@@ -75,27 +117,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       apiClient.client.setToken(existingToken);
     }
 
-    apiClient.client.setOnRefreshToken(async () => {
-      const refreshToken = authStorage.getRefreshToken();
-      if (!refreshToken) {
-        logout();
-        return null;
-      }
-
-      try {
-        const response = await apiClient.auth.refresh({ refreshToken });
-        apiClient.client.setToken(response.accessToken);
-        authStorage.setTokens({ accessToken: response.accessToken });
-        return response.accessToken;
-      } catch {
-        logout();
-        return null;
-      }
-    });
+    apiClient.client.setOnRefreshToken(refreshSession);
 
     return () => {
       apiClient.client.setOnRefreshToken(null);
     };
+    // refreshSession only uses stable setters and module singletons.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const value = useMemo<AuthContextValue>(

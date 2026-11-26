@@ -1,7 +1,8 @@
 import { act, render, renderHook, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { apiClient } from '@aegis/api-client';
+import { apiClient, ApiError } from '@aegis/api-client';
+import { showToast } from '@aegis/ui';
 
 import { AUTH_STORAGE_KEY, useAuth } from './auth.context';
 import { authStorage } from './auth.storage';
@@ -104,6 +105,7 @@ describe('AuthProvider & useAuth', () => {
   it('handles login and logout lifecycle', async () => {
     authStorage.clear();
 
+    vi.spyOn(apiClient.auth, 'logout').mockResolvedValue(undefined);
     vi.spyOn(apiClient.auth, 'login').mockResolvedValue({
       accessToken: 'test-access-token',
       refreshToken: 'test-refresh-token',
@@ -134,7 +136,7 @@ describe('AuthProvider & useAuth', () => {
           >
             Log In
           </button>
-          <button type="button" onClick={logout}>
+          <button type="button" onClick={() => void logout()}>
             Log Out
           </button>
         </div>
@@ -161,7 +163,7 @@ describe('AuthProvider & useAuth', () => {
     expect(apiClient.client.getToken()).toBe('test-access-token');
 
     // Perform Logout
-    act(() => {
+    await act(async () => {
       screen.getByRole('button', { name: 'Log Out' }).click();
     });
 
@@ -195,11 +197,13 @@ describe('AuthProvider & useAuth', () => {
       );
 
       expect(registeredHandler).not.toBeNull();
+      const logoutSpy = vi.spyOn(apiClient.auth, 'logout');
       const token = await act(async () => registeredHandler!());
 
       expect(token).toBeNull();
       expect(authStorage.get()).toBeNull();
       expect(apiClient.client.getToken()).toBeNull();
+      expect(logoutSpy).not.toHaveBeenCalled();
     });
 
     it('refreshes token successfully and updates client and storage', async () => {
@@ -215,6 +219,7 @@ describe('AuthProvider & useAuth', () => {
 
       vi.spyOn(apiClient.auth, 'refresh').mockResolvedValueOnce({
         accessToken: 'new-refreshed-jwt',
+        refreshToken: 'new-rotated-refresh-jwt',
         expiresIn: 900,
       });
 
@@ -227,6 +232,7 @@ describe('AuthProvider & useAuth', () => {
       const token = await act(async () => registeredHandler!());
 
       expect(token).toBe('new-refreshed-jwt');
+      expect(authStorage.getRefreshToken()).toBe('new-rotated-refresh-jwt');
       expect(authStorage.getToken()).toBe('new-refreshed-jwt');
       expect(apiClient.client.getToken()).toBe('new-refreshed-jwt');
     });
@@ -243,8 +249,9 @@ describe('AuthProvider & useAuth', () => {
       });
 
       vi.spyOn(apiClient.auth, 'refresh').mockRejectedValueOnce(
-        new Error('Invalid or expired refresh token'),
+        new ApiError('Invalid or expired refresh token', 401),
       );
+      const logoutSpy = vi.spyOn(apiClient.auth, 'logout');
 
       render(
         <AuthProvider>
@@ -257,6 +264,238 @@ describe('AuthProvider & useAuth', () => {
       expect(token).toBeNull();
       expect(authStorage.get()).toBeNull();
       expect(apiClient.client.getToken()).toBeNull();
+      expect(logoutSpy).not.toHaveBeenCalled();
+    });
+
+    it.each([
+      ['localStorage', true, 'sessionStorage'],
+      ['sessionStorage', false, 'localStorage'],
+    ] as const)(
+      'stores both rotated tokens in %s, the storage of the current ones (AC-8)',
+      async (used, rememberMe, other) => {
+        let registeredHandler: (() => Promise<string | null>) | null = null;
+        vi.spyOn(apiClient.client, 'setOnRefreshToken').mockImplementation(fn => {
+          registeredHandler = fn;
+        });
+        authStorage.set(mockUser, rememberMe, {
+          accessToken: 'old-access-jwt',
+          refreshToken: 'old-refresh-jwt',
+        });
+        const refreshSpy = vi.spyOn(apiClient.auth, 'refresh').mockResolvedValueOnce({
+          accessToken: 'rotated-access-jwt',
+          refreshToken: 'rotated-refresh-jwt',
+          expiresIn: 900,
+        });
+        render(
+          <AuthProvider>
+            <div>Mounted</div>
+          </AuthProvider>,
+        );
+
+        await act(async () => registeredHandler!());
+
+        expect(refreshSpy).toHaveBeenCalledWith({ refreshToken: 'old-refresh-jwt' });
+        expect(window[used].getItem('dsm_refresh_token')).toBe(
+          JSON.stringify('rotated-refresh-jwt'),
+        );
+        expect(window[used].getItem('dsm_access_token')).toBe(JSON.stringify('rotated-access-jwt'));
+        expect(window[other].getItem('dsm_refresh_token')).toBeNull();
+        expect(window[other].getItem('dsm_access_token')).toBeNull();
+      },
+    );
+
+    it.each([
+      ['a network error', new TypeError('Failed to fetch')],
+      ['a 500 response', new ApiError('Server error', 500)],
+      ['a 429 response', new ApiError('Too many requests', 429)],
+    ])('keeps the operator signed in after %s (AC-8)', async (_name, failure) => {
+      let registeredHandler: (() => Promise<string | null>) | null = null;
+      vi.spyOn(apiClient.client, 'setOnRefreshToken').mockImplementation(fn => {
+        registeredHandler = fn;
+      });
+      authStorage.set(mockUser, true, {
+        accessToken: 'old-access-jwt',
+        refreshToken: 'kept-refresh-jwt',
+      });
+      vi.spyOn(apiClient.auth, 'refresh').mockRejectedValueOnce(failure);
+      const logoutSpy = vi.spyOn(apiClient.auth, 'logout');
+      render(
+        <AuthProvider>
+          <div>Mounted</div>
+        </AuthProvider>,
+      );
+
+      const token = await act(async () => registeredHandler!());
+
+      expect(token).toBeNull();
+      expect(authStorage.get()).not.toBeNull();
+      expect(authStorage.getToken()).toBe('old-access-jwt');
+      expect(authStorage.getRefreshToken()).toBe('kept-refresh-jwt');
+      expect(apiClient.client.getToken()).toBe('old-access-jwt');
+      expect(logoutSpy).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('logout (AC-3)', () => {
+    const storedUser: AuthUser = {
+      id: 'usr-out',
+      username: 'outUser',
+      email: 'out@dayz.local',
+      role: 'admin',
+    };
+
+    function LogoutConsumer() {
+      const { isAuthenticated, logout } = useAuth();
+      return (
+        <div>
+          <span data-testid="status">{isAuthenticated ? 'logged-in' : 'logged-out'}</span>
+          <button type="button" onClick={() => void logout()}>
+            Log Out
+          </button>
+        </div>
+      );
+    }
+
+    const signOut = async () => {
+      render(
+        <AuthProvider>
+          <LogoutConsumer />
+        </AuthProvider>,
+      );
+      await act(async () => {
+        screen.getByRole('button', { name: 'Log Out' }).click();
+      });
+    };
+
+    const expectSignedOutLocally = () => {
+      expect(screen.getByTestId('status')).toHaveTextContent('logged-out');
+      expect(authStorage.get()).toBeNull();
+      expect(authStorage.getToken()).toBeNull();
+      expect(authStorage.getRefreshToken()).toBeNull();
+      expect(apiClient.client.getToken()).toBeNull();
+    };
+
+    beforeEach(() => {
+      authStorage.set(storedUser, true, {
+        accessToken: 'stored-access-jwt',
+        refreshToken: 'stored-refresh-jwt',
+      });
+    });
+
+    it('calls the sign-out endpoint once and then clears local state', async () => {
+      const logoutSpy = vi.spyOn(apiClient.auth, 'logout').mockResolvedValue(undefined);
+      const refreshSpy = vi.spyOn(apiClient.auth, 'refresh');
+
+      await signOut();
+
+      expect(logoutSpy).toHaveBeenCalledTimes(1);
+      expect(refreshSpy).not.toHaveBeenCalled();
+      expectSignedOutLocally();
+    });
+
+    it('keeps the local session until the sign-out call has settled', async () => {
+      let settle!: () => void;
+      vi.spyOn(apiClient.auth, 'logout').mockReturnValue(
+        new Promise<void>(resolve => {
+          settle = resolve;
+        }),
+      );
+
+      await signOut();
+      expect(screen.getByTestId('status')).toHaveTextContent('logged-in');
+      expect(authStorage.get()).not.toBeNull();
+
+      await act(async () => settle());
+
+      expectSignedOutLocally();
+    });
+
+    it('refreshes once and repeats the call when the access token has expired', async () => {
+      const tokenAtCall: (string | null)[] = [];
+      const logoutSpy = vi
+        .spyOn(apiClient.auth, 'logout')
+        .mockImplementationOnce(() => {
+          tokenAtCall.push(apiClient.client.getToken());
+          return Promise.reject(new ApiError('Token expired', 401));
+        })
+        .mockImplementationOnce(() => {
+          tokenAtCall.push(apiClient.client.getToken());
+          return Promise.resolve(undefined);
+        });
+      const refreshSpy = vi.spyOn(apiClient.auth, 'refresh').mockResolvedValue({
+        accessToken: 'fresh-access-jwt',
+        refreshToken: 'fresh-refresh-jwt',
+        expiresIn: 900,
+      });
+
+      await signOut();
+
+      expect(refreshSpy).toHaveBeenCalledTimes(1);
+      expect(refreshSpy).toHaveBeenCalledWith({ refreshToken: 'stored-refresh-jwt' });
+      expect(logoutSpy).toHaveBeenCalledTimes(2);
+      expect(tokenAtCall[1]).toBe('fresh-access-jwt');
+      expectSignedOutLocally();
+    });
+
+    it('stops after one repeat when the sign-out call is rejected again', async () => {
+      const logoutSpy = vi
+        .spyOn(apiClient.auth, 'logout')
+        .mockRejectedValue(new ApiError('Token expired', 401));
+      const refreshSpy = vi.spyOn(apiClient.auth, 'refresh').mockResolvedValue({
+        accessToken: 'fresh-access-jwt',
+        refreshToken: 'fresh-refresh-jwt',
+        expiresIn: 900,
+      });
+
+      await signOut();
+
+      expect(logoutSpy).toHaveBeenCalledTimes(2);
+      expect(refreshSpy).toHaveBeenCalledTimes(1);
+      expectSignedOutLocally();
+    });
+
+    it.each([
+      ['the server rejects it', new ApiError('Session expired', 401)],
+      ['a network error occurs', new TypeError('Failed to fetch')],
+    ])(
+      'does not call the endpoint again when the refresh fails because %s',
+      async (_name, failure) => {
+        const logoutSpy = vi
+          .spyOn(apiClient.auth, 'logout')
+          .mockRejectedValue(new ApiError('Token expired', 401));
+        const refreshSpy = vi.spyOn(apiClient.auth, 'refresh').mockRejectedValue(failure);
+
+        await signOut();
+
+        expect(refreshSpy).toHaveBeenCalledTimes(1);
+        expect(logoutSpy).toHaveBeenCalledTimes(1);
+        expectSignedOutLocally();
+      },
+    );
+
+    it.each([
+      ['a network error', new TypeError('Failed to fetch')],
+      ['a 500 response', new ApiError('Server error', 500)],
+      ['an aborted call', new DOMException('The operation timed out', 'TimeoutError')],
+    ])('still clears local state after %s and does not refresh', async (_name, failure) => {
+      const logoutSpy = vi.spyOn(apiClient.auth, 'logout').mockRejectedValue(failure);
+      const refreshSpy = vi.spyOn(apiClient.auth, 'refresh');
+
+      await signOut();
+
+      expect(logoutSpy).toHaveBeenCalledTimes(1);
+      expect(refreshSpy).not.toHaveBeenCalled();
+      expectSignedOutLocally();
+    });
+
+    it('shows no error toast when the sign-out call fails', async () => {
+      const errorToast = vi.spyOn(showToast, 'error');
+      vi.spyOn(apiClient.auth, 'logout').mockRejectedValue(new TypeError('Failed to fetch'));
+
+      await signOut();
+
+      expect(errorToast).not.toHaveBeenCalled();
+      expectSignedOutLocally();
     });
   });
 

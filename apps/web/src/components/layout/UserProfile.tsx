@@ -17,7 +17,7 @@ export function UserProfile() {
   const confirmDiscardAll = useConfirmDiscardAll();
 
   const signOut = async () => {
-    logout();
+    await logout();
     await router.invalidate();
     // Unsaved edits were already confirmed for discard above (DSM-00138).
     await navigate({ to: '/sign-in', ignoreBlocker: true });

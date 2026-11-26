@@ -39,7 +39,7 @@ export const defaultAuthContext: AuthContextValue = {
   user: null,
   isAuthenticated: false,
   login: async () => {},
-  logout: () => {},
+  logout: async () => {},
   adoptSession: () => {},
 };
 

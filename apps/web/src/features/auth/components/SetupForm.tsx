@@ -58,10 +58,10 @@ export function SetupForm() {
     }
   }, [alertMessage, mutation.isPending]);
 
-  const leaveToSignIn = () => {
-    logout();
-    void router.invalidate();
-    void navigate({ to: '/sign-in', replace: true });
+  const leaveToSignIn = async () => {
+    await logout();
+    await router.invalidate();
+    await navigate({ to: '/sign-in', replace: true });
   };
 
   const submitValidForm = () => {
@@ -89,7 +89,7 @@ export function SetupForm() {
             (reported.status === 401 ||
               (reported.errorCode && SESSION_ENDED_CODES.includes(reported.errorCode)))
           ) {
-            leaveToSignIn();
+            void leaveToSignIn();
             return;
           }
           if (!reported?.fieldErrors || Object.keys(reported.fieldErrors).length === 0) {
@@ -213,7 +213,7 @@ export function SetupForm() {
           >
             Create root account
           </Button>
-          <Button type="button" variant="ghost" fullWidth onClick={leaveToSignIn}>
+          <Button type="button" variant="ghost" fullWidth onClick={() => void leaveToSignIn()}>
             Sign out
           </Button>
         </form>

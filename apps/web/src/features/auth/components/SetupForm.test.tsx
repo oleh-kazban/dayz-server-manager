@@ -457,23 +457,53 @@ describe('SetupForm', () => {
   });
 
   describe('Sign out', () => {
-    it('clears the session and opens /sign-in with replace, without a request or a toast', () => {
-      const fetchSpy = vi.spyOn(globalThis, 'fetch');
+    it('ends the server session, clears local state and opens /sign-in with replace, without a toast', async () => {
+      const logoutSpy = vi.spyOn(apiClient.auth, 'logout').mockResolvedValue(undefined);
       renderForm();
 
       fireEvent.click(screen.getByRole('button', { name: 'Sign out' }));
 
-      expect(mockNavigate).toHaveBeenCalledWith(
-        expect.objectContaining({ to: '/sign-in', replace: true }),
-      );
+      await waitFor(() => {
+        expect(mockNavigate).toHaveBeenCalledWith(
+          expect.objectContaining({ to: '/sign-in', replace: true }),
+        );
+      });
+      expect(logoutSpy).toHaveBeenCalledTimes(1);
       expect(mockInvalidate).toHaveBeenCalled();
       expect(authStorage.get()).toBeNull();
       expect(authStorage.getToken()).toBeNull();
       expect(apiClient.client.getToken()).toBeNull();
       expect(setupRoot).not.toHaveBeenCalled();
-      expect(fetchSpy).not.toHaveBeenCalled();
       expect(showToast.success).not.toHaveBeenCalled();
       expect(showToast.error).not.toHaveBeenCalled();
+    });
+
+    it('waits for the sign-out call before it invalidates the router and navigates, in that order', async () => {
+      let settle!: () => void;
+      const logoutSpy = vi.spyOn(apiClient.auth, 'logout').mockReturnValue(
+        new Promise<void>(resolve => {
+          settle = resolve;
+        }),
+      );
+      renderForm();
+
+      fireEvent.click(screen.getByRole('button', { name: 'Sign out' }));
+      await waitFor(() => expect(logoutSpy).toHaveBeenCalledTimes(1));
+
+      expect(mockInvalidate).not.toHaveBeenCalled();
+      expect(mockNavigate).not.toHaveBeenCalled();
+
+      settle();
+
+      await waitFor(() => expect(mockNavigate).toHaveBeenCalledTimes(1));
+      expect(mockInvalidate).toHaveBeenCalledTimes(1);
+      expect(logoutSpy.mock.invocationCallOrder[0]).toBeLessThan(
+        mockInvalidate.mock.invocationCallOrder[0],
+      );
+      expect(mockInvalidate.mock.invocationCallOrder[0]).toBeLessThan(
+        mockNavigate.mock.invocationCallOrder[0],
+      );
+      expect(authStorage.get()).toBeNull();
     });
   });
 });

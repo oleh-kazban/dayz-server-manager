@@ -3,6 +3,7 @@ import type { ReactNode } from 'react';
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { apiClient } from '@aegis/api-client';
 import { UnsavedChangesScope, useUnsavedChangesGuard } from '@aegis/web/core';
 import { AuthProvider } from '@aegis/web/features/auth';
 import { authStorage } from '@aegis/web/features/auth/auth.storage';
@@ -95,6 +96,7 @@ describe('UserProfile', () => {
   });
 
   it('triggers logout, router invalidation, and navigation to /sign-in on logout button click', async () => {
+    const logoutSpy = vi.spyOn(apiClient.auth, 'logout').mockResolvedValue(undefined);
     render(
       <AuthProvider>
         <UserProfile />
@@ -106,6 +108,34 @@ describe('UserProfile', () => {
 
     await waitFor(() => {
       expect(mockInvalidate).toHaveBeenCalled();
+      expect(mockNavigate).toHaveBeenCalledWith({ to: '/sign-in', ignoreBlocker: true });
+      expect(authStorage.get()).toBeNull();
+    });
+    expect(logoutSpy).toHaveBeenCalledTimes(1);
+  });
+
+  it('waits for the sign-out call before it invalidates the router and navigates (AC-3)', async () => {
+    let settle!: () => void;
+    vi.spyOn(apiClient.auth, 'logout').mockReturnValue(
+      new Promise<void>(resolve => {
+        settle = resolve;
+      }),
+    );
+    render(
+      <AuthProvider>
+        <UserProfile />
+      </AuthProvider>,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Sign out' }));
+    await waitFor(() => expect(apiClient.auth.logout).toHaveBeenCalled());
+
+    expect(mockNavigate).not.toHaveBeenCalled();
+    expect(authStorage.get()).not.toBeNull();
+
+    settle();
+
+    await waitFor(() => {
       expect(mockNavigate).toHaveBeenCalledWith({ to: '/sign-in', ignoreBlocker: true });
       expect(authStorage.get()).toBeNull();
     });
