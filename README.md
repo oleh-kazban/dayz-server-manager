@@ -127,7 +127,7 @@ Built from the ground up as a modern, high-throughput monorepo:
 
    Open [http://localhost:4200](http://localhost:4200) in your browser.
 
-4. **Sign in.** On the first start the backend creates a temporary setup account and writes its username and password to `manager-data/setup-credentials.txt`. The console prints where the file is and when it expires. Sign in with these credentials to create the root account. There is no default account or password.
+4. **Sign in.** On the first start the backend creates a temporary setup account and writes its username and password to `manager-data/setup-credentials.txt`. The console prints where the file is and when it expires. Sign in with these credentials. Aegis then opens the setup screen, where you choose the username and password of the root account. The setup account is deleted when you finish. If the setup credentials are lost or have expired (they last 60 minutes), restart Aegis to create new ones. There is no default account or password.
 
 Settings, environment variables and Windows notes are in [getting started](docs/engineering/getting-started.md).
 

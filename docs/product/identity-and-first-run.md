@@ -2,7 +2,7 @@
 
 |              |                                                                                                                                              |
 | :----------- | :------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Status**   | Approved by the product owner. Slice 3a (server and library) is implemented                                                                  |
+| **Status**   | Approved by the product owner. Slice 3 is complete: 3a (server and library) and 3b (web) are implemented                                     |
 | **Audience** | Maintainers and AI agents                                                                                                                    |
 | **Covers**   | Start-up defaults (first item of roadmap package R1), roadmap package R7, `TD-01`, `TD-07`, `TD-LIB-005`                                     |
 | **Related**  | [Vision and scope](vision-and-scope.md#4-users), [Fix roadmap](../engineering/fix-roadmap.md), [Persistence](../architecture/persistence.md) |

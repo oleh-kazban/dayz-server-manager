@@ -103,3 +103,7 @@ Backing up a DayZ server does not require archiving tens of gigabytes of static 
 - **Certificates are yours.** Aegis does not manage certificates. The reverse proxy obtains and renews them.
 - **Restrict direct access.** Set `HOST=127.0.0.1` when the proxy runs on the same machine, so only the proxy can reach the daemon. With the default `0.0.0.0`, the daemon logs a warning at start.
 - **Session key.** Leave `SESSION_SECRET` empty and Aegis creates and keeps a key in `manager-data/.session.key`. Back this file up with the rest of `manager-data/`.
+
+### First start and lost setup credentials
+
+On the first start Aegis writes a temporary username and password to `manager-data/setup-credentials.txt`; the console shows the location. Sign in with them, then create the root account on the setup screen. The credentials expire after 60 minutes. If you lost them or they expired, restart Aegis: it creates new setup credentials.

@@ -31,11 +31,11 @@ This map answers one question: what works today, and what does not. Statuses com
 
 ## Operator access
 
-| Capability                                | PBI         | Status      | Notes                                                                                                        |
-| :---------------------------------------- | :---------- | :---------- | :----------------------------------------------------------------------------------------------------------- |
-| Sign-in, sessions, token refresh          | `DSM-00107` | Built       | No default account: the first start creates a setup account ([vision](vision-and-scope.md#4-users))          |
-| Profile, password change, active sessions | `DSM-00109` | Built       | `/profile`                                                                                                   |
-| Operators page                            | -           | Placeholder | `/settings/operators`. Root-only page to add, disable and delete admins, reset passwords and revoke sessions |
+| Capability                                | PBI         | Status      | Notes                                                                                                                                 |
+| :---------------------------------------- | :---------- | :---------- | :------------------------------------------------------------------------------------------------------------------------------------ |
+| Sign-in, sessions, token refresh          | `DSM-00107` | Built       | No default account: the first start creates a setup account and the setup screen creates root ([vision](vision-and-scope.md#4-users)) |
+| Profile, password change, active sessions | `DSM-00109` | Built       | `/profile`                                                                                                                            |
+| Operators page                            | -           | Placeholder | `/settings/operators`. Root-only page to add, disable and delete admins, reset passwords and revoke sessions                          |
 
 ## Server management
 

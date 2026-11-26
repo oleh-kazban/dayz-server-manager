@@ -59,7 +59,8 @@ Imports use the aliases `@aegis/web/core` and `@aegis/web/components`. A feature
 Routing is code-based with TanStack Router (`router.tsx`). The router context carries `auth` and `features`.
 
 - The root route validates the `serverId` search parameter (a UUID, optional).
-- `/` redirects to `/dashboard`. `/sign-in` redirects signed-in users to `/dashboard` and accepts a `redirect` parameter.
+- `/` redirects to `/dashboard`. `/sign-in` redirects signed-in users to `/dashboard` (setup users to `/setup`) and accepts a `redirect` parameter.
+- `/setup` is the one-purpose screen of the setup account, outside the shell. It sends signed-out users to `/sign-in` and other users to `/dashboard`. The layout route sends a `setup` user to `/setup`.
 - Every other route sits under a layout route whose `beforeLoad` sends signed-out users to `/sign-in?redirect=<current URL>`.
 - Index routes redirect to the first child: `/logs` to `/logs/rpt`, `/world` to `/world/map`, `/economy` to `/economy/types`, `/settings` to `/settings/steam`.
 - Some routes check a feature flag in `beforeLoad` and redirect to `/dashboard` when it is off.
