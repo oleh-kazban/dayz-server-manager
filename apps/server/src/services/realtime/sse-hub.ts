@@ -1,6 +1,8 @@
 import type { FastifyReply, FastifyRequest } from 'fastify';
 import crypto from 'node:crypto';
 
+import { SECURITY_HEADERS } from '../../app/security-headers';
+
 export interface SseClient {
   id: string;
   userId: string;
@@ -56,6 +58,7 @@ export class SseHub {
       'Cache-Control': 'no-cache, no-transform',
       Connection: 'keep-alive',
       'X-Accel-Buffering': 'no',
+      ...SECURITY_HEADERS,
     });
 
     const write = (chunk: string) => {
