@@ -35,6 +35,7 @@ import {
   serverQueryKeys,
   useActiveServer,
   useEditableForm,
+  useInvalidateServerList,
 } from '@aegis/web/core';
 
 import {
@@ -491,6 +492,7 @@ function ServerSettingsForm({
 
 export function ServerSettingsView() {
   const queryClient = useQueryClient();
+  const invalidateServerList = useInvalidateServerList();
   const navigate = useNavigate();
   const {
     servers,
@@ -525,7 +527,7 @@ export function ServerSettingsView() {
       queryClient.setQueryData<ServerSummaryDto[]>(serverQueryKeys.list(), old =>
         old ? old.filter(s => s.id !== deletedId) : [],
       );
-      void queryClient.invalidateQueries({ queryKey: serverQueryKeys.list() });
+      invalidateServerList();
       notifySuccess('SERVER_DELETED', { name: deletedServerName });
 
       // Edits to a deleted server cannot be saved anymore; leave without the discard prompt.
@@ -576,7 +578,7 @@ export function ServerSettingsView() {
       if (activeServerId) {
         queryClient.setQueryData(serverQueryKeys.detail(activeServerId), updatedServer);
       }
-      void queryClient.invalidateQueries({ queryKey: serverQueryKeys.list() });
+      invalidateServerList();
       notifySuccess('SERVER_UPDATED', { name: updatedServer.name });
     },
     onError: (err: Error) => {

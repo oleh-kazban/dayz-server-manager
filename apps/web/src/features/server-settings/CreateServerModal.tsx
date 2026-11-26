@@ -17,6 +17,7 @@ import {
   serverQueryKeys,
   useActiveServer,
   useEditableForm,
+  useInvalidateServerList,
   useModalDialog,
 } from '@aegis/web/core';
 
@@ -84,6 +85,7 @@ function validateCreateServerForm(input: CreateServerValidationInput): Record<st
 
 function CreateServerDialog({ onClose }: { onClose: () => void }) {
   const queryClient = useQueryClient();
+  const invalidateServerList = useInvalidateServerList();
   const { setActiveServerId } = useActiveServer();
   const inFlightRef = useRef(false);
 
@@ -104,7 +106,7 @@ function CreateServerDialog({ onClose }: { onClose: () => void }) {
       queryClient.setQueryData<ServerSummaryDto[]>(serverQueryKeys.list(), old =>
         old ? [...old.filter(s => s.id !== newServer.id), newServer] : [newServer],
       );
-      void queryClient.invalidateQueries({ queryKey: serverQueryKeys.list() });
+      invalidateServerList();
       releaseUnsavedChanges();
       setActiveServerId(newServer.id);
       notifySuccess('SERVER_CREATED', { name: newServer.name });

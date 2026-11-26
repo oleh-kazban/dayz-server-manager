@@ -83,7 +83,7 @@ import {
   type ModSortState,
   reconcileModColumns,
 } from './mods.columns';
-import { modsQueries, modsQueryKeys } from './mods.queries';
+import { modsQueries, modsQueryKeys, useInvalidateMods } from './mods.queries';
 
 type StatusFilter = 'all' | ModSyncStatus;
 type TargetFilter = 'all' | 'client_server' | 'server_only';
@@ -637,6 +637,7 @@ export function ModsView() {
   );
 
   const serverId = activeServerId ?? '';
+  const invalidateMods = useInvalidateMods(serverId);
 
   const columns = useMemo(() => reconcileModColumns(storedColumns), [storedColumns]);
   const visibleColumns = useMemo(() => columns.filter(col => col.isVisible), [columns]);
@@ -716,7 +717,7 @@ export function ModsView() {
     mutationFn: ({ modId, enabled }: { modId: string; enabled: boolean }) =>
       apiClient.mods.update(serverId, modId, { enabled }),
     onSuccess: updated => {
-      void queryClient.invalidateQueries({ queryKey: modsQueryKeys.list(serverId) });
+      invalidateMods();
       notifySuccess(updated.enabled ? 'MOD_ENABLED' : 'MOD_DISABLED', { name: updated.name });
     },
     onError: (err: Error) => notifyApiError(err, 'Failed to Toggle Mod'),
@@ -726,7 +727,7 @@ export function ModsView() {
     mutationFn: (mod: ServerModDto) =>
       apiClient.mods.update(serverId, mod.id, { markSynced: true }),
     onSuccess: updated => {
-      void queryClient.invalidateQueries({ queryKey: modsQueryKeys.list(serverId) });
+      invalidateMods();
       notifySuccess('MOD_MARKED_SYNCED', { name: updated.name });
     },
     onError: (err: Error) => notifyApiError(err, 'Failed to Mark Mod as Synced'),
@@ -736,7 +737,7 @@ export function ModsView() {
     mutationFn: (mod: ServerModDto) => apiClient.mods.delete(serverId, mod.id),
     onSuccess: (_res, mod) => {
       setDeletingMod(null);
-      void queryClient.invalidateQueries({ queryKey: modsQueryKeys.list(serverId) });
+      invalidateMods();
       notifySuccess('MOD_DELETED', { name: mod.name });
     },
     onError: (err: Error) => {

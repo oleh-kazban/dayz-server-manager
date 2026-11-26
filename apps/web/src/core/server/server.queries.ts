@@ -1,4 +1,6 @@
-import { queryOptions } from '@tanstack/react-query';
+import { useCallback } from 'react';
+
+import { queryOptions, useQueryClient } from '@tanstack/react-query';
 
 import { apiClient } from '@aegis/api-client';
 import type { ServerRestartFailedEventDto } from '@aegis/api-contracts';
@@ -13,6 +15,13 @@ export const serverQueryKeys = {
   /** Client-only: the last restart that failed in its stop or start phase (SSE, DSM-00172). */
   restartFailure: (id: string) => [...serverQueryKeys.all, 'restart-failure', id] as const,
 };
+
+export function useInvalidateServerList() {
+  const queryClient = useQueryClient();
+  return useCallback(() => {
+    void queryClient.invalidateQueries({ queryKey: serverQueryKeys.list() });
+  }, [queryClient]);
+}
 
 /** A scheduled stop that came due but could not run (`server.stop.failed`). */
 export interface ServerStopFailure {

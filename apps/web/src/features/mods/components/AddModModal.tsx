@@ -1,6 +1,6 @@
 import { type RefObject, useRef, useState } from 'react';
 
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation } from '@tanstack/react-query';
 import { Link } from '@tanstack/react-router';
 import { ExternalLink, FolderPlus, Link2, PackagePlus, Search, X } from 'lucide-react';
 
@@ -39,7 +39,7 @@ import {
   usePublishDiscardGuard,
 } from '@aegis/web/core';
 
-import { modsQueryKeys } from '../mods.queries';
+import { useInvalidateMods } from '../mods.queries';
 
 export interface AddModModalProps {
   isOpen: boolean;
@@ -176,7 +176,7 @@ function UrlLookupTab({
   /** Closes on user cancel; asks first when the Local Mod tab holds unsaved input. */
   onCancel: () => void;
 }) {
-  const queryClient = useQueryClient();
+  const invalidateMods = useInvalidateMods(serverId);
   const lookupInFlightRef = useRef(false);
   const addInFlightRef = useRef(false);
   const [input, setInput] = useState('');
@@ -209,7 +209,7 @@ function UrlLookupTab({
   const addSingleMutation = useMutation({
     mutationFn: (dto: AddServerModDto) => apiClient.mods.add(serverId, dto),
     onSuccess: created => {
-      void queryClient.invalidateQueries({ queryKey: modsQueryKeys.list(serverId) });
+      invalidateMods();
       notifySuccess('MOD_ADDED', { name: created.name });
       onClose();
     },
@@ -222,7 +222,7 @@ function UrlLookupTab({
   const batchAddMutation = useMutation({
     mutationFn: (dto: BatchAddServerModsDto) => apiClient.mods.batchAdd(serverId, dto),
     onSuccess: result => {
-      void queryClient.invalidateQueries({ queryKey: modsQueryKeys.list(serverId) });
+      invalidateMods();
       notifySuccess('MODS_BATCH_ADDED', {
         addedCount: result.added.length,
         skippedCount: result.skippedCount,
@@ -411,7 +411,7 @@ function WorkshopSearchTab({
   /** Closes on user cancel; asks first when the Local Mod tab holds unsaved input. */
   onCancel: () => void;
 }) {
-  const queryClient = useQueryClient();
+  const invalidateMods = useInvalidateMods(serverId);
   const searchInFlightRef = useRef(false);
   const batchAddInFlightRef = useRef(false);
   const [query, setQuery] = useState('');
@@ -447,7 +447,7 @@ function WorkshopSearchTab({
   const batchAddMutation = useMutation({
     mutationFn: (dto: BatchAddServerModsDto) => apiClient.mods.batchAdd(serverId, dto),
     onSuccess: result => {
-      void queryClient.invalidateQueries({ queryKey: modsQueryKeys.list(serverId) });
+      invalidateMods();
       notifySuccess('MODS_BATCH_ADDED', {
         addedCount: result.added.length,
         skippedCount: result.skippedCount,
@@ -625,7 +625,7 @@ function LocalModTab({
   onClose: () => void;
   discardGuardSlot: RefObject<DiscardGuard | null>;
 }) {
-  const queryClient = useQueryClient();
+  const invalidateMods = useInvalidateMods(serverId);
   const inFlightRef = useRef(false);
   const [name, setName] = useState('');
   const [folderName, setFolderName] = useState('');
@@ -633,7 +633,7 @@ function LocalModTab({
   const addLocalMutation = useMutation({
     mutationFn: (dto: AddServerModDto) => apiClient.mods.add(serverId, dto),
     onSuccess: created => {
-      void queryClient.invalidateQueries({ queryKey: modsQueryKeys.list(serverId) });
+      invalidateMods();
       notifySuccess('MOD_ADDED', { name: created.name });
       onClose();
     },

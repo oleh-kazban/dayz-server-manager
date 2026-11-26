@@ -1,7 +1,5 @@
 import { useEffect, useState } from 'react';
 
-import { useQueryClient } from '@tanstack/react-query';
-
 import { apiClient } from '@aegis/api-client';
 import type { SteamChallengeEventDto } from '@aegis/api-contracts';
 
@@ -9,8 +7,10 @@ import { notifyApiError, notifyInfo, notifySuccess } from '../../../core/notific
 import { REALTIME_SSE_PATH } from '../../../core/realtime/realtime-connection';
 import { requestSseTicket } from '../../../core/realtime/sse-ticket';
 
+import { useInvalidateSteamSettings } from './useInvalidateSteamSettings';
+
 export function useSteamAuthChallenge() {
-  const queryClient = useQueryClient();
+  const invalidateSteamSettings = useInvalidateSteamSettings();
   const [activeChallenge, setActiveChallenge] = useState<SteamChallengeEventDto | null>(null);
 
   useEffect(() => {
@@ -61,7 +61,7 @@ export function useSteamAuthChallenge() {
             setActiveChallenge(null);
             notifySuccess('STEAM_AUTH_SUCCESS');
           }
-          void queryClient.invalidateQueries({ queryKey: ['steam-settings'] });
+          invalidateSteamSettings();
         } catch {
           // Ignore
         }
@@ -80,7 +80,7 @@ export function useSteamAuthChallenge() {
       cancelled = true;
       eventSource?.close();
     };
-  }, [queryClient]);
+  }, [invalidateSteamSettings]);
 
   const respondToChallenge = async (code: string) => {
     if (!activeChallenge) return;

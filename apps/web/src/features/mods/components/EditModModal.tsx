@@ -1,6 +1,6 @@
 import { type RefObject, useRef, useState } from 'react';
 
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation } from '@tanstack/react-query';
 import { Pencil, X } from 'lucide-react';
 
 import { apiClient } from '@aegis/api-client';
@@ -22,7 +22,7 @@ import {
   usePublishDiscardGuard,
 } from '@aegis/web/core';
 
-import { modsQueryKeys } from '../mods.queries';
+import { useInvalidateMods } from '../mods.queries';
 
 export interface EditModModalProps {
   isOpen: boolean;
@@ -84,7 +84,7 @@ function EditModForm({
   onClose: () => void;
   discardGuardSlot: RefObject<DiscardGuard | null>;
 }) {
-  const queryClient = useQueryClient();
+  const invalidateMods = useInvalidateMods(serverId);
   const inFlightRef = useRef(false);
 
   const [name, setName] = useState(mod.name);
@@ -102,7 +102,7 @@ function EditModForm({
   const updateMutation = useMutation({
     mutationFn: (dto: UpdateServerModDto) => apiClient.mods.update(serverId, mod.id, dto),
     onSuccess: updated => {
-      void queryClient.invalidateQueries({ queryKey: modsQueryKeys.list(serverId) });
+      invalidateMods();
       notifySuccess('MOD_UPDATED', { name: updated.name });
       onClose();
     },

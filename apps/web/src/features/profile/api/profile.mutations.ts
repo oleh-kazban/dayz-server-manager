@@ -1,3 +1,5 @@
+import { useCallback } from 'react';
+
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 
 import { apiClient } from '@aegis/api-client';
@@ -6,6 +8,13 @@ import type { ChangePasswordDto, UpdateProfileDto } from '@aegis/api-contracts';
 import { useAuth } from '../../auth';
 
 import { profileQueryKeys, sessionsQueryKeys } from './profile.queries';
+
+function useInvalidateSessions() {
+  const queryClient = useQueryClient();
+  return useCallback(() => {
+    void queryClient.invalidateQueries({ queryKey: sessionsQueryKeys.all });
+  }, [queryClient]);
+}
 
 export function useUpdateProfileMutation() {
   const queryClient = useQueryClient();
@@ -23,18 +32,18 @@ export function useUpdateProfileMutation() {
 }
 
 export function useChangePasswordMutation() {
-  const queryClient = useQueryClient();
+  const invalidateSessions = useInvalidateSessions();
 
   return useMutation({
     mutationFn: (dto: ChangePasswordDto) => apiClient.profile.changePassword(dto),
     onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: sessionsQueryKeys.all });
+      invalidateSessions();
     },
   });
 }
 
 export function useRevokeSessionMutation() {
-  const queryClient = useQueryClient();
+  const invalidateSessions = useInvalidateSessions();
   const { logout } = useAuth();
 
   return useMutation({
@@ -47,18 +56,18 @@ export function useRevokeSessionMutation() {
         logout();
         return;
       }
-      void queryClient.invalidateQueries({ queryKey: sessionsQueryKeys.all });
+      invalidateSessions();
     },
   });
 }
 
 export function useRevokeOtherSessionsMutation() {
-  const queryClient = useQueryClient();
+  const invalidateSessions = useInvalidateSessions();
 
   return useMutation({
     mutationFn: () => apiClient.sessions.revokeOthers(),
     onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: sessionsQueryKeys.all });
+      invalidateSessions();
     },
   });
 }

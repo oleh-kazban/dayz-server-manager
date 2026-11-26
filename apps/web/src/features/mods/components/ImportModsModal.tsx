@@ -1,6 +1,6 @@
 import { useId, useMemo, useRef, useState } from 'react';
 
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation } from '@tanstack/react-query';
 import { AlertCircle, Upload, X } from 'lucide-react';
 
 import { apiClient } from '@aegis/api-client';
@@ -24,7 +24,7 @@ import {
 } from '@aegis/web/core';
 
 import { getTargetLabel } from '../mods.columns';
-import { modsQueryKeys } from '../mods.queries';
+import { useInvalidateMods } from '../mods.queries';
 
 export interface ImportModsModalProps {
   isOpen: boolean;
@@ -409,7 +409,7 @@ function ImportModsDialog({
   isServerLocked = false,
   onClose,
 }: Omit<ImportModsModalProps, 'isOpen'>) {
-  const queryClient = useQueryClient();
+  const invalidateMods = useInvalidateMods(serverId);
   const [activeTab, setActiveTab] = useState<'file' | 'json'>('file');
   const [strategy, setStrategy] = useState<ModImportMode>(MOD_IMPORT_MODE.MERGE);
   const [pastedText, setPastedText] = useState<string>('');
@@ -438,7 +438,7 @@ function ImportModsDialog({
     mutationFn: async ({ preset, mode }: { preset: ModPresetDto; mode: ModImportMode }) =>
       apiClient.mods.importPreset(serverId, { preset, mode }),
     onSuccess: (data, { preset, mode }) => {
-      void queryClient.invalidateQueries({ queryKey: modsQueryKeys.list(serverId) });
+      invalidateMods();
       notifyImportSuccess(data, preset, mode);
       releaseGuard();
       onClose();

@@ -28,6 +28,7 @@ import { notifyApiError, notifyInfo, notifySuccess, useEditableForm } from '../.
 
 import { SteamDiagnosticsModal } from './components/SteamDiagnosticsModal';
 import { SteamGuardChallengeModal } from './components/SteamGuardChallengeModal';
+import { useInvalidateSteamSettings } from './hooks/useInvalidateSteamSettings';
 import { useSteamAuthChallenge } from './hooks/useSteamAuthChallenge';
 
 const AUTH_MODE_OPTIONS: SelectOption[] = [
@@ -816,7 +817,7 @@ function SteamSettingsForm({
 }
 
 export function SteamSettingsView() {
-  const queryClient = useQueryClient();
+  const invalidateSteamSettings = useInvalidateSteamSettings();
 
   const { activeChallenge, respondToChallenge, abortChallenge } = useSteamAuthChallenge();
 
@@ -834,7 +835,7 @@ export function SteamSettingsView() {
   const clearSessionMutation = useMutation({
     mutationFn: () => apiClient.steam.clearSession(),
     onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: ['steam-settings'] });
+      invalidateSteamSettings();
       notifySuccess('STEAM_SESSION_CLEARED');
     },
     onError: (err: Error) => {
