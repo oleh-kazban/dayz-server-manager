@@ -1,16 +1,25 @@
 import type { FastifyRequest } from 'fastify';
 
 /** Query parameters whose values are credentials and must never reach a log (DSM-00348). */
-const SECRET_QUERY_PARAMS = ['ticket', 'token', 'access_token', 'refresh_token'];
+const SECRET_QUERY_PARAMS = ['ticket', 'token', 'access_token', 'refresh_token', 'sessionToken'];
 
-const SECRET_QUERY_PATTERN = new RegExp(
-  String.raw`([?&](?:${SECRET_QUERY_PARAMS.join('|')})=)[^&#]*`,
-  'gi',
-);
+const SECRET_NAMES = new Set(SECRET_QUERY_PARAMS.map(name => name.toLowerCase()));
 
-/** `/sse?ticket=abc&x=1` → `/sse?ticket=[REDACTED]&x=1`. */
+function isSecretName(rawName: string): boolean {
+  try {
+    return SECRET_NAMES.has(decodeURIComponent(rawName).toLowerCase());
+  } catch {
+    return false;
+  }
+}
+
+/** `/sse?ticket=abc&x=1` → `/sse?ticket=[REDACTED]&x=1`. Names are matched after percent-decoding. */
 export function redactUrl(url: string): string {
-  return url.replace(SECRET_QUERY_PATTERN, '$1[REDACTED]');
+  // Each match is a separator plus one parameter; it stops at the next `&` or `#`.
+  return url.replace(/[?&][^&#]*/g, pair => {
+    const eq = pair.indexOf('=');
+    return eq > 0 && isSecretName(pair.slice(1, eq)) ? `${pair.slice(0, eq + 1)}[REDACTED]` : pair;
+  });
 }
 
 /**
