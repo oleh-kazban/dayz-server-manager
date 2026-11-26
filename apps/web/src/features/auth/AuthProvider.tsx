@@ -1,6 +1,7 @@
 import { type ReactNode, useEffect, useMemo, useState } from 'react';
 
 import { apiClient } from '@aegis/api-client';
+import type { SignInResponseDto } from '@aegis/api-contracts';
 
 import { AuthContext } from './auth.context';
 import { authStorage } from './auth.storage';
@@ -36,13 +37,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
   };
 
-  const login = async (credentials: SignInCredentials) => {
-    const response = await apiClient.auth.login({
-      usernameOrEmail: credentials.usernameOrEmail,
-      password: credentials.password,
-      rememberMe: credentials.rememberMe,
-    });
-
+  const storeSession = (response: SignInResponseDto, rememberMe: boolean) => {
     const authenticatedUser: AuthUser = {
       id: response.user.id,
       username: response.user.username,
@@ -52,11 +47,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
 
     apiClient.client.setToken(response.accessToken);
-    authStorage.set(authenticatedUser, credentials.rememberMe, {
+    authStorage.set(authenticatedUser, rememberMe, {
       accessToken: response.accessToken,
       refreshToken: response.refreshToken,
     });
     setUser(authenticatedUser);
+  };
+
+  const login = async (credentials: SignInCredentials) => {
+    const response = await apiClient.auth.login({
+      usernameOrEmail: credentials.usernameOrEmail,
+      password: credentials.password,
+      rememberMe: credentials.rememberMe,
+    });
+    // A setup session never outlives the tab, whatever "Remember me" says.
+    const remember = response.user.role !== 'setup' && (credentials.rememberMe ?? false);
+    storeSession(response, remember);
+  };
+
+  const adoptSession = (response: SignInResponseDto) => {
+    storeSession(response, false);
   };
 
   useEffect(() => {
@@ -94,8 +104,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       isAuthenticated: !!user,
       login,
       logout,
+      adoptSession,
       updateUser,
     }),
+    // login and adoptSession only use stable setters; the memo follows the user.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [user],
   );
 

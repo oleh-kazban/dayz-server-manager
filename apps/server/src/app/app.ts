@@ -15,6 +15,8 @@ import { type DatabaseInstance, initDatabase, sessions } from '@aegis/database';
 import { createProcessManager, type ProcessManager } from '@aegis/platform';
 
 import { type EnvConfig } from '../config/env';
+import { listenWarning } from '../config/network';
+import { resolveSessionSecret } from '../config/session-secret';
 import { registerAuthRoutes } from '../routes/auth';
 import { registerHealthRoutes } from '../routes/health';
 import { registerLaunchCommandRoutes } from '../routes/launch-command';
@@ -26,8 +28,10 @@ import { registerServerLogRoutes } from '../routes/server-logs';
 import { registerServerModsRoutes } from '../routes/server-mods';
 import { registerServersRoutes } from '../routes/servers';
 import { registerSessionsRoutes } from '../routes/sessions';
+import { registerSetupRoutes } from '../routes/setup';
 import { registerSteamRoutes } from '../routes/steam';
 import { registerWorkshopRoutes } from '../routes/workshop';
+import { defaultDataDir } from '../services/identity/setup-file';
 import { sseHub } from '../services/realtime/sse-hub';
 import { SseTicketStore } from '../services/realtime/sse-ticket-store';
 import { ConfigEditLockService } from '../services/server/config-edit-lock.service';
@@ -38,8 +42,12 @@ import {
 import { sendApiError } from '../utils/api-error';
 import { serializeRequest } from '../utils/log-redaction';
 
+import { enforceRoleGate } from './role-guards';
+
 export interface BuildAppOptions {
   config: EnvConfig;
+  /** Directory for `.session.key` when SESSION_SECRET is not set; defaults to `manager-data`. */
+  sessionKeyDir?: string;
   serverOptions?: FastifyServerOptions;
   db?: DatabaseInstance;
   /** OS process adapter; defaults to the platform implementation (DSM-00160). */
@@ -50,6 +58,8 @@ export interface BuildAppOptions {
   skipLifecycleReconcile?: boolean;
   /** Log destination (tests assert on log output); defaults to stdout. */
   logStream?: { write: (line: string) => void };
+  /** Directory of `setup-credentials.txt`; specs pass a temp dir; defaults to `manager-data`. */
+  setupFileDir?: string;
 }
 
 export function buildApp(options: BuildAppOptions): FastifyInstance {
@@ -100,6 +110,13 @@ export function buildApp(options: BuildAppOptions): FastifyInstance {
   // Only timers stop; DayZ processes keep running across DSM restarts (DSM-00160 D1).
   app.addHook('onClose', async () => lifecycle.close());
 
+  app.addHook('onListen', async () => {
+    const warning = listenWarning(options.config.HOST);
+    if (warning) {
+      app.log.warn(warning);
+    }
+  });
+
   // Allow empty bodies when Content-Type: application/json is sent on DELETE/GET requests
   app.addContentTypeParser('application/json', { parseAs: 'string' }, (_req, body, defaultDone) => {
     if (typeof body === 'string' && body.trim() === '') {
@@ -131,7 +148,10 @@ export function buildApp(options: BuildAppOptions): FastifyInstance {
   app.register(sensible);
 
   app.register(jwt, {
-    secret: options.config.SESSION_SECRET,
+    secret: resolveSessionSecret({
+      configured: options.config.SESSION_SECRET,
+      dir: options.sessionKeyDir,
+    }),
   });
 
   app.setErrorHandler(
@@ -204,6 +224,7 @@ export function buildApp(options: BuildAppOptions): FastifyInstance {
         'Invalid or missing authentication token',
       );
     }
+    return enforceRoleGate(request, reply);
   });
 
   /**
@@ -228,6 +249,7 @@ export function buildApp(options: BuildAppOptions): FastifyInstance {
       return sendApiError(reply, 401, 'AUTH_SESSION_INVALID', 'Session is invalid or expired');
     }
     request.user = { ...identity, type: 'access' };
+    return enforceRoleGate(request, reply);
   });
 
   app.register(registerHealthRoutes);
@@ -235,6 +257,10 @@ export function buildApp(options: BuildAppOptions): FastifyInstance {
   app.register(registerProfileRoutes, { prefix: '/api/v1/profile' });
   app.register(registerProfileRoutes, { prefix: '/api/v1/auth/profile' });
   app.register(registerSessionsRoutes, { prefix: '/api/v1/auth/sessions' });
+  app.register(registerSetupRoutes, {
+    prefix: '/api/v1/setup',
+    setupFileDir: options.setupFileDir ?? defaultDataDir(),
+  });
   app.register(registerServersRoutes, { prefix: '/api/v1/servers' });
   app.register(registerServerModsRoutes, { prefix: '/api/v1/servers' });
   app.register(registerServerConfigRoutes, { prefix: '/api/v1/servers' });

@@ -10,6 +10,7 @@ import {
   users,
 } from '@aegis/database';
 
+import { insertUser } from '../__fixtures__/users';
 import { buildApp } from '../app/app';
 import { loadEnv } from '../config/env';
 
@@ -41,6 +42,7 @@ describe('Sessions Routes (/api/v1/auth/sessions)', () => {
     await app.ready();
 
     // User 1 login (admin)
+    const admin = insertUser(dbInstance, { username: 'admin', role: 'admin' });
     const login1 = await app.inject({
       method: 'POST',
       url: '/api/v1/auth/login',
@@ -48,7 +50,7 @@ describe('Sessions Routes (/api/v1/auth/sessions)', () => {
         'user-agent':
           'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120.0.0.0 Safari/537.36',
       },
-      payload: { usernameOrEmail: 'admin', password: 'admin' },
+      payload: admin.credentials,
     });
     user1Token = login1.json().accessToken;
     user1Id = login1.json().user.id;
@@ -336,5 +338,38 @@ describe('Sessions Routes (/api/v1/auth/sessions)', () => {
       expect(body.revokedCount).toBe(1);
       expect(body.message).toBe('Successfully revoked 1 other session');
     });
+  });
+});
+
+describe('Sessions routes deny the setup role (role model)', () => {
+  it.each([
+    ['GET', '/api/v1/auth/sessions'],
+    ['DELETE', '/api/v1/auth/sessions/some-session-id'],
+    ['POST', '/api/v1/auth/sessions/revoke-others'],
+  ])('returns 403 for a setup token on %s %s', async (method, url) => {
+    const dbInstance = initDatabase({ dbPath: ':memory:' });
+    const app = buildApp({
+      config: loadEnv({
+        SESSION_SECRET: 'test-session-secret-at-least-32-chars-long!',
+        LOG_LEVEL: 'silent',
+      }),
+      db: dbInstance,
+    });
+    await app.ready();
+    try {
+      const token = app.jwt.sign({ sub: 'setup-id', role: 'setup', type: 'access' });
+
+      const res = await app.inject({
+        method: method as 'GET',
+        url,
+        headers: { authorization: `Bearer ${token}` },
+      });
+
+      expect(res.statusCode).toBe(403);
+      expect(res.json().errorCode).toBe('AUTH_FORBIDDEN_ADMIN_REQUIRED');
+    } finally {
+      await app.close();
+      dbInstance.close();
+    }
   });
 });

@@ -6,25 +6,21 @@ import { type AuthUser, authUserSchema } from './auth.types';
 const AUTH_TOKEN_KEY = 'dsm_access_token';
 const AUTH_REFRESH_TOKEN_KEY = 'dsm_refresh_token';
 
-function parseNormalizedStoredUser(raw: unknown): AuthUser | null {
-  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
-    return null;
-  }
-  const normalized: Record<string, unknown> = {
-    ...(raw as Record<string, unknown>),
-    role: 'admin',
-  };
-  delete normalized.roles;
-  const parsed = authUserSchema.safeParse(normalized);
-  return parsed.success ? parsed.data : null;
-}
-
 export const authStorage = {
   get(): AuthUser | null {
     const raw =
       sessionStorageDriver.get<unknown>(AUTH_STORAGE_KEY, null) ??
       localStorageDriver.get<unknown>(AUTH_STORAGE_KEY, null);
-    return parseNormalizedStoredUser(raw);
+    if (raw === null) {
+      return null;
+    }
+    const parsed = authUserSchema.safeParse(raw);
+    if (!parsed.success) {
+      // A stored user with an unknown or missing role is discarded, not repaired.
+      authStorage.clear();
+      return null;
+    }
+    return parsed.data;
   },
 
   getToken(): string | null {

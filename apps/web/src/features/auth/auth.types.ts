@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-import { userRoleSchema } from '@aegis/api-contracts';
+import { type SignInResponseDto, userRoleSchema } from '@aegis/api-contracts';
 
 export { userRoleSchema };
 export type UserRole = z.infer<typeof userRoleSchema>;
@@ -25,5 +25,6 @@ export interface AuthContextValue {
   isAuthenticated: boolean;
   login: (credentials: SignInCredentials) => Promise<void> | void;
   logout: () => void;
+  adoptSession: (response: SignInResponseDto) => void;
   updateUser?: (patch: Partial<AuthUser>) => void;
 }

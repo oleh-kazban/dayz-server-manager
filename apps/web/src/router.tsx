@@ -15,7 +15,7 @@ import {
   RootLoader,
 } from '@aegis/web/components';
 
-import { type AuthContextValue, SignIn } from './features/auth';
+import { type AuthContextValue, Setup, SignIn } from './features/auth';
 import { Dashboard } from './features/dashboard';
 import { MaintenanceView } from './features/maintenance';
 import { ModsView } from './features/mods';
@@ -40,6 +40,7 @@ export const defaultAuthContext: AuthContextValue = {
   isAuthenticated: false,
   login: async () => {},
   logout: () => {},
+  adoptSession: () => {},
 };
 
 export const defaultFeaturesContext: FeatureFlagsContextValue = {
@@ -88,10 +89,26 @@ const signInRoute = createRoute({
     signInSearchSchema.parse(search),
   beforeLoad: ({ context }) => {
     if (context?.auth?.isAuthenticated) {
-      throw redirect({ to: '/dashboard' });
+      throw redirect({ to: context.auth.user?.role === 'setup' ? '/setup' : '/dashboard' });
     }
   },
   component: SignIn,
+});
+
+// Setup-Only Route: /setup (the setup account creates the root account)
+const setupRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/setup',
+  beforeLoad: ({ context }) => {
+    const user = context?.auth?.user;
+    if (!user) {
+      throw redirect({ to: '/sign-in' });
+    }
+    if (user.role !== 'setup') {
+      throw redirect({ to: '/dashboard' });
+    }
+  },
+  component: Setup,
 });
 
 export interface AuthedSearch {
@@ -116,6 +133,9 @@ const authedRoute = createRoute({
           redirect: location.href,
         },
       });
+    }
+    if (context.auth.user?.role === 'setup') {
+      throw redirect({ to: '/setup' });
     }
   },
   component: AuthedLayout,
@@ -415,6 +435,7 @@ const settingsBackupsRoute = createRoute({
 const routeTree = rootRoute.addChildren([
   indexRoute,
   signInRoute,
+  setupRoute,
   authedRoute.addChildren([
     dashboardRoute,
     systemRoute,

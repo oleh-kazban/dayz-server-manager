@@ -18,7 +18,7 @@ describe('Workshop Routes (/api/v1/workshop)', () => {
   let app: FastifyInstance;
   let dbInstance: DatabaseInstance;
   let adminToken: string;
-  let viewerToken: string;
+  let setupToken: string;
 
   beforeAll(async () => {
     dbInstance = initDatabase({ dbPath: ':memory:' });
@@ -34,8 +34,8 @@ describe('Workshop Routes (/api/v1/workshop)', () => {
       { sub: 'admin-id', role: 'admin', type: 'access' },
       { expiresIn: '15m' },
     );
-    viewerToken = app.jwt.sign(
-      { sub: 'viewer-id', role: 'viewer', type: 'access' },
+    setupToken = app.jwt.sign(
+      { sub: 'setup-id', role: 'setup', type: 'access' },
       { expiresIn: '15m' },
     );
   });
@@ -55,7 +55,7 @@ describe('Workshop Routes (/api/v1/workshop)', () => {
   });
 
   describe('RBAC Boundaries', () => {
-    it('returns 401 unauthenticated and 403 for viewer on lookup and search', async () => {
+    it('returns 401 unauthenticated and 403 for setup on lookup and search', async () => {
       expect(
         (
           await app.inject({
@@ -69,22 +69,36 @@ describe('Workshop Routes (/api/v1/workshop)', () => {
         (await app.inject({ method: 'GET', url: '/api/v1/workshop/search?q=CF' })).statusCode,
       ).toBe(401);
 
-      const viewerLookup = await app.inject({
+      const setupLookup = await app.inject({
         method: 'POST',
         url: '/api/v1/workshop/lookup',
-        headers: { authorization: `Bearer ${viewerToken}` },
+        headers: { authorization: `Bearer ${setupToken}` },
         payload: { input: '1559212036' },
       });
-      expect(viewerLookup.statusCode).toBe(403);
-      expect(viewerLookup.json().errorCode).toBe('AUTH_FORBIDDEN_ADMIN_REQUIRED');
+      expect(setupLookup.statusCode).toBe(403);
+      expect(setupLookup.json().errorCode).toBe('AUTH_FORBIDDEN_ADMIN_REQUIRED');
 
-      const viewerSearch = await app.inject({
+      const setupSearch = await app.inject({
         method: 'GET',
         url: '/api/v1/workshop/search?q=CF',
-        headers: { authorization: `Bearer ${viewerToken}` },
+        headers: { authorization: `Bearer ${setupToken}` },
       });
-      expect(viewerSearch.statusCode).toBe(403);
-      expect(viewerSearch.json().errorCode).toBe('AUTH_FORBIDDEN_ADMIN_REQUIRED');
+      expect(setupSearch.statusCode).toBe(403);
+      expect(setupSearch.json().errorCode).toBe('AUTH_FORBIDDEN_ADMIN_REQUIRED');
+    });
+
+    it.each([
+      ['no role', undefined],
+      ['an unknown role', 'viewer'],
+    ])('returns 403 on search for a token with %s', async (_name, role) => {
+      const token = app.jwt.sign({ sub: 'x', type: 'access', ...(role ? { role } : {}) });
+      const res = await app.inject({
+        method: 'GET',
+        url: '/api/v1/workshop/search?q=CF',
+        headers: { authorization: `Bearer ${token}` },
+      });
+      expect(res.statusCode).toBe(403);
+      expect(res.json().errorCode).toBe('AUTH_FORBIDDEN_ADMIN_REQUIRED');
     });
   });
 

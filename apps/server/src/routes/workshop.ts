@@ -1,5 +1,5 @@
 import { eq } from 'drizzle-orm';
-import type { FastifyPluginAsync, FastifyReply, FastifyRequest } from 'fastify';
+import type { FastifyPluginAsync } from 'fastify';
 
 import {
   STEAM_APP_IDS,
@@ -8,27 +8,14 @@ import {
 } from '@aegis/api-contracts';
 import { decryptVaultSecret, resolveVaultKey, steamSettings } from '@aegis/database';
 
+import { requireAdmin } from '../app/role-guards';
 import { SteamWorkshopError, steamWorkshopService } from '../services/steam/steam-workshop.service';
 import { formatZodFieldErrors, sendApiError } from '../utils/api-error';
 
-function ensureAdminRole(
-  request: FastifyRequest,
-  reply: FastifyReply,
-  actionMessage: string,
-): boolean {
-  if (request.user?.role !== 'admin') {
-    sendApiError(reply, 403, 'AUTH_FORBIDDEN_ADMIN_REQUIRED', actionMessage);
-    return false;
-  }
-  return true;
-}
-
 export const registerWorkshopRoutes: FastifyPluginAsync = async fastify => {
-  fastify.post('/lookup', { onRequest: [fastify.authenticate] }, async (request, reply) => {
-    if (!ensureAdminRole(request, reply, 'Admin role required to lookup Steam Workshop items')) {
-      return;
-    }
+  const adminRoute = { onRequest: [fastify.authenticate, requireAdmin] };
 
+  fastify.post('/lookup', adminRoute, async (request, reply) => {
     const parseResult = workshopLookupRequestSchema.safeParse(request.body);
     if (!parseResult.success) {
       return sendApiError(reply, 400, 'VALIDATION_FAILED', {
@@ -61,11 +48,7 @@ export const registerWorkshopRoutes: FastifyPluginAsync = async fastify => {
     }
   });
 
-  fastify.get('/search', { onRequest: [fastify.authenticate] }, async (request, reply) => {
-    if (!ensureAdminRole(request, reply, 'Admin role required to search Steam Workshop')) {
-      return;
-    }
-
+  fastify.get('/search', adminRoute, async (request, reply) => {
     const parseResult = workshopSearchQuerySchema.safeParse(request.query);
     if (!parseResult.success) {
       return sendApiError(reply, 400, 'VALIDATION_FAILED', {

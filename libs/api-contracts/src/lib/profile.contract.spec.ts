@@ -10,8 +10,10 @@ import {
 
 describe('Profile Contracts', () => {
   describe('userRoleSchema', () => {
-    it('accepts only admin and rejects deprecated moderator/viewer roles', () => {
-      expect(userRoleSchema.safeParse('admin').success).toBe(true);
+    it('accepts root, admin and setup and rejects deprecated moderator/viewer roles', () => {
+      for (const role of ['root', 'admin', 'setup']) {
+        expect(userRoleSchema.safeParse(role).success).toBe(true);
+      }
       expect(userRoleSchema.safeParse('moderator').success).toBe(false);
       expect(userRoleSchema.safeParse('viewer').success).toBe(false);
     });
@@ -70,7 +72,18 @@ describe('Profile Contracts', () => {
       expect(result.success).toBe(true);
     });
 
-    it('rejects non-admin roles or invalid datetime string', () => {
+    it.each(['root', 'setup'])('accepts a profile with role %s', role => {
+      expect(
+        userProfileSchema.safeParse({
+          id: 'usr-1',
+          username: 'operator',
+          role,
+          createdAt: '2026-11-01T12:00:00.000Z',
+        }).success,
+      ).toBe(true);
+    });
+
+    it('rejects unknown roles or invalid datetime string', () => {
       expect(
         userProfileSchema.safeParse({
           id: 'usr-mod',

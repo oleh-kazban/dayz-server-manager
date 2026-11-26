@@ -41,7 +41,7 @@ describe('Servers Routes (/api/v1/servers)', () => {
   let app: FastifyInstance;
   let dbInstance: DatabaseInstance;
   let adminToken: string;
-  let viewerToken: string;
+  let setupToken: string;
   let defaultServerId: string;
   let routeTempRoot: string;
   let savedDsmVaultKey: string | undefined;
@@ -75,8 +75,8 @@ describe('Servers Routes (/api/v1/servers)', () => {
       { sub: 'admin-id', role: 'admin', type: 'access' },
       { expiresIn: '15m' },
     );
-    viewerToken = app.jwt.sign(
-      { sub: 'viewer-id', role: 'viewer', type: 'access' },
+    setupToken = app.jwt.sign(
+      { sub: 'setup-id', role: 'setup', type: 'access' },
       { expiresIn: '15m' },
     );
 
@@ -141,7 +141,7 @@ describe('Servers Routes (/api/v1/servers)', () => {
       const response = await app.inject({
         method: 'GET',
         url: '/api/v1/servers',
-        headers: { authorization: `Bearer ${viewerToken}` },
+        headers: { authorization: `Bearer ${adminToken}` },
       });
 
       expect(response.statusCode).toBe(200);
@@ -153,12 +153,47 @@ describe('Servers Routes (/api/v1/servers)', () => {
     });
   });
 
+  describe('role model on the server routes', () => {
+    it.each([
+      ['GET', '/api/v1/servers'],
+      ['GET', '/api/v1/servers/123e4567-e89b-12d3-a456-426614174999'],
+    ])('returns 403 for a setup token on %s %s', async (method, url) => {
+      const response = await app.inject({
+        method: method as 'GET',
+        url,
+        headers: { authorization: `Bearer ${setupToken}` },
+      });
+      expect(response.statusCode).toBe(403);
+      expect(response.json().errorCode).toBe('AUTH_FORBIDDEN_ADMIN_REQUIRED');
+    });
+
+    it.each([
+      ['no role', undefined],
+      ['an unknown role', 'viewer'],
+    ])('returns 403 on create for a token with %s', async (_name, role) => {
+      const token = app.jwt.sign({ sub: 'x', type: 'access', ...(role ? { role } : {}) });
+      const response = await app.inject({
+        method: 'POST',
+        url: '/api/v1/servers',
+        headers: { authorization: `Bearer ${token}` },
+        payload: {
+          name: 'Forbidden Server',
+          installPath: '/opt/dayz',
+          profilePath: '/opt/dayz/profiles',
+          missionPath: 'mpmissions/dayzOffline.chernarusplus',
+        },
+      });
+      expect(response.statusCode).toBe(403);
+      expect(response.json().errorCode).toBe('AUTH_FORBIDDEN_ADMIN_REQUIRED');
+    });
+  });
+
   describe('GET /api/v1/servers/:id', () => {
     it('returns 400 when :id is not a valid UUID', async () => {
       const response = await app.inject({
         method: 'GET',
         url: '/api/v1/servers/invalid-uuid-string-or-injection',
-        headers: { authorization: `Bearer ${viewerToken}` },
+        headers: { authorization: `Bearer ${adminToken}` },
       });
       expect(response.statusCode).toBe(400);
       const body = response.json();
@@ -175,7 +210,7 @@ describe('Servers Routes (/api/v1/servers)', () => {
       const response = await app.inject({
         method: 'GET',
         url: `/api/v1/servers/${missingId}`,
-        headers: { authorization: `Bearer ${viewerToken}` },
+        headers: { authorization: `Bearer ${adminToken}` },
       });
       expect(response.statusCode).toBe(404);
       const body = response.json();
@@ -188,7 +223,7 @@ describe('Servers Routes (/api/v1/servers)', () => {
       const response = await app.inject({
         method: 'GET',
         url: `/api/v1/servers/${defaultServerId}`,
-        headers: { authorization: `Bearer ${viewerToken}` },
+        headers: { authorization: `Bearer ${adminToken}` },
       });
 
       expect(response.statusCode).toBe(200);
@@ -204,7 +239,7 @@ describe('Servers Routes (/api/v1/servers)', () => {
       const response = await app.inject({
         method: 'POST',
         url: '/api/v1/servers',
-        headers: { authorization: `Bearer ${viewerToken}` },
+        headers: { authorization: `Bearer ${setupToken}` },
         payload: {
           name: 'Forbidden Server',
           installPath: '/opt/dayz',
@@ -457,7 +492,7 @@ describe('Servers Routes (/api/v1/servers)', () => {
       const response = await app.inject({
         method: 'PATCH',
         url: `/api/v1/servers/${secondServerId}`,
-        headers: { authorization: `Bearer ${viewerToken}` },
+        headers: { authorization: `Bearer ${setupToken}` },
         payload: { name: 'Unauthorized Change' },
       });
       expect(response.statusCode).toBe(403);
@@ -957,7 +992,7 @@ describe('Servers Routes (/api/v1/servers)', () => {
       const response = await app.inject({
         method: 'POST',
         url: `/api/v1/servers/${defaultServerId}/validate-paths`,
-        headers: { authorization: `Bearer ${viewerToken}` },
+        headers: { authorization: `Bearer ${setupToken}` },
       });
 
       expect(response.statusCode).toBe(403);
@@ -1773,7 +1808,7 @@ describe('Servers Routes (/api/v1/servers)', () => {
       const response = await app.inject({
         method: 'DELETE',
         url: `/api/v1/servers/${secondServerId}`,
-        headers: { authorization: `Bearer ${viewerToken}` },
+        headers: { authorization: `Bearer ${setupToken}` },
       });
       expect(response.statusCode).toBe(403);
       const body = response.json();

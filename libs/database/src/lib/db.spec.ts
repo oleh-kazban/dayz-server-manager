@@ -2,30 +2,25 @@ import Database from 'better-sqlite3';
 import { eq } from 'drizzle-orm';
 import fs from 'node:fs';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
-import { verifyPassword } from './crypto';
+import { userRoleSchema } from '@aegis/api-contracts';
+
+import { insertTestUser } from './__fixtures__/users';
 import { initDatabase } from './db';
 import { runMigrations } from './migrations';
 import { serverMods, servers, sessions, steamSettings, users } from './schema';
 
-describe('Database Initialization & Seeding', () => {
-  const originalEnv = { ...process.env };
-
+describe('Database Initialization (no seed)', () => {
   afterEach(() => {
-    process.env = { ...originalEnv };
+    vi.unstubAllEnvs();
   });
 
-  it('initializes in-memory database and auto-seeds default admin with zero servers (clean slate)', () => {
+  it('initializes in-memory database with no account and zero servers (clean slate)', () => {
     const instance = initDatabase({ dbPath: ':memory:' });
 
     try {
-      const seededUsers = instance.db.select().from(users).all();
-      expect(seededUsers).toHaveLength(1);
-
-      const admin = seededUsers[0];
-      expect(admin.username).toBe('admin');
-      expect(admin.role).toBe('admin');
-      expect(verifyPassword('admin', admin.passwordHash)).toBe(true);
+      expect(instance.db.select().from(users).all()).toHaveLength(0);
 
       const seededServers = instance.db.select().from(servers).all();
       expect(seededServers).toHaveLength(0);
@@ -56,7 +51,7 @@ describe('Database Initialization & Seeding', () => {
       expect(sessionCols.length).toBeGreaterThan(0);
 
       // Verify sessions table operations
-      const admin = instance.db.select().from(users).all()[0];
+      const admin = insertTestUser(instance.db, { role: 'admin' });
       const now = new Date();
       instance.db
         .insert(sessions)
@@ -111,7 +106,7 @@ describe('Database Initialization & Seeding', () => {
     }
   });
 
-  it('does not duplicate admin if already populated and maintains zero initial servers', () => {
+  it('creates no account on a second init of a file database and keeps zero servers', () => {
     const tempDir = path.resolve(process.cwd(), 'tmp/test-seed-db');
     const tempDbPath = path.join(tempDir, 'seed.sqlite');
 
@@ -121,8 +116,7 @@ describe('Database Initialization & Seeding', () => {
 
       const secondInstance = initDatabase({ dbPath: tempDbPath });
       try {
-        const seededUsers = secondInstance.db.select().from(users).all();
-        expect(seededUsers).toHaveLength(1);
+        expect(secondInstance.db.select().from(users).all()).toHaveLength(0);
 
         const seededServers = secondInstance.db.select().from(servers).all();
         expect(seededServers).toHaveLength(0);
@@ -189,29 +183,56 @@ describe('Database Initialization & Seeding', () => {
     legacyDb.close();
   });
 
-  it('requires explicit DSM_ADMIN_PASSWORD in production', () => {
-    process.env.NODE_ENV = 'production';
-    delete process.env.DSM_ADMIN_PASSWORD;
-
-    expect(() => initDatabase({ dbPath: ':memory:' })).toThrow(
-      'DSM_ADMIN_PASSWORD environment variable is required to bootstrap the database in production',
-    );
-  });
-
-  it('bootstraps in production with provided DSM_ADMIN_PASSWORD', () => {
-    process.env.NODE_ENV = 'production';
-    process.env.DSM_ADMIN_PASSWORD = 'super-strong-production-pass!';
+  it('does not throw and creates no account in production without DSM_ADMIN_PASSWORD', () => {
+    vi.stubEnv('NODE_ENV', 'production');
+    vi.stubEnv('DSM_ADMIN_PASSWORD', '');
 
     const instance = initDatabase({ dbPath: ':memory:' });
     try {
-      const seededUsers = instance.db.select().from(users).all();
-      expect(seededUsers).toHaveLength(1);
-      expect(verifyPassword('super-strong-production-pass!', seededUsers[0].passwordHash)).toBe(
-        true,
-      );
+      expect(instance.db.select().from(users).all()).toHaveLength(0);
     } finally {
       instance.close();
     }
+  });
+
+  it('ignores DSM_ADMIN_PASSWORD in production (no account is created)', () => {
+    vi.stubEnv('NODE_ENV', 'production');
+    vi.stubEnv('DSM_ADMIN_PASSWORD', 'super-strong-production-pass!');
+
+    const instance = initDatabase({ dbPath: ':memory:' });
+    try {
+      expect(instance.db.select().from(users).all()).toHaveLength(0);
+    } finally {
+      instance.close();
+    }
+  });
+
+  it('reads neither NODE_ENV nor DSM_ADMIN_PASSWORD while opening the database', () => {
+    const reads: string[] = [];
+    const spy = new Proxy(process.env, {
+      get(target, key, receiver) {
+        if (typeof key === 'string') reads.push(key);
+        return Reflect.get(target, key, receiver);
+      },
+    });
+    const original = process.env;
+    process.env = spy;
+    try {
+      const instance = initDatabase({ dbPath: ':memory:' });
+      instance.close();
+    } finally {
+      process.env = original;
+    }
+    // The vault key lookup in migrations may read STEAM_VAULT_KEY / DSM_VAULT_KEY; the seed keys are gone.
+    expect(reads.filter(k => k === 'NODE_ENV' || k === 'DSM_ADMIN_PASSWORD')).toEqual([]);
+  });
+
+  it('contains no process.env read, hashPassword call or crypto import in db.ts', () => {
+    const dir = path.dirname(fileURLToPath(import.meta.url));
+    const source = fs.readFileSync(path.join(dir, 'db.ts'), 'utf8');
+    expect(source).not.toContain('process.env');
+    expect(source).not.toContain('hashPassword');
+    expect(source).not.toContain('node:crypto');
   });
 
   it('initializes file-based database and creates directory if missing', () => {
@@ -221,8 +242,7 @@ describe('Database Initialization & Seeding', () => {
     try {
       const instance = initDatabase({ dbPath: tempDbPath });
       try {
-        const seededUsers = instance.db.select().from(users).all();
-        expect(seededUsers).toHaveLength(1);
+        expect(instance.db.select().from(users).all()).toHaveLength(0);
       } finally {
         instance.close();
       }
@@ -498,5 +518,50 @@ describe('Database Initialization & Seeding', () => {
         instance.close();
       }
     });
+  });
+});
+
+describe('users.role column (role model)', () => {
+  it('builds the column enum from the contract role values', () => {
+    expect([...users.role.enumValues]).toEqual([...userRoleSchema.options]);
+    expect([...users.role.enumValues]).toEqual(['root', 'admin', 'setup']);
+  });
+
+  it.each(['root', 'setup'] as const)('reads back a row written with role %s', role => {
+    const instance = initDatabase({ dbPath: ':memory:' });
+    try {
+      instance.sqlite
+        .prepare(
+          'INSERT INTO users (id, username, password_hash, role, created_at) VALUES (?, ?, ?, ?, ?)',
+        )
+        .run(`u-${role}`, `user-${role}`, 'hash', role, 1);
+
+      const row = instance.db
+        .select()
+        .from(users)
+        .where(eq(users.id, `u-${role}`))
+        .get();
+      expect(row?.role).toBe(role);
+    } finally {
+      instance.close();
+    }
+  });
+
+  it('keeps the default role admin and adds no CHECK constraint or migration', () => {
+    const instance = initDatabase({ dbPath: ':memory:' });
+    try {
+      instance.sqlite
+        .prepare('INSERT INTO users (id, username, password_hash, created_at) VALUES (?, ?, ?, ?)')
+        .run('u-default', 'default-user', 'hash', 1);
+      const row = instance.db.select().from(users).where(eq(users.id, 'u-default')).get();
+      expect(row?.role).toBe('admin');
+
+      const ddl = instance.sqlite
+        .prepare("SELECT sql FROM sqlite_master WHERE name = 'users'")
+        .get() as { sql: string };
+      expect(ddl.sql.toUpperCase()).not.toContain('CHECK');
+    } finally {
+      instance.close();
+    }
   });
 });

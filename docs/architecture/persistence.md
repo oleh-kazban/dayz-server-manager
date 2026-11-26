@@ -21,7 +21,7 @@ Aegis stores its own state in one SQLite file. Game files stay on disk in their 
 | `foreign_keys` | `ON`     | Enforces references and cascades             |
 | `busy_timeout` | `5000`   | Absorbs short lock windows                   |
 
-- After the migrations run, an empty `users` table is seeded with an `admin` account. In production `DSM_ADMIN_PASSWORD` is required for this. The seed is being replaced by a first-run setup (see the [overview](overview.md#decided)).
+- `initDatabase` opens the file and runs the migrations. It creates no account. A fresh database has an empty `users` table; the first account comes from the first-time setup (section 4).
 
 ## 2. Migrations
 
@@ -54,7 +54,7 @@ Seven application tables.
 
 ### Notes on columns
 
-- **`users.role`** accepts only `admin` today. The target is two fixed roles, `root` and `admin`, added through a migration (see the [overview](overview.md#decided)).
+- **`users.role`** is `root`, `admin` or `setup`. There is at most one `root`. A `setup` account exists only until the root account is created. An account whose password hash is `!` (`UNUSABLE_PASSWORD_HASH`) cannot sign in, because no password verifies against it.
 - **Timestamps** are integers. Most columns are in seconds (`mode: 'timestamp'`). Runtime state and config tables use milliseconds (`mode: 'timestamp_ms'`): `process_started_at`, `last_exit_at`, `pending_stop_at`, `acquired_at`, `expires_at` and the revision `created_at`.
 - **`servers`** holds the supervision state that must survive an Aegis restart: the tracked process (`process_pid`, `process_start_token`, `process_started_at`), the last exit (`last_exit_reason`, `last_exit_code`, `last_exit_signal`, `last_exit_at`), a delayed graceful stop (`pending_stop_at`, `pending_stop_requested_at`) and a requested restart (`restart_requested`). `ServerLifecycleService.reconcile()` reads them at boot.
 - **`servers.launch_options`** is a JSON column typed as `LaunchOptionsDto` (`libs/api-contracts`). It replaced the free-text `launch_parameters` column.
@@ -66,8 +66,9 @@ Seven application tables.
 
 - **Passwords** are hashed with scrypt (64-byte key, random 16-byte salt) and stored as `salt:hex`. Verification uses `timingSafeEqual`.
 - **Vault secrets** (Steam credentials and API key, RCON passwords) are encrypted with AES-256-GCM and stored as `iv:authTag:ciphertext`, all in hex, with a random 12-byte IV.
-- **The vault key** comes from `STEAM_VAULT_KEY` or `DSM_VAULT_KEY` (a 64-character hex value is used as is, anything else is derived with scrypt). Without either, a random 32-byte key is created once in `manager-data/.vault.key` with mode `0600`. The key is independent of `SESSION_SECRET`.
+- **The vault key** comes from `STEAM_VAULT_KEY` or `DSM_VAULT_KEY` (a 64-character hex value is used as is, anything else is derived with scrypt). Without either, a random 32-byte key is created once in `manager-data/.vault.key` with mode `0600`. The key is independent of the session secret, which comes from `SESSION_SECRET` or from `manager-data/.session.key` (created once, mode `0600` where the platform supports it).
 - Losing the key file makes the stored secrets unreadable. Back it up together with the database.
+- **The setup file** `manager-data/setup-credentials.txt` exists only while the first-time setup is open (no `root` account). At start Aegis creates one `setup` account with a random username (`setup-` and 12 hex characters) and a random 32-character password, stores only the scrypt hash, and writes the pair to this file. The file has four lines: a `#` notice, `username: ...`, `password: ...` and `expires: <ISO time>`. It is written through a temporary file with mode `0600` and renamed into place. On Windows, which ignores mode bits, Aegis restricts the temporary file with `icacls` (inheritance removed, full control for the current user and Administrators only) before it writes the pair. If this fails (for example on a non-NTFS volume), the start fails and no file is written. The setup account and its sessions end 60 minutes after creation (second resolution). A start with an unexpired account whose file still verifies keeps both; otherwise the account and the file are replaced. Creating the root account deletes the setup account, a locked seeded `admin` and the file. A start with a `root` account removes any leftover setup account and file.
 
 ## 5. Backups
 

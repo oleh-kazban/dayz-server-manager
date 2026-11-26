@@ -54,6 +54,7 @@ const renderHeaderWithAuth = (user: AuthUser | null) => {
           isAuthenticated: Boolean(currentUser),
           login: vi.fn(),
           logout: vi.fn(),
+          adoptSession: vi.fn(),
         }}
       >
         <ThemeProvider>

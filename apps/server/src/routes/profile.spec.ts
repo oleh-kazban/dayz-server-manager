@@ -4,6 +4,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { apiErrorResponseSchema } from '@aegis/api-contracts';
 import { type DatabaseInstance, initDatabase, sessions, verifyPassword } from '@aegis/database';
 
+import { DEFAULT_TEST_PASSWORD, insertUser } from '../__fixtures__/users';
 import { buildApp } from '../app/app';
 import { loadEnv } from '../config/env';
 
@@ -28,14 +29,12 @@ describe('Profile Routes (/api/v1/profile & /api/v1/auth/profile)', () => {
 
     await app.ready();
 
-    // Login as default admin to obtain a valid access token with stateful session
+    // Sign in as an admin inserted by the spec to obtain a token with a stateful session
+    const admin = insertUser(dbInstance, { username: 'admin', role: 'admin' });
     const loginRes = await app.inject({
       method: 'POST',
       url: '/api/v1/auth/login',
-      payload: {
-        usernameOrEmail: 'admin',
-        password: 'admin',
-      },
+      payload: admin.credentials,
     });
 
     expect(loginRes.statusCode).toBe(200);
@@ -349,7 +348,7 @@ describe('Profile Routes (/api/v1/profile & /api/v1/auth/profile)', () => {
           authorization: `Bearer ${userAccessToken}`,
         },
         payload: {
-          currentPassword: 'admin',
+          currentPassword: DEFAULT_TEST_PASSWORD,
           newPassword: 'newSuperPassword1!',
           confirmPassword: 'differentPassword2@',
         },
@@ -371,7 +370,7 @@ describe('Profile Routes (/api/v1/profile & /api/v1/auth/profile)', () => {
           authorization: `Bearer ${userAccessToken}`,
         },
         payload: {
-          currentPassword: 'admin',
+          currentPassword: DEFAULT_TEST_PASSWORD,
           newPassword: passWithoutDigits,
           confirmPassword: passWithoutDigits,
         },
@@ -388,7 +387,7 @@ describe('Profile Routes (/api/v1/profile & /api/v1/auth/profile)', () => {
           authorization: `Bearer ${userAccessToken}`,
         },
         payload: {
-          currentPassword: 'admin',
+          currentPassword: DEFAULT_TEST_PASSWORD,
           newPassword: 'Str0ng! Pass1',
           confirmPassword: 'Str0ng! Pass1',
         },
@@ -452,7 +451,7 @@ describe('Profile Routes (/api/v1/profile & /api/v1/auth/profile)', () => {
           authorization: `Bearer ${userAccessToken}`,
         },
         payload: {
-          currentPassword: 'admin',
+          currentPassword: DEFAULT_TEST_PASSWORD,
           newPassword: 'BrandNewSecurePassword123!',
           confirmPassword: 'BrandNewSecurePassword123!',
         },
@@ -518,7 +517,7 @@ describe('Profile Routes (/api/v1/profile & /api/v1/auth/profile)', () => {
           authorization: `Bearer ${ghostToken}`,
         },
         payload: {
-          currentPassword: 'admin',
+          currentPassword: DEFAULT_TEST_PASSWORD,
           newPassword: 'SomePassword123!',
           confirmPassword: 'SomePassword123!',
         },
@@ -528,5 +527,72 @@ describe('Profile Routes (/api/v1/profile & /api/v1/auth/profile)', () => {
       const body = response.json();
       expect(body.errorCode).toBe('AUTH_USER_NOT_FOUND');
     });
+  });
+});
+
+async function buildRoleApp() {
+  const dbInstance = initDatabase({ dbPath: ':memory:' });
+  const app = buildApp({
+    config: loadEnv({
+      SESSION_SECRET: 'test-session-secret-at-least-32-chars-long!',
+      LOG_LEVEL: 'silent',
+    }),
+    db: dbInstance,
+  });
+  await app.ready();
+  return { app, dbInstance };
+}
+
+describe.each(['/api/v1/profile', '/api/v1/auth/profile'])('role model on %s', prefix => {
+  let app: FastifyInstance;
+  let dbInstance: DatabaseInstance;
+
+  beforeAll(async () => {
+    ({ app, dbInstance } = await buildRoleApp());
+  });
+
+  afterAll(async () => {
+    await app.close();
+    dbInstance.close();
+  });
+
+  it('GET and PATCH return the root role from the database (AC-11)', async () => {
+    const { credentials } = insertUser(dbInstance, { role: 'root' });
+    const login = await app.inject({
+      method: 'POST',
+      url: '/api/v1/auth/login',
+      payload: credentials,
+    });
+    const headers = { authorization: `Bearer ${login.json().accessToken}` };
+
+    const get = await app.inject({ method: 'GET', url: prefix, headers });
+    const patch = await app.inject({
+      method: 'PATCH',
+      url: prefix,
+      headers,
+      payload: { displayName: 'Root Operator' },
+    });
+
+    expect(get.statusCode).toBe(200);
+    expect(get.json().role).toBe('root');
+    expect(patch.statusCode).toBe(200);
+    expect(patch.json().role).toBe('root');
+  });
+
+  it.each([
+    ['GET', ''],
+    ['PATCH', ''],
+    ['POST', '/change-password'],
+  ])('denies a setup token on %s %s (AC-5)', async (method, suffix) => {
+    const token = app.jwt.sign({ sub: 'setup-id', role: 'setup', type: 'access' });
+
+    const res = await app.inject({
+      method: method as 'GET',
+      url: `${prefix}${suffix}`,
+      headers: { authorization: `Bearer ${token}` },
+    });
+
+    expect(res.statusCode).toBe(403);
+    expect(res.json().errorCode).toBe('AUTH_FORBIDDEN_ADMIN_REQUIRED');
   });
 });

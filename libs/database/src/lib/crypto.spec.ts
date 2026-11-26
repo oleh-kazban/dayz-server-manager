@@ -8,6 +8,7 @@ import {
   encryptVaultSecret,
   hashPassword,
   resolveVaultKey,
+  UNUSABLE_PASSWORD_HASH,
   verifyPassword,
   verifyVaultKey,
 } from './crypto';
@@ -43,6 +44,18 @@ describe('Password Hashing & Verification (scrypt)', () => {
     expect(verifyPassword('password', 'malformed')).toBe(false);
     expect(verifyPassword('password', '')).toBe(false);
     expect(verifyPassword('password', 'invalid:salt:length')).toBe(false);
+  });
+
+  it.each(['', '!', 'admin', UNUSABLE_PASSWORD_HASH, 'a:b'])(
+    'never verifies %j against the unusable hash',
+    password => {
+      expect(verifyPassword(password, UNUSABLE_PASSWORD_HASH)).toBe(false);
+    },
+  );
+
+  it('uses a stored value without the salt:key shape as the unusable hash', () => {
+    expect(UNUSABLE_PASSWORD_HASH).not.toContain(':');
+    expect(UNUSABLE_PASSWORD_HASH.length).toBeGreaterThan(0);
   });
 });
 

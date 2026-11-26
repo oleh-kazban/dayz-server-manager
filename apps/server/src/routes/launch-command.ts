@@ -4,6 +4,7 @@ import type { FastifyPluginAsync } from 'fastify';
 import { CONFIG_FILE_KIND, serverIdParamSchema } from '@aegis/api-contracts';
 import { servers } from '@aegis/database';
 
+import { requireAdmin } from '../app/role-guards';
 import { ConfigEditLockService } from '../services/server/config-edit-lock.service';
 import { buildLaunchCommandPreview } from '../services/server/launch-command.service';
 import { formatZodFieldErrors, sendApiError } from '../utils/api-error';
@@ -15,18 +16,9 @@ export const registerLaunchCommandRoutes: FastifyPluginAsync = async fastify => 
   fastify.get<{ Params: { id: string } }>(
     '/:id/launch-command',
     {
-      onRequest: [fastify.authenticate],
+      onRequest: [fastify.authenticate, requireAdmin],
     },
     async (request, reply) => {
-      if (request.user?.role !== 'admin') {
-        return sendApiError(
-          reply,
-          403,
-          'AUTH_FORBIDDEN_ADMIN_REQUIRED',
-          'Admin role required to view the server launch command',
-        );
-      }
-
       const paramResult = serverIdParamSchema.safeParse(request.params);
       if (!paramResult.success) {
         return sendApiError(reply, 400, 'VALIDATION_FAILED', {

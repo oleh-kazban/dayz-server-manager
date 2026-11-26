@@ -52,6 +52,7 @@ describe('Dashboard Component', () => {
     isAuthenticated: true,
     login: vi.fn(),
     logout: vi.fn(),
+    adoptSession: vi.fn(),
   };
 
   beforeEach(() => {
@@ -134,6 +135,31 @@ describe('Dashboard Component', () => {
     const headerAddBtn = screen.getByRole('button', { name: /add dayz server/i });
     fireEvent.click(headerAddBtn);
     expect(screen.getByTestId('create-server-modal')).toBeInTheDocument();
+  });
+
+  it.each(['root', 'setup'] as const)('shows the real role %s', role => {
+    vi.mocked(useActiveServer).mockReturnValue({
+      servers: [],
+      activeServer: null,
+      activeServerId: null,
+      setActiveServerId: vi.fn(),
+      isLoading: false,
+      error: null,
+    });
+
+    render(
+      <AuthContext.Provider
+        value={{
+          ...mockAuthContext,
+          user: { ...mockAuthContext.user, username: 'operator', role },
+        }}
+      >
+        <Dashboard />
+      </AuthContext.Provider>,
+    );
+
+    expect(screen.getByText(role)).toBeInTheDocument();
+    expect(screen.queryByText('admin')).not.toBeInTheDocument();
   });
 
   it('handles health check query failure gracefully', async () => {

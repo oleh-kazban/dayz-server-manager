@@ -94,3 +94,16 @@ Backing up a DayZ server does not require archiving tens of gigabytes of static 
 
 - **Pre-Wipe Snapshot:** Always execute an automatic persistence snapshot prior to performing any scheduled server wipe.
 - **Atomic Rollback:** When restoring `storage_1`, ensure the server process is completely stopped. Replacing storage files while the server is running causes fatal binary conflicts and corrupts the hive.
+
+## 5. Running Aegis in Production
+
+### HTTPS
+
+- **Put HTTPS in front of Aegis.** Run a reverse proxy (for example nginx, Caddy or Traefik) that serves the web console over HTTPS and forwards requests to the Aegis daemon.
+- **Certificates are yours.** Aegis does not manage certificates. The reverse proxy obtains and renews them.
+- **Restrict direct access.** Set `HOST=127.0.0.1` when the proxy runs on the same machine, so only the proxy can reach the daemon. With the default `0.0.0.0`, the daemon logs a warning at start.
+- **Session key.** Leave `SESSION_SECRET` empty and Aegis creates and keeps a key in `manager-data/.session.key`. Back this file up with the rest of `manager-data/`.
+
+### First start and lost setup credentials
+
+On the first start Aegis writes a temporary username and password to `manager-data/setup-credentials.txt`; the console shows the location. Sign in with them, then create the root account on the setup screen. The credentials expire after 60 minutes. If you lost them or they expired, restart Aegis: it creates new setup credentials.

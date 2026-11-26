@@ -25,7 +25,7 @@ interface Harness {
   db: DatabaseInstance;
   processes: FakeProcessManager;
   adminToken: string;
-  viewerToken: string;
+  setupToken: string;
 }
 
 const open: Harness[] = [];
@@ -72,7 +72,7 @@ async function createHarness(
     db,
     processes,
     adminToken: app.jwt.sign({ sub: 'admin-id', role: 'admin', type: 'access' }),
-    viewerToken: app.jwt.sign({ sub: 'viewer-id', role: 'viewer', type: 'access' }),
+    setupToken: app.jwt.sign({ sub: 'setup-id', role: 'setup', type: 'access' }),
   };
   open.push(harness);
   return harness;
@@ -218,10 +218,29 @@ describe('Server lifecycle routes', () => {
     expect(statusOf(h)).toBe('starting');
   });
 
+  it.each([
+    ['setup', 'setup'],
+    ['no role', undefined],
+    ['an unknown role', 'viewer'],
+  ])(
+    'denies %s on every lifecycle action with the admin code and no process change',
+    async (_name, role) => {
+      const h = await createHarness();
+      const token = h.app.jwt.sign({ sub: 'x', type: 'access', ...(role ? { role } : {}) });
+      for (const action of ['start', 'stop', 'force-stop', 'restart', 'stop/cancel']) {
+        const response = await post(h, action, token);
+        expect(response.statusCode, action).toBe(403);
+        expect(response.json().errorCode, action).toBe('AUTH_FORBIDDEN_ADMIN_REQUIRED');
+      }
+      expect(h.processes.spawnCalls).toHaveLength(0);
+      expect(h.processes.killCalls).toHaveLength(0);
+    },
+  );
+
   it('enforces admin role, id format and existence on both actions', async () => {
     const h = await createHarness();
     for (const action of ['start', 'force-stop']) {
-      expect((await post(h, action, h.viewerToken)).statusCode).toBe(403);
+      expect((await post(h, action, h.setupToken)).statusCode).toBe(403);
       expect((await post(h, action, h.adminToken, 'not-a-uuid')).statusCode).toBe(400);
       const missing = await post(h, action, h.adminToken, '66666666-6666-4666-a666-666666666666');
       expect(missing.statusCode).toBe(404);
@@ -333,7 +352,7 @@ describe('Server lifecycle routes', () => {
 
     it('enforces admin role, id format and existence', async () => {
       const h = await createHarness();
-      expect((await post(h, 'stop', h.viewerToken)).statusCode).toBe(403);
+      expect((await post(h, 'stop', h.setupToken)).statusCode).toBe(403);
       expect((await post(h, 'stop', h.adminToken, 'not-a-uuid')).statusCode).toBe(400);
       expect(
         (await post(h, 'stop', h.adminToken, '66666666-6666-4666-a666-666666666666')).statusCode,
@@ -443,7 +462,7 @@ describe('Server lifecycle routes', () => {
 
     it('enforces admin role, id format and existence on restart (DSM-00168)', async () => {
       const h = await createHarness();
-      expect((await post(h, 'restart', h.viewerToken)).statusCode).toBe(403);
+      expect((await post(h, 'restart', h.setupToken)).statusCode).toBe(403);
       expect((await post(h, 'restart', h.adminToken, 'not-a-uuid')).statusCode).toBe(400);
       expect(
         (await post(h, 'restart', h.adminToken, '66666666-6666-4666-a666-666666666666')).statusCode,
@@ -453,7 +472,7 @@ describe('Server lifecycle routes', () => {
 
     it('enforces admin role, id format and existence on cancel (DSM-00167)', async () => {
       const h = await createHarness();
-      expect((await post(h, 'stop/cancel', h.viewerToken)).statusCode).toBe(403);
+      expect((await post(h, 'stop/cancel', h.setupToken)).statusCode).toBe(403);
       expect((await post(h, 'stop/cancel', h.adminToken, 'not-a-uuid')).statusCode).toBe(400);
       expect(
         (await post(h, 'stop/cancel', h.adminToken, '66666666-6666-4666-a666-666666666666'))

@@ -5,7 +5,9 @@ import { useConfirmDiscardAll } from '@aegis/web/core';
 import { useAuth, type UserRole } from '@aegis/web/features/auth';
 
 const ROLE_LABELS: Record<UserRole, string> = {
+  root: 'Root',
   admin: 'Administrator',
+  setup: 'Setup',
 };
 
 export function UserProfile() {

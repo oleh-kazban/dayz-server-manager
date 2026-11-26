@@ -47,7 +47,8 @@ The users are **operators**: people who administer DayZ servers, such as a serve
 
 Rules:
 
-- Root is the first account, created by a setup screen on an empty database. A one-time token printed to the server log protects that screen. There is no default password.
+- Root is the first account. On first start Aegis generates a temporary setup account with a random username and password and writes them to a protected file on the host. The person who installs Aegis signs in with it and creates root on the setup screen (`/setup`). Aegis then deletes the setup account. If the credentials are lost or expired, restarting Aegis creates new ones. There is no default account and no default password.
+- An installation upgraded from an older version is treated the same way. The old seeded account is locked if it still has its default password, and it is deleted when root is created.
 - Root cannot be deleted or demoted, and root cannot be transferred for now.
 - A lost root password is reset with a CLI command run on the host. The CLI belongs to the appliance epic (`DSM-00144`). Until it exists, recovery means editing the database by hand.
 - An admin sees only their own sessions. Root sees all operators and their sessions.

@@ -40,6 +40,7 @@ describe('Profile Queries & Mutations', () => {
       isAuthenticated: true,
       login: vi.fn(),
       logout: mockLogout,
+      adoptSession: vi.fn(),
       updateUser: mockUpdateUser,
     });
   });
@@ -133,6 +134,7 @@ describe('Profile Queries & Mutations', () => {
         isAuthenticated: true,
         login: vi.fn(),
         logout: mockLogout,
+        adoptSession: vi.fn(),
         updateUser: undefined as unknown as () => void,
       });
 

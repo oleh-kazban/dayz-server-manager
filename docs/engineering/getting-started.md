@@ -26,7 +26,11 @@ The web dev server proxies `/api` to the daemon.
 >
 > If Storybook or Nx behaves oddly on Windows, check `echo $env:NX_WORKSPACE_ROOT_PATH`. Nx prefers that variable over the real working directory, and a lowercase `d:\...` value makes Storybook build with broken story keys (every story fails with `importers[path] is not a function`). Unset it or set it with an uppercase drive letter.
 
-On first start the daemon creates the database and seeds an `admin` user. The password is `admin`, or the value of `DSM_ADMIN_PASSWORD`. In production `DSM_ADMIN_PASSWORD` is required. This seed is being replaced by a first-run setup screen that creates the root operator; see [vision and scope](../product/vision-and-scope.md#4-users).
+On first start the daemon creates the database with no account. It then creates a temporary setup account and writes its username and password to `manager-data/setup-credentials.txt`. The log prints the path of the file and the time it expires, never the credentials. The setup account and the file are valid for 60 minutes. Restart the daemon to get new ones. Creating the root account deletes the setup account and the file. No variable presets a password.
+
+The file has mode `0600` where the platform supports it. On Windows the mode bits have no effect, so Aegis restricts the file with `icacls` to the current user and Administrators and removes inherited permissions. If it cannot do this (for example on a non-NTFS volume), the start fails. `manager-data/.vault.key` still inherits the ACL of the data directory: restrict that directory to the account that runs Aegis. The file is replaced with a rename, so the data directory needs no hard link support for it.
+
+**Upgrading.** The first start of this version changes the session secret handling, so every session ends and operators sign in again. An `admin` account that still has the default password `admin` is locked at start and removed when the root account is created. Other accounts are not changed.
 
 ## Configuration
 
@@ -35,18 +39,21 @@ Copy `.env.example` to `.env.local`. The daemon validates its environment with Z
 | Variable                           | Default                                       | Purpose                                                                                    |
 | :--------------------------------- | :-------------------------------------------- | :----------------------------------------------------------------------------------------- |
 | `PORT`                             | `5000`                                        | Daemon port                                                                                |
-| `HOST`                             | `0.0.0.0`                                     | Bind address                                                                               |
+| `HOST`                             | `0.0.0.0`                                     | Bind address. A non-loopback address logs a start warning: put HTTPS in front of Aegis     |
 | `NODE_ENV`                         | `development`                                 | `development`, `production` or `test`                                                      |
 | `CORS_ORIGIN`                      | `http://localhost:4200,http://127.0.0.1:4200` | Allowed browser origins, comma-separated                                                   |
 | `LOG_LEVEL`                        | `info`                                        | Pino level                                                                                 |
-| `SESSION_SECRET`                   | development value                             | Signs tokens. In production it must be set explicitly and be at least 32 characters        |
-| `DSM_ADMIN_PASSWORD`               | none                                          | Initial admin password. Required in production on first boot                               |
+| `SESSION_SECRET`                   | none                                          | Optional, at least 32 characters. Empty: Aegis keeps a key in `manager-data/.session.key`  |
 | `DATABASE_PATH`                    | `manager-data/database/manager.sqlite`        | SQLite file                                                                                |
 | `DSM_SERVER_STARTUP_WINDOW_MS`     | `60000`                                       | How long a starting server may take before it counts as failed                             |
 | `DSM_SERVER_POLL_INTERVAL_MS`      | `5000`                                        | Liveness poll for supervised processes                                                     |
 | `DSM_SERVER_STOP_TIMEOUT_MS`       | `60000`                                       | Time to wait for a graceful stop before force-killing                                      |
 | `STEAM_VAULT_KEY`, `DSM_VAULT_KEY` | none                                          | Key for encrypted secrets. Without one, a key file is created in `manager-data/.vault.key` |
 | `VITE_API_URL`                     | empty                                         | Web app: API origin. Empty uses the Vite proxy                                             |
+
+### Production setup
+
+Put HTTPS in front of Aegis with a reverse proxy that you provide. Aegis does not manage certificates. See the [FAQ](../../faq.md). Leave `SESSION_SECRET` empty to let Aegis generate a key once and keep it in `manager-data/.session.key`. Set it only to share one key between instances. If the key file is invalid, the start fails and names the file: fix it, delete it (this signs everyone out), or set `SESSION_SECRET`. The data directory must support hard links (NTFS, ext4 and xfs do; FAT, exFAT and some network shares do not). On such a directory, set `SESSION_SECRET` instead.
 
 ## Commands
 

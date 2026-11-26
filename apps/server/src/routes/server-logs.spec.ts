@@ -234,3 +234,45 @@ describe('GET /servers/:id/logs/rpt/stream (DSM-00206)', () => {
     expect(missing.status).toBe(404);
   });
 });
+
+describe('setup role is denied on the log routes (role model)', () => {
+  const snapshotUrl = () => `/api/v1/servers/${SERVER_ID}/logs/rpt`;
+  const streamUrl = () => `/api/v1/servers/${SERVER_ID}/logs/rpt/stream`;
+
+  it('returns 403 for a setup token on the snapshot', async () => {
+    const setupToken = app.jwt.sign({ sub: 'setup-id', role: 'setup', type: 'access' });
+
+    const response = await app.inject({
+      method: 'GET',
+      url: snapshotUrl(),
+      headers: { authorization: `Bearer ${setupToken}` },
+    });
+
+    expect(response.statusCode).toBe(403);
+    expect(response.json().errorCode).toBe('AUTH_FORBIDDEN_ADMIN_REQUIRED');
+  });
+
+  it('returns 403 for a setup token on the stream via the header', async () => {
+    const setupToken = app.jwt.sign({ sub: 'setup-id', role: 'setup', type: 'access' });
+
+    const response = await app.inject({
+      method: 'GET',
+      url: streamUrl(),
+      headers: { authorization: `Bearer ${setupToken}` },
+    });
+
+    expect(response.statusCode).toBe(403);
+  });
+
+  it('returns 403 for a ticket stored with role setup on the stream', async () => {
+    const { ticket } = app.sseTickets.issue({ sub: 'setup-id', role: 'setup' });
+
+    const response = await app.inject({
+      method: 'GET',
+      url: `${streamUrl()}?ticket=${encodeURIComponent(ticket)}`,
+    });
+
+    expect(response.statusCode).toBe(403);
+    expect(response.json().errorCode).toBe('AUTH_FORBIDDEN_ADMIN_REQUIRED');
+  });
+});

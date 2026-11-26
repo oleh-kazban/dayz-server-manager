@@ -15,6 +15,19 @@ describe('Error Contracts (@aegis/api-contracts)', () => {
       expect(parsed.success).toBe(true);
     });
 
+    it('includes the admin and root forbidden codes', () => {
+      expect(apiErrorCodeSchema.options).toEqual(
+        expect.arrayContaining(['AUTH_FORBIDDEN_ADMIN_REQUIRED', 'AUTH_FORBIDDEN_ROOT_REQUIRED']),
+      );
+    });
+
+    it.each(['AUTH_SETUP_ALREADY_COMPLETE', 'AUTH_SETUP_SESSION_EXPIRED', 'AUTH_USERNAME_TAKEN'])(
+      'includes the setup flow error code %s',
+      code => {
+        expect(apiErrorCodeSchema.options).toContain(code);
+      },
+    );
+
     it('includes server config storage and BattlEye sync error codes', () => {
       expect(apiErrorCodeSchema.options).toEqual(
         expect.arrayContaining([

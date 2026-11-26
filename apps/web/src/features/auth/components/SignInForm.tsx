@@ -127,6 +127,10 @@ export function SignInForm() {
           <p className="text-[11px] text-[var(--color-text-muted)] leading-[1.65]">
             Contact your workspace administrator for your credentials or to reset your password.
           </p>
+          <p className="text-[11px] text-[var(--color-text-muted)] leading-[1.65]">
+            First start of Aegis? Sign in with the setup credentials from the file
+            setup-credentials.txt. The server console shows where it is saved.
+          </p>
         </div>
       </div>
     </div>

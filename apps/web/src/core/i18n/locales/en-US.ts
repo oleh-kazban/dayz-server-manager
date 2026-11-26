@@ -38,6 +38,7 @@ export type NotificationCode =
   | 'SERVER_CONFIG_CREATED'
   | 'SERVER_CONFIG_RESTORED'
   | 'PROFILE_UPDATED'
+  | 'ROOT_ACCOUNT_CREATED'
   | 'PASSWORD_ROTATED'
   | 'SESSION_REVOKED'
   | 'OTHER_SESSIONS_REVOKED'
@@ -86,6 +87,22 @@ export const enUSTranslations: TranslationCatalog = {
     AUTH_FORBIDDEN_ADMIN_REQUIRED: {
       title: 'Access Denied',
       description: 'Administrator privileges are required to perform this action.',
+    },
+    AUTH_FORBIDDEN_ROOT_REQUIRED: {
+      title: 'Access Denied',
+      description: 'Only the root account can perform this action.',
+    },
+    AUTH_SETUP_ALREADY_COMPLETE: {
+      title: 'Setup is already complete',
+      description: 'Sign in with your account to continue.',
+    },
+    AUTH_SETUP_SESSION_EXPIRED: {
+      title: 'Setup session expired',
+      description: 'Restart Aegis to create new setup credentials.',
+    },
+    AUTH_USERNAME_TAKEN: {
+      title: 'Username already taken',
+      description: 'Choose a different username.',
     },
     AUTH_RATE_LIMIT_EXCEEDED: {
       title: 'Too Many Requests',
@@ -363,6 +380,7 @@ export const enUSTranslations: TranslationCatalog = {
     STORAGE_PATH_NOT_WRITABLE: '{{message}}',
     INSUFFICIENT_STORAGE_SPACE: '{{message}}',
     AUTH_PASSWORD_MISMATCH: 'Current password is incorrect.',
+    AUTH_USERNAME_TAKEN: 'This username is already taken',
   },
   notifications: {
     SERVER_CREATED: {
@@ -494,6 +512,10 @@ export const enUSTranslations: TranslationCatalog = {
     PROFILE_UPDATED: {
       title: 'Profile Updated',
       description: 'Your identity and regional preferences have been saved.',
+    },
+    ROOT_ACCOUNT_CREATED: {
+      title: 'Root account created',
+      description: 'You are signed in as root.',
     },
     PASSWORD_ROTATED: {
       title: 'Password Rotated',

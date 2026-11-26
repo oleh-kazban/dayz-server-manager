@@ -72,7 +72,7 @@ Rules:
 
 ## 7. Forms
 
-Every create and update form uses `useEditableForm` (`apps/web/src/core/forms`). Reference implementations: `ServerSettingsView` (header `SaveButton` outside the form), `SteamSettingsView` (secret fields), `CreateServerModal` (create form).
+Every create and update form uses `useEditableForm` (`apps/web/src/core/forms`). Sign-in is not one of them: it creates and edits nothing, and it has no unsaved changes to protect. Reference implementations: `ServerSettingsView` (header `SaveButton` outside the form), `SteamSettingsView` (secret fields), `CreateServerModal` (create form).
 
 1. **Save disabled without changes (update forms).** The submit control is a `SaveButton`. It is `aria-disabled` with the tooltip "No changes to save" while the form matches its saved values, enabled after a real change, and inert again after reverting. Whitespace-only edits are not changes. After a successful save it returns to the unchanged state. Create forms are always enabled. Enter in a field never submits an unchanged form.
 2. **Validation on save.** No client errors while typing before the first save attempt. On save, every invalid field shows its message and the first one receives focus. After a failed attempt, errors update live.
