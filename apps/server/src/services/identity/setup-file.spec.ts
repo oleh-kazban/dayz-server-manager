@@ -135,8 +135,9 @@ describe('setup credentials file', () => {
       writeSetupFile(dir, PAIR, EXPIRES);
 
       expect(readFileSync(victim, 'utf8')).toBe('victim content\n');
+      const content = readFileSync(file, 'utf8');
+      expect(content).toContain(`username: ${PAIR.username}`);
       expect(lstatSync(file).isSymbolicLink()).toBe(false);
-      expect(readFileSync(file, 'utf8')).toContain(`username: ${PAIR.username}`);
       expect(readdirSync(dir).sort()).toEqual([SETUP_FILE_NAME, 'victim.txt']);
     });
 
@@ -212,8 +213,13 @@ describe('setup credentials file', () => {
       let seen: { path: string; existed: boolean; size: number } | null = null;
       const { run, calls } = fakeRun(((_command: string, args: readonly string[]) => {
         const temp = args[0];
-        const existed = existsSync(temp);
-        seen = { path: temp, existed, size: existed ? statSync(temp).size : -1 };
+        let size = -1;
+        try {
+          size = statSync(temp).size;
+        } catch {
+          // a missing temp file stays at -1
+        }
+        seen = { path: temp, existed: size !== -1, size };
         return { status: 0, stdout: '' };
       }) as Run);
 
