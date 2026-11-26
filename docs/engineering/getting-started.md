@@ -45,11 +45,16 @@ Copy `.env.example` to `.env.local`. The daemon validates its environment with Z
 | `LOG_LEVEL`                        | `info`                                        | Pino level                                                                                 |
 | `SESSION_SECRET`                   | none                                          | Optional, at least 32 characters. Empty: Aegis keeps a key in `manager-data/.session.key`  |
 | `DATABASE_PATH`                    | `manager-data/database/manager.sqlite`        | SQLite file                                                                                |
+| `TRUST_PROXY`                      | off                                           | Reverse proxy to trust: an address or CIDR list, or `true`. See "Behind a reverse proxy"   |
 | `DSM_SERVER_STARTUP_WINDOW_MS`     | `60000`                                       | How long a starting server may take before it counts as failed                             |
 | `DSM_SERVER_POLL_INTERVAL_MS`      | `5000`                                        | Liveness poll for supervised processes                                                     |
 | `DSM_SERVER_STOP_TIMEOUT_MS`       | `60000`                                       | Time to wait for a graceful stop before force-killing                                      |
 | `STEAM_VAULT_KEY`, `DSM_VAULT_KEY` | none                                          | Key for encrypted secrets. Without one, a key file is created in `manager-data/.vault.key` |
 | `VITE_API_URL`                     | empty                                         | Web app: API origin. Empty uses the Vite proxy                                             |
+
+### Behind a reverse proxy
+
+Set `TRUST_PROXY` to the address or CIDR list of your proxy, for example `127.0.0.1` or `10.0.0.0/8,::1`. Aegis then reads the client address from `X-Forwarded-For` for the sign-in rate limit and the address stored with each session. If it is left off, all clients share the proxy address. `true` trusts every hop, so a client can choose its own address when the proxy appends to `X-Forwarded-For` instead of replacing it. Numbers (hop counts) are not accepted. The accepted keywords, in lower case, are `loopback`, `linklocal` and `uniquelocal`. The proxy must append to or overwrite `X-Forwarded-For`, and clients must not be able to reach Aegis directly, otherwise the address list has no effect. A forwarded value that is not a valid IP address is recorded as `unknown`. An invalid value stops the start and names `TRUST_PROXY`.
 
 ### Production setup
 

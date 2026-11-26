@@ -48,7 +48,7 @@ Seven application tables.
 ### Relations
 
 - `sessions.user_id` references `users` with `ON DELETE CASCADE`.
-- `sessions` also holds `refresh_jti` (the current refresh token id), `previous_refresh_jti` and `refresh_rotated_at` (ms, the time of the last rotation). Migration 0013 adds them and deletes sessions without a refresh token id.
+- `sessions` also holds `refresh_jti` (the current refresh token id), `previous_refresh_jti` and `refresh_rotated_at` (ms, the time of the last rotation). Migration 0013 adds them and deletes sessions without a refresh token id. Rows whose `expires_at` has passed are deleted at start and on each sign-in.
 - `server_mods.server_id` and both config tables reference `servers` with `ON DELETE CASCADE`.
 - `config_edit_locks.user_id` cascades with the user. `server_config_revisions.user_id` is set to `NULL` when the user is deleted, so the history stays.
 - `config_edit_locks` has the primary key `(server_id, file_kind)`. `server_config_revisions` has an index on `(server_id, file_kind, created_at DESC)`. `server_mods` has unique indexes on `(server_id, workshop_id)` and `(server_id, folder_name)`.

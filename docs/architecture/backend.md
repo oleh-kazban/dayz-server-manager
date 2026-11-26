@@ -88,6 +88,8 @@ Every error response uses one envelope, built by `sendApiError` (`utils/api-erro
 - `formatZodFieldErrors` converts a `ZodError` into `fieldErrors` keyed by field name.
 - An unexpected error is logged in full and answered with `500 INTERNAL_SERVER_ERROR` and a generic message, so internals never reach the client.
 - Rate limiting answers `429 AUTH_RATE_LIMIT_EXCEEDED`.
+- The client address is `request.ip`, for the rate limit and for the address stored with a session. Fastify's `trustProxy` comes from `TRUST_PROXY` (off by default; an address or CIDR list, or `true`), validated by `config/trust-proxy.ts` so a bad value stops the start. A session stores the address only when it is a valid IP address, otherwise `unknown`. No code reads `X-Forwarded-For` itself.
+- Expired session rows are deleted when the daemon starts (`prepareIdentity`) and whenever a sign-in creates a session (`issueSignIn`).
 
 A new error gets a new code in the contract, a message in the web locale file, and a test.
 

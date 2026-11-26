@@ -2,7 +2,7 @@
 
 |              |                                                                                                                                     |
 | :----------- | :---------------------------------------------------------------------------------------------------------------------------------- |
-| **Status**   | Approved by the product owner                                                                                                       |
+| **Status**   | Approved by the product owner. All three slices are implemented                                                                     |
 | **Audience** | Maintainers and AI agents                                                                                                           |
 | **Covers**   | Sign-out, refresh tokens, live event streams and the client address recorded for a session (part of roadmap package R1)             |
 | **Related**  | [Identity and first-run setup](identity-and-first-run.md), [Fix roadmap](../engineering/fix-roadmap.md), `TD-SRV-006`, `TD-SRV-007` |
