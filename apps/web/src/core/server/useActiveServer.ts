@@ -56,7 +56,7 @@ export function useActiveServer(): UseActiveServerResult {
 
     if (!isServer) {
       if (searchServerId) {
-        navigate({
+        void navigate({
           search: ((prev: Record<string, unknown>) => {
             const next = { ...prev };
             delete next.serverId;
@@ -70,7 +70,7 @@ export function useActiveServer(): UseActiveServerResult {
     }
 
     if (activeServer && searchServerId !== activeServer.id) {
-      navigate({
+      void navigate({
         search: ((prev: Record<string, unknown>) => ({
           ...prev,
           serverId: activeServer.id,
@@ -79,7 +79,7 @@ export function useActiveServer(): UseActiveServerResult {
         ignoreBlocker: true,
       });
     } else if (!activeServer && searchServerId) {
-      navigate({
+      void navigate({
         search: ((prev: Record<string, unknown>) => {
           const next = { ...prev };
           delete next.serverId;
@@ -92,7 +92,7 @@ export function useActiveServer(): UseActiveServerResult {
   }, [isLoading, isServer, activeServer, searchServerId, navigate]);
 
   const setActiveServerId = (id: string, options: SetActiveServerOptions = {}) => {
-    navigate({
+    void navigate({
       ignoreBlocker: options.ignoreBlocker,
       search: ((prev: Record<string, unknown>) => ({
         ...prev,

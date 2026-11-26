@@ -525,7 +525,7 @@ export function ServerSettingsView() {
       queryClient.setQueryData<ServerSummaryDto[]>(serverQueryKeys.list(), old =>
         old ? old.filter(s => s.id !== deletedId) : [],
       );
-      queryClient.invalidateQueries({ queryKey: serverQueryKeys.list() });
+      void queryClient.invalidateQueries({ queryKey: serverQueryKeys.list() });
       notifySuccess('SERVER_DELETED', { name: deletedServerName });
 
       // Edits to a deleted server cannot be saved anymore; leave without the discard prompt.
@@ -533,7 +533,7 @@ export function ServerSettingsView() {
       if (nextServer) {
         setActiveServerId(nextServer.id, { ignoreBlocker: true });
       } else {
-        navigate({
+        void navigate({
           to: '/dashboard',
           ignoreBlocker: true,
           search: ((prev: Record<string, unknown>) => {
@@ -576,7 +576,7 @@ export function ServerSettingsView() {
       if (activeServerId) {
         queryClient.setQueryData(serverQueryKeys.detail(activeServerId), updatedServer);
       }
-      queryClient.invalidateQueries({ queryKey: serverQueryKeys.list() });
+      void queryClient.invalidateQueries({ queryKey: serverQueryKeys.list() });
       notifySuccess('SERVER_UPDATED', { name: updatedServer.name });
     },
     onError: (err: Error) => {

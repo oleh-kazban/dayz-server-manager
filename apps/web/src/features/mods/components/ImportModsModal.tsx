@@ -435,7 +435,7 @@ function ImportModsDialog({
     mutationFn: async ({ preset, mode }: { preset: ModPresetDto; mode: ModImportMode }) =>
       apiClient.mods.importPreset(serverId, { preset, mode }),
     onSuccess: (data, { preset, mode }) => {
-      queryClient.invalidateQueries({ queryKey: modsQueryKeys.list(serverId) });
+      void queryClient.invalidateQueries({ queryKey: modsQueryKeys.list(serverId) });
       notifyImportSuccess(data, preset, mode);
       releaseGuard();
       onClose();

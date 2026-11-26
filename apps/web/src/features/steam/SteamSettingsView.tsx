@@ -834,7 +834,7 @@ export function SteamSettingsView() {
   const clearSessionMutation = useMutation({
     mutationFn: () => apiClient.steam.clearSession(),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['steam-settings'] });
+      void queryClient.invalidateQueries({ queryKey: ['steam-settings'] });
       notifySuccess('STEAM_SESSION_CLEARED');
     },
     onError: (err: Error) => {

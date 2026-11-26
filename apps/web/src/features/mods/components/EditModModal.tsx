@@ -102,7 +102,7 @@ function EditModForm({
   const updateMutation = useMutation({
     mutationFn: (dto: UpdateServerModDto) => apiClient.mods.update(serverId, mod.id, dto),
     onSuccess: updated => {
-      queryClient.invalidateQueries({ queryKey: modsQueryKeys.list(serverId) });
+      void queryClient.invalidateQueries({ queryKey: modsQueryKeys.list(serverId) });
       notifySuccess('MOD_UPDATED', { name: updated.name });
       onClose();
     },

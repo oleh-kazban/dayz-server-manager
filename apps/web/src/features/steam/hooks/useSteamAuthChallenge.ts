@@ -61,7 +61,7 @@ export function useSteamAuthChallenge() {
             setActiveChallenge(null);
             notifySuccess('STEAM_AUTH_SUCCESS');
           }
-          queryClient.invalidateQueries({ queryKey: ['steam-settings'] });
+          void queryClient.invalidateQueries({ queryKey: ['steam-settings'] });
         } catch {
           // Ignore
         }

@@ -28,7 +28,7 @@ export function useChangePasswordMutation() {
   return useMutation({
     mutationFn: (dto: ChangePasswordDto) => apiClient.profile.changePassword(dto),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: sessionsQueryKeys.all });
+      void queryClient.invalidateQueries({ queryKey: sessionsQueryKeys.all });
     },
   });
 }
@@ -47,7 +47,7 @@ export function useRevokeSessionMutation() {
         logout();
         return;
       }
-      queryClient.invalidateQueries({ queryKey: sessionsQueryKeys.all });
+      void queryClient.invalidateQueries({ queryKey: sessionsQueryKeys.all });
     },
   });
 }
@@ -58,7 +58,7 @@ export function useRevokeOtherSessionsMutation() {
   return useMutation({
     mutationFn: () => apiClient.sessions.revokeOthers(),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: sessionsQueryKeys.all });
+      void queryClient.invalidateQueries({ queryKey: sessionsQueryKeys.all });
     },
   });
 }

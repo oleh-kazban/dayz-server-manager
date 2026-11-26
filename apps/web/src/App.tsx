@@ -53,7 +53,7 @@ function InnerApp() {
   const features = useFeatureFlags();
 
   useEffect(() => {
-    router.invalidate();
+    void router.invalidate();
   }, [auth.isAuthenticated, auth.user]);
 
   return <RouterProvider router={router} context={{ auth, features }} />;

@@ -716,7 +716,7 @@ export function ModsView() {
     mutationFn: ({ modId, enabled }: { modId: string; enabled: boolean }) =>
       apiClient.mods.update(serverId, modId, { enabled }),
     onSuccess: updated => {
-      queryClient.invalidateQueries({ queryKey: modsQueryKeys.list(serverId) });
+      void queryClient.invalidateQueries({ queryKey: modsQueryKeys.list(serverId) });
       notifySuccess(updated.enabled ? 'MOD_ENABLED' : 'MOD_DISABLED', { name: updated.name });
     },
     onError: (err: Error) => notifyApiError(err, 'Failed to Toggle Mod'),
@@ -726,7 +726,7 @@ export function ModsView() {
     mutationFn: (mod: ServerModDto) =>
       apiClient.mods.update(serverId, mod.id, { markSynced: true }),
     onSuccess: updated => {
-      queryClient.invalidateQueries({ queryKey: modsQueryKeys.list(serverId) });
+      void queryClient.invalidateQueries({ queryKey: modsQueryKeys.list(serverId) });
       notifySuccess('MOD_MARKED_SYNCED', { name: updated.name });
     },
     onError: (err: Error) => notifyApiError(err, 'Failed to Mark Mod as Synced'),
@@ -736,7 +736,7 @@ export function ModsView() {
     mutationFn: (mod: ServerModDto) => apiClient.mods.delete(serverId, mod.id),
     onSuccess: (_res, mod) => {
       setDeletingMod(null);
-      queryClient.invalidateQueries({ queryKey: modsQueryKeys.list(serverId) });
+      void queryClient.invalidateQueries({ queryKey: modsQueryKeys.list(serverId) });
       notifySuccess('MOD_DELETED', { name: mod.name });
     },
     onError: (err: Error) => {

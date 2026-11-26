@@ -104,7 +104,7 @@ function CreateServerDialog({ onClose }: { onClose: () => void }) {
       queryClient.setQueryData<ServerSummaryDto[]>(serverQueryKeys.list(), old =>
         old ? [...old.filter(s => s.id !== newServer.id), newServer] : [newServer],
       );
-      queryClient.invalidateQueries({ queryKey: serverQueryKeys.list() });
+      void queryClient.invalidateQueries({ queryKey: serverQueryKeys.list() });
       releaseUnsavedChanges();
       setActiveServerId(newServer.id);
       notifySuccess('SERVER_CREATED', { name: newServer.name });

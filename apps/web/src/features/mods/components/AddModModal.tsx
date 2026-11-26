@@ -209,7 +209,7 @@ function UrlLookupTab({
   const addSingleMutation = useMutation({
     mutationFn: (dto: AddServerModDto) => apiClient.mods.add(serverId, dto),
     onSuccess: created => {
-      queryClient.invalidateQueries({ queryKey: modsQueryKeys.list(serverId) });
+      void queryClient.invalidateQueries({ queryKey: modsQueryKeys.list(serverId) });
       notifySuccess('MOD_ADDED', { name: created.name });
       onClose();
     },
@@ -222,7 +222,7 @@ function UrlLookupTab({
   const batchAddMutation = useMutation({
     mutationFn: (dto: BatchAddServerModsDto) => apiClient.mods.batchAdd(serverId, dto),
     onSuccess: result => {
-      queryClient.invalidateQueries({ queryKey: modsQueryKeys.list(serverId) });
+      void queryClient.invalidateQueries({ queryKey: modsQueryKeys.list(serverId) });
       notifySuccess('MODS_BATCH_ADDED', {
         addedCount: result.added.length,
         skippedCount: result.skippedCount,
@@ -447,7 +447,7 @@ function WorkshopSearchTab({
   const batchAddMutation = useMutation({
     mutationFn: (dto: BatchAddServerModsDto) => apiClient.mods.batchAdd(serverId, dto),
     onSuccess: result => {
-      queryClient.invalidateQueries({ queryKey: modsQueryKeys.list(serverId) });
+      void queryClient.invalidateQueries({ queryKey: modsQueryKeys.list(serverId) });
       notifySuccess('MODS_BATCH_ADDED', {
         addedCount: result.added.length,
         skippedCount: result.skippedCount,
@@ -633,7 +633,7 @@ function LocalModTab({
   const addLocalMutation = useMutation({
     mutationFn: (dto: AddServerModDto) => apiClient.mods.add(serverId, dto),
     onSuccess: created => {
-      queryClient.invalidateQueries({ queryKey: modsQueryKeys.list(serverId) });
+      void queryClient.invalidateQueries({ queryKey: modsQueryKeys.list(serverId) });
       notifySuccess('MOD_ADDED', { name: created.name });
       onClose();
     },
