@@ -2,7 +2,7 @@ import { and, eq, ne } from 'drizzle-orm';
 
 import { sessions, UNUSABLE_PASSWORD_HASH, users, verifyPassword } from '@aegis/database';
 
-import type { IdentityDeps } from './startup';
+import type { IdentityDeps } from './types';
 
 export const SEEDED_ADMIN_USERNAME = 'admin';
 export const SEEDED_ADMIN_EMAIL = 'admin@dsm.local';

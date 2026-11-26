@@ -5,7 +5,7 @@ import path from 'node:path';
 import { hashPassword, users, verifyPassword } from '@aegis/database';
 
 import { readSetupFile, SETUP_FILE_NAME, writeSetupFile } from './setup-file';
-import type { IdentityDeps } from './startup';
+import type { IdentityDeps } from './types';
 
 export const SETUP_ACCOUNT_TTL_MS = 60 * 60 * 1000;
 

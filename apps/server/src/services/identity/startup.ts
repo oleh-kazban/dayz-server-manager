@@ -1,33 +1,13 @@
-import type Database from 'better-sqlite3';
 import { eq } from 'drizzle-orm';
 
-import { type DsmDatabase, users } from '@aegis/database';
+import { users } from '@aegis/database';
 
 import { lockSeededAdmin } from './seeded-admin';
 import { ensureSetupAccount } from './setup-account';
 import { removeSetupFile } from './setup-file';
+import type { IdentityDeps, IdentityStartupResult } from './types';
 
-export interface IdentityLog {
-  info(message: string): void;
-  warn(message: string): void;
-}
-
-export interface IdentityDeps {
-  db: DsmDatabase;
-  /** Raw handle for `transaction().immediate()`. */
-  sqlite: Database.Database;
-  dataDir: string;
-  now?: () => Date;
-  randomBytes?: (size: number) => Buffer;
-  log: IdentityLog;
-}
-
-export interface IdentityStartupResult {
-  setup: 'none' | 'created' | 'kept';
-  filePath?: string;
-  expiresAt?: Date;
-  lockedSeededAdmin: boolean;
-}
+export type { IdentityDeps, IdentityLog, IdentityStartupResult } from './types';
 
 /** The only start-up entry for identity; `main.ts` calls it after `buildApp`, before `listen`. */
 export function prepareIdentity(deps: IdentityDeps): IdentityStartupResult {
