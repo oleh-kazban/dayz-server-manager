@@ -6,12 +6,13 @@ Every document starts with a status block. Documents describe what the code does
 
 ## Product
 
-| Document                                                          | Content                                             |
-| :---------------------------------------------------------------- | :-------------------------------------------------- |
-| [Vision and scope](product/vision-and-scope.md)                   | Purpose, pillars, users, scope, open questions      |
-| [Feature map](product/feature-map.md)                             | What is built, partial, placeholder or planned      |
-| [Backlog](product/backlog.md)                                     | Product backlog items (source of `history.md`)      |
-| [Identity and first-run setup](product/identity-and-first-run.md) | Requirements: secrets, roles, setup account (draft) |
+| Document                                                          | Content                                                                       |
+| :---------------------------------------------------------------- | :---------------------------------------------------------------------------- |
+| [Vision and scope](product/vision-and-scope.md)                   | Purpose, pillars, users, scope, open questions                                |
+| [Feature map](product/feature-map.md)                             | What is built, partial, placeholder or planned                                |
+| [Backlog](product/backlog.md)                                     | Product backlog items (source of `history.md`)                                |
+| [Identity and first-run setup](product/identity-and-first-run.md) | Requirements: secrets, roles, setup account (draft)                           |
+| [Session handling](product/session-handling.md)                   | Requirements: sign-out, refresh tokens, event streams, client address (draft) |
 
 ## Architecture
 
