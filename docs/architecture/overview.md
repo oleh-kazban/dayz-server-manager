@@ -110,7 +110,8 @@ Errors use one envelope built by `sendApiError` (`apps/server/src/utils/api-erro
 
 - Three roles exist: `root`, `admin` and `setup` (see [vision](../product/vision-and-scope.md#4-users)). `USER_ROLE_VALUES` in `libs/api-contracts` is the single source. Admin-guarded routes share one `requireAdmin`; there are no duplicated helpers.
 - Sign-in issues a 15-minute **access token** and a **refresh token** (7 days, or 30 days with "remember me"). Both are JWTs signed with `SESSION_SECRET`.
-- Every access token carries a session id (`sid`). `authenticate` rejects tokens whose session row is missing or expired.
+- Every access token carries a session id (`sid`). `authenticate` rejects tokens without `sid` and tokens whose session row is missing or expired.
+- Every refresh issues a new access token and a new refresh token with a new `jti`. The session row tracks the current `jti`. See [refresh rotation](backend.md#5-authentication).
 - Passwords are hashed with scrypt (`libs/database/src/lib/crypto.ts`).
 - Tokens travel only in the `Authorization` header. The browser cannot set that header on an `EventSource`, so SSE uses a short-lived **ticket** (`SseTicketStore`). Request logging redacts credentials in URLs (`log-redaction.ts`).
 - Sign-in routes are rate limited.
