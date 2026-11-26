@@ -36,7 +36,9 @@ The daemon does not serve the web app yet. In production, one process is meant t
 
 **Plugins:** `@fastify/cors` (origins from `CORS_ORIGIN`, credentials allowed), `@fastify/rate-limit` (`global: false`, so only routes that ask for a limit have one), `@fastify/sensible`, and `@fastify/jwt` (secret from `SESSION_SECRET` or `.session.key`).
 
-**Body parsing:** a custom JSON parser accepts an empty body with `Content-Type: application/json` (clients send it on `DELETE`). Invalid JSON is a `400`.
+**Body parsing:** a custom JSON parser accepts an empty body with `Content-Type: application/json` (clients send it on `DELETE`). A body with a `__proto__` key or a `constructor.prototype` path is rejected with `400`. Invalid JSON is also a `400` (`VALIDATION_FAILED`).
+
+**Response headers:** every response carries `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY` and `Referrer-Policy: no-referrer`. This includes errors, 404 and 429 answers, `/health` and the event streams. Aegis does not set a Content-Security-Policy or HSTS. A reverse proxy that terminates HTTPS can add HSTS.
 
 **Error handler:** one app-level handler turns errors into the API error envelope (see [Errors](#4-errors)). `server-config.ts` sets its own handler for its plugin scope.
 
@@ -144,7 +146,7 @@ Config files are limited to 64 KiB (`SERVER_CONFIG_MAX_BYTES`). The config route
 
 ## 8. Logging
 
-Fastify's logger (pino) writes to standard output at `LOG_LEVEL`. The request serializer redacts the query values `ticket`, `token`, `access_token` and `refresh_token`, so a credential in a URL never reaches the log. Credentials are never logged elsewhere.
+Fastify's logger (pino) writes to standard output at `LOG_LEVEL`. The request serializer redacts the query values `ticket`, `token`, `access_token`, `refresh_token` and `sessionToken`, so a credential in a URL never reaches the log. Parameter names are matched after percent-decoding and without regard to case, so `?%74icket=` is redacted too. A name that does not decode to one of these names is left unchanged. Credentials are never logged elsewhere.
 
 ## 9. Tests
 

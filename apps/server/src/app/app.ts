@@ -43,6 +43,7 @@ import { sendApiError } from '../utils/api-error';
 import { serializeRequest } from '../utils/log-redaction';
 
 import { enforceRoleGate } from './role-guards';
+import { registerSecurityHeaders } from './security-headers';
 
 export interface BuildAppOptions {
   config: EnvConfig;
@@ -125,17 +126,14 @@ export function buildApp(options: BuildAppOptions): FastifyInstance {
     }
   });
 
+  registerSecurityHeaders(app);
   // Allow empty bodies when Content-Type: application/json is sent on DELETE/GET requests
-  app.addContentTypeParser('application/json', { parseAs: 'string' }, (_req, body, defaultDone) => {
+  const defaultJsonParser = app.getDefaultJsonParser('error', 'error');
+  app.addContentTypeParser('application/json', { parseAs: 'string' }, (req, body, done) => {
     if (typeof body === 'string' && body.trim() === '') {
-      return defaultDone(null, undefined);
+      return done(null, undefined);
     }
-    try {
-      const json = JSON.parse(body as string);
-      return defaultDone(null, json);
-    } catch (err) {
-      return defaultDone(err as Error, undefined);
-    }
+    return defaultJsonParser(req, body as string, done);
   });
 
   app.register(cors, {
@@ -161,6 +159,11 @@ export function buildApp(options: BuildAppOptions): FastifyInstance {
       dir: options.sessionKeyDir,
     }),
   });
+
+  // Fastify's default 404 logs "Route <method>:<raw url> not found", which would bypass redaction.
+  app.setNotFoundHandler((_request, reply) =>
+    reply.status(404).send({ statusCode: 404, error: 'Not Found', message: 'Route not found' }),
+  );
 
   app.setErrorHandler(
     (error: Error & { statusCode?: number; errorCode?: string }, _request, reply) => {

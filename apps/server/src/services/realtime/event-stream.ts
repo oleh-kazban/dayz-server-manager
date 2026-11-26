@@ -1,5 +1,7 @@
 import type { FastifyReply } from 'fastify';
 
+import { SECURITY_HEADERS } from '../../app/security-headers';
+
 /** Heartbeat comment interval: keeps proxies from closing an idle stream. */
 export const EVENT_STREAM_HEARTBEAT_MS = 15_000;
 
@@ -26,6 +28,7 @@ export function openEventStream(
     'Cache-Control': 'no-cache, no-transform',
     Connection: 'keep-alive',
     'X-Accel-Buffering': 'no',
+    ...SECURITY_HEADERS,
   });
   const write = (chunk: string) => {
     if (!raw.writableEnded && !raw.destroyed) {

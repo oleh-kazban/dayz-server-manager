@@ -63,6 +63,9 @@ describe('SseHub (apps/server/src/services/realtime)', () => {
         'Cache-Control': 'no-cache, no-transform',
         Connection: 'keep-alive',
         'X-Accel-Buffering': 'no',
+        'X-Content-Type-Options': 'nosniff',
+        'X-Frame-Options': 'DENY',
+        'Referrer-Policy': 'no-referrer',
       });
 
       expect(raw.write).toHaveBeenCalledWith(`: connected client=${clientId}\n\n`);
