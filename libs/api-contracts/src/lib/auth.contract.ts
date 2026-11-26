@@ -35,6 +35,7 @@ export type RefreshRequestDto = z.infer<typeof refreshRequestSchema>;
 
 export const refreshResponseSchema = z.object({
   accessToken: z.string().min(1),
+  refreshToken: z.string().min(1),
   expiresIn: z.number().positive().default(900),
 });
 export type RefreshResponseDto = z.infer<typeof refreshResponseSchema>;

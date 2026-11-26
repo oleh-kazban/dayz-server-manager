@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest';
 
-import { authUserSchema, USER_ROLE_VALUES, userRoleSchema } from './auth.contract';
+import {
+  authUserSchema,
+  refreshResponseSchema,
+  USER_ROLE_VALUES,
+  userRoleSchema,
+} from './auth.contract';
 
 describe('Auth contract roles', () => {
   it('lists root, admin and setup as the role values', () => {
@@ -29,5 +34,30 @@ describe('Auth contract roles', () => {
 
   it.each(['viewer', '', undefined])('authUserSchema rejects a user with role %s', role => {
     expect(authUserSchema.safeParse({ id: 'u1', username: 'name', role }).success).toBe(false);
+  });
+});
+
+describe('refreshResponseSchema (AC-4)', () => {
+  it('accepts a response with the rotated refresh token', () => {
+    const result = refreshResponseSchema.safeParse({
+      accessToken: 'access',
+      refreshToken: 'refresh',
+      expiresIn: 900,
+    });
+
+    expect(result.success).toBe(true);
+  });
+
+  it.each([
+    ['missing', undefined],
+    ['empty', ''],
+  ])('rejects a response with a %s refresh token', (_name, refreshToken) => {
+    const result = refreshResponseSchema.safeParse({
+      accessToken: 'access',
+      refreshToken,
+      expiresIn: 900,
+    });
+
+    expect(result.success).toBe(false);
   });
 });
