@@ -28,7 +28,7 @@ The web dev server proxies `/api` to the daemon.
 
 On first start the daemon creates the database with no account. It then creates a temporary setup account and writes its username and password to `manager-data/setup-credentials.txt`. The log prints the path of the file and the time it expires, never the credentials. The setup account and the file are valid for 60 minutes. Restart the daemon to get new ones. Creating the root account deletes the setup account and the file. No variable presets a password.
 
-The file has mode `0600` where the platform supports it. On Windows the mode bits have no effect and the file inherits the ACL of the data directory, as `manager-data/.vault.key` does: restrict that directory to the account that runs Aegis. The file is replaced with a rename, so the data directory needs no hard link support for it.
+The file has mode `0600` where the platform supports it. On Windows the mode bits have no effect, so Aegis restricts the file with `icacls` to the current user and Administrators and removes inherited permissions. If it cannot do this (for example on a non-NTFS volume), the start fails. `manager-data/.vault.key` still inherits the ACL of the data directory: restrict that directory to the account that runs Aegis. The file is replaced with a rename, so the data directory needs no hard link support for it.
 
 **Upgrading.** The first start of this version changes the session secret handling, so every session ends and operators sign in again. An `admin` account that still has the default password `admin` is locked at start and removed when the root account is created. Other accounts are not changed.
 
