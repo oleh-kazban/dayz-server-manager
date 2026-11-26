@@ -3,7 +3,9 @@ import crypto from 'node:crypto';
 
 export interface SseClient {
   id: string;
-  reply: FastifyReply;
+  userId: string;
+  sid: string;
+  reply?: FastifyReply;
   write: (chunk: string) => void;
   close: () => void;
 }
@@ -11,6 +13,8 @@ export interface SseClient {
 export class SseHub {
   private clients = new Map<string, SseClient>();
   private heartbeatInterval: NodeJS.Timeout | null = null;
+  private sessionCheck: ((sid: string) => boolean) | null = null;
+  private onCheckError: ((error: unknown, sid: string) => void) | null = null;
 
   constructor() {
     this.heartbeatInterval = setInterval(() => {
@@ -19,7 +23,32 @@ export class SseHub {
     this.heartbeatInterval.unref();
   }
 
-  public subscribe(reply: FastifyReply, request?: FastifyRequest): string {
+  /** Called at every heartbeat with each client's session id; false closes that client. */
+  public setSessionCheck(
+    check: ((sid: string) => boolean) | null,
+    onError?: (error: unknown, sid: string) => void,
+  ): void {
+    this.sessionCheck = check;
+    this.onCheckError = onError ?? null;
+  }
+
+  /**
+   * Registers a stream that owns its response and heartbeat (log streams): the hub only ends it
+   * with the session. Returns the function that unregisters it.
+   */
+  public track(identity: { userId: string; sid: string }, close: () => void): () => void {
+    const id = crypto.randomUUID();
+    this.clients.set(id, { id, ...identity, write: () => undefined, close });
+    return () => {
+      this.clients.delete(id);
+    };
+  }
+
+  public subscribe(
+    reply: FastifyReply,
+    identity: { userId: string; sid: string },
+    request?: FastifyRequest,
+  ): string {
     const clientId = crypto.randomUUID();
 
     reply.raw.writeHead(200, {
@@ -37,6 +66,8 @@ export class SseHub {
 
     const client: SseClient = {
       id: clientId,
+      userId: identity.userId,
+      sid: identity.sid,
       reply,
       write,
       close: () => {
@@ -88,13 +119,48 @@ export class SseHub {
     }
   }
 
+  /** Ends every stream of the session and returns how many there were. */
+  public closeSession(sid: string): number {
+    let closed = 0;
+    for (const [id, client] of [...this.clients.entries()]) {
+      if (client.sid !== sid) continue;
+      this.clients.delete(id);
+      closed += 1;
+      try {
+        client.close();
+      } catch {
+        // Ignore: the remaining streams must still close
+      }
+    }
+    return closed;
+  }
+
   public heartbeat(): void {
+    this.closeEndedSessions();
     const ping = ': ping\n\n';
     for (const [id, client] of this.clients.entries()) {
       try {
         client.write(ping);
       } catch {
         this.clients.delete(id);
+      }
+    }
+  }
+
+  private closeEndedSessions(): void {
+    const check = this.sessionCheck;
+    if (!check) return;
+    for (const sid of new Set([...this.clients.values()].map(c => c.sid))) {
+      try {
+        if (!check(sid)) this.closeSession(sid);
+      } catch (error) {
+        // Fail closed: a session that cannot be verified must not keep a stream
+        this.closeSession(sid);
+        try {
+          this.onCheckError?.(error, sid);
+        } catch {
+          // Ignore: logging must not stop the heartbeat
+        }
       }
     }
   }

@@ -2,7 +2,6 @@ import cors from '@fastify/cors';
 import jwt from '@fastify/jwt';
 import rateLimit from '@fastify/rate-limit';
 import sensible from '@fastify/sensible';
-import { eq } from 'drizzle-orm';
 import Fastify, {
   type FastifyInstance,
   type FastifyReply,
@@ -11,7 +10,7 @@ import Fastify, {
 } from 'fastify';
 
 import { type UserRole } from '@aegis/api-contracts';
-import { type DatabaseInstance, initDatabase, sessions } from '@aegis/database';
+import { type DatabaseInstance, initDatabase } from '@aegis/database';
 import { createProcessManager, type ProcessManager } from '@aegis/platform';
 
 import { type EnvConfig } from '../config/env';
@@ -31,6 +30,7 @@ import { registerSessionsRoutes } from '../routes/sessions';
 import { registerSetupRoutes } from '../routes/setup';
 import { registerSteamRoutes } from '../routes/steam';
 import { registerWorkshopRoutes } from '../routes/workshop';
+import { findLiveSession, touchSession } from '../services/identity/sessions';
 import { defaultDataDir } from '../services/identity/setup-file';
 import { sseHub } from '../services/realtime/sse-hub';
 import { SseTicketStore } from '../services/realtime/sse-ticket-store';
@@ -70,6 +70,7 @@ export function buildApp(options: BuildAppOptions): FastifyInstance {
       serializers: { req: serializeRequest },
       ...(options.logStream ? { stream: options.logStream } : {}),
     },
+    trustProxy: options.config.TRUST_PROXY,
     ...options.serverOptions,
   });
 
@@ -78,6 +79,10 @@ export function buildApp(options: BuildAppOptions): FastifyInstance {
   app.decorate('sqlite', dbInstance.sqlite);
   app.decorate('closeDb', () => dbInstance.close());
   app.decorate('sseHub', sseHub);
+  sseHub.setSessionCheck(
+    sid => findLiveSession(dbInstance.db, sid) !== undefined,
+    (error, sid) => app.log.error({ err: error, sid }, 'Session check failed; streams closed'),
+  );
   app.decorate('sseTickets', new SseTicketStore());
 
   const lifecycle = new ServerLifecycleService(
@@ -108,7 +113,10 @@ export function buildApp(options: BuildAppOptions): FastifyInstance {
     });
   }
   // Only timers stop; DayZ processes keep running across DSM restarts (DSM-00160 D1).
-  app.addHook('onClose', async () => lifecycle.close());
+  app.addHook('onClose', async () => {
+    sseHub.setSessionCheck(null);
+    await lifecycle.close();
+  });
 
   app.addHook('onListen', async () => {
     const warning = listenWarning(options.config.HOST);
@@ -175,57 +183,52 @@ export function buildApp(options: BuildAppOptions): FastifyInstance {
 
   /** Whether a session exists and has not expired; records activity (throttled, ARCH-04). */
   app.decorate('isSessionActive', (sid: string): boolean => {
-    const session = app.db.select().from(sessions).where(eq(sessions.id, sid)).get();
-    if (!session || session.expiresAt.getTime() <= Date.now()) {
-      return false;
-    }
-    // SQLite WAL Write Contention Guard (ARCH-04): throttled to 60s
-    const now = Date.now();
-    if (now - session.lastActiveAt.getTime() > 60_000) {
-      app.db
-        .update(sessions)
-        .set({ lastActiveAt: new Date(now) })
-        .where(eq(sessions.id, session.id))
-        .run();
-    }
+    const now = new Date();
+    const session = findLiveSession(app.db, sid, now);
+    if (!session) return false;
+    touchSession(app.db, session, now);
     return true;
   });
 
-  app.decorate('authenticate', async (request: FastifyRequest, reply: FastifyReply) => {
-    try {
-      type JwtPayload = {
-        sub: string;
-        username?: string;
-        role?: UserRole;
-        type?: 'access' | 'refresh';
-        sid?: string;
-      };
+  const authenticateWith =
+    (checkSession: boolean) => async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        type JwtPayload = {
+          sub: string;
+          username?: string;
+          role?: UserRole;
+          type?: 'access' | 'refresh';
+          sid?: string;
+        };
 
-      // Header only: tokens in URLs end up in logs and proxies (DSM-00348); SSE uses tickets.
-      const payload = await request.jwtVerify<JwtPayload>();
+        // Header only: tokens in URLs end up in logs and proxies (DSM-00348); SSE uses tickets.
+        const payload = await request.jwtVerify<JwtPayload>();
 
-      if (!payload || payload.type !== 'access') {
+        if (!payload || payload.type !== 'access') {
+          return sendApiError(
+            reply,
+            401,
+            'AUTH_TOKEN_TYPE_INVALID',
+            'Invalid token type for authorization',
+          );
+        }
+
+        if (!payload.sid || (checkSession && !app.isSessionActive(payload.sid))) {
+          return sendApiError(reply, 401, 'AUTH_SESSION_INVALID', 'Session is invalid or expired');
+        }
+      } catch {
         return sendApiError(
           reply,
           401,
-          'AUTH_TOKEN_TYPE_INVALID',
-          'Invalid token type for authorization',
+          'AUTH_TOKEN_MISSING_OR_INVALID',
+          'Invalid or missing authentication token',
         );
       }
-
-      if (payload.sid && !app.isSessionActive(payload.sid)) {
-        return sendApiError(reply, 401, 'AUTH_SESSION_INVALID', 'Session is invalid or expired');
-      }
-    } catch {
-      return sendApiError(
-        reply,
-        401,
-        'AUTH_TOKEN_MISSING_OR_INVALID',
-        'Invalid or missing authentication token',
-      );
-    }
-    return enforceRoleGate(request, reply);
-  });
+      return enforceRoleGate(request, reply);
+    };
+  app.decorate('authenticate', authenticateWith(true));
+  /** Sign-out: a session that is already gone must still answer 204 (R-OUT-2). */
+  app.decorate('authenticateIgnoringSession', authenticateWith(false));
 
   /**
    * DSM-00348: `EventSource` cannot send an Authorization header, so a browser opens a stream
@@ -245,7 +248,7 @@ export function buildApp(options: BuildAppOptions): FastifyInstance {
         'The realtime ticket is invalid, expired or already used',
       );
     }
-    if (identity.sid && !app.isSessionActive(identity.sid)) {
+    if (!identity.sid || !app.isSessionActive(identity.sid)) {
       return sendApiError(reply, 401, 'AUTH_SESSION_INVALID', 'Session is invalid or expired');
     }
     request.user = { ...identity, type: 'access' };

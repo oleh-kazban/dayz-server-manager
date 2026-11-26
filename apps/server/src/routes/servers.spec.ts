@@ -31,6 +31,7 @@ import {
   users,
 } from '@aegis/database';
 
+import { signSession } from '../__fixtures__/session-token';
 import { buildApp } from '../app/app';
 import { loadEnv } from '../config/env';
 import { getBattlEyeConfigFilename } from '../services/server/battleye-config.service';
@@ -71,14 +72,8 @@ describe('Servers Routes (/api/v1/servers)', () => {
     await app.ready();
 
     // Generate tokens for test roles
-    adminToken = app.jwt.sign(
-      { sub: 'admin-id', role: 'admin', type: 'access' },
-      { expiresIn: '15m' },
-    );
-    setupToken = app.jwt.sign(
-      { sub: 'setup-id', role: 'setup', type: 'access' },
-      { expiresIn: '15m' },
-    );
+    adminToken = signSession(app, { sub: 'admin-id', role: 'admin' }).accessToken;
+    setupToken = signSession(app, { sub: 'setup-id', role: 'setup' }).accessToken;
 
     // Seed initial test server for test suite baseline
     defaultServerId = '11111111-1111-4111-a111-111111111111';
@@ -171,7 +166,7 @@ describe('Servers Routes (/api/v1/servers)', () => {
       ['no role', undefined],
       ['an unknown role', 'viewer'],
     ])('returns 403 on create for a token with %s', async (_name, role) => {
-      const token = app.jwt.sign({ sub: 'x', type: 'access', ...(role ? { role } : {}) });
+      const token = signSession(app, { tokenRole: role ?? null }).accessToken;
       const response = await app.inject({
         method: 'POST',
         url: '/api/v1/servers',

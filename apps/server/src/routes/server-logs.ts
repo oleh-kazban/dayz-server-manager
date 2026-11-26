@@ -139,7 +139,15 @@ export const registerServerLogRoutes: FastifyPluginAsync = async fastify => {
         onLines: event => stream.send(LOG_LINES_EVENT, event),
       });
       follower.start();
-      stream.onClose(() => follower.stop());
+      // The stream keeps its own heartbeat; the hub only ends it when the session ends.
+      const untrack = fastify.sseHub.track(
+        { userId: request.user.sub, sid: request.user.sid },
+        stream.end,
+      );
+      stream.onClose(() => {
+        untrack();
+        follower.stop();
+      });
     },
   );
 };

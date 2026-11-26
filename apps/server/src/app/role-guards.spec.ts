@@ -4,6 +4,7 @@ import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import type { UserRole } from '@aegis/api-contracts';
 import { type DatabaseInstance, initDatabase } from '@aegis/database';
 
+import { signSession } from '../__fixtures__/session-token';
 import { loadEnv } from '../config/env';
 
 import { buildApp } from './app';
@@ -58,7 +59,7 @@ describe('role guards', () => {
     return app.inject({ method: 'GET', url, headers: { 'x-test-role': role } });
   };
   const token = (role?: string) =>
-    app.jwt.sign({ sub: 'test-user', type: 'access', ...(role ? { role } : {}) });
+    signSession(app, { sub: 'test-user', tokenRole: role ?? null }).accessToken;
   const withToken = (url: string, role?: string) => {
     handler.mockClear();
     return app.inject({
@@ -178,7 +179,8 @@ describe('role guards', () => {
     it.each([['setup' as const], [undefined]])(
       'denies a ticket stored with role %s',
       async role => {
-        const { ticket } = app.sseTickets.issue({ sub: 'x', role });
+        const { sid, userId } = signSession(app);
+        const { ticket } = app.sseTickets.issue({ sub: userId, role, sid });
         handler.mockClear();
 
         const res = await app.inject({ method: 'GET', url: `/throwaway/sse?ticket=${ticket}` });
@@ -190,7 +192,8 @@ describe('role guards', () => {
     );
 
     it.each(['root', 'admin'] as const)('accepts a ticket stored with role %s', async role => {
-      const { ticket } = app.sseTickets.issue({ sub: 'x', role });
+      const { sid, userId } = signSession(app, { role });
+      const { ticket } = app.sseTickets.issue({ sub: userId, role, sid });
       expect(
         (await app.inject({ method: 'GET', url: `/throwaway/sse?ticket=${ticket}` })).statusCode,
       ).toBe(200);
@@ -207,10 +210,11 @@ describe('role guards', () => {
   });
 
   describe('ROLE_GATE_OPEN_ROUTES (AC-5, AC-8)', () => {
-    it('is pinned to GET /api/v1/auth/me and POST /api/v1/setup/root', () => {
+    it('is pinned to GET /api/v1/auth/me, POST /api/v1/setup/root and POST /api/v1/auth/logout', () => {
       expect([...ROLE_GATE_OPEN_ROUTES]).toEqual([
         'GET /api/v1/auth/me',
         'POST /api/v1/setup/root',
+        'POST /api/v1/auth/logout',
       ]);
     });
   });

@@ -254,7 +254,16 @@ describe('prepareIdentity', () => {
 
     it('keeps other accounts and their sessions when it replaces the setup account', () => {
       const admin = insertUser(dbi, { role: 'admin', username: 'operator' });
-      addSession('admin-session', admin.id);
+      dbi.db
+        .insert(sessions)
+        .values({
+          id: 'admin-session',
+          userId: admin.id,
+          lastActiveAt: T0,
+          createdAt: T0,
+          expiresAt: new Date(T0.getTime() + 3 * HOUR),
+        })
+        .run();
       prepareIdentity(deps());
       current = new Date(T0.getTime() + 2 * HOUR);
 
@@ -306,6 +315,53 @@ describe('prepareIdentity', () => {
       expect(messages).toHaveLength(1);
       expect(messages[0]).toMatch(/^warn: /);
       expect(messages[0]).toContain(file);
+    });
+  });
+
+  describe('expired session rows (AC-13)', () => {
+    const idsLeft = () =>
+      dbi.db
+        .select()
+        .from(sessions)
+        .all()
+        .map(s => s.id)
+        .sort();
+    const addSessionExpiring = (id: string, userId: string, expiresAt: Date) =>
+      dbi.db
+        .insert(sessions)
+        .values({ id, userId, lastActiveAt: T0, createdAt: T0, expiresAt })
+        .run();
+
+    it('removes expired rows at start with the injected now and keeps live ones', () => {
+      const owner = insertUser(dbi, { role: 'root', username: 'owner' });
+      addSessionExpiring('long-gone', owner.id, new Date(T0.getTime() - HOUR));
+      addSessionExpiring('at-now', owner.id, T0);
+      addSessionExpiring('one-second-left', owner.id, new Date(T0.getTime() + 1000));
+      addSessionExpiring('live', owner.id, new Date(T0.getTime() + HOUR));
+
+      prepareIdentity(deps());
+
+      expect(idsLeft()).toEqual(['live', 'one-second-left']);
+    });
+
+    it('measures expiry against the injected now, not the wall clock', () => {
+      const owner = insertUser(dbi, { role: 'root', username: 'owner' });
+      addSessionExpiring('later', owner.id, new Date(T0.getTime() + HOUR));
+      current = new Date(T0.getTime() + 2 * HOUR);
+
+      prepareIdentity(deps());
+
+      expect(idsLeft()).toEqual([]);
+    });
+
+    it('removes expired rows of other users when it creates a setup account', () => {
+      const admin = insertUser(dbi, { role: 'admin', username: 'operator' });
+      addSessionExpiring('admin-expired', admin.id, new Date(T0.getTime() - 1000));
+      addSessionExpiring('admin-live', admin.id, new Date(T0.getTime() + HOUR));
+
+      prepareIdentity(deps());
+
+      expect(idsLeft()).toEqual(['admin-live']);
     });
   });
 

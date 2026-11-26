@@ -13,6 +13,7 @@ import {
 } from '@aegis/api-contracts';
 import { type DatabaseInstance, initDatabase, serverMods, servers } from '@aegis/database';
 
+import { signSession } from '../__fixtures__/session-token';
 import { buildApp } from '../app/app';
 import { loadEnv } from '../config/env';
 import { SteamWorkshopError, steamWorkshopService } from '../services/steam/steam-workshop.service';
@@ -39,14 +40,8 @@ describe('Server Mods Helpers & Routes (/api/v1/servers/:id/mods)', () => {
     app = buildApp({ config, db: dbInstance });
     await app.ready();
 
-    adminToken = app.jwt.sign(
-      { sub: 'admin-id', role: 'admin', type: 'access' },
-      { expiresIn: '15m' },
-    );
-    setupToken = app.jwt.sign(
-      { sub: 'setup-id', role: 'setup', type: 'access' },
-      { expiresIn: '15m' },
-    );
+    adminToken = signSession(app, { sub: 'admin-id', role: 'admin' }).accessToken;
+    setupToken = signSession(app, { sub: 'setup-id', role: 'setup' }).accessToken;
 
     const now = new Date();
     dbInstance.db
@@ -205,8 +200,8 @@ describe('Server Mods Helpers & Routes (/api/v1/servers/:id/mods)', () => {
       });
       expect(setupExport.statusCode).toBe(403);
 
-      const roleless = app.jwt.sign({ sub: 'roleless', type: 'access' });
-      const unknown = app.jwt.sign({ sub: 'unknown', role: 'viewer', type: 'access' });
+      const roleless = signSession(app, { sub: 'roleless', tokenRole: null }).accessToken;
+      const unknown = signSession(app, { sub: 'unknown', tokenRole: 'viewer' }).accessToken;
       for (const token of [roleless, unknown]) {
         const denied = await app.inject({
           method: 'POST',

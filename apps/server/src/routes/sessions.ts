@@ -1,8 +1,9 @@
-import { and, desc, eq, gt, ne } from 'drizzle-orm';
+import { and, desc, eq, gt } from 'drizzle-orm';
 import type { FastifyPluginAsync } from 'fastify';
 
 import { sessions } from '@aegis/database';
 
+import { revokeSessions } from '../services/identity/sessions';
 import { sendApiError } from '../utils/api-error';
 import { parseUserAgent } from '../utils/user-agent';
 
@@ -47,15 +48,16 @@ export const registerSessionsRoutes: FastifyPluginAsync = async fastify => {
     async (request, reply) => {
       const sessionId = (request.params as { id: string }).id;
 
-      // GUARD-02: Anti-IDOR delete session strictly owned by user
-      const result = fastify.db
-        .delete(sessions)
+      // GUARD-02: Anti-IDOR, only a session owned by the user is revoked
+      const owned = fastify.db
+        .select()
+        .from(sessions)
         .where(and(eq(sessions.id, sessionId), eq(sessions.userId, request.user.sub)))
-        .run();
-
-      if (result.changes === 0) {
+        .get();
+      if (!owned) {
         return sendApiError(reply, 404, 'AUTH_SESSION_NOT_FOUND', 'Session not found');
       }
+      revokeSessions({ db: fastify.db, hub: fastify.sseHub }, { sid: sessionId });
 
       return reply.send({
         success: true,
@@ -70,19 +72,15 @@ export const registerSessionsRoutes: FastifyPluginAsync = async fastify => {
       onRequest: [fastify.authenticate],
     },
     async (request, reply) => {
-      const currentSid = request.user.sid;
-      if (!currentSid) {
-        return sendApiError(reply, 401, 'AUTH_SESSION_INVALID', 'No active session found');
-      }
-
-      const result = fastify.db
-        .delete(sessions)
-        .where(and(eq(sessions.userId, request.user.sub), ne(sessions.id, currentSid)))
-        .run();
+      const revoked = revokeSessions(
+        { db: fastify.db, hub: fastify.sseHub },
+        { userId: request.user.sub, exceptSid: request.user.sid },
+      );
+      const count = revoked.length;
 
       return reply.send({
-        revokedCount: result.changes,
-        message: `Successfully revoked ${result.changes} other session${result.changes === 1 ? '' : 's'}`,
+        revokedCount: count,
+        message: `Successfully revoked ${count} other session${count === 1 ? '' : 's'}`,
       });
     },
   );

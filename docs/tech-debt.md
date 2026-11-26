@@ -687,17 +687,13 @@ The audit read the daemon's source (36 files, about 10,300 lines), ran its tests
 - **Recommendation:** one helper for "parse or send the error", and either Zod for request and response everywhere, or Fastify schemas generated from the contracts.
 - **Decision:** no.
 
-#### TD-SRV-006 · Expired sessions are never deleted · Low
+#### TD-SRV-006 · Expired sessions are never deleted (resolved) · Low
 
-- **Code:** a session row is removed only when an operator revokes it or changes the password. Rows whose `expires_at` has passed stay in `sessions` forever, and each sign-in adds one.
-- **Recommendation:** delete expired rows at start-up and on a slow timer.
-- **Decision:** no.
+- **Resolved (session hardening, slice 3).** `prepareIdentity` at start and `issueSignIn` on every sign-in delete the session rows whose `expires_at` has passed (`deleteExpiredSessions`).
 
-#### TD-SRV-007 · No `trustProxy` setting · Medium
+#### TD-SRV-007 · No `trustProxy` setting (resolved) · Medium
 
-- **Code:** Fastify's `trustProxy` is not set. Behind the optional reverse proxy that the production plan allows, `request.ip` is the proxy's address, so the login rate limit (10 per minute) is shared by every client. The login route also reads `X-Forwarded-For` by hand for the session's IP, so the two disagree.
-- **Recommendation:** a `TRUST_PROXY` setting in the validated environment, used by Fastify for both the rate limit and the recorded IP, and no manual header reading.
-- **Decision:** no.
+- **Resolved (session hardening, slice 3).** `TRUST_PROXY` is validated in the environment and passed to Fastify. The rate limit and the stored session address both use `request.ip`, and no code reads `X-Forwarded-For` by hand.
 
 #### TD-SRV-008 · An environment variable outside the schema · Low
 

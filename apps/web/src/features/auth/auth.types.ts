@@ -24,7 +24,7 @@ export interface AuthContextValue {
   user: AuthUser | null;
   isAuthenticated: boolean;
   login: (credentials: SignInCredentials) => Promise<void> | void;
-  logout: () => void;
+  logout: () => Promise<void>;
   adoptSession: (response: SignInResponseDto) => void;
   updateUser?: (patch: Partial<AuthUser>) => void;
 }

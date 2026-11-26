@@ -28,6 +28,7 @@ import {
   users,
 } from '@aegis/database';
 
+import { signSession } from '../__fixtures__/session-token';
 import { buildApp } from '../app/app';
 import { loadEnv } from '../config/env';
 import { battlEyeConfigService } from '../services/server/battleye-config.service';
@@ -160,11 +161,11 @@ describe('Server config routes (/api/v1/servers/:id/config)', () => {
     });
     await app.ready();
     const sign = (sub: string, role: string) =>
-      app.jwt.sign({ sub, role, type: 'access' }, { expiresIn: '15m' });
+      signSession(app, { sub, tokenRole: role }).accessToken;
     adminToken = sign(ADMIN.id, 'admin');
     otherAdminToken = sign(OTHER_ADMIN.id, 'admin');
     moderatorToken = sign('route-moderator', 'moderator');
-    rolelessToken = app.jwt.sign({ sub: 'route-roleless', type: 'access' }, { expiresIn: '15m' });
+    rolelessToken = signSession(app, { sub: 'route-roleless', tokenRole: null }).accessToken;
     setupToken = sign('route-setup', 'setup');
   });
 

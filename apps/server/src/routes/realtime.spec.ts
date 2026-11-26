@@ -5,6 +5,7 @@ import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { realtimeTicketResponseSchema } from '@aegis/api-contracts';
 import { type DatabaseInstance, initDatabase, sessions, users } from '@aegis/database';
 
+import { signSession } from '../__fixtures__/session-token';
 import { buildApp } from '../app/app';
 import { loadEnv } from '../config/env';
 
@@ -74,6 +75,7 @@ describe('Realtime Routes (/api/v1/realtime/sse)', () => {
       role: 'admin',
       type: 'refresh',
       sid: sessionId,
+      jti: 'refresh-jti',
     });
   });
 
@@ -209,7 +211,7 @@ describe('Realtime Routes (/api/v1/realtime/sse)', () => {
   it('issues no ticket to a setup token', async () => {
     const issueSpy = vi.spyOn(app.sseTickets, 'issue');
     issueSpy.mockClear();
-    const setupToken = app.jwt.sign({ sub: 'setup-id', role: 'setup', type: 'access' });
+    const setupToken = signSession(app, { sub: 'setup-id', role: 'setup' }).accessToken;
 
     const res = await issueTicket(setupToken);
 
@@ -221,7 +223,7 @@ describe('Realtime Routes (/api/v1/realtime/sse)', () => {
   it('denies a setup token on the SSE stream via the header', async () => {
     const subscribeSpy = vi.spyOn(app.sseHub, 'subscribe');
     subscribeSpy.mockClear();
-    const setupToken = app.jwt.sign({ sub: 'setup-id', role: 'setup', type: 'access' });
+    const setupToken = signSession(app, { sub: 'setup-id', role: 'setup' }).accessToken;
 
     const res = await app.inject({
       method: 'GET',
@@ -239,7 +241,8 @@ describe('Realtime Routes (/api/v1/realtime/sse)', () => {
   ])('rejects an SSE ticket stored with a %s role and consumes it', async (_name, role) => {
     const subscribeSpy = vi.spyOn(app.sseHub, 'subscribe');
     subscribeSpy.mockClear();
-    const { ticket } = app.sseTickets.issue({ sub: 'x', role });
+    const { sid, userId } = signSession(app);
+    const { ticket } = app.sseTickets.issue({ sub: userId, role, sid });
     const url = `/api/v1/realtime/sse?ticket=${encodeURIComponent(ticket)}`;
 
     const res = await app.inject({ method: 'GET', url });
@@ -251,15 +254,48 @@ describe('Realtime Routes (/api/v1/realtime/sse)', () => {
     expect(subscribeSpy).not.toHaveBeenCalled();
   });
 
-  it('opens the stream for a ticket of a session-less token', async () => {
-    mockSubscribe();
-    const sessionless = app.jwt.sign({ sub: 'svc', role: 'admin', type: 'access' });
-    const { ticket } = realtimeTicketResponseSchema.parse((await issueTicket(sessionless)).json());
+  it('issues no ticket to a token without sid (AC-7)', async () => {
+    const issueSpy = vi.spyOn(app.sseTickets, 'issue');
+    issueSpy.mockClear();
+    const sessionless = app.jwt.sign({ sub: 'svc', role: 'admin', type: 'access' } as never);
+
+    const res = await issueTicket(sessionless);
+
+    expect(res.statusCode).toBe(401);
+    expect(res.json().errorCode).toBe('AUTH_SESSION_INVALID');
+    expect(issueSpy).not.toHaveBeenCalled();
+  });
+
+  it('refuses a ticket that carries no sid and opens no stream (AC-7)', async () => {
+    const subscribeSpy = vi.spyOn(app.sseHub, 'subscribe');
+    subscribeSpy.mockClear();
+    const { userId } = signSession(app);
+    const { ticket } = app.sseTickets.issue({ sub: userId, role: 'admin' } as never);
+
     const response = await app.inject({
       method: 'GET',
       url: `/api/v1/realtime/sse?ticket=${encodeURIComponent(ticket)}`,
     });
-    expect(response.statusCode).toBe(200);
+
+    expect(response.statusCode).toBe(401);
+    expect(response.json().errorCode).toBe('AUTH_SESSION_INVALID');
+    expect(subscribeSpy).not.toHaveBeenCalled();
+  });
+
+  it('refuses the stream for a header token without sid (AC-7)', async () => {
+    const subscribeSpy = vi.spyOn(app.sseHub, 'subscribe');
+    subscribeSpy.mockClear();
+    const sessionless = app.jwt.sign({ sub: 'svc', role: 'admin', type: 'access' } as never);
+
+    const response = await app.inject({
+      method: 'GET',
+      url: '/api/v1/realtime/sse',
+      headers: { authorization: `Bearer ${sessionless}` },
+    });
+
+    expect(response.statusCode).toBe(401);
+    expect(response.json().errorCode).toBe('AUTH_SESSION_INVALID');
+    expect(subscribeSpy).not.toHaveBeenCalled();
   });
 });
 
@@ -277,7 +313,7 @@ describe('Request logs never contain credentials (DSM-00348)', () => {
     });
     await app.ready();
     try {
-      const token = app.jwt.sign({ sub: 'svc', role: 'admin', type: 'access' });
+      const token = signSession(app).accessToken;
       const { ticket } = realtimeTicketResponseSchema.parse(
         (
           await app.inject({

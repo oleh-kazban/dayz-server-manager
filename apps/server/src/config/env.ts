@@ -1,5 +1,7 @@
 import { z } from 'zod';
 
+import { parseTrustProxy } from './trust-proxy';
+
 /** Deny-list entries only: these values are rejected, never used. */
 export const FORMER_PUBLIC_SESSION_SECRETS: readonly string[] = [
   'super-secret-dev-session-key-32-chars-long',
@@ -23,6 +25,17 @@ export const envSchema = z.object({
       .optional(),
   ),
   DATABASE_PATH: z.string().optional(),
+  TRUST_PROXY: z
+    .string()
+    .optional()
+    .transform((value, ctx): boolean | string => {
+      try {
+        return parseTrustProxy(value);
+      } catch (error) {
+        ctx.addIssue({ code: 'custom', message: (error as Error).message });
+        return z.NEVER;
+      }
+    }),
   // Time a new DayZ process must survive before it counts as running (DSM-00162).
   DSM_SERVER_STARTUP_WINDOW_MS: z.coerce.number().int().min(0).default(60_000),
   DSM_SERVER_POLL_INTERVAL_MS: z.coerce.number().int().min(250).default(5_000),

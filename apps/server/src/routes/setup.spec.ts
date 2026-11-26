@@ -15,6 +15,7 @@ import {
   verifyPassword,
 } from '@aegis/database';
 
+import { signSession } from '../__fixtures__/session-token';
 import { type InsertedUser, insertUser } from '../__fixtures__/users';
 import { buildApp } from '../app/app';
 import { loadEnv } from '../config/env';
@@ -270,11 +271,11 @@ describe('POST /api/v1/setup/root', () => {
     });
 
     it('answers 401 AUTH_SESSION_INVALID when the caller row is gone and changes nothing', async () => {
-      const ghost = app.jwt.sign({
+      const ghost = signSession(app, {
         sub: '00000000-0000-4000-8000-000000000000',
         role: 'setup',
-        type: 'access',
-      });
+        withoutUser: true,
+      }).accessToken;
       const operator = insertUser(dbi, { username: 'operator' });
 
       const res = await post(body(), ghost);

@@ -11,6 +11,7 @@ import {
   users,
 } from '@aegis/database';
 
+import { signSession } from '../__fixtures__/session-token';
 import { buildApp } from '../app/app';
 import { loadEnv } from '../config/env';
 import { FakeProcessManager } from '../services/server/__fixtures__/fake-process-manager';
@@ -71,8 +72,8 @@ async function createHarness(
     rcon,
     db,
     processes,
-    adminToken: app.jwt.sign({ sub: 'admin-id', role: 'admin', type: 'access' }),
-    setupToken: app.jwt.sign({ sub: 'setup-id', role: 'setup', type: 'access' }),
+    adminToken: signSession(app, { sub: 'admin-id', role: 'admin' }).accessToken,
+    setupToken: signSession(app, { sub: 'setup-id', role: 'setup' }).accessToken,
   };
   open.push(harness);
   return harness;
@@ -226,7 +227,7 @@ describe('Server lifecycle routes', () => {
     'denies %s on every lifecycle action with the admin code and no process change',
     async (_name, role) => {
       const h = await createHarness();
-      const token = h.app.jwt.sign({ sub: 'x', type: 'access', ...(role ? { role } : {}) });
+      const token = signSession(h.app, { tokenRole: role ?? null }).accessToken;
       for (const action of ['start', 'stop', 'force-stop', 'restart', 'stop/cancel']) {
         const response = await post(h, action, token);
         expect(response.statusCode, action).toBe(403);

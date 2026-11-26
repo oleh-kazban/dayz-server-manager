@@ -1,5 +1,6 @@
-import { eq, or } from 'drizzle-orm';
+import { and, eq, or } from 'drizzle-orm';
 import type { FastifyPluginAsync } from 'fastify';
+import { randomUUID } from 'node:crypto';
 
 import {
   type AuthUserDto,
@@ -10,6 +11,8 @@ import {
 } from '@aegis/api-contracts';
 import { sessions, users, verifyPassword } from '@aegis/database';
 
+import { rotateRefreshToken } from '../services/identity/refresh-rotation';
+import { revokeSessions } from '../services/identity/sessions';
 import { isSetupExpired } from '../services/identity/setup-account';
 import { issueSignIn, signInContext } from '../services/identity/sign-in';
 import { formatZodFieldErrors, sendApiError } from '../utils/api-error';
@@ -119,9 +122,10 @@ export const registerAuthRoutes: FastifyPluginAsync = async fastify => {
         response: {
           200: {
             type: 'object',
-            required: ['accessToken', 'expiresIn'],
+            required: ['accessToken', 'refreshToken', 'expiresIn'],
             properties: {
               accessToken: { type: 'string' },
+              refreshToken: { type: 'string' },
               expiresIn: { type: 'number' },
             },
           },
@@ -140,11 +144,18 @@ export const registerAuthRoutes: FastifyPluginAsync = async fastify => {
       const { refreshToken } = parseResult.data;
 
       try {
-        const payload = fastify.jwt.verify<{ sub: string; type?: string; sid?: string }>(
-          refreshToken,
-        );
+        const payload = fastify.jwt.verify<{
+          sub: string;
+          type?: string;
+          sid?: string;
+          jti?: string;
+        }>(refreshToken);
         if (payload.type !== 'refresh') {
           return sendApiError(reply, 401, 'AUTH_TOKEN_TYPE_INVALID', 'Invalid token type');
+        }
+        const { sid, jti } = payload;
+        if (!sid || !jti) {
+          throw new Error('Refresh token without sid or jti');
         }
 
         const user = fastify.db.select().from(users).where(eq(users.id, payload.sub)).get();
@@ -152,30 +163,24 @@ export const registerAuthRoutes: FastifyPluginAsync = async fastify => {
           return sendApiError(reply, 401, 'AUTH_USER_NOT_FOUND', 'User not found');
         }
 
-        if (payload.sid) {
-          const session = fastify.db
-            .select()
-            .from(sessions)
-            .where(eq(sessions.id, payload.sid))
-            .get();
-          if (!session || session.expiresAt.getTime() <= Date.now()) {
-            return sendApiError(
-              reply,
-              401,
-              'AUTH_SESSION_EXPIRED',
-              'Session has expired or was revoked',
-            );
+        const now = new Date();
+        const result = rotateRefreshToken(fastify.sqlite, fastify.db, {
+          sid,
+          jti,
+          now,
+          newJti: randomUUID(),
+        });
+        if (result.kind !== 'rotated') {
+          if (result.kind === 'reuse') {
+            request.log.warn({ sid, userId: user.id }, 'Refresh token reuse, session ended');
+            fastify.sseHub.closeSession(sid);
           }
-
-          // Throttle lastActiveAt update
-          const now = Date.now();
-          if (now - session.lastActiveAt.getTime() > 60_000) {
-            fastify.db
-              .update(sessions)
-              .set({ lastActiveAt: new Date(now) })
-              .where(eq(sessions.id, session.id))
-              .run();
-          }
+          return sendApiError(
+            reply,
+            401,
+            'AUTH_SESSION_EXPIRED',
+            'Session has expired or was revoked',
+          );
         }
 
         const accessToken = fastify.jwt.sign(
@@ -184,13 +189,23 @@ export const registerAuthRoutes: FastifyPluginAsync = async fastify => {
             username: user.username,
             role: user.role,
             type: 'access',
-            sid: payload.sid,
+            sid,
           },
           { expiresIn: '15m' },
+        );
+        const newRefreshToken = fastify.jwt.sign(
+          { sub: user.id, type: 'refresh', sid, jti: result.jti },
+          {
+            expiresIn: Math.max(
+              1,
+              Math.floor((result.session.expiresAt.getTime() - now.getTime()) / 1000),
+            ),
+          },
         );
 
         const response: RefreshResponseDto = {
           accessToken,
+          refreshToken: newRefreshToken,
           expiresIn: 900,
         };
         return reply.send(response);
@@ -202,6 +217,22 @@ export const registerAuthRoutes: FastifyPluginAsync = async fastify => {
           'Invalid or expired refresh token',
         );
       }
+    },
+  );
+
+  fastify.post(
+    '/logout',
+    { onRequest: [fastify.authenticateIgnoringSession] },
+    async (request, reply) => {
+      const { sid, sub } = request.user;
+      // Only the owner's row: a token's sid must not end another user's session
+      const owned = fastify.db
+        .select()
+        .from(sessions)
+        .where(and(eq(sessions.id, sid), eq(sessions.userId, sub)))
+        .get();
+      if (owned) revokeSessions({ db: fastify.db, hub: fastify.sseHub }, { sid });
+      return reply.code(204).send();
     },
   );
 

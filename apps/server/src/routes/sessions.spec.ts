@@ -10,6 +10,7 @@ import {
   users,
 } from '@aegis/database';
 
+import { signSession } from '../__fixtures__/session-token';
 import { insertUser } from '../__fixtures__/users';
 import { buildApp } from '../app/app';
 import { loadEnv } from '../config/env';
@@ -306,7 +307,7 @@ describe('Sessions Routes (/api/v1/auth/sessions)', () => {
     it('returns 401 when token lacks sid claim', async () => {
       // Token without sid
       const tokenWithoutSid = app.jwt.sign(
-        { sub: user1Id, role: 'admin', type: 'access' },
+        { sub: user1Id, role: 'admin', type: 'access' } as never,
         { expiresIn: '15m' },
       );
 
@@ -357,7 +358,7 @@ describe('Sessions routes deny the setup role (role model)', () => {
     });
     await app.ready();
     try {
-      const token = app.jwt.sign({ sub: 'setup-id', role: 'setup', type: 'access' });
+      const token = signSession(app, { sub: 'setup-id', role: 'setup' }).accessToken;
 
       const res = await app.inject({
         method: method as 'GET',

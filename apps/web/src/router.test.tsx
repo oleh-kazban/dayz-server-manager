@@ -25,7 +25,7 @@ const mockAdminAuth: AuthContextValue = {
   },
   isAuthenticated: true,
   login: async () => {},
-  logout: () => {},
+  logout: vi.fn().mockResolvedValue(undefined),
   adoptSession: () => {},
 };
 
@@ -38,7 +38,7 @@ const mockGuestAuth: AuthContextValue = {
   user: null,
   isAuthenticated: false,
   login: async () => {},
-  logout: () => {},
+  logout: vi.fn().mockResolvedValue(undefined),
   adoptSession: () => {},
 };
 

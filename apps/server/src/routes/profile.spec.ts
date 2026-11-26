@@ -4,6 +4,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { apiErrorResponseSchema } from '@aegis/api-contracts';
 import { type DatabaseInstance, initDatabase, sessions, verifyPassword } from '@aegis/database';
 
+import { signSession } from '../__fixtures__/session-token';
 import { DEFAULT_TEST_PASSWORD, insertUser } from '../__fixtures__/users';
 import { buildApp } from '../app/app';
 import { loadEnv } from '../config/env';
@@ -124,14 +125,10 @@ describe('Profile Routes (/api/v1/profile & /api/v1/auth/profile)', () => {
     });
 
     it('returns 401 when token subject does not exist in database', async () => {
-      const ghostToken = app.jwt.sign(
-        {
-          sub: '99999999-9999-9999-9999-999999999999',
-          role: 'admin',
-          type: 'access',
-        },
-        { expiresIn: '15m' },
-      );
+      const ghostToken = signSession(app, {
+        sub: '99999999-9999-9999-9999-999999999999',
+        withoutUser: true,
+      }).accessToken;
 
       const response = await app.inject({
         method: 'GET',
@@ -268,14 +265,10 @@ describe('Profile Routes (/api/v1/profile & /api/v1/auth/profile)', () => {
     });
 
     it('returns 401 when token subject does not exist in database during PATCH', async () => {
-      const ghostToken = app.jwt.sign(
-        {
-          sub: '99999999-9999-9999-9999-999999999998',
-          role: 'admin',
-          type: 'access',
-        },
-        { expiresIn: '15m' },
-      );
+      const ghostToken = signSession(app, {
+        sub: '99999999-9999-9999-9999-999999999998',
+        withoutUser: true,
+      }).accessToken;
 
       const response = await app.inject({
         method: 'PATCH',
@@ -304,10 +297,7 @@ describe('Profile Routes (/api/v1/profile & /api/v1/auth/profile)', () => {
         )
         .run(tempUserId, now.getTime());
 
-      const tempToken = app.jwt.sign(
-        { sub: tempUserId, role: 'admin', type: 'access' },
-        { expiresIn: '15m' },
-      );
+      const tempToken = signSession(app, { sub: tempUserId }).accessToken;
 
       // Create a temporary BEFORE UPDATE trigger that deletes the user
       dbInstance.sqlite.exec(`
@@ -476,9 +466,9 @@ describe('Profile Routes (/api/v1/profile & /api/v1/auth/profile)', () => {
       expect(remainingIds).not.toContain(remoteSid);
     });
 
-    it('rotates password when token does not have sid claim without session deletion', async () => {
+    it('rejects a token without sid with 401 and leaves the password unchanged (AC-7)', async () => {
       const tokenWithoutSid = app.jwt.sign(
-        { sub: userId, role: 'admin', type: 'access' },
+        { sub: userId, role: 'admin', type: 'access' } as never,
         { expiresIn: '15m' },
       );
 
@@ -495,20 +485,19 @@ describe('Profile Routes (/api/v1/profile & /api/v1/auth/profile)', () => {
         },
       });
 
-      expect(response.statusCode).toBe(200);
-      const body = response.json();
-      expect(body.success).toBe(true);
+      expect(response.statusCode).toBe(401);
+      expect(response.json().errorCode).toBe('AUTH_SESSION_INVALID');
+      const stored = dbInstance.sqlite
+        .prepare('SELECT password_hash FROM users WHERE id = ?')
+        .get(userId) as { password_hash: string };
+      expect(verifyPassword('BrandNewSecurePassword123!', stored.password_hash)).toBe(true);
     });
 
     it('returns 401 when token subject does not exist in database during change password', async () => {
-      const ghostToken = app.jwt.sign(
-        {
-          sub: '99999999-9999-9999-9999-999999999997',
-          role: 'admin',
-          type: 'access',
-        },
-        { expiresIn: '15m' },
-      );
+      const ghostToken = signSession(app, {
+        sub: '99999999-9999-9999-9999-999999999997',
+        withoutUser: true,
+      }).accessToken;
 
       const response = await app.inject({
         method: 'POST',
@@ -584,7 +573,7 @@ describe.each(['/api/v1/profile', '/api/v1/auth/profile'])('role model on %s', p
     ['PATCH', ''],
     ['POST', '/change-password'],
   ])('denies a setup token on %s %s (AC-5)', async (method, suffix) => {
-    const token = app.jwt.sign({ sub: 'setup-id', role: 'setup', type: 'access' });
+    const token = signSession(app, { sub: 'setup-id', role: 'setup' }).accessToken;
 
     const res = await app.inject({
       method: method as 'GET',

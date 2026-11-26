@@ -1,10 +1,11 @@
 import { eq } from 'drizzle-orm';
 import type { FastifyInstance } from 'fastify';
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 
-import { apiErrorResponseSchema } from '@aegis/api-contracts';
+import { apiErrorResponseSchema, refreshResponseSchema } from '@aegis/api-contracts';
 import { type DatabaseInstance, initDatabase, sessions } from '@aegis/database';
 
+import { signSession } from '../__fixtures__/session-token';
 import { DEFAULT_TEST_PASSWORD, type InsertedUser, insertUser } from '../__fixtures__/users';
 import { buildApp } from '../app/app';
 import { loadEnv } from '../config/env';
@@ -143,6 +144,8 @@ describe('Auth Routes (/api/v1/auth)', () => {
       expect(refreshRes.statusCode).toBe(200);
       const body = refreshRes.json();
       expect(body.accessToken).toBeDefined();
+      expect(body.refreshToken).toBeDefined();
+      expect(body.refreshToken).not.toBe(refreshToken);
       expect(body.expiresIn).toBe(900);
     });
 
@@ -194,10 +197,10 @@ describe('Auth Routes (/api/v1/auth)', () => {
     });
 
     it('returns 401 if user in refresh token is no longer in database', async () => {
-      const ghostToken = app.jwt.sign(
-        { sub: '00000000-0000-0000-0000-000000000000', type: 'refresh' },
-        { expiresIn: '1h' },
-      );
+      const ghostToken = signSession(app, {
+        sub: '00000000-0000-0000-0000-000000000000',
+        withoutUser: true,
+      }).refreshToken;
 
       const refreshRes = await app.inject({
         method: 'POST',
@@ -287,10 +290,10 @@ describe('Auth Routes (/api/v1/auth)', () => {
     });
 
     it('returns 401 when user in access token is not found in database', async () => {
-      const ghostAccessToken = app.jwt.sign(
-        { sub: '00000000-0000-0000-0000-000000000000', type: 'access' },
-        { expiresIn: '1h' },
-      );
+      const ghostAccessToken = signSession(app, {
+        sub: '00000000-0000-0000-0000-000000000000',
+        withoutUser: true,
+      }).accessToken;
 
       const meRes = await app.inject({
         method: 'GET',
@@ -402,41 +405,18 @@ describe('Auth Routes (/api/v1/auth)', () => {
       expect(Math.abs(actualTtl - expectedTtl)).toBeLessThan(5000);
     });
 
-    it('parses forwarded IP from x-forwarded-for header string and array', async () => {
-      // Test string x-forwarded-for
-      const resString = await sessionApp.inject({
+    it('records the socket address and ignores x-forwarded-for when TRUST_PROXY is unset (AC-11)', async () => {
+      const res = await sessionApp.inject({
         method: 'POST',
         url: '/api/v1/auth/login',
-        headers: {
-          'x-forwarded-for': '203.0.113.195, 70.41.3.18',
-        },
+        remoteAddress: '192.0.2.9',
+        headers: { 'x-forwarded-for': '203.0.113.195, 70.41.3.18' },
         payload: sessionAdmin.credentials,
       });
-      const sidString = sessionApp.jwt.decode<{ sid: string }>(resString.json().accessToken)?.sid;
-      const sessString = sessionDb.db
-        .select()
-        .from(sessions)
-        .where(eq(sessions.id, sidString!))
-        .get();
-      expect(sessString?.ipAddress).toBe('203.0.113.195');
+      const sid = sessionApp.jwt.decode<{ sid: string }>(res.json().accessToken)?.sid;
+      const row = sessionDb.db.select().from(sessions).where(eq(sessions.id, sid!)).get();
 
-      // Test array x-forwarded-for (simulated via raw headers)
-      const resArray = await sessionApp.inject({
-        method: 'POST',
-        url: '/api/v1/auth/login',
-        headers: {
-          // eslint-disable-next-line sonarjs/no-hardcoded-ip
-          'x-forwarded-for': ['198.51.100.10', '10.0.0.1'] as unknown as string,
-        },
-        payload: sessionAdmin.credentials,
-      });
-      const sidArray = sessionApp.jwt.decode<{ sid: string }>(resArray.json().accessToken)?.sid;
-      const sessArray = sessionDb.db
-        .select()
-        .from(sessions)
-        .where(eq(sessions.id, sidArray!))
-        .get();
-      expect(sessArray?.ipAddress).toBe('198.51.100.10');
+      expect(row?.ipAddress).toBe('192.0.2.9');
     });
 
     it('rejects access token when session is revoked from database', async () => {
@@ -653,7 +633,10 @@ describe('GET /api/v1/auth/me with a role-less token (role model)', () => {
     const { app, dbInstance } = await buildRoleApp();
     try {
       insertUser(dbInstance, { role: 'root', id: 'role-model-root' });
-      const token = app.jwt.sign({ sub: 'role-model-root', type: 'access' });
+      const token = signSession(app, {
+        sub: 'role-model-root',
+        tokenRole: null,
+      }).accessToken;
 
       const res = await app.inject({
         method: 'GET',
@@ -794,5 +777,378 @@ describe('Setup account sign-in and session cap (AC-10)', () => {
     expect(refresh.json().errorCode).toBe('AUTH_SESSION_EXPIRED');
     expect(me.statusCode).toBe(401);
     expect(me.json().errorCode).toBe('AUTH_SESSION_INVALID');
+  });
+});
+
+describe('Sign-out, refresh rotation and strict tokens', () => {
+  const WINDOW_MS = 60_000;
+  let app: FastifyInstance;
+  let dbInstance: DatabaseInstance;
+
+  beforeEach(async () => {
+    ({ app, dbInstance } = await buildRoleApp());
+  });
+
+  afterEach(async () => {
+    await app.close();
+    dbInstance.close();
+  });
+
+  const bearer = (token: string) => ({ authorization: `Bearer ${token}` });
+  const logout = (token?: string) =>
+    app.inject({
+      method: 'POST',
+      url: '/api/v1/auth/logout',
+      headers: token ? bearer(token) : {},
+    });
+  const refresh = (refreshToken: string) =>
+    app.inject({ method: 'POST', url: '/api/v1/auth/refresh', payload: { refreshToken } });
+  const me = (token: string) =>
+    app.inject({ method: 'GET', url: '/api/v1/auth/me', headers: bearer(token) });
+  const sessionRow = (sid: string) =>
+    dbInstance.sqlite
+      .prepare(
+        'SELECT refresh_jti, previous_refresh_jti, refresh_rotated_at, expires_at FROM sessions WHERE id = ?',
+      )
+      .get(sid) as
+      | {
+          refresh_jti: string | null;
+          previous_refresh_jti: string | null;
+          refresh_rotated_at: number | null;
+          expires_at: number;
+        }
+      | undefined;
+  const jtiOf = (token: string) => app.jwt.decode<{ jti?: string }>(token)?.jti;
+  const setRotatedAt = (sid: string, ms: number) =>
+    dbInstance.sqlite
+      .prepare('UPDATE sessions SET refresh_rotated_at = ? WHERE id = ?')
+      .run(ms, sid);
+
+  describe('POST /api/v1/auth/logout', () => {
+    it('answers 204 with no body and ends the session: both tokens are rejected afterwards (AC-1)', async () => {
+      const { accessToken, refreshToken, sid } = signSession(app);
+
+      const res = await logout(accessToken);
+
+      expect(res.statusCode).toBe(204);
+      expect(res.body).toBe('');
+      expect(sessionRow(sid)).toBeUndefined();
+      const afterAccess = await me(accessToken);
+      expect(afterAccess.statusCode).toBe(401);
+      expect(afterAccess.json().errorCode).toBe('AUTH_SESSION_INVALID');
+      const afterRefresh = await refresh(refreshToken);
+      expect(afterRefresh.statusCode).toBe(401);
+      expect(afterRefresh.json().errorCode).toBe('AUTH_SESSION_EXPIRED');
+    });
+
+    it('removes the session from the sessions list and keeps the other sessions (AC-1)', async () => {
+      const current = signSession(app, { sub: 'two-sessions' });
+      const other = signSession(app, { sub: 'two-sessions' });
+
+      await logout(current.accessToken);
+
+      const list = await app.inject({
+        method: 'GET',
+        url: '/api/v1/auth/sessions',
+        headers: bearer(other.accessToken),
+      });
+      const ids = list.json().sessions.map((s: { id: string }) => s.id);
+      expect(ids).toEqual([other.sid]);
+      expect((await me(other.accessToken)).statusCode).toBe(200);
+    });
+
+    it('works with the tokens of a real sign-in (AC-1)', async () => {
+      const user = insertUser(dbInstance, { username: 'real-login' });
+      const login = await app.inject({
+        method: 'POST',
+        url: '/api/v1/auth/login',
+        payload: user.credentials,
+      });
+      const { accessToken, refreshToken } = login.json();
+
+      expect((await logout(accessToken)).statusCode).toBe(204);
+
+      expect((await me(accessToken)).statusCode).toBe(401);
+      expect((await refresh(refreshToken)).statusCode).toBe(401);
+    });
+
+    it('answers 204 again for a token whose session is already gone (AC-2)', async () => {
+      const { accessToken } = signSession(app);
+      await logout(accessToken);
+
+      const second = await logout(accessToken);
+
+      expect(second.statusCode).toBe(204);
+      expect(second.body).toBe('');
+    });
+
+    it('answers 204 when the session row was removed by someone else (AC-2)', async () => {
+      const { accessToken, sid } = signSession(app);
+      dbInstance.sqlite.prepare('DELETE FROM sessions WHERE id = ?').run(sid);
+
+      expect((await logout(accessToken)).statusCode).toBe(204);
+    });
+
+    it('answers 401 AUTH_TOKEN_MISSING_OR_INVALID without a token (AC-2)', async () => {
+      const res = await logout();
+
+      expect(res.statusCode).toBe(401);
+      expect(res.json().errorCode).toBe('AUTH_TOKEN_MISSING_OR_INVALID');
+    });
+
+    it('answers 401 AUTH_TOKEN_MISSING_OR_INVALID for a malformed token (AC-2)', async () => {
+      const res = await logout('bogus.token.value');
+
+      expect(res.statusCode).toBe(401);
+      expect(res.json().errorCode).toBe('AUTH_TOKEN_MISSING_OR_INVALID');
+    });
+
+    it('answers 401 AUTH_TOKEN_TYPE_INVALID for a refresh token and keeps the session (AC-2)', async () => {
+      const { refreshToken, sid } = signSession(app);
+
+      const res = await logout(refreshToken);
+
+      expect(res.statusCode).toBe(401);
+      expect(res.json().errorCode).toBe('AUTH_TOKEN_TYPE_INVALID');
+      expect(sessionRow(sid)).toBeDefined();
+    });
+
+    it('answers 401 AUTH_SESSION_INVALID for an access token without sid (AC-7)', async () => {
+      const { userId } = signSession(app);
+      const sidLess = app.jwt.sign({ sub: userId, role: 'admin', type: 'access' } as never);
+
+      const res = await logout(sidLess);
+
+      expect(res.statusCode).toBe(401);
+      expect(res.json().errorCode).toBe('AUTH_SESSION_INVALID');
+    });
+
+    it('deletes only a session that belongs to the caller (AC-1)', async () => {
+      const victim = signSession(app, { sub: 'victim' });
+      const attacker = signSession(app, { sub: 'attacker' });
+      const forged = app.jwt.sign({
+        sub: attacker.userId,
+        role: 'admin',
+        type: 'access',
+        sid: victim.sid,
+      });
+
+      const res = await logout(forged);
+
+      expect(res.statusCode).toBe(204);
+      expect(sessionRow(victim.sid)).toBeDefined();
+      expect((await me(victim.accessToken)).statusCode).toBe(200);
+    });
+
+    it('lets a setup user sign out (AC-2)', async () => {
+      const { accessToken, sid } = signSession(app, { role: 'setup' });
+
+      expect((await logout(accessToken)).statusCode).toBe(204);
+      expect(sessionRow(sid)).toBeUndefined();
+    });
+  });
+
+  describe('POST /api/v1/auth/refresh rotation', () => {
+    it('returns a different refresh token that carries the same session and a fresh identifier (AC-4)', async () => {
+      const { refreshToken, sid, jti } = signSession(app);
+
+      const res = await refresh(refreshToken);
+
+      expect(res.statusCode).toBe(200);
+      const body = res.json();
+      expect(refreshResponseSchema.safeParse(body).success).toBe(true);
+      expect(body.refreshToken).not.toBe(refreshToken);
+      const claims = app.jwt.decode<{ sid: string; type: string; jti: string }>(body.refreshToken);
+      expect(claims).toMatchObject({ sid, type: 'refresh' });
+      expect(claims?.jti).toBeTruthy();
+      expect(claims?.jti).not.toBe(jti);
+    });
+
+    it('stores the new identifier and the previous one on the session (AC-4)', async () => {
+      const { refreshToken, sid, jti } = signSession(app);
+
+      const body = (await refresh(refreshToken)).json();
+
+      const row = sessionRow(sid);
+      expect(row?.refresh_jti).toBe(jtiOf(body.refreshToken));
+      expect(row?.previous_refresh_jti).toBe(jti);
+      expect(row?.refresh_rotated_at).toBeGreaterThan(0);
+    });
+
+    it('accepts the new refresh token and rotates it again (AC-4)', async () => {
+      const { refreshToken } = signSession(app);
+      const first = (await refresh(refreshToken)).json();
+
+      const second = await refresh(first.refreshToken);
+
+      expect(second.statusCode).toBe(200);
+      expect(second.json().refreshToken).not.toBe(first.refreshToken);
+    });
+
+    it('gives the new access token a working session (AC-4)', async () => {
+      const { refreshToken } = signSession(app);
+
+      const body = (await refresh(refreshToken)).json();
+
+      expect((await me(body.accessToken)).statusCode).toBe(200);
+    });
+
+    it('gives the new refresh token the expiry of the session (AC-4)', async () => {
+      const { refreshToken, sid } = signSession(app, { ttlMs: 3 * 24 * 3_600_000 });
+
+      const body = (await refresh(refreshToken)).json();
+
+      const exp = app.jwt.decode<{ exp: number }>(body.refreshToken)?.exp ?? 0;
+      expect(Math.abs(exp - (sessionRow(sid)?.expires_at ?? 0))).toBeLessThanOrEqual(2);
+    });
+
+    it('answers the previous token inside the window with the current token and changes nothing (AC-5)', async () => {
+      const { refreshToken, sid } = signSession(app);
+      const rotated = (await refresh(refreshToken)).json();
+      const before = sessionRow(sid);
+
+      const again = await refresh(refreshToken);
+
+      expect(again.statusCode).toBe(200);
+      expect(jtiOf(again.json().refreshToken)).toBe(jtiOf(rotated.refreshToken));
+      expect(sessionRow(sid)).toEqual(before);
+    });
+
+    it('lets several holders of the previous token converge on one token (AC-5)', async () => {
+      const { refreshToken } = signSession(app);
+      const rotated = (await refresh(refreshToken)).json();
+
+      const second = await refresh(refreshToken);
+      const third = await refresh(refreshToken);
+
+      expect(second.statusCode).toBe(200);
+      expect(third.statusCode).toBe(200);
+      expect(jtiOf(second.json().refreshToken)).toBe(jtiOf(rotated.refreshToken));
+      expect(jtiOf(third.json().refreshToken)).toBe(jtiOf(rotated.refreshToken));
+    });
+
+    it('rejects the previous token after the window, deletes the session and the current token stops working (AC-5)', async () => {
+      const { refreshToken, sid } = signSession(app);
+      const rotated = (await refresh(refreshToken)).json();
+      setRotatedAt(sid, Date.now() - WINDOW_MS - 1_000);
+
+      const res = await refresh(refreshToken);
+
+      expect(res.statusCode).toBe(401);
+      expect(res.json().errorCode).toBe('AUTH_SESSION_EXPIRED');
+      expect(sessionRow(sid)).toBeUndefined();
+      expect((await refresh(rotated.refreshToken)).statusCode).toBe(401);
+      expect((await me(rotated.accessToken)).statusCode).toBe(401);
+    });
+
+    it('deletes the session for a signed refresh token with an unknown identifier (AC-6)', async () => {
+      const { userId, sid, accessToken } = signSession(app);
+      const forged = app.jwt.sign({
+        sub: userId,
+        type: 'refresh',
+        sid,
+        jti: 'never-issued',
+      } as never);
+
+      const res = await refresh(forged);
+
+      expect(res.statusCode).toBe(401);
+      expect(res.json().errorCode).toBe('AUTH_SESSION_EXPIRED');
+      expect(sessionRow(sid)).toBeUndefined();
+      expect((await me(accessToken)).statusCode).toBe(401);
+    });
+
+    it('answers a token two rotations back as reuse (AC-6)', async () => {
+      const { refreshToken, sid } = signSession(app);
+      const first = (await refresh(refreshToken)).json();
+      await refresh(first.refreshToken);
+
+      const res = await refresh(refreshToken);
+
+      expect(res.statusCode).toBe(401);
+      expect(sessionRow(sid)).toBeUndefined();
+    });
+
+    it('answers an expired session with AUTH_SESSION_EXPIRED (AC-6)', async () => {
+      const { refreshToken, sid } = signSession(app);
+      dbInstance.sqlite.prepare('UPDATE sessions SET expires_at = ? WHERE id = ?').run(1, sid);
+
+      const res = await refresh(refreshToken);
+
+      expect(res.statusCode).toBe(401);
+      expect(res.json().errorCode).toBe('AUTH_SESSION_EXPIRED');
+    });
+
+    it('keeps answering AUTH_USER_NOT_FOUND when the user is gone (AC-4)', async () => {
+      const { refreshToken } = signSession(app, { withoutUser: true });
+
+      const res = await refresh(refreshToken);
+
+      expect(res.statusCode).toBe(401);
+      expect(res.json().errorCode).toBe('AUTH_USER_NOT_FOUND');
+    });
+
+    it('leaves the other sessions of the user alone on a reuse (AC-6)', async () => {
+      const first = signSession(app, { sub: 'two-devices' });
+      const second = signSession(app, { sub: 'two-devices' });
+      const forged = app.jwt.sign({
+        sub: first.userId,
+        type: 'refresh',
+        sid: first.sid,
+        jti: 'never-issued',
+      } as never);
+
+      await refresh(forged);
+
+      expect(sessionRow(second.sid)).toBeDefined();
+    });
+  });
+
+  describe('tokens without sid or jti (AC-7)', () => {
+    it('rejects an access token without sid on a protected route', async () => {
+      const { userId } = signSession(app);
+      const token = app.jwt.sign({ sub: userId, role: 'admin', type: 'access' } as never);
+
+      const res = await me(token);
+
+      expect(res.statusCode).toBe(401);
+      expect(res.json().errorCode).toBe('AUTH_SESSION_INVALID');
+    });
+
+    it('rejects an access token without sid on the stream ticket route', async () => {
+      const { userId } = signSession(app);
+      const token = app.jwt.sign({ sub: userId, role: 'admin', type: 'access' } as never);
+
+      const res = await app.inject({
+        method: 'POST',
+        url: '/api/v1/realtime/ticket',
+        headers: bearer(token),
+      });
+
+      expect(res.statusCode).toBe(401);
+      expect(res.json().errorCode).toBe('AUTH_SESSION_INVALID');
+    });
+
+    it('rejects a refresh token without sid', async () => {
+      const { userId, sid } = signSession(app);
+      const token = app.jwt.sign({ sub: userId, type: 'refresh', jti: 'J1' } as never);
+
+      const res = await refresh(token);
+
+      expect(res.statusCode).toBe(401);
+      expect(res.json().errorCode).toBe('AUTH_REFRESH_TOKEN_INVALID');
+      expect(sessionRow(sid)).toBeDefined();
+    });
+
+    it('rejects a refresh token without jti and keeps the session', async () => {
+      const { userId, sid } = signSession(app);
+      const token = app.jwt.sign({ sub: userId, type: 'refresh', sid } as never);
+
+      const res = await refresh(token);
+
+      expect(res.statusCode).toBe(401);
+      expect(res.json().errorCode).toBe('AUTH_REFRESH_TOKEN_INVALID');
+      expect(sessionRow(sid)).toBeDefined();
+    });
   });
 });

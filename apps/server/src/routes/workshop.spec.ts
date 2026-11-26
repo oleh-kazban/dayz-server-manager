@@ -10,6 +10,7 @@ import {
   steamSettings,
 } from '@aegis/database';
 
+import { signSession } from '../__fixtures__/session-token';
 import { buildApp } from '../app/app';
 import { loadEnv } from '../config/env';
 import { SteamWorkshopError, steamWorkshopService } from '../services/steam/steam-workshop.service';
@@ -30,14 +31,8 @@ describe('Workshop Routes (/api/v1/workshop)', () => {
     app = buildApp({ config, db: dbInstance });
     await app.ready();
 
-    adminToken = app.jwt.sign(
-      { sub: 'admin-id', role: 'admin', type: 'access' },
-      { expiresIn: '15m' },
-    );
-    setupToken = app.jwt.sign(
-      { sub: 'setup-id', role: 'setup', type: 'access' },
-      { expiresIn: '15m' },
-    );
+    adminToken = signSession(app, { sub: 'admin-id', role: 'admin' }).accessToken;
+    setupToken = signSession(app, { sub: 'setup-id', role: 'setup' }).accessToken;
   });
 
   beforeEach(() => {
@@ -91,7 +86,7 @@ describe('Workshop Routes (/api/v1/workshop)', () => {
       ['no role', undefined],
       ['an unknown role', 'viewer'],
     ])('returns 403 on search for a token with %s', async (_name, role) => {
-      const token = app.jwt.sign({ sub: 'x', type: 'access', ...(role ? { role } : {}) });
+      const token = signSession(app, { tokenRole: role ?? null }).accessToken;
       const res = await app.inject({
         method: 'GET',
         url: '/api/v1/workshop/search?q=CF',

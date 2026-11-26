@@ -12,6 +12,7 @@ export const ROOT_FORBIDDEN_MESSAGE = 'Root privileges are required to perform t
 export const ROLE_GATE_OPEN_ROUTES: ReadonlySet<string> = new Set([
   'GET /api/v1/auth/me',
   'POST /api/v1/setup/root',
+  'POST /api/v1/auth/logout',
 ]);
 
 export function isAdminRole(role: UserRole | undefined): boolean {

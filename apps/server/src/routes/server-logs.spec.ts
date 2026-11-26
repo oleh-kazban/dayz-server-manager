@@ -8,6 +8,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { realtimeTicketResponseSchema, serverLogTailSchema } from '@aegis/api-contracts';
 import { type DatabaseInstance, initDatabase, servers } from '@aegis/database';
 
+import { signSession } from '../__fixtures__/session-token';
 import { buildApp } from '../app/app';
 import { loadEnv } from '../config/env';
 import { FakeProcessManager } from '../services/server/__fixtures__/fake-process-manager';
@@ -47,7 +48,7 @@ beforeEach(async () => {
     processManager: new FakeProcessManager(),
   });
   await app.ready();
-  token = app.jwt.sign({ sub: 'admin-id', role: 'admin', type: 'access' });
+  token = signSession(app, { sub: 'admin-id', role: 'admin' }).accessToken;
 });
 
 afterEach(async () => {
@@ -240,7 +241,7 @@ describe('setup role is denied on the log routes (role model)', () => {
   const streamUrl = () => `/api/v1/servers/${SERVER_ID}/logs/rpt/stream`;
 
   it('returns 403 for a setup token on the snapshot', async () => {
-    const setupToken = app.jwt.sign({ sub: 'setup-id', role: 'setup', type: 'access' });
+    const setupToken = signSession(app, { sub: 'setup-id', role: 'setup' }).accessToken;
 
     const response = await app.inject({
       method: 'GET',
@@ -253,7 +254,7 @@ describe('setup role is denied on the log routes (role model)', () => {
   });
 
   it('returns 403 for a setup token on the stream via the header', async () => {
-    const setupToken = app.jwt.sign({ sub: 'setup-id', role: 'setup', type: 'access' });
+    const setupToken = signSession(app, { sub: 'setup-id', role: 'setup' }).accessToken;
 
     const response = await app.inject({
       method: 'GET',
@@ -265,7 +266,8 @@ describe('setup role is denied on the log routes (role model)', () => {
   });
 
   it('returns 403 for a ticket stored with role setup on the stream', async () => {
-    const { ticket } = app.sseTickets.issue({ sub: 'setup-id', role: 'setup' });
+    const { sid, userId } = signSession(app, { role: 'setup' });
+    const { ticket } = app.sseTickets.issue({ sub: userId, role: 'setup', sid });
 
     const response = await app.inject({
       method: 'GET',

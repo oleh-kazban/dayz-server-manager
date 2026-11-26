@@ -26,7 +26,7 @@ describe('Database Initialization (no seed)', () => {
       expect(seededServers).toHaveLength(0);
 
       const migrations = instance.sqlite.prepare('SELECT * FROM _dsm_migrations').all();
-      expect(migrations).toHaveLength(12);
+      expect(migrations).toHaveLength(13);
     } finally {
       instance.close();
     }
@@ -332,7 +332,7 @@ describe('Database Initialization (no seed)', () => {
         // Idempotent re-run
         runMigrations(instance.sqlite);
         const migrations = instance.sqlite.prepare('SELECT * FROM _dsm_migrations').all();
-        expect(migrations).toHaveLength(12);
+        expect(migrations).toHaveLength(13);
       } finally {
         instance.close();
       }

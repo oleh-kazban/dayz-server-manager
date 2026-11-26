@@ -24,14 +24,15 @@ The daemon does not serve the web app yet. In production, one process is meant t
 
 **Decorators** available to every route as `fastify.<name>`:
 
-| Decorator                 | What it is                                                                    |
-| :------------------------ | :---------------------------------------------------------------------------- |
-| `db`, `sqlite`, `closeDb` | Drizzle handle, raw `better-sqlite3` handle, and the close function           |
-| `sseHub`, `sseTickets`    | The broadcast hub and the single-use ticket store                             |
-| `lifecycle`               | `ServerLifecycleService`                                                      |
-| `isSessionActive(sid)`    | Checks the session row and expiry, and records activity at most once a minute |
-| `authenticate`            | Route hook that requires a valid access token                                 |
-| `authenticateSse`         | Route hook that accepts a one-time ticket, or falls back to `authenticate`    |
+| Decorator                     | What it is                                                                    |
+| :---------------------------- | :---------------------------------------------------------------------------- |
+| `db`, `sqlite`, `closeDb`     | Drizzle handle, raw `better-sqlite3` handle, and the close function           |
+| `sseHub`, `sseTickets`        | The broadcast hub and the single-use ticket store                             |
+| `lifecycle`                   | `ServerLifecycleService`                                                      |
+| `isSessionActive(sid)`        | Checks the session row and expiry, and records activity at most once a minute |
+| `authenticate`                | Route hook that requires a valid access token                                 |
+| `authenticateSse`             | Route hook that accepts a one-time ticket, or falls back to `authenticate`    |
+| `authenticateIgnoringSession` | Route hook for logout: verifies the access token but not the session row      |
 
 **Plugins:** `@fastify/cors` (origins from `CORS_ORIGIN`, credentials allowed), `@fastify/rate-limit` (`global: false`, so only routes that ask for a limit have one), `@fastify/sensible`, and `@fastify/jwt` (secret from `SESSION_SECRET` or `.session.key`).
 
@@ -47,7 +48,8 @@ Routes live in `apps/server/src/routes/`, one file per area, each registered wit
 | :------------------------------------------------------------------------------------------------------------------ | :-------------------------------------------------------------------------------------------------------- |
 | `GET /api/v1/health`                                                                                                | Liveness: `200 {status: ok}` or `503` when SQLite fails                                                   |
 | `POST /api/v1/auth/login`                                                                                           | Sign in (rate limited: 10 per minute)                                                                     |
-| `POST /api/v1/auth/refresh`                                                                                         | Exchange a refresh token (rate limited: 30 per minute)                                                    |
+| `POST /api/v1/auth/refresh`                                                                                         | Exchange a refresh token for a new access token and a new refresh token (rate limited: 30 per minute)     |
+| `POST /api/v1/auth/logout`                                                                                          | End the current session: `204`, idempotent, open to every role                                            |
 | `GET /api/v1/auth/me`                                                                                               | The current operator                                                                                      |
 | `POST /api/v1/setup/root`                                                                                           | Create the root account from the setup session (rate limited: 10 per minute)                              |
 | `GET`, `PATCH /api/v1/profile`, `POST /api/v1/profile/change-password`                                              | Profile and password (also under `/api/v1/auth/profile`)                                                  |
@@ -74,7 +76,7 @@ The request and response shapes are Zod schemas in `libs/api-contracts`, and the
 
 **Request validation.** Handlers parse the body, params and query with the contract schemas (`safeParse`) and answer `400 VALIDATION_FAILED` with `fieldErrors`. Only the health and auth routes also declare a Fastify JSON schema.
 
-**Authorization.** The roles are `root`, `admin` and `setup`. `authenticate` (and `authenticateSse`) is the choke point: after it verifies the token it applies a default-deny, so only `root` and `admin` pass, and a `setup`, missing or unknown role gets `403 AUTH_FORBIDDEN_ADMIN_REQUIRED`. The only exception is the allowlist `ROLE_GATE_OPEN_ROUTES` (`GET /api/v1/auth/me` and `POST /api/v1/setup/root`). Routes that need the admin role add `requireAdmin` after `authenticate` in `onRequest`, so a denied caller gets 403 before the body is parsed. `requireRoot` (`AUTH_FORBIDDEN_ROOT_REQUIRED`) exists, but no route uses it yet.
+**Authorization.** The roles are `root`, `admin` and `setup`. `authenticate` (and `authenticateSse`) is the choke point: after it verifies the token it applies a default-deny, so only `root` and `admin` pass, and a `setup`, missing or unknown role gets `403 AUTH_FORBIDDEN_ADMIN_REQUIRED`. The only exception is the allowlist `ROLE_GATE_OPEN_ROUTES` (`GET /api/v1/auth/me`, `POST /api/v1/auth/logout` and `POST /api/v1/setup/root`). Routes that need the admin role add `requireAdmin` after `authenticate` in `onRequest`, so a denied caller gets 403 before the body is parsed. `requireRoot` (`AUTH_FORBIDDEN_ROOT_REQUIRED`) exists, but no route uses it yet.
 
 **First-time setup.** `POST /api/v1/setup/root` takes `{username, password, confirmPassword}` with the `Authorization` header of a `setup` session (the account from `setup-credentials.txt`, signed in through `/auth/login`). In one immediate transaction `createRoot` (`services/identity/create-root.ts`) checks that no root exists and that the caller is the unexpired `setup` account, deletes the setup account and a locked seeded `admin`, and inserts the `root` account. After the commit the route deletes the file and answers with the same body as login. If a database failure happens while the tokens are issued after the commit, the route answers `500`; the root account exists and the operator signs in normally. Refusals: `409 AUTH_SETUP_ALREADY_COMPLETE`, `401 AUTH_SETUP_SESSION_EXPIRED`, `401 AUTH_SESSION_INVALID` (caller gone), `409 AUTH_USERNAME_TAKEN` (with `fieldErrors.username`), `403 AUTH_FORBIDDEN_ADMIN_REQUIRED` for any role but `setup`, `400 VALIDATION_FAILED`. Login answers `401 AUTH_SETUP_SESSION_EXPIRED` for a setup account older than 60 minutes, and a setup session never outlives that time. The guards are in `app/role-guards.ts`; see TD-01 in the [register](../tech-debt.md).
 
@@ -86,6 +88,8 @@ Every error response uses one envelope, built by `sendApiError` (`utils/api-erro
 - `formatZodFieldErrors` converts a `ZodError` into `fieldErrors` keyed by field name.
 - An unexpected error is logged in full and answered with `500 INTERNAL_SERVER_ERROR` and a generic message, so internals never reach the client.
 - Rate limiting answers `429 AUTH_RATE_LIMIT_EXCEEDED`.
+- The client address is `request.ip`, for the rate limit and for the address stored with a session. Fastify's `trustProxy` comes from `TRUST_PROXY` (off by default; an address or CIDR list, or `true`), validated by `config/trust-proxy.ts` so a bad value stops the start. A session stores the address only when it is a valid IP address, otherwise `unknown`. No code reads `X-Forwarded-For` itself.
+- Expired session rows are deleted when the daemon starts (`prepareIdentity`) and whenever a sign-in creates a session (`issueSignIn`).
 
 A new error gets a new code in the contract, a message in the web locale file, and a test.
 
@@ -93,7 +97,9 @@ A new error gets a new code in the contract, a message in the web locale file, a
 
 Details of the token model are in the [overview](overview.md#authentication-and-sessions). In the daemon:
 
-- `authenticate` verifies the `Authorization` header only. It rejects a token that is not an access token (`AUTH_TOKEN_TYPE_INVALID`) and a token whose session is missing or expired (`AUTH_SESSION_INVALID`).
+- `authenticate` verifies the `Authorization` header only. It rejects a token that is not an access token (`AUTH_TOKEN_TYPE_INVALID`), a token without `sid`, and a token whose session is missing or expired (all `AUTH_SESSION_INVALID`).
+- `authenticateIgnoringSession` is used by `POST /auth/logout`. It verifies the token and the role gate but does not require a live session row, so logout succeeds when the session is already gone.
+- **Refresh rotation.** Every refresh issues a new refresh token with a new `jti` and stores it on the session row. The previous token stays valid for 60 seconds and is answered with the current token, with no state change. Outside that window, or for any unknown `jti`, the session is deleted and the answer is `401 AUTH_SESSION_EXPIRED`. A refresh token without `jti` is rejected. A client that keeps the previous token inside the 60 second window receives the current one, so the window is a deliberate limit.
 - `isSessionActive` writes `last_active_at` at most once every 60 seconds, to avoid write contention in SQLite.
 - `POST /realtime/ticket` issues a ticket that is valid for 30 seconds and can be used once (`SseTicketStore`). `authenticateSse` consumes it from `?ticket=` and sets `request.user`.
 
@@ -101,7 +107,7 @@ Details of the token model are in the [overview](overview.md#authentication-and-
 
 Two kinds of streams, both SSE:
 
-- **Broadcast stream** (`GET /realtime/sse`). `SseHub` sends every event to every connected client and a `: ping` comment on an interval. Events today:
+- **Broadcast stream** (`GET /realtime/sse`). `SseHub` sends every event to every connected client and a `: ping` comment every 15 seconds. Each stream is tied to the user and the session that opened it. The hub closes the streams of a session when it ends: sign-out, revoking that session, revoke-others (all except the caller), a password change (all except the caller) and refresh-token reuse. `revokeSessions` (`services/identity/sessions.ts`) deletes the rows first and then closes the streams. Every 15 seconds the hub also checks each stream's session and closes the streams of a missing or expired session; the check does not update `last_active_at`. If the check throws, the hub fails closed: it closes that session's streams and logs the error (session id, no token); other sessions are still checked. Events today:
 
 | Event                          | Sent when                                       |
 | :----------------------------- | :---------------------------------------------- |
@@ -112,7 +118,7 @@ Two kinds of streams, both SSE:
 | `steam.auth.challenge`         | Steam asks for a Guard code                     |
 | `steam.auth.challenge.expired` | A challenge was not answered in time            |
 
-- **Per-client stream** (`openEventStream`). The route owns the response (`reply.hijack()`), sets `Content-Type: text/event-stream` and `X-Accel-Buffering: no`, and sends a heartbeat every 15 seconds. The log stream uses it to send `log.lines` events. A reverse proxy in front must not buffer these responses.
+- **Per-client stream** (`openEventStream`). The route owns the response (`reply.hijack()`), sets `Content-Type: text/event-stream` and `X-Accel-Buffering: no`, and sends a heartbeat every 15 seconds. The log stream uses it to send `log.lines` events. It is also tied to the session: the route registers it with the hub (`SseHub.track`), so every session end and a failing check close it like a broadcast stream, and the log follower stops with it. The hub does not write to it; the stream keeps its own heartbeat. A reverse proxy in front must not buffer these responses.
 
 ## 7. Services
 

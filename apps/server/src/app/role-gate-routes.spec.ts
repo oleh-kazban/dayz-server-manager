@@ -4,6 +4,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { USER_ROLE_VALUES } from '@aegis/api-contracts';
 import { type DatabaseInstance, initDatabase } from '@aegis/database';
 
+import { signSession } from '../__fixtures__/session-token';
 import { loadEnv } from '../config/env';
 import { FakeProcessManager } from '../services/server/__fixtures__/fake-process-manager';
 
@@ -114,7 +115,9 @@ describe('role gate over every registered route', () => {
   const isPublic = (r: RouteEntry) => PUBLIC_ROUTES.includes(r.key);
   const isOpen = (r: RouteEntry) => ROLE_GATE_OPEN_ROUTES.has(r.key);
   const hasAuthHook = (r: RouteEntry) =>
-    r.hooks.includes(app.authenticate) || r.hooks.includes(app.authenticateSse);
+    r.hooks.includes(app.authenticate) ||
+    r.hooks.includes(app.authenticateSse) ||
+    r.hooks.includes(app.authenticateIgnoringSession);
   const isAdminGuarded = (r: RouteEntry) => r.hooks.includes(requireAdmin);
   const concreteUrl = (r: RouteEntry) => r.url.replace(/:\w+/g, DUMMY_PARAM);
   const callAs = (r: RouteEntry, role?: string) =>
@@ -122,7 +125,7 @@ describe('role gate over every registered route', () => {
       method: r.method as 'GET',
       url: concreteUrl(r),
       headers: {
-        authorization: `Bearer ${app.jwt.sign({ sub: 'probe', type: 'access', ...(role ? { role } : {}) })}`,
+        authorization: `Bearer ${signSession(app, { sub: 'probe', tokenRole: role ?? null }).accessToken}`,
       },
     });
 
@@ -151,6 +154,29 @@ describe('role gate over every registered route', () => {
     expect(PUBLIC_ROUTES).not.toContain(key);
     expect(route && hasAuthHook(route)).toBe(true);
     expect(route && isAdminGuarded(route)).toBe(false);
+  });
+
+  it('registers POST /api/v1/auth/logout behind the ignore-session hook, on the allowlist and not public (AC-2)', () => {
+    const key = 'POST /api/v1/auth/logout';
+    const route = routes.find(r => r.key === key);
+
+    expect(route).toBeDefined();
+    expect(ROLE_GATE_OPEN_ROUTES.has(key)).toBe(true);
+    expect(PUBLIC_ROUTES).not.toContain(key);
+    expect(route?.hooks).toContain(app.authenticateIgnoringSession);
+    expect(route && isAdminGuarded(route)).toBe(false);
+  });
+
+  it('lets a setup token sign out (AC-2)', async () => {
+    const { accessToken } = signSession(app, { role: 'setup' });
+
+    const res = await app.inject({
+      method: 'POST',
+      url: '/api/v1/auth/logout',
+      headers: { authorization: `Bearer ${accessToken}` },
+    });
+
+    expect(res.statusCode).toBe(204);
   });
 
   it('carries requireAdmin on exactly the pinned admin-guarded routes (AC-9)', () => {

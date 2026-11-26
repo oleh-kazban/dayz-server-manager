@@ -22,7 +22,7 @@ import { insertTestUser } from './__fixtures__/users';
 import * as actualCrypto from './crypto';
 import { initDatabase } from './db';
 import { convertLegacyLaunchParameters, migrations, runMigrations } from './migrations';
-import { configEditLocks, serverConfigRevisions, servers, users } from './schema';
+import { configEditLocks, serverConfigRevisions, servers, sessions, users } from './schema';
 
 function seedPre0006Database(sqlite: Database.Database): void {
   sqlite.exec(`
@@ -346,6 +346,7 @@ const MIGRATION_0009_ID = '0009_structured_launch_options';
 const MIGRATION_0010_ID = '0010_server_runtime_state';
 const MIGRATION_0011_ID = '0011_server_pending_stop';
 const MIGRATION_0012_ID = '0012_server_restart_requested';
+const MIGRATION_0013_ID = '0013_session_refresh_rotation';
 
 function findMigration(id: string) {
   const migration = migrations.find(m => m.id === id);
@@ -682,6 +683,7 @@ describe('Database Migrations — 0007_server_config_editor', () => {
           MIGRATION_0010_ID,
           MIGRATION_0011_ID,
           MIGRATION_0012_ID,
+          MIGRATION_0013_ID,
         ]);
 
         expect(
@@ -1197,6 +1199,125 @@ describe('Database Migrations — 0012_server_restart_requested', () => {
     } finally {
       instance.close();
       fs.rmSync(tempDir, { recursive: true, force: true });
+    }
+  });
+});
+
+describe('Database Migrations — 0013_session_refresh_rotation (AC-4, AC-5, AC-6)', () => {
+  function seedPre0013(): Database.Database {
+    const sqlite = new Database(':memory:');
+    sqlite.pragma('foreign_keys = ON');
+    sqlite.exec(`
+      CREATE TABLE IF NOT EXISTS _dsm_migrations (
+        id TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        applied_at INTEGER NOT NULL
+      );
+    `);
+    const insertMigration = sqlite.prepare(
+      'INSERT INTO _dsm_migrations (id, name, applied_at) VALUES (?, ?, ?)',
+    );
+    for (const migration of migrations.filter(m => m.id < MIGRATION_0013_ID)) {
+      migration.up(sqlite);
+      insertMigration.run(migration.id, migration.name, 1_700_000_000_000);
+    }
+    return sqlite;
+  }
+
+  const sessionColumns = (sqlite: Database.Database) =>
+    (sqlite.prepare("PRAGMA table_info('sessions')").all() as { name: string }[]).map(c => c.name);
+
+  it('adds refresh_jti, previous_refresh_jti and refresh_rotated_at to sessions', () => {
+    const sqlite = seedPre0013();
+    try {
+      expect(sessionColumns(sqlite)).not.toContain('refresh_jti');
+
+      runMigrations(sqlite);
+
+      expect(sessionColumns(sqlite)).toEqual(
+        expect.arrayContaining(['refresh_jti', 'previous_refresh_jti', 'refresh_rotated_at']),
+      );
+    } finally {
+      sqlite.close();
+    }
+  });
+
+  it('deletes the session rows that have no refresh token identifier', () => {
+    const sqlite = seedPre0013();
+    try {
+      sqlite
+        .prepare(
+          `INSERT INTO users (id, username, password_hash, role, created_at)
+           VALUES ('u1', 'legacy', 'x', 'admin', 1)`,
+        )
+        .run();
+      sqlite
+        .prepare(
+          `INSERT INTO sessions (id, user_id, last_active_at, created_at, expires_at)
+           VALUES ('legacy-sid', 'u1', 1, 1, 4102444800)`,
+        )
+        .run();
+
+      runMigrations(sqlite);
+
+      expect(sqlite.prepare('SELECT id FROM sessions').all()).toEqual([]);
+      expect(sqlite.prepare("SELECT id FROM users WHERE id = 'u1'").get()).toBeDefined();
+    } finally {
+      sqlite.close();
+    }
+  });
+
+  it('is idempotent and keeps rows that already have a refresh token identifier', () => {
+    const sqlite = seedPre0013();
+    try {
+      runMigrations(sqlite);
+      sqlite
+        .prepare(
+          `INSERT INTO users (id, username, password_hash, role, created_at)
+           VALUES ('u1', 'rotated', 'x', 'admin', 1)`,
+        )
+        .run();
+      sqlite
+        .prepare(
+          `INSERT INTO sessions (id, user_id, last_active_at, created_at, expires_at, refresh_jti)
+           VALUES ('live-sid', 'u1', 1, 1, 4102444800, 'jti-1')`,
+        )
+        .run();
+
+      expect(() => findMigration(MIGRATION_0013_ID).up(sqlite)).not.toThrow();
+
+      expect(sqlite.prepare('SELECT id FROM sessions').all()).toEqual([{ id: 'live-sid' }]);
+    } finally {
+      sqlite.close();
+    }
+  });
+
+  it('round-trips the rotation columns through drizzle with millisecond precision', () => {
+    const instance = initDatabase({ dbPath: ':memory:' });
+    try {
+      const user = insertTestUser(instance.db);
+      const now = new Date(1_763_400_000_123);
+      instance.db
+        .insert(sessions)
+        .values({
+          id: 'sid-rot',
+          userId: user.id,
+          lastActiveAt: now,
+          createdAt: now,
+          expiresAt: new Date(now.getTime() + 86_400_000),
+          refreshJti: 'jti-current',
+          previousRefreshJti: 'jti-previous',
+          refreshRotatedAt: now,
+        })
+        .run();
+
+      const row = instance.db.select().from(sessions).where(eq(sessions.id, 'sid-rot')).get();
+
+      expect(row?.refreshJti).toBe('jti-current');
+      expect(row?.previousRefreshJti).toBe('jti-previous');
+      expect(row?.refreshRotatedAt?.getTime()).toBe(1_763_400_000_123);
+    } finally {
+      instance.close();
     }
   });
 });

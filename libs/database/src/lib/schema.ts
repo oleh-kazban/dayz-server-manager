@@ -44,6 +44,9 @@ export const sessions = sqliteTable('sessions', {
   lastActiveAt: integer('last_active_at', { mode: 'timestamp' }).notNull(),
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
   expiresAt: integer('expires_at', { mode: 'timestamp' }).notNull(),
+  refreshJti: text('refresh_jti'),
+  previousRefreshJti: text('previous_refresh_jti'),
+  refreshRotatedAt: integer('refresh_rotated_at', { mode: 'timestamp_ms' }),
 });
 
 export type Session = typeof sessions.$inferSelect;

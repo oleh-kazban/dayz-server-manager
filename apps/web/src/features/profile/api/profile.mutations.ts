@@ -53,7 +53,7 @@ export function useRevokeSessionMutation() {
     },
     onSuccess: data => {
       if (data.isCurrent) {
-        logout();
+        void logout();
         return;
       }
       invalidateSessions();
