@@ -855,6 +855,12 @@ The audit ran the 87 test files (874 tests, 96.12% statement coverage), read the
 - **Recommendation:** fix the lint rule, the log text, and keep one place for error handling per mutation.
 - **Decision:** no.
 
+#### TD-WEB-013 · Unhandled promises and three accessibility findings reported by Sonar · Medium
+
+- **Code (Sonar, 26 issues, about 2 h 10 min):** 23 calls start a promise and ignore it: 17 `queryClient.invalidateQueries(...)` in `onSuccess` handlers (`ModsView`, `AddModModal`, `EditModModal`, `ImportModsModal`, `profile.mutations`, `CreateServerModal`, `ServerSettingsView`, `SteamSettingsView`, `useSteamAuthChallenge`), 5 `navigate(...)` calls (`useActiveServer`, `ServerSettingsView`) and one `router.invalidate()` in `App.tsx`. All run after the action has already succeeded. Three more issues are accessibility rules: a `<label>` without text in `ImportModsModal.tsx`, a non-native interactive `<div>` in `libs/ui/src/input/Input.tsx`, and `tabIndex` on a non-interactive element in `libs/ui/src/log-viewer/LogViewer.tsx`.
+- **Recommendation:** mark the 23 calls with `void`, because a failed refetch already shows through the query state and awaiting would keep the mutation busy longer. Handle each accessibility finding by its own cause. Consider the ESLint rule `@typescript-eslint/no-floating-promises` with `void` allowed, so lint catches new cases.
+- **Decision:** no (the lint rule needs a yes).
+
 ## 5. Libraries (`libs/*` except `ui`)
 
 The audit ran every library's tests with coverage, counted the usual smells, read the riskiest code (the process managers, the RCON packet decoder, the HTTP client) and fuzzed the `serverDZ.cfg` parser with 4,000 random inputs and seven adversarial ones.

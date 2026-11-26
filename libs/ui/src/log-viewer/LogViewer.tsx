@@ -108,7 +108,7 @@ export function LogViewer({
         role="log"
         aria-label={label}
         aria-live="off"
-        tabIndex={0}
+        tabIndex={0} // NOSONAR: keyboard users must focus the log to scroll it (TD-UI-063)
         onScroll={handleScroll}
         style={{ height }}
         className="overflow-auto font-mono text-xs text-[var(--color-text-main)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--color-primary)]"
