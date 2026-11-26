@@ -310,6 +310,42 @@ describe('HttpClient', () => {
     expect(refreshHandler).toHaveBeenCalledTimes(1);
   });
 
+  it('resolves a 204 response without a body when the schema is z.void() (AC-3)', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(new Response(null, { status: 204 }));
+
+    const client = new HttpClient({ baseUrl: 'http://localhost:5000' });
+
+    await expect(client.post('/no-content', z.void())).resolves.toBeUndefined();
+  });
+
+  it('rejects a 204 when the schema needs a body', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(new Response(null, { status: 204 }));
+
+    const client = new HttpClient();
+
+    await expect(client.post('/no-content', dummySchema)).rejects.toThrow();
+  });
+
+  it('does not refresh or repeat a 401 from the sign-out endpoint (AC-3)', async () => {
+    const refreshHandler = vi.fn().mockResolvedValue('new-token-123');
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(JSON.stringify({ message: 'Token expired' }), {
+        status: 401,
+        headers: { 'Content-Type': 'application/json' },
+      }),
+    );
+    const client = new HttpClient({ onRefreshToken: refreshHandler });
+    client.setToken('expired-token');
+
+    await expect(client.post('/api/v1/auth/logout', z.void())).rejects.toMatchObject({
+      status: 401,
+    });
+
+    expect(refreshHandler).not.toHaveBeenCalled();
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
+    expect(client.getToken()).toBe('expired-token');
+  });
+
   it('throws 401 error if refresh handler returns null or throws', async () => {
     const refreshHandler = vi.fn().mockResolvedValue(null);
 

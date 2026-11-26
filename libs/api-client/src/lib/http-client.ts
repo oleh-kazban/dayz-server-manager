@@ -147,7 +147,8 @@ export class HttpClient {
         !isRetry &&
         Boolean(this.onRefreshToken) &&
         !endpoint.includes('/auth/login') &&
-        !endpoint.includes('/auth/refresh');
+        !endpoint.includes('/auth/refresh') &&
+        !endpoint.includes('/auth/logout');
 
       if (canRefresh) {
         const newAccessToken = await this.tryRefreshToken();
@@ -178,7 +179,7 @@ export class HttpClient {
       );
     }
 
-    const json = await response.json();
+    const json: unknown = response.status === 204 ? undefined : await response.json();
     const result = schema.safeParse(json);
 
     if (!result.success) {
