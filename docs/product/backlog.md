@@ -1066,6 +1066,7 @@
   - **Included**: Appliance directory structure, bundling scripts, WinSW and systemd service management wrappers, CLI runner for background execution and headless admin password resets.
   - **Excluded / Deferred**: Blue-green auto-updater orchestration (`DSM-00145`).
 - **Implementation Notes**: Game servers must survive DSM service restarts (`DSM-00160` survive + re-adopt): systemd units use `KillMode=process`, and WinSW must not terminate child processes on service stop. On Windows `taskkill /T` on the DSM process would also kill DayZ (a descendant by parent PID even when detached): stop only the DSM process (verified in `DSM-00162` QA).
+- **Data directory permissions**: The installer or appliance must place the data directory (`manager-data/`) where only administrators and the service account can write. The first-time setup file, the session key and the vault key rely on it.
 - **Refinement Note (2026-11-16)**: Split on 2026-11-16 under the backlog-planning size budget (one behaviour or contract change per PBI, ≤ 5 AC, ~≤ 400 changed lines, migrations / refactors / new dependencies separate, risky operations isolated). The epic is `DONE` when all children are `DONE`; dependents reference the child they need. Game servers must survive DSM service restarts: stop only the DSM process, never its tree (see the original implementation notes).
 
 ---
