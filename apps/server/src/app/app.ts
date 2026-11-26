@@ -78,6 +78,10 @@ export function buildApp(options: BuildAppOptions): FastifyInstance {
   app.decorate('sqlite', dbInstance.sqlite);
   app.decorate('closeDb', () => dbInstance.close());
   app.decorate('sseHub', sseHub);
+  sseHub.setSessionCheck(
+    sid => findLiveSession(dbInstance.db, sid) !== undefined,
+    (error, sid) => app.log.error({ err: error, sid }, 'Session check failed; streams closed'),
+  );
   app.decorate('sseTickets', new SseTicketStore());
 
   const lifecycle = new ServerLifecycleService(
@@ -108,7 +112,10 @@ export function buildApp(options: BuildAppOptions): FastifyInstance {
     });
   }
   // Only timers stop; DayZ processes keep running across DSM restarts (DSM-00160 D1).
-  app.addHook('onClose', async () => lifecycle.close());
+  app.addHook('onClose', async () => {
+    sseHub.setSessionCheck(null);
+    await lifecycle.close();
+  });
 
   app.addHook('onListen', async () => {
     const warning = listenWarning(options.config.HOST);

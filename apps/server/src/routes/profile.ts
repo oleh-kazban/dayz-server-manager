@@ -1,9 +1,10 @@
-import { and, eq, ne } from 'drizzle-orm';
+import { eq } from 'drizzle-orm';
 import type { FastifyPluginAsync } from 'fastify';
 
 import { changePasswordSchema, updateProfileSchema } from '@aegis/api-contracts';
-import { hashPassword, sessions, users, verifyPassword } from '@aegis/database';
+import { hashPassword, users, verifyPassword } from '@aegis/database';
 
+import { revokeSessions } from '../services/identity/sessions';
 import { formatZodFieldErrors, sendApiError } from '../utils/api-error';
 
 export const registerProfileRoutes: FastifyPluginAsync = async fastify => {
@@ -144,13 +145,10 @@ export const registerProfileRoutes: FastifyPluginAsync = async fastify => {
         .run();
 
       // Auto-revoke all other sessions for this user (R-01)
-      const currentSid = request.user.sid;
-      if (currentSid) {
-        fastify.db
-          .delete(sessions)
-          .where(and(eq(sessions.userId, user.id), ne(sessions.id, currentSid)))
-          .run();
-      }
+      revokeSessions(
+        { db: fastify.db, hub: fastify.sseHub },
+        { userId: user.id, exceptSid: request.user.sid },
+      );
 
       return reply.send({
         success: true,

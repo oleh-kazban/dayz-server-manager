@@ -12,6 +12,7 @@ import {
 import { sessions, users, verifyPassword } from '@aegis/database';
 
 import { rotateRefreshToken } from '../services/identity/refresh-rotation';
+import { revokeSessions } from '../services/identity/sessions';
 import { isSetupExpired } from '../services/identity/setup-account';
 import { issueSignIn, signInContext } from '../services/identity/sign-in';
 import { formatZodFieldErrors, sendApiError } from '../utils/api-error';
@@ -172,6 +173,7 @@ export const registerAuthRoutes: FastifyPluginAsync = async fastify => {
         if (result.kind !== 'rotated') {
           if (result.kind === 'reuse') {
             request.log.warn({ sid, userId: user.id }, 'Refresh token reuse, session ended');
+            fastify.sseHub.closeSession(sid);
           }
           return sendApiError(
             reply,
@@ -223,10 +225,13 @@ export const registerAuthRoutes: FastifyPluginAsync = async fastify => {
     { onRequest: [fastify.authenticateIgnoringSession] },
     async (request, reply) => {
       const { sid, sub } = request.user;
-      fastify.db
-        .delete(sessions)
+      // Only the owner's row: a token's sid must not end another user's session
+      const owned = fastify.db
+        .select()
+        .from(sessions)
         .where(and(eq(sessions.id, sid), eq(sessions.userId, sub)))
-        .run();
+        .get();
+      if (owned) revokeSessions({ db: fastify.db, hub: fastify.sseHub }, { sid });
       return reply.code(204).send();
     },
   );

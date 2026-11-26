@@ -14,6 +14,6 @@ export const registerRealtimeRoutes: FastifyPluginAsync = async fastify => {
 
   // GET /api/v1/realtime/sse?ticket=… - Server-sent events (DSM-00173)
   fastify.get('/sse', { onRequest: [fastify.authenticateSse] }, async (request, reply) => {
-    fastify.sseHub.subscribe(reply, request);
+    fastify.sseHub.subscribe(reply, { userId: request.user.sub, sid: request.user.sid }, request);
   });
 };

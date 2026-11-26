@@ -74,4 +74,38 @@ describe('openEventStream (DSM-00206)', () => {
     stream.send('x', 2);
     expect(raw.chunks).toEqual([': connected\n\n']);
   });
+
+  describe('end', () => {
+    const endingReply = () => {
+      const { reply, raw } = fakeReply();
+      const end = vi.fn(() => {
+        raw.writableEnded = true;
+        raw.emit('close');
+      });
+      Object.assign(raw, { end });
+      return { reply, end };
+    };
+
+    it('ends the response once and runs the close listeners', () => {
+      const { reply, end } = endingReply();
+      const stream = openEventStream(reply, 1_000);
+      const onClose = vi.fn();
+      stream.onClose(onClose);
+
+      stream.end();
+
+      expect(end).toHaveBeenCalledTimes(1);
+      expect(onClose).toHaveBeenCalledTimes(1);
+    });
+
+    it('is safe to call twice', () => {
+      const { reply, end } = endingReply();
+      const stream = openEventStream(reply, 1_000);
+
+      stream.end();
+      stream.end();
+
+      expect(end).toHaveBeenCalledTimes(1);
+    });
+  });
 });

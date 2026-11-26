@@ -7,6 +7,8 @@ export interface EventStream {
   send: (event: string, data: unknown) => void;
   /** Runs once when the client disconnects (or the stream is ended). */
   onClose: (listener: () => void) => void;
+  /** Ends the response; the close listeners then run. */
+  end: () => void;
 }
 
 /**
@@ -53,6 +55,11 @@ export function openEventStream(
     send: (event, data) => write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`),
     onClose: listener => {
       listeners.push(listener);
+    },
+    end: () => {
+      if (!raw.writableEnded) {
+        raw.end();
+      }
     },
   };
 }
